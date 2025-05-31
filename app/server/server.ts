@@ -7,20 +7,21 @@ import { Server } from "socket.io";
 import type { C2S, S2C } from "~/socket";
 import type { Music } from "~/stores/musicStore.js";
 
-const viteDevServer =
-    process.env.NODE_ENV === "production"
-        ? undefined
-        : await import("vite").then((vite) =>
-              vite.createServer({
-                  server: { middlewareMode: true },
-              })
-          );
-const reactRouterHandler = createRequestHandler({
-    build: viteDevServer
-        ? () => viteDevServer.ssrLoadModule("virtual:react-router/server-build")
-        : // @ts-expect-error
-          await import("./build/server/index.js"),
-});
+let reactRouterHandler: any;
+let viteDevServer: any = undefined;
+if (process.env.NODE_ENV === "production") {
+  // 本番はビルド成果物のSSRハンドラを関数としてrequire
+  const ssrBuild = require("../../build/server/index.js");
+  reactRouterHandler = createRequestHandler({ build: ssrBuild });
+} else {
+  // 開発はVite SSR
+  viteDevServer = await import("vite").then((vite) =>
+    vite.createServer({ server: { middlewareMode: true } })
+  );
+  reactRouterHandler = createRequestHandler({
+    build: () => viteDevServer.ssrLoadModule("virtual:react-router/server-build"),
+  });
+}
 
 const port = process.env.PORT || 3000;
 const app = express();
