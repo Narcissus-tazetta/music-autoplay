@@ -5,11 +5,17 @@ export interface S2C {
     addMusic(music: Music): void;
     initMusics(musics: Music[]): void;
     deleteMusic(url: string): void;
-
-    // URLリスト機能
-    url_list(urls: { url: string }[]): void;
-    new_url(url: { url: string } | null): void;
+    url_list(musics: Music[]): void;
+    new_url(music: Music | null): void;
     delete_url(url: string): void;
+
+    // YouTube拡張: サーバー→クライアント
+    current_youtube_status(data: {
+        state: string;
+        url: string;
+        match: boolean;
+        music: Music | null;
+    }): void;
 }
 // Client ~> Server
 export interface C2S {
@@ -17,7 +23,11 @@ export interface C2S {
     deleteMusic(url: string): void;
 
     // URLリスト機能
+    get_urls(): void;
     submit_url(url: string): void;
     delete_url(url: string): void;
-    get_urls(): void;
+
+    // YouTube拡張: クライアント→サーバー
+    youtube_video_state(data: { state: string; url: string }): void;
+    youtube_tab_closed(data: { url: string }): void;
 }

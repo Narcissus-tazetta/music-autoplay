@@ -15,7 +15,6 @@ interface MusicStore {
     addMusic(music: Music): void;
     deleteMusic(url: string): void;
     resetError(): void;
-    setMusics(musics: Music[]): void;
 }
 export const useMusicStore = create<MusicStore>((set, get) => {
     const socket: Socket<S2C, C2S> = io({ autoConnect: false });
@@ -25,22 +24,12 @@ export const useMusicStore = create<MusicStore>((set, get) => {
                 musics: [...get().musics, music],
             });
         })
-        .on("initMusics", (musics) => {
+        .on("url_list", (musics) => {
             set({ musics });
         })
         .on("deleteMusic", (url) => {
             set({
                 musics: get().musics.filter((m) => m.url !== url),
-            });
-        })
-        .on("url_list", (musics) => {
-            // 受信データを Music 型に変換してセット
-            set({
-                musics: musics.map((m: any) => ({
-                    url: m.url,
-                    title: m.title ?? "",
-                    thumbnail: m.thumbnail ?? "",
-                })),
             });
         })
         .connect();
@@ -60,9 +49,6 @@ export const useMusicStore = create<MusicStore>((set, get) => {
         },
         resetError() {
             set({ error: undefined });
-        },
-        setMusics(musics) {
-            set({ musics });
         },
     };
 });

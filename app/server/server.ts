@@ -50,7 +50,10 @@ app.use(morgan("tiny"));
 app.all("*splat", reactRouterHandler);
 
 const io = new Server<C2S, S2C>(server);
+
 const musics: Music[] = [];
+// 現在のYouTube状態を保存
+let currentYoutubeState: { state: string; url: string } | null = null;
 
 
 
@@ -59,6 +62,34 @@ io.on("connection", (socket) => {
     socket.emit("initMusics", musics);
 
     // 既存のmusic管理
+
+    // --- 拡張機能からのYouTube状態受信ログ・保存・全体通知 ---
+    socket.on("youtube_video_state", (data) => {
+        currentYoutubeState = { state: data.state, url: data.url };
+        // music.listの一番古い（先頭）urlと一致するか
+        const nowMusic = musics[0] || null;
+        const isMatch = nowMusic && nowMusic.url === data.url;
+        console.log("[拡張機能] YouTube動画状態:", data, "music.list[0]と一致:", isMatch);
+        // 全クライアントに現在の状態をemit
+        io.emit("current_youtube_status", {
+            state: data.state,
+            url: data.url,
+            match: isMatch,
+            music: nowMusic,
+        });
+    });
+    socket.on("youtube_tab_closed", (data) => {
+        currentYoutubeState = { state: "window_close", url: data.url };
+        const nowMusic = musics[0] || null;
+        const isMatch = nowMusic && nowMusic.url === data.url;
+        console.log("[拡張機能] YouTubeタブ閉じた:", data, "music.list[0]と一致:", isMatch);
+        io.emit("current_youtube_status", {
+            state: "window_close",
+            url: data.url,
+            match: isMatch,
+            music: nowMusic,
+        });
+    });
     socket
         .on("addMusic", (music, error) => {
             if (!musics.find((m) => m.title === music.title || m.url === music.url)) {

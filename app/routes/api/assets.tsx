@@ -21,24 +21,25 @@ export const action = async ({ request }: Route.ActionArgs) => {
 
     const item = res.data.items?.[0];
     const snippet = item?.snippet;
-    const title = snippet?.title;
+    const title = snippet?.title || "";
+    const description = snippet?.description || "";
+    const channelTitle = snippet?.channelTitle || "";
     const thumbnail = snippet?.thumbnails?.high?.url;
     const length = item?.contentDetails?.duration;
-    // 音楽判定キーワード
-    const musicKeywords = [
-      "music", "音楽", "records", "official", "label", "ミュージック", "mv"
+    // 判定キーワード
+    const keywords = [
+        "music",
+        "音楽",
+        "records",
+        "official",
+        "label",
+        "ミュージック",
+        "mv"
     ];
-    // 判定対象文字列を結合
-    const textForCheck = [
-      snippet?.title,
-      snippet?.description,
-      snippet?.channelTitle,
-    ].filter(Boolean).join(" ").toLowerCase();
-
-    // キーワードが1つでも含まれていればtrue
-    const hasMusicKeyword = musicKeywords.some((kw) => textForCheck.includes(kw.toLowerCase()));
-
-    const isMusic = item?.snippet?.categoryId === "10" || hasMusicKeyword;
+    const lower = (s: string) => s.toLowerCase();
+    const text = `${title} ${description} ${channelTitle}`.toLowerCase();
+    const hasKeyword = keywords.some((kw) => text.includes(kw.toLowerCase()));
+    const isMusic = snippet?.categoryId === "10" || hasKeyword;
 
     if (!title || !thumbnail || !length) {
         return new Response("Invalid video ID", { status: 400 });
