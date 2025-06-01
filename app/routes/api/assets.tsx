@@ -24,7 +24,21 @@ export const action = async ({ request }: Route.ActionArgs) => {
     const title = snippet?.title;
     const thumbnail = snippet?.thumbnails?.high?.url;
     const length = item?.contentDetails?.duration;
-    const isMusic = item?.snippet?.categoryId === "10";
+    // 音楽判定キーワード
+    const musicKeywords = [
+      "music", "音楽", "records", "official", "label", "ミュージック", "mv"
+    ];
+    // 判定対象文字列を結合
+    const textForCheck = [
+      snippet?.title,
+      snippet?.description,
+      snippet?.channelTitle,
+    ].filter(Boolean).join(" ").toLowerCase();
+
+    // キーワードが1つでも含まれていればtrue
+    const hasMusicKeyword = musicKeywords.some((kw) => textForCheck.includes(kw.toLowerCase()));
+
+    const isMusic = item?.snippet?.categoryId === "10" || hasMusicKeyword;
 
     if (!title || !thumbnail || !length) {
         return new Response("Invalid video ID", { status: 400 });
