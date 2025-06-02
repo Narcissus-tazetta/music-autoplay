@@ -1,3 +1,4 @@
+import { Footer } from "../components/Footer";
 import { useEffect, useState } from "react";
 import { SettingsButton } from "../components/SettingsButton";
 import { SettingsPanel } from "../components/SettingsPanel";
@@ -76,18 +77,29 @@ export default function Home() {
         const formData = new FormData();
         formData.append("videoId", videoId);
 
-        const assets = await fetch("/api/assets", {
-            method: "POST",
-            body: formData,
-        }).then(async (res) => {
+
+        let assets: any = null;
+        try {
+            const res = await fetch("/api/assets", {
+                method: "POST",
+                body: formData,
+            });
             const text = await res.text();
-            try {
-                return JSON.parse(text);
-            } catch (e) {
-                console.error(e, text);
-                throw new Error("サーバーからの応答が不正です");
+            if (!res.ok) {
+                setError("url", {
+                    type: "manual",
+                    message: text || "動画情報の取得に失敗しました",
+                });
+                return;
             }
-        });
+            assets = JSON.parse(text);
+        } catch (e) {
+            setError("url", {
+                type: "manual",
+                message: "サーバーとの通信に失敗しました",
+            });
+            return;
+        }
 
         if (convert(assets.length) > 60 * 10) {
             setError("url", {
@@ -140,7 +152,8 @@ export default function Home() {
     };
 
     return (
-        <div className={`relative flex flex-col items-center justify-center mt-4 gap-4 w-xl mx-auto ${darkClass}`}>
+        <>
+          <div className={`relative flex flex-col items-center justify-center mt-4 gap-4 w-xl mx-auto ${darkClass}`}>
             <SettingsButton onClick={handleSettingsButtonClick} />
             <SettingsPanel
                 open={settingsOpen}
@@ -237,7 +250,9 @@ export default function Home() {
                     )}
                 </TableBody>
             </Table>
-        </div>
+          </div>
+          <Footer />
+        </>
     );
 }
 

@@ -26,6 +26,16 @@ export const action = async ({ request }: Route.ActionArgs) => {
     const channelTitle = snippet?.channelTitle || "";
     const thumbnail = snippet?.thumbnails?.high?.url;
     const length = item?.contentDetails?.duration;
+    // 年齢制限判定（他のバリデーションと同じ流れで統一）
+    const ytRating = item?.contentDetails?.contentRating?.ytRating;
+    const isAgeRestricted = ytRating === "ytAgeRestricted";
+
+    if (!title || !thumbnail || !length) {
+        return new Response("Invalid video ID", { status: 400 });
+    }
+    if (isAgeRestricted) {
+        return new Response("年齢制限付き動画は登録できません", { status: 400 });
+    }
     // 判定キーワード
     const keywords = [
         "music",
@@ -41,9 +51,7 @@ export const action = async ({ request }: Route.ActionArgs) => {
     const hasKeyword = keywords.some((kw) => text.includes(kw.toLowerCase()));
     const isMusic = snippet?.categoryId === "10" || hasKeyword;
 
-    if (!title || !thumbnail || !length) {
-        return new Response("Invalid video ID", { status: 400 });
-    }
+
 
     return { title, thumbnail, length, isMusic };
 };
