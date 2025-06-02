@@ -119,6 +119,53 @@
   }
 }
 
+/* 共通スタイル */
+body {
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.youtube-status-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 900px;
+  min-width: 320px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: 1.5px solid;
+  font-weight: bold;
+  gap: 0px;
+}
+
+.youtube-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ダークモード */
+body.dark-mode {
+  background-color: #212225;
+  color: #E8EAED;
+}
+
+.youtube-status-container.dark {
+  background-color: #212225;
+  color: #E8EAED;
+}
+
+/* ライトモード */
+body.light-mode {
+  background-color: #fff;
+  color: #212225;
+}
+
+.youtube-status-container.light {
+  background-color: #fff;
+  color: #212225;
+}
+
 /* 状態表示コンテナ */
 .youtube-status-container {
     display: flex;
@@ -166,4 +213,71 @@
 
 .youtube-title:hover {
     color: #2563eb;
+}
+
+/* ダーク・ライト切り替え時のbodyアニメーション */
+body {
+  transition: background-color 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* 設定パネルの背景・テキスト色もアニメーション */
+.settings-panel {
+  transition: background 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ダークモード用クラス */
+body.dark-mode {
+  background-color: #212225 !important;
+  color: #E8EAED !important;
+}
+body.light-mode {
+  background-color: #fff !important;
+  color: #212225 !important;
+}
+
+/* 設定パネルの色切り替え */
+.settings-panel.dark {
+  background: #212225 !important;
+  color: #E8EAED !important;
+}
+.settings-panel.light {
+  background: #fff !important;
+  color: #212225 !important;
+}
+
+/* 楽曲ヘッダー用アニメーション */
+.table-head-animated {
+  transition: background-color 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+.table-head-dark {
+  background-color: #212225 !important;
+  color: #E8EAED !important;
+}
+.table-head-light {
+  background-color: #fff !important;
+  color: #212225 !important;
+}
+
+/* <td>要素のホバー時の背景色を完全に無効化 */
+td {
+  background-color: transparent !important; /* デフォルトの背景色を透明に */
+  transition: none !important; /* アニメーションを無効化 */
+}
+
+td:hover, tr:hover {
+  background-color: transparent !important; /* 背景色を完全に無効化 */
+}
+
+/* <tr>要素のホバー時の背景色を無効化 */
+tr:hover {
+  background-color: transparent !important; /* ホバー時も背景色を変えない */
+}
+
+/* table全体のホバー背景色を無効化 */
+table:hover {
+  background-color: transparent !important;
+}
+
+table tr:hover {
+  background-color: transparent !important;
 }

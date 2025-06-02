@@ -55,10 +55,15 @@ const musics: Music[] = [];
 // 現在のYouTube状態を保存
 let currentYoutubeState: { state: string; url: string } | null = null;
 
-
+// クライアントの状態を管理
+const clients = new Map();
 
 io.on("connection", (socket) => {
-    console.log("a user connected");
+    console.log("[server] 拡張機能が接続:", socket.id);
+
+    // クライアント情報を記録
+    clients.set(socket.id, {});
+
     socket.emit("initMusics", musics);
 
     // 既存のmusic管理
@@ -172,7 +177,17 @@ io.on("connection", (socket) => {
         }
     });
 
-    socket.on("disconnect", () => {
-        console.log("[server] クライアント切断: ", socket.id);
+    // 切断時
+    socket.on("disconnect", (reason) => {
+        console.warn("[server] 拡張機能が切断:", socket.id, reason);
+        clients.delete(socket.id);
+        // 必要なら再同期や通知
     });
+
+    // エラー時
+    socket.on("error", (err) => {
+        console.error("[server] Socket.IO error:", err);
+    });
+
+
 });

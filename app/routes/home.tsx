@@ -1,32 +1,18 @@
-import { Input } from "~/components/ui/input";
-import { Button } from "~/components/ui/button";
+import { useEffect, useState } from "react";
+import { SettingsButton } from "../components/SettingsButton";
+import { SettingsPanel } from "../components/SettingsPanel";
+import { YouTubeStatus } from "../components/YouTubeStatus";
+import { Input } from "../components/ui/input";
+import { Button } from "../components/ui/button";
 import { SendIcon } from "lucide-react";
 import { useForm, type SubmitHandler } from "react-hook-form";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { useMusicStore } from "~/stores/musicStore";
-import { useEffect, useState } from "react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "../components/ui/hover-card";
+import { useMusicStore } from "../stores/musicStore";
 import type { Route } from "./+types/home";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "~/components/ui/hover-card";
 import convert from "convert-iso8601-duration";
-import { Textfit } from "react-textfit";
+import { COLORS, useSmoothBodyColor, changeMode, parseYoutubeUrl, YOUTUBE_PATTERN } from "../libs/utils";
 
-// 動画の状態と資産の型定義
-interface YTStatus {
-    state: 'playing' | 'paused' | 'window_close';
-    url: string;
-    music: {
-        url: string;
-        title: string;
-        thumbnail: string;
-    } | null;
-}
-
-interface VideoAssets {
-    title: string;
-    thumbnail: string;
-    length: string;
-    isMusic: boolean;
-}
 
 export function meta({}: Route.MetaArgs) {
     return [{ title: "Music Auto Play" }, { name: "description", content: "Welcome to Music Auto Play!" }];
@@ -40,14 +26,11 @@ export default function Home() {
     const musics = useMusicStore((store) => store.musics);
     const error = useMusicStore((store) => store.error);
     const socket = useMusicStore((store) => store.socket);
-
-    // サーバーからのYouTube状態
-    const [ytStatus, setYtStatus] = useState<YTStatus | null>(null);
+    const [ytStatus, setYtStatus] = useState<any>(null);
 
     useEffect(() => {
         if (!socket) return;
         const handler = (data: any) => {
-            // stateが想定外の場合はwindow_closeに変換
             let state: 'playing' | 'paused' | 'window_close' = 'paused';
             if (data.state === 'playing' || data.state === 'paused' || data.state === 'window_close') {
                 state = data.state;
@@ -61,6 +44,7 @@ export default function Home() {
             socket.off("current_youtube_status", handler);
         };
     }, [socket]);
+
     const {
         register,
         handleSubmit,
@@ -80,7 +64,7 @@ export default function Home() {
         }
 
         const url = data.url;
-        const videoId = parseUrl(url);
+        const videoId = parseYoutubeUrl(url);
         if (videoId === null) {
             setError("url", {
                 type: "onChange",
@@ -92,7 +76,7 @@ export default function Home() {
         const formData = new FormData();
         formData.append("videoId", videoId);
 
-        const assets: VideoAssets = await fetch("/api/assets", {
+        const assets = await fetch("/api/assets", {
             method: "POST",
             body: formData,
         }).then(async (res) => {
@@ -125,9 +109,53 @@ export default function Home() {
         resetField("url");
     };
 
+    // 設定パネルの開閉
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [mode, setModeState] = useState<"dark" | "light">("light");
+
+    // 初回ロード時にlocalStorageから取得
+    useEffect(() => {
+      const savedMode = (localStorage.getItem("selectedMode") as "dark" | "light") || "light";
+      setModeState(savedMode);
+      changeMode(savedMode);
+    }, []);
+
+    // ダーク・ライトのbody色をスムーズに
+    useSmoothBodyColor(
+      mode === "dark" ? "#212225" : "#fff",
+      mode === "dark" ? "#E8EAED" : "#212225"
+    );
+
+    // モード変更時の副作用
+    const setMode = (newMode: "dark" | "light") => {
+      setModeState(newMode);
+      changeMode(newMode);
+    };
+
+    const darkClass = mode === "dark" ? "dark-mode" : "";
+
+    // 設定ボタンのトグル動作に修正
+    const handleSettingsButtonClick = () => {
+      setSettingsOpen((prev) => !prev);
+    };
+
     return (
-        <div className="w-xl mx-auto flex flex-col items-center justify-center mt-4 gap-4">
-            <h1 className="text-2xl font-bold m-4">楽曲リクエストフォーム</h1>
+        <div className={`relative flex flex-col items-center justify-center mt-4 gap-4 w-xl mx-auto ${darkClass}`}>
+            <SettingsButton onClick={handleSettingsButtonClick} />
+            <SettingsPanel
+                open={settingsOpen}
+                onClose={() => setSettingsOpen(false)}
+                mode={mode}
+                setMode={setMode}
+            />
+            <h1
+              className="text-2xl font-bold m-4"
+              style={{
+                color: mode === "dark" ? "#E8EAED" : "#212225"
+              }}
+            >
+              楽曲リクエストフォーム
+            </h1>
             <form className="flex flex-col items-center gap-4" onSubmit={handleSubmit(onSubmit)}>
                 <div className="w-full flex flex-col items-center">
                     <Input
@@ -135,7 +163,7 @@ export default function Home() {
                         {...register("url", {
                             required: "URLを入力してください",
                             pattern: {
-                                value: pattern,
+                                value: YOUTUBE_PATTERN,
                                 message: "有効なYouTubeのURLを入力してください"
                             },
                             onChange() {
@@ -149,62 +177,32 @@ export default function Home() {
                     <p className="text-red-500 text-sm">{error}</p>
                     {errors.url && <p className="text-red-500 text-sm">{errors.url?.message}</p>}
                 </div>
-                <Button type="submit" className="flex w-xs gap-2">
+                <Button
+                  type="submit"
+                  className="flex w-xs gap-2"
+                  style={{
+                    background: mode === "dark" ? "#E8EAED" : "#212225",
+                    color: mode === "dark" ? "#212225" : "#fff",
+                    border: "none"
+                  }}
+                >
                     <SendIcon size={12} />
                     <p>送信</p>
                 </Button>
             </form>
 
             {/* YouTube状態表示 */}
-            {ytStatus && ytStatus.music && (() => {
-                const state = ytStatus.state;
-                const music = ytStatus.music;
-                let stateLabel = "";
-                let containerClass = "youtube-status-container youtube-status-closed";
-
-                if (state === "playing") {
-                    stateLabel = "再生中";
-                    containerClass = "youtube-status-container youtube-status-playing";
-                } else if (state === "paused") {
-                    stateLabel = "停止中";
-                    containerClass = "youtube-status-container youtube-status-paused";
-                } else if (state === "window_close") {
-                    stateLabel = "タブが閉じました";
-                }
-
-                return (
-                    <div className="w-full flex items-center justify-center my-2">
-                        <div className={containerClass}>
-                            <Textfit mode="single" max={22} min={18} style={{ marginRight: "2px" }}>
-                                {stateLabel}：
-                            </Textfit>
-                            <HoverCard>
-                                <HoverCardTrigger
-                                    href={music.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="youtube-title"
-                                    title={music.title}
-                                    aria-label={`${music.title}を再生（新しいタブで開きます）`}
-                                >
-                                    <Textfit mode="single" max={20} min={10} style={{ maxWidth: "650px" }}>
-                                        {music.title}
-                                    </Textfit>
-                                </HoverCardTrigger>
-                                <HoverCardContent>
-                                    <img src={music.thumbnail} alt={`${music.title}のサムネイル`} />
-                                </HoverCardContent>
-                            </HoverCard>
-                        </div>
-                    </div>
-                );
-            })()}
+            <YouTubeStatus ytStatus={ytStatus} />
 
             {/* 楽曲リスト */}
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead className="text-center">楽曲</TableHead>
+                        <TableHead
+                          className={`text-center table-head-animated ${mode === "dark" ? "table-head-dark" : "table-head-light"}`}
+                        >
+                          楽曲
+                        </TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -224,7 +222,7 @@ export default function Home() {
                                                 rel="noopener noreferrer"
                                                 className="text-blue-500 hover:text-blue-700 hover:underline transition-colors cursor-pointer"
                                                 title={`${music.title}（新しいタブで開く）`}
-                                                aria-label={`${music.title}を再生（新しいタブで開きます）`}
+                                                aria-label={`${music.title}を再生（新規タブで開く）`}
                                             >
                                                 {music.title}
                                             </HoverCardTrigger>
@@ -243,7 +241,4 @@ export default function Home() {
     );
 }
 
-const pattern = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/i;
-function parseUrl(url: string): string | null {
-    return url.match(pattern)?.[1] ?? null;
-}
+
