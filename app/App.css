@@ -118,3 +118,52 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* 状態表示コンテナ */
+.youtube-status-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 900px;
+    min-width: 320px;
+    padding: 10px 20px;
+    border-radius: 12px;
+    border: 1.5px solid;
+    font-weight: bold;
+    gap: 0px; /* 間隔を減らす */
+}
+
+/* 状態ごとのスタイル */
+.youtube-status-playing {
+    background-color: #f0fdf4;
+    border-color: #22c55e;
+    color: #166534;
+}
+
+.youtube-status-paused {
+    background-color: #fff7ed;
+    border-color: #f59e42;
+    color: #c2410c;
+}
+
+.youtube-status-closed {
+    background-color: #f3f4f6;
+    border-color: #94a3b8;
+    color: #334155;
+}
+
+/* タイトル部分 */
+.youtube-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 650px;
+    display: inline-block;
+    color: #3b82f6;
+    transition: color 0.2s ease-in-out;
+}
+
+.youtube-title:hover {
+    color: #2563eb;
+}

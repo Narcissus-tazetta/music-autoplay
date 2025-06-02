@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import type { Route } from "./+types/home";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "~/components/ui/hover-card";
 import convert from "convert-iso8601-duration";
+import { Textfit } from "react-textfit";
 
 // 動画の状態と資産の型定義
 interface YTStatus {
@@ -70,6 +71,14 @@ export default function Home() {
 
     // フォーム送信処理
     const onSubmit: SubmitHandler<Inputs> = async (data) => {
+        if (musics.length >= 50) {
+            setError("url", {
+                type: "manual",
+                message: "これ以上は送信できません。リストは50件までです。",
+            });
+            return;
+        }
+
         const url = data.url;
         const videoId = parseUrl(url);
         if (videoId === null) {
@@ -150,30 +159,37 @@ export default function Home() {
             {ytStatus && ytStatus.music && (() => {
                 const state = ytStatus.state;
                 const music = ytStatus.music;
-                let stateLabel = state;
-                let color = "bg-gray-100 border-gray-400 text-gray-800";
+                let stateLabel = "";
+                let containerClass = "youtube-status-container youtube-status-closed";
+
                 if (state === "playing") {
-                    stateLabel = "playing";
-                    color = "bg-green-100 border-green-500 text-green-800";
+                    stateLabel = "再生中";
+                    containerClass = "youtube-status-container youtube-status-playing";
                 } else if (state === "paused") {
-                    stateLabel = "paused";
-                    color = "bg-orange-100 border-orange-500 text-orange-800";
+                    stateLabel = "停止中";
+                    containerClass = "youtube-status-container youtube-status-paused";
                 } else if (state === "window_close") {
-                    stateLabel = "window_close";
-                    color = "bg-gray-200 border-gray-500 text-gray-800";
+                    stateLabel = "タブが閉じました";
                 }
+
                 return (
                     <div className="w-full flex items-center justify-center my-2">
-                        <div className={`flex items-center gap-2 px-4 py-2 rounded border ${color}`} style={{ minWidth: 320 }}>
-                            <span className="font-bold whitespace-nowrap">{stateLabel}：</span>
+                        <div className={containerClass}>
+                            <Textfit mode="single" max={22} min={18} style={{ marginRight: "2px" }}>
+                                {stateLabel}：
+                            </Textfit>
                             <HoverCard>
                                 <HoverCardTrigger
                                     href={music.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-blue-500 hover:text-blue-700 hover:underline transition-colors cursor-pointer"
+                                    className="youtube-title"
+                                    title={music.title}
+                                    aria-label={`${music.title}を再生（新しいタブで開きます）`}
                                 >
-                                    {music.title}
+                                    <Textfit mode="single" max={20} min={10} style={{ maxWidth: "650px" }}>
+                                        {music.title}
+                                    </Textfit>
                                 </HoverCardTrigger>
                                 <HoverCardContent>
                                     <img src={music.thumbnail} alt={`${music.title}のサムネイル`} />
