@@ -34,6 +34,8 @@ export const Footer: React.FC = () => {
         <a
           href="https://github.com/alinco8"
           className="text-blue-500 hover:underline mx-1 gaming-hover"
+          target="_blank"
+          rel="noopener noreferrer"
           style={{ transition: "color 0.2s" }}
         >
           alinco8
@@ -58,7 +60,7 @@ export const Footer: React.FC = () => {
     `}</style> */}
       </div>
       <div className="text-[10px] mt-1 opacity-70 select-none leading-tight">
-        &copy; {new Date().getFullYear()} <a href="https://github.com/Narcissus-tazetta">Narcissus-tazetta</a>
+        &copy; {new Date().getFullYear()} <a href="https://github.com/Narcissus-tazetta" target="_blank" rel="noopener noreferrer">Narcissus-tazetta</a>
       </div>
     </footer>
   );
