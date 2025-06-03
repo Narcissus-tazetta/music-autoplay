@@ -18,7 +18,9 @@ export function registerSocketHandlers(io: Server<C2S, S2C>, socket: Socket<C2S,
     socket.on("youtube_video_state", (data) => {
         currentState.currentYoutubeState.state = data.state;
         currentState.currentYoutubeState.url = data.url;
-        if (data.state === "playing" || data.state === "paused") {
+        if (data.state === "playing") {
+            currentState.currentPlayingId = extractYouTubeId(data.url);
+        } else if (data.state === "paused") {
             if (!currentState.currentPlayingId) {
                 currentState.currentPlayingId = extractYouTubeId(data.url);
             }
@@ -59,7 +61,10 @@ export function registerSocketHandlers(io: Server<C2S, S2C>, socket: Socket<C2S,
     });
     socket
         .on("addMusic", (music, error) => {
-            if (!musics.find((m) => m.title === music.title || m.url === music.url)) {
+            // YouTube動画IDで重複判定（現在のmusicsのみ）
+            const newId = extractYouTubeId(music.url);
+            const exists = musics.some(m => extractYouTubeId(m.url) === newId);
+            if (!exists) {
                 console.log("addMusic", music);
                 musics.push(music);
                 console.log("[server] url_list emit(addMusic):", musics);
