@@ -1,4 +1,3 @@
-// socket.io関連の全ハンドラ（server.tsから移植、ロジックは一切変更しない）
 import type { Server, Socket } from "socket.io";
 import type { C2S, S2C } from "~/socket";
 import type { Music } from "~/stores/musicStore";

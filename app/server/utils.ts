@@ -1,4 +1,3 @@
-// 共通ユーティリティ（内容はserver.tsから移植、ロジックは一切変更しない）
 export function extractYouTubeId(url: string): string | null {
     if (!url) return null;
     try {
