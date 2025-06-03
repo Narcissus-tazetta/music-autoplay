@@ -2,63 +2,60 @@
 import type { Server, Socket } from "socket.io";
 import type { C2S, S2C } from "~/socket";
 import type { Music } from "~/stores/musicStore";
-import { musics, currentYoutubeState, lastYoutubeStatus, currentPlayingId } from "./youtubeState";
+import { musics, currentState } from "./youtubeState";
 import { extractYouTubeId } from "./utils";
 
 export function registerSocketHandlers(io: Server<C2S, S2C>, socket: Socket<C2S, S2C>, clients: Map<any, any>) {
-    const { musics } = require("./youtubeState");
-    const { extractYouTubeId } = require("./utils");
-    let { currentYoutubeState, lastYoutubeStatus, currentPlayingId } = require("./youtubeState");
 
     console.log("[server] 拡張機能が接続:", socket.id);
     clients.set(socket.id, {});
     socket.emit("initMusics", musics);
-    if (lastYoutubeStatus) {
+    if (currentState.lastYoutubeStatus) {
         setTimeout(() => {
-            socket.emit("current_youtube_status", lastYoutubeStatus);
+            socket.emit("current_youtube_status", currentState.lastYoutubeStatus);
         }, 10);
     }
 
     socket.on("youtube_video_state", (data) => {
-        currentYoutubeState.state = data.state;
-        currentYoutubeState.url = data.url;
+        currentState.currentYoutubeState.state = data.state;
+        currentState.currentYoutubeState.url = data.url;
         if (data.state === "playing" || data.state === "paused") {
-            if (!currentPlayingId) {
-                currentPlayingId = extractYouTubeId(data.url);
+            if (!currentState.currentPlayingId) {
+                currentState.currentPlayingId = extractYouTubeId(data.url);
             }
         } else if (data.state === "window_close") {
-            currentPlayingId = null;
+            currentState.currentPlayingId = null;
         }
         let nowMusic = null;
         let isMatch = false;
-        if (currentPlayingId) {
-            nowMusic = musics.find(m => extractYouTubeId(m.url) === currentPlayingId) || null;
-            isMatch = nowMusic ? extractYouTubeId(data.url) === currentPlayingId : false;
+        if (currentState.currentPlayingId) {
+            nowMusic = musics.find(m => extractYouTubeId(m.url) === currentState.currentPlayingId) || null;
+            isMatch = nowMusic ? extractYouTubeId(data.url) === currentState.currentPlayingId : false;
         } else {
             nowMusic = musics[0] || null;
             isMatch = nowMusic && nowMusic.url === data.url;
         }
-        console.log("[拡張機能] YouTube動画状態:", data, "再生中ID:", currentPlayingId, "isMatch:", isMatch);
+        console.log("[拡張機能] YouTube動画状態:", data, "再生中ID:", currentState.currentPlayingId, "isMatch:", isMatch);
         if (data.state === "window_close") {
-            lastYoutubeStatus = null;
+            currentState.lastYoutubeStatus = null;
             io.emit("current_youtube_status", { state: "window_close", url: data.url, match: isMatch, music: nowMusic });
         } else {
-            lastYoutubeStatus = {
+            currentState.lastYoutubeStatus = {
                 state: data.state,
                 url: data.url,
                 match: isMatch,
                 music: nowMusic,
             };
-            io.emit("current_youtube_status", lastYoutubeStatus);
+            io.emit("current_youtube_status", currentState.lastYoutubeStatus);
         }
     });
     socket.on("youtube_tab_closed", (data) => {
-        currentYoutubeState.state = "window_close";
-        currentYoutubeState.url = data.url;
+        currentState.currentYoutubeState.state = "window_close";
+        currentState.currentYoutubeState.url = data.url;
         const nowMusic = musics[0] || null;
         const isMatch = nowMusic && nowMusic.url === data.url;
         console.log("[拡張機能] YouTubeタブ閉じた:", data, "music.list[0]と一致:", isMatch);
-        lastYoutubeStatus = null;
+        currentState.lastYoutubeStatus = null;
         io.emit("current_youtube_status", { state: "window_close", url: data.url, match: isMatch, music: nowMusic });
     });
     socket
@@ -119,34 +116,34 @@ export function registerSocketHandlers(io: Server<C2S, S2C>, socket: Socket<C2S,
     socket.on("move_prev_video", (data) => {
         console.log("[拡張機能] move_prev_video受信:", data);
         const videoId = extractYouTubeId(data.url);
-        currentPlayingId = videoId;
+        currentState.currentPlayingId = videoId;
         const nowMusic = musics.find(m => extractYouTubeId(m.url) === videoId) || null;
         const isMatch = !!nowMusic;
-        currentYoutubeState.state = "prev_video";
-        currentYoutubeState.url = data.url;
-        lastYoutubeStatus = {
+        currentState.currentYoutubeState.state = "prev_video";
+        currentState.currentYoutubeState.url = data.url;
+        currentState.lastYoutubeStatus = {
             state: "prev_video",
             url: data.url,
             match: isMatch,
             music: nowMusic,
         };
-        io.emit("current_youtube_status", lastYoutubeStatus);
+        io.emit("current_youtube_status", currentState.lastYoutubeStatus);
     });
     socket.on("move_next_video", (data) => {
         console.log("[拡張機能] move_next_video受信:", data);
         const videoId = extractYouTubeId(data.url);
-        currentPlayingId = videoId;
+        currentState.currentPlayingId = videoId;
         const nowMusic = musics.find(m => extractYouTubeId(m.url) === videoId) || null;
         const isMatch = !!nowMusic;
-        currentYoutubeState.state = "next_video";
-        currentYoutubeState.url = data.url;
-        lastYoutubeStatus = {
+        currentState.currentYoutubeState.state = "next_video";
+        currentState.currentYoutubeState.url = data.url;
+        currentState.lastYoutubeStatus = {
             state: "next_video",
             url: data.url,
             match: isMatch,
             music: nowMusic,
         };
-        io.emit("current_youtube_status", lastYoutubeStatus);
+        io.emit("current_youtube_status", currentState.lastYoutubeStatus);
     });
     socket.on("disconnect", (reason) => {
         console.warn("[server] 拡張機能が切断:", socket.id, reason);
