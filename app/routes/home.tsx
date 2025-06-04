@@ -37,7 +37,7 @@ export default function Home() {
 
     return (
         <>
-          <div className={`relative flex flex-col items-center justify-center mt-4 gap-4 w-xl mx-auto ${darkClass}`}>
+          <div className={`relative flex flex-col items-center justify-center mt-4 gap-4 w-xl mx-auto ${darkClass}`} style={{ paddingBottom: '80px' }}>
             <SettingsButton onClick={handleSettingsButtonClick} />
             <SettingsPanel
                 open={settingsOpen}
@@ -84,7 +84,7 @@ export default function Home() {
                                                 href={music.url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="text-blue-500 hover:text-blue-700 hover:underline transition-colors cursor-pointer"
+                                                className="text-blue-500 hover:text-blue-700 hover:underline transition-colors cursor-pointer long-title"
                                                 title={`${music.title}（新しいタブで開く）`}
                                                 aria-label={`${music.title}を再生（新規タブで開く）`}
                                             >

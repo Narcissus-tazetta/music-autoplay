@@ -1,3 +1,8 @@
+.long-title {
+  white-space: normal;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
 /* ===== フッターのアニメーション ===== */
 .footer {
   transition: background 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1);
