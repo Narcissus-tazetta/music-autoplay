@@ -18,18 +18,22 @@ export const Footer: React.FC = () => {
     return () => observer.disconnect();
   }, []);
 
-  const bg = mode === 'dark' ? '#212225' : '#fff';
-  const fg = mode === 'dark' ? '#E8EAED' : '#212225';
-  const border = mode === 'dark' ? '#444' : '#e5e7eb';
+  // ゲーミング > ダーク > ノーマル
+  const theme = gamingAlinco || gamingNarcissus ? 'gaming' : mode;
+  const themeColors = theme === 'gaming'
+    ? { background: '#1a0033', text: '#fff', border: '#ff00cc' }
+    : (mode === 'dark'
+      ? { background: '#212225', text: '#E8EAED', border: '#444' }
+      : { background: '#fff', text: '#212225', border: '#e5e7eb' });
 
   return (
     <footer
       className="footer w-full py-2 flex flex-col items-center justify-center text-[11px] opacity-80 fixed left-0 bottom-0 z-50"
       style={{
-        background: bg,
-        color: fg,
+        background: themeColors.background,
+        color: themeColors.text,
         boxShadow: "0 -2px 12px 0 rgba(0,0,0,0.04)",
-        borderTop: `1px solid ${border}`,
+        borderTop: `1px solid ${themeColors.border}`,
         transition: "background 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1)",
       }}
     >
