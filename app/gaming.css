@@ -1,21 +1,24 @@
 /* alinco8 ゲーミングカラー */
-.gaming-color {
-  background: linear-gradient(270deg, #ff0057, #00ffea, #ffe600, #00ffea, #ff0057);
-  background-size: 200% 100%;
-  color: transparent !important;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: gaming-rainbow 3s linear infinite;
-}
+/* ゲーミングカラー: リンクが最優先で発色 */
 .gaming-links a {
-  background: linear-gradient(270deg, #ff0057, #00ffea, #ffe600, #00ffea, #ff0057);
-  background-size: 200% 100%;
-  color: transparent !important;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: gaming-rainbow 3s linear infinite;
+    background: linear-gradient(270deg, #ff0057, #00ffea, #ffe600, #00ffea, #ff0057) !important;
+    background-size: 200% 100% !important;
+    color: transparent !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    animation: gaming-rainbow 3s linear infinite !important;
+    z-index: 10 !important;
+    position: relative;
 }
-@keyframes gaming-rainbow {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 200% 50%; }
+.gaming-color {
+    background: linear-gradient(270deg, #ff0057, #00ffea, #ffe600, #00ffea, #ff0057);
+    background-size: 200% 100%;
+    color: transparent !important;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: gaming-rainbow 3s linear infinite;
 }
+  @keyframes gaming-rainbow {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+  }
