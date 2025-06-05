@@ -20,44 +20,40 @@ export function meta({}: Route.MetaArgs) {
 
 export default function Home() {
     // ゲーミングカラーモード（カスタムフックに分離）
-
     const gaming = useGamingToggle('-');
+
     const musics = useMusicStore((store) => store.musics);
     const error = useMusicStore((store) => store.error);
     const ytStatus = useYouTubeStatus();
+
+    // 設定パネルの開閉
     const [settingsOpen, setSettingsOpen] = useState(false);
     const { mode, setMode, darkClass } = useColorMode();
 
-    // 優先順位: ゲーミング > ダーク > ノーマル
-    const theme = gaming ? 'gaming' : mode;
-    const themeColors = theme === 'gaming'
-      ? { background: '#1a0033', text: '#fff', buttonBackground: '#ff00cc', buttonText: '#fff' }
-      : COLORS[mode];
-
+    // 設定ボタンのトグル動作に修正
     const handleSettingsButtonClick = () => {
       setSettingsOpen((prev) => !prev);
     };
 
     return (
         <>
-          <div className={`relative flex flex-col items-center justify-center mt-4 gap-4 w-xl mx-auto ${theme === 'gaming' ? 'gaming-links' : darkClass}`} style={{ paddingBottom: '80px', background: themeColors.background, color: themeColors.text }}>
+          <div className={`relative flex flex-col items-center justify-center mt-4 gap-4 w-xl mx-auto ${darkClass} ${gaming ? "gaming-links" : ""}`} style={{ paddingBottom: '80px' }}>
             <SettingsButton onClick={handleSettingsButtonClick} />
             <SettingsPanel
                 open={settingsOpen}
                 onClose={() => setSettingsOpen(false)}
                 mode={mode}
                 setMode={setMode}
-                gaming={gaming}
             />
             <h1
               className="text-2xl font-bold m-4"
               style={{
-                color: themeColors.text
+                color: mode === "dark" ? "#E8EAED" : "#212225"
               }}
             >
               楽曲リクエストフォーム
             </h1>
-            <HomeForm mode={theme} />
+            <HomeForm mode={mode} />
 
             {/* YouTube状態表示 */}
             <YouTubeStatus ytStatus={ytStatus} />

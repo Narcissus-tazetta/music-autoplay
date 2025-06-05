@@ -7,15 +7,10 @@ interface SettingsPanelProps {
   onClose: () => void;
   mode: "dark" | "light";
   setMode: (v: "dark" | "light") => void;
-  gaming?: boolean;
 }
 
-export const SettingsPanel: React.FC<SettingsPanelProps> = ({ open, onClose, mode, setMode, gaming }) => {
-  // ゲーミング > ダーク > ノーマル
-  const theme = gaming ? 'gaming' : mode;
-  const currentColors = theme === 'gaming'
-    ? { background: '#1a0033', text: '#fff', buttonBackground: '#ff00cc', buttonText: '#fff' }
-    : COLORS[mode];
+export const SettingsPanel: React.FC<SettingsPanelProps> = ({ open, onClose, mode, setMode }) => {
+  const currentColors = COLORS[mode];
   return (
     <div
       style={{
@@ -29,7 +24,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ open, onClose, mod
       }}
     >
       <div
-        className={`settings-panel h-full w-full flex flex-col p-6 relative ${theme}`}
+        className={`settings-panel h-full w-full flex flex-col p-6 relative ${mode}`}
         style={{
           transform: open ? "translateX(0)" : "translateX(100%)",
           boxShadow: open ? "-6px 0 24px #0002" : "none",
