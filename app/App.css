@@ -1,3 +1,13 @@
+/* ダークモード時のリンク色をシアンに */
+body.dark-mode a,
+.dark-mode a {
+  color: #D1B3FF !important;
+}
+
+body.dark-mode a:hover,
+.dark-mode a:hover {
+  color: #B698FF !important;
+}
 .long-title {
   white-space: normal;
   word-break: break-all;
