@@ -49,6 +49,19 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ open, onClose, mod
         <h2 className="text-xl font-bold mb-6">設定</h2>
         <div className="flex flex-col gap-4">
           <label className={`flex items-center gap-4 cursor-pointer py-2 ${mode === "dark" ? "text-white" : "text-black"}`}>
+            <span className="block font-medium">ダークモード</span>
+            <button
+              type="button"
+              aria-pressed={mode === "dark"}
+              onClick={() => setMode(mode === "dark" ? "light" : "dark")}
+              tabIndex={0}
+              className={`${mode === "dark" ? "bg-blue-600" : "bg-gray-200"} relative inline-flex h-[28px] w-[52px] items-center rounded-full transition-colors duration-200 ring-1 ring-zinc-600/5 outline-none`}
+            >
+              <span
+                className={`${mode === "dark" ? "translate-x-6" : "translate-x-1"} inline-block h-6 w-6 transform bg-white rounded-full transition-transform duration-200`}
+                style={{ background: mode === "dark" ? "#E8EAED" : "#fff" }}
+              ></span>
+            </button>
           </label>
         </div>
         {/* お問い合わせ先をパネルの最下部に絶対配置 */}
@@ -64,6 +77,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ open, onClose, mod
             boxSizing: "border-box",
           }}
         >
+          <div>
+            <span className="font-bold">お問い合わせ:</span>
+            <br />
+            📧 Gmail: <a href="mailto:clownfish11621@gmail.com" className="text-blue-500 hover:underline mx-1">clownfish11621@gmail.com</a> <br /> 💬 Slack: <a href="https://n-highschool.slack.com/team/U04VDPX7ZHV" className="text-blue-500 hover:underline mx-1">prason</a>
+            <br />
+            <span className="text-gray-500 text-[10px]">※エラーやバグのご報告、ご意見・ご要望は、以下のメールアドレスまたはSlackにてお気軽にご連絡ください。</span>
+          </div>
         </div>
       </div>
     </div>
