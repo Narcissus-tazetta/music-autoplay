@@ -10,8 +10,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./footer.css";
-@import "./gaming.css";
 @import "./darkmode.css";
+@import "./gaming.css";
 
 @custom-variant dark (&:is(.dark *));
 

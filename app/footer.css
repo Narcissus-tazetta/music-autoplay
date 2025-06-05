@@ -3,14 +3,6 @@
   transition: background 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1);
 }
 
-.footer-link-normal.gaming-color {
-  color: transparent !important;
-  background: linear-gradient(270deg, #ff0057, #00ffea, #ffe600, #00ffea, #ff0057);
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: gaming-rainbow 3s linear infinite;
-}
 .footer-link-normal {
   color: inherit !important;
 }
