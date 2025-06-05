@@ -1,3 +1,10 @@
+/* FooterのNarcissus-tazettaリンクだけはダークモードでも色を変えない */
+.footer-link-normal {
+  color: inherit !important;
+}
+.dark-mode .footer-link-normal {
+  color: inherit !important;
+}
 /* ダークモード時のリンク色をシアンに */
 body.dark-mode a,
 .dark-mode a {

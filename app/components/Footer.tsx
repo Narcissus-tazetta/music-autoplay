@@ -60,7 +60,7 @@ export const Footer: React.FC = () => {
     `}</style> */}
       </div>
       <div className="text-[10px] mt-1 opacity-70 select-none leading-tight">
-        &copy; {new Date().getFullYear()} <a href="https://github.com/Narcissus-tazetta" target="_blank" rel="noopener noreferrer">Narcissus-tazetta</a>
+        &copy; {new Date().getFullYear()} <a href="https://github.com/Narcissus-tazetta" target="_blank" rel="noopener noreferrer" className="footer-link-normal">Narcissus-tazetta</a>
       </div>
     </footer>
   );
