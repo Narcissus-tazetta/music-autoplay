@@ -1,6 +1,6 @@
 // 移動元: ../Footer.tsx
 import { useEffect, useState } from "react";
-import { useGamingToggle } from "../../hooks/use-gaming-toggle";
+import { useGamingToggle } from "~/hooks/use-gaming-toggle";
 
 export const Footer: React.FC = () => {
   const [mode, setMode] = useState<'dark' | 'light'>('light');

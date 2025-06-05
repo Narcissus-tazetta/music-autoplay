@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { changeMode, useSmoothBodyColor } from "../libs/utils";
+import { changeMode, useSmoothBodyColor } from "~/libs/utils";
 
 export function useColorMode() {
   const [mode, setModeState] = useState<"dark" | "light">("light");

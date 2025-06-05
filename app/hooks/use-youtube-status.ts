@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useMusicStore } from "../stores/musicStore";
+import { useMusicStore } from "~/stores/musicStore";
 
 export function useYouTubeStatus() {
   const socket = useMusicStore((store) => store.socket);

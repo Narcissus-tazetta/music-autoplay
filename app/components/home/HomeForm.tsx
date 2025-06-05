@@ -1,11 +1,11 @@
 // 移動元: ../HomeForm.tsx
 import React from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
-import { useMusicStore } from "../../stores/musicStore";
-import { parseYoutubeUrl, YOUTUBE_PATTERN } from "../../libs/utils";
+import { useMusicStore } from "~/stores/musicStore";
+import { parseYoutubeUrl, YOUTUBE_PATTERN } from "~/libs/utils";
 import convert from "convert-iso8601-duration";
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
+import { Input } from "~/components/ui/input";
+import { Button } from "~/components/ui/button";
 import { SendIcon } from "lucide-react";
 
 interface HomeFormProps {

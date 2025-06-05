@@ -1,17 +1,17 @@
 import { useState } from "react";
-import { useGamingToggle } from "../hooks/use-gaming-toggle";
-import { Footer } from "../components/footer/Footer";
-import { SettingsButton } from "../components/settings/SettingsButton";
-import { SettingsPanel } from "../components/settings/SettingsPanel";
-import { YouTubeStatus } from "../components/home/YouTubeStatus";
-import { HomeForm } from "../components/home/HomeForm";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "../components/ui/hover-card";
-import { useMusicStore } from "../stores/musicStore";
+import { useGamingToggle } from "~/hooks/use-gaming-toggle";
+import { Footer } from "~/components/footer/Footer";
+import { SettingsButton } from "~/components/settings/SettingsButton";
+import { SettingsPanel } from "~/components/settings/SettingsPanel";
+import { YouTubeStatus } from "~/components/home/YouTubeStatus";
+import { HomeForm } from "~/components/home/HomeForm";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "~/components/ui/hover-card";
+import { useMusicStore } from "~/stores/musicStore";
 import type { Route } from "./+types/home";
-import { COLORS } from "../libs/utils";
-import { useColorMode } from "../hooks/use-color-mode";
-import { useYouTubeStatus } from "../hooks/use-youtube-status";
+import { COLORS } from "~/libs/utils";
+import { useColorMode } from "~/hooks/use-color-mode";
+import { useYouTubeStatus } from "~/hooks/use-youtube-status";
 
 
 export function meta({}: Route.MetaArgs) {
