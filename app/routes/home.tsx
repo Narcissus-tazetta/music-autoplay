@@ -1,9 +1,10 @@
-import { Footer } from "../components/Footer";
 import { useState } from "react";
-import { SettingsButton } from "../components/SettingsButton";
-import { SettingsPanel } from "../components/SettingsPanel";
-import { YouTubeStatus } from "../components/YouTubeStatus";
-import { HomeForm } from "../components/HomeForm";
+import { useGamingToggle } from "../hooks/use-gaming-toggle";
+import { Footer } from "../components/footer/Footer";
+import { SettingsButton } from "../components/settings/SettingsButton";
+import { SettingsPanel } from "../components/settings/SettingsPanel";
+import { YouTubeStatus } from "../components/home/YouTubeStatus";
+import { HomeForm } from "../components/home/HomeForm";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "../components/ui/hover-card";
 import { useMusicStore } from "../stores/musicStore";
@@ -14,17 +15,16 @@ import { useYouTubeStatus } from "../hooks/use-youtube-status";
 
 
 export function meta({}: Route.MetaArgs) {
-    return [{ title: "Music Auto Play" }, { name: "description", content: "Welcome to Music Auto Play!" }];
+    return [{ title: "音楽リクエストフォーム" }, { name: "description", content: "浜松キャンパスの音楽リクエストフォームです。" }];
 }
 
 export default function Home() {
+    // ゲーミングカラーモード（カスタムフックに分離）
+    const gaming = useGamingToggle('-');
 
     const musics = useMusicStore((store) => store.musics);
     const error = useMusicStore((store) => store.error);
     const ytStatus = useYouTubeStatus();
-
-
-
 
     // 設定パネルの開閉
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -37,7 +37,7 @@ export default function Home() {
 
     return (
         <>
-          <div className={`relative flex flex-col items-center justify-center mt-4 gap-4 w-xl mx-auto ${darkClass}`} style={{ paddingBottom: '80px' }}>
+          <div className={`relative flex flex-col items-center justify-center mt-4 gap-4 w-xl mx-auto ${darkClass} ${gaming ? "gaming-links" : ""}`} style={{ paddingBottom: '80px' }}>
             <SettingsButton onClick={handleSettingsButtonClick} />
             <SettingsPanel
                 open={settingsOpen}

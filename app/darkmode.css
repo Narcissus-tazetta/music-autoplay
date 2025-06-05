@@ -1,0 +1,20 @@
+/* ダークモード専用の上書きスタイル */
+body.dark-mode a,
+.dark-mode a {
+  color: #D1B3FF !important;
+}
+body.dark-mode a:hover,
+.dark-mode a:hover {
+  color: #B698FF !important;
+}
+.dark-mode .footer-link-normal {
+  color: inherit !important;
+}
+body.dark-mode {
+  background-color: #212225 !important;
+  color: #E8EAED !important;
+}
+body.light-mode {
+  background-color: #fff !important;
+  color: #212225 !important;
+}

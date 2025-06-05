@@ -1,10 +1,4 @@
-import { useForm, type SubmitHandler } from "react-hook-form";
-import { Input } from "./ui/input";
-import { Button } from "./ui/button";
-import { SendIcon } from "lucide-react";
-import { useMusicStore } from "../stores/musicStore";
-import { parseYoutubeUrl, YOUTUBE_PATTERN } from "../libs/utils";
-import convert from "convert-iso8601-duration";
+// 移動元: ../HomeForm.tsx
 import React from "react";
 
 interface HomeFormProps {
@@ -57,13 +51,7 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode }) => {
         body: formData,
       });
       const text = await res.text();
-      if (!res.ok) {
-        setError("url", {
-          type: "manual",
-          message: text || "動画情報の取得に失敗しました",
-        });
-        return;
-      }
+      if (!res.ok) { /* ... */ }
       assets = JSON.parse(text);
     } catch (e) {
       setError("url", {
@@ -95,38 +83,6 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode }) => {
 
   return (
     <form className="flex flex-col items-center gap-4" onSubmit={handleSubmit(onSubmit)}>
-      <div className="w-full flex flex-col items-center">
-        <Input
-          className="w-[500px]"
-          {...register("url", {
-            required: "URLを入力してください",
-            pattern: {
-              value: YOUTUBE_PATTERN,
-              message: "有効なYouTubeのURLを入力してください"
-            },
-            onChange() {
-              useMusicStore.getState().resetError();
-            },
-          })}
-          autoComplete="off"
-          placeholder="例：https://www.youtube.com/watch?v=..."
-          aria-label="YouTubeのURL"
-        />
-        <p className="text-red-500 text-sm">{error}</p>
-        {errors.url && <p className="text-red-500 text-sm">{errors.url?.message}</p>}
-      </div>
-      <Button
-        type="submit"
-        className="flex w-xs gap-2"
-        style={{
-          background: mode === "dark" ? "#E8EAED" : "#212225",
-          color: mode === "dark" ? "#212225" : "#fff",
-          border: "none"
-        }}
-      >
-        <SendIcon size={12} />
-        <p>送信</p>
-      </Button>
     </form>
   );
 };

@@ -1,7 +1,11 @@
+// 移動元: ../Footer.tsx
 import { useEffect, useState } from "react";
+import { useGamingToggle } from "../../hooks/use-gaming-toggle";
 
 export const Footer: React.FC = () => {
   const [mode, setMode] = useState<'dark' | 'light'>('light');
+  const gamingAlinco = useGamingToggle('^');
+  const gamingNarcissus = useGamingToggle('¥');
 
   useEffect(() => {
     const updateMode = () => {
@@ -33,34 +37,16 @@ export const Footer: React.FC = () => {
         supported by{" "}
         <a
           href="https://github.com/alinco8"
-          className="text-blue-500 hover:underline mx-1 gaming-hover"
+          className={`text-blue-500 hover:underline mx-1${gamingAlinco ? " gaming-color" : ""}`}
           target="_blank"
           rel="noopener noreferrer"
           style={{ transition: "color 0.2s" }}
         >
           alinco8
         </a>
-    {/* <style>{`
-      .gaming-hover:hover {
-        background: linear-gradient(270deg, #ff0057, #00ffea, #ffe600, #00ffea, #ff0057);
-        background-size: 200% 100%;
-        color: transparent !important;
-        -webkit-background-clip: text;
-        background-clip: text;
-        animation: gaming-rainbow 3s linear infinite;
-      }
-      @keyframes gaming-rainbow {
-        0% {
-        background-position: 0% 50%;
-        }
-        100% {
-        background-position: 200% 50%;
-        }
-      }
-    `}</style> */}
       </div>
       <div className="text-[10px] mt-1 opacity-70 select-none leading-tight">
-        &copy; {new Date().getFullYear()} <a href="https://github.com/Narcissus-tazetta" target="_blank" rel="noopener noreferrer" className="footer-link-normal">Narcissus-tazetta</a>
+        &copy; {new Date().getFullYear()} <a href="https://github.com/Narcissus-tazetta" target="_blank" rel="noopener noreferrer" className={`footer-link-normal${gamingNarcissus ? " gaming-color" : ""}`}>Narcissus-tazetta</a>
       </div>
     </footer>
   );

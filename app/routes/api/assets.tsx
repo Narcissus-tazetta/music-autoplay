@@ -44,7 +44,13 @@ export const action = async ({ request }: Route.ActionArgs) => {
         "official",
         "label",
         "ミュージック",
-        "mv"
+        "mv",
+        "op",
+        "ed",
+        "ライブ",
+        "live",
+        "ost",
+        "soundtrack",
     ];
     const lower = (s: string) => s.toLowerCase();
     const text = `${title} ${description} ${channelTitle}`.toLowerCase();

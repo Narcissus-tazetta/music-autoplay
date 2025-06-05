@@ -1,31 +1,17 @@
-/* FooterのNarcissus-tazettaリンクだけはダークモードでも色を変えない */
-.footer-link-normal {
-  color: inherit !important;
-}
-.dark-mode .footer-link-normal {
-  color: inherit !important;
-}
-/* ダークモード時のリンク色をシアンに */
-body.dark-mode a,
-.dark-mode a {
-  color: #D1B3FF !important;
-}
-
-body.dark-mode a:hover,
-.dark-mode a:hover {
-  color: #B698FF !important;
-}
+/* ゲーミングカラー・フッター・ダークモード系は各専用CSSに分離済み */
+/* 共通・全体・テーマ・YouTube状態・設定パネル・テーブル等のみ残す */
+/* ===== 長いタイトル用 ===== */
 .long-title {
   white-space: normal;
   word-break: break-all;
   overflow-wrap: anywhere;
 }
-/* ===== フッターのアニメーション ===== */
-.footer {
-  transition: background 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1);
-}
+/* ===== フッターのアニメーションはfooter.cssに移動 ===== */
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./footer.css";
+@import "./gaming.css";
+@import "./darkmode.css";
 
 @custom-variant dark (&:is(.dark *));
 
