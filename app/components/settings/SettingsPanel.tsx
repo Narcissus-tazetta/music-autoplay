@@ -1,5 +1,6 @@
 // 移動元: ../SettingsPanel.tsx
 import React from "react";
+import { COLORS } from "../../libs/utils";
 
 interface SettingsPanelProps {
   open: boolean;
