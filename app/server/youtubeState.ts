@@ -1,4 +1,3 @@
-// YouTube状態管理用（内容はserver.tsから移植、ロジックは一切変更しない）
 import type { Music } from "~/stores/musicStore";
 
 export const currentState = {
