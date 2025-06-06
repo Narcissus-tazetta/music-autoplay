@@ -117,6 +117,7 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode, onAdminModeChange }) =
           aria-label="YouTubeのURL"
         />
         {errors.url && <p className="text-red-500 text-sm">{errors.url?.message}</p>}
+        {!errors.url && error && <p className="text-red-500 text-sm">{error}</p>}
       </div>
       <Button
         type="submit"
