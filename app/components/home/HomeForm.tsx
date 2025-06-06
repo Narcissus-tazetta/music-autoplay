@@ -1,3 +1,4 @@
+
 // 移動元: ../HomeForm.tsx
 import React from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
@@ -10,13 +11,14 @@ import { SendIcon } from "lucide-react";
 
 interface HomeFormProps {
   mode: "dark" | "light";
+  onAdminModeChange?: (isAdmin: boolean) => void;
 }
 
 interface Inputs {
   url: string;
 }
 
-export const HomeForm: React.FC<HomeFormProps> = ({ mode }) => {
+export const HomeForm: React.FC<HomeFormProps> = ({ mode, onAdminModeChange }) => {
   const musics = useMusicStore((store) => store.musics);
   const error = useMusicStore((store) => store.error);
 
@@ -27,9 +29,16 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode }) => {
     setError,
     formState: { errors },
   } = useForm<Inputs>();
+  // isAdmin状態は親(Home)で管理
 
   // フォーム送信処理
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
+    const url = data.url.trim();
+    if (url.toLowerCase() === 'admin') {
+      if (onAdminModeChange) onAdminModeChange(true);
+      resetField("url");
+      return;
+    }
     if (musics.length >= 50) {
       setError("url", {
         type: "manual",
@@ -37,8 +46,6 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode }) => {
       });
       return;
     }
-
-    const url = data.url;
     const videoId = parseYoutubeUrl(url);
     if (videoId === null) {
       setError("url", {
@@ -47,10 +54,8 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode }) => {
       });
       return;
     }
-
     const formData = new FormData();
     formData.append("videoId", videoId);
-
     let assets: any = null;
     try {
       const res = await fetch("/api/assets", {
@@ -73,7 +78,6 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode }) => {
       });
       return;
     }
-
     if (convert(assets.length) > 60 * 10) {
       setError("url", {
         type: "onChange",
@@ -81,7 +85,6 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode }) => {
       });
       return;
     }
-
     if (!assets.isMusic) {
       setError("url", {
         type: "onChange",
@@ -89,7 +92,6 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode }) => {
       });
       return;
     }
-
     useMusicStore.getState().addMusic({ url, title: assets.title, thumbnail: assets.thumbnail });
     resetField("url");
   };
@@ -100,10 +102,11 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode }) => {
         <Input
           className="w-[500px]"
           {...register("url", {
-            required: "URLを入力してください",
-            pattern: {
-              value: YOUTUBE_PATTERN,
-              message: "有効なYouTubeのURLを入力してください"
+            validate: (value) => {
+              if (value.trim().toLowerCase() === 'admin') return true;
+              if (!value) return "URLを入力してください";
+              if (!YOUTUBE_PATTERN.test(value)) return "有効なYouTubeのURLを入力してください";
+              return true;
             },
             onChange() {
               useMusicStore.getState().resetError();
@@ -113,7 +116,6 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode }) => {
           placeholder="例：https://www.youtube.com/watch?v=..."
           aria-label="YouTubeのURL"
         />
-        <p className="text-red-500 text-sm">{error}</p>
         {errors.url && <p className="text-red-500 text-sm">{errors.url?.message}</p>}
       </div>
       <Button

@@ -5,6 +5,8 @@ import { SettingsButton } from "~/components/settings/SettingsButton";
 import { SettingsPanel } from "~/components/settings/SettingsPanel";
 import { YouTubeStatus } from "~/components/home/YouTubeStatus";
 import { HomeForm } from "~/components/home/HomeForm";
+import { Button } from "~/components/ui/button";
+import { TrashIcon } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "~/components/ui/hover-card";
 import { useMusicStore } from "~/stores/musicStore";
@@ -19,6 +21,7 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
+    const [isAdmin, setIsAdmin] = useState(false);
     // ゲーミングカラーモード（カスタムフックに分離）
     const gaming = useGamingToggle('-');
 
@@ -53,7 +56,7 @@ export default function Home() {
             >
               楽曲リクエストフォーム
             </h1>
-            <HomeForm mode={mode} />
+            <HomeForm mode={mode} onAdminModeChange={setIsAdmin} />
 
             {/* YouTube状態表示 */}
             <YouTubeStatus ytStatus={ytStatus} />
@@ -94,6 +97,19 @@ export default function Home() {
                                                 <img src={music.thumbnail} alt={`${music.title}のサムネイル`} />
                                             </HoverCardContent>
                                         </HoverCard>
+                                        {isAdmin && (
+                                          <Button
+                                            type="button"
+                                            size="icon"
+                                            style={{ color: '#fff', background: '#dc2626' }}
+                                            aria-label="この曲を削除"
+                                            onClick={() => {
+                                              useMusicStore.getState().socket.emit('delete_url', music.url);
+                                            }}
+                                          >
+                                            <TrashIcon size={16} />
+                                          </Button>
+                                        )}
                                     </div>
                                 </TableCell>
                             </TableRow>
