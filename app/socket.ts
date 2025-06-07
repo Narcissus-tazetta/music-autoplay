@@ -25,9 +25,11 @@ export interface C2S {
     // URLリスト機能
     get_urls(): void;
     submit_url(url: string): void;
-    delete_url(url: string): void;
+    delete_url(url: string | { url: string }): void;
 
     // YouTube拡張: クライアント→サーバー
     youtube_video_state(data: { state: string; url: string }): void;
     youtube_tab_closed(data: { url: string }): void;
+    move_prev_video(data: { url: string }): void;
+    move_next_video(data: { url: string }): void;
 }

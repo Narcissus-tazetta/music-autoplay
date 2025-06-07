@@ -60,17 +60,26 @@ export function registerSocketHandlers(io: Server<C2S, S2C>, socket: Socket<C2S,
         io.emit("current_youtube_status", { state: "window_close", url: data.url, match: isMatch, music: nowMusic });
     });
     socket
-        .on("addMusic", (music, error) => {
+        .on("addMusic", (music, callback) => {
             // YouTube動画IDで重複判定（現在のmusicsのみ）
             const newId = extractYouTubeId(music.url);
             const exists = musics.some(m => extractYouTubeId(m.url) === newId);
+            
             if (!exists) {
                 console.log("addMusic", music);
                 musics.push(music);
                 console.log("[server] url_list emit(addMusic):", musics);
                 io.emit("url_list", musics);
+                
+                // 成功時はエラーなしでコールバック実行
+                if (typeof callback === 'function') {
+                    callback();
+                }
             } else {
-                error("この楽曲はすでにリクエストされています");
+                // エラー時はエラーメッセージでコールバック実行
+                if (typeof callback === 'function') {
+                    callback("この楽曲はすでにリクエストされています");
+                }
             }
         })
         .on("deleteMusic", (url) => {
@@ -99,7 +108,7 @@ export function registerSocketHandlers(io: Server<C2S, S2C>, socket: Socket<C2S,
     });
     socket.on("delete_url", (data) => {
         console.log("[server] delete_url受信:", data, "from", socket.id);
-        const url = typeof data === "string" ? data : data?.url;
+        const url = typeof data === "string" ? data : (data as { url: string }).url;
         const targetId = extractYouTubeId(url);
         console.log("[server] delete_url処理: 受信URL=", url, "抽出ID=", targetId);
         console.log("[server] delete_url処理: 現在のmusics=", musics.map(m => ({ url: m.url, id: extractYouTubeId(m.url) })));
