@@ -135,33 +135,6 @@ body {
   transition: background-color 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1);
 }
 
-.youtube-status-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  max-width: 900px;
-  min-width: 320px;
-  padding: 10px 20px;
-  border-radius: var(--radius-xl, 12px);
-  border: 1.5px solid;
-  font-weight: bold;
-  gap: 0;
-}
-
-.youtube-title {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 650px;
-  display: inline-block;
-  color: #3b82f6;
-  transition: color 0.2s ease-in-out;
-}
-.youtube-title:hover {
-  color: #2563eb;
-}
-
 /* ===== ダーク・ライトモード body色 ===== */
 body.dark-mode {
   background-color: #212225 !important;
@@ -198,35 +171,66 @@ body.light-mode {
   color: #212225 !important;
 }
 
-/* ===== YouTube状態ごとの色 ===== */
+/* ===== YouTube状態表示コンテナ ===== */
+.youtube-status-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 900px;
+  min-width: 320px;
+  padding: 10px 20px;
+  border-radius: var(--radius-xl, 12px);
+  border: 1.5px solid;
+  font-weight: bold;
+  gap: 0;
+}
 
-/* ===== YouTube状態ごとの色（ダーク・ライト両対応） ===== */
+.youtube-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 650px;
+  display: inline-block;
+  color: #3b82f6;
+  transition: color 0.2s ease-in-out;
+}
+.youtube-title:hover {
+  color: #2563eb;
+}
+
+/* YouTube状態ごとの色（ライトモード） */
 .youtube-status-playing {
-  background-color: var(--status-playing-bg, #f0fdf4);
-  border-color: var(--status-playing-border, #22c55e);
-  color: var(--status-playing-text, #166534);
-}
-.youtube-status-paused {
-  background-color: var(--status-paused-bg, #fff7ed);
-  border-color: var(--status-paused-border, #f59e42);
-  color: var(--status-paused-text, #c2410c);
-}
-.youtube-status-closed {
-  background-color: var(--status-closed-bg, #f3f4f6);
-  border-color: var(--status-closed-border, #94a3b8);
-  color: var(--status-closed-text, #334155);
+  background-color: #f0fdf4;
+  border-color: #22c55e;
+  color: #166534;
 }
 
+.youtube-status-paused {
+  background-color: #fff7ed;
+  border-color: #f59e42;
+  color: #c2410c;
+}
+
+.youtube-status-closed {
+  background-color: #f3f4f6;
+  border-color: #94a3b8;
+  color: #334155;
+}
+
+/* YouTube状態ごとの色（ダークモード） */
 body.dark-mode .youtube-status-playing {
   background-color: #26302a;
   border-color: #22c55e;
   color: #7fffa1;
 }
+
 body.dark-mode .youtube-status-paused {
   background-color: #3a3227;
   border-color: #f59e42;
   color: #ffd7a0;
 }
+
 body.dark-mode .youtube-status-closed {
   background-color: #23272e;
   border-color: #94a3b8;
@@ -234,128 +238,11 @@ body.dark-mode .youtube-status-closed {
 }
 
 /* ===== テーブル・リストのホバー背景色無効化 ===== */
-td, td:hover, tr:hover, table:hover, table tr:hover {
-  background-color: transparent !important;
-  transition: none !important;
-}
-
-.youtube-status-container.light {
-  background-color: #fff;
-  color: #212225;
-}
-
-/* 状態表示コンテナ */
-.youtube-status-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    max-width: 900px;
-    min-width: 320px;
-    padding: 10px 20px;
-    border-radius: 12px;
-    border: 1.5px solid;
-    font-weight: bold;
-    gap: 0px; /* 間隔を減らす */
-}
-
-/* 状態ごとのスタイル */
-.youtube-status-playing {
-    background-color: #f0fdf4;
-    border-color: #22c55e;
-    color: #166534;
-}
-
-.youtube-status-paused {
-    background-color: #fff7ed;
-    border-color: #f59e42;
-    color: #c2410c;
-}
-
-.youtube-status-closed {
-    background-color: #f3f4f6;
-    border-color: #94a3b8;
-    color: #334155;
-}
-
-/* タイトル部分 */
-.youtube-title {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 650px;
-    display: inline-block;
-    color: #3b82f6;
-    transition: color 0.2s ease-in-out;
-}
-
-.youtube-title:hover {
-    color: #2563eb;
-}
-
-/* ダーク・ライト切り替え時のbodyアニメーション */
-body {
-  transition: background-color 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1);
-}
-
-/* 設定パネルの背景・テキスト色もアニメーション */
-.settings-panel {
-  transition: background 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1);
-}
-
-/* ダークモード用クラス */
-body.dark-mode {
-  background-color: #212225 !important;
-  color: #E8EAED !important;
-}
-body.light-mode {
-  background-color: #fff !important;
-  color: #212225 !important;
-}
-
-/* 設定パネルの色切り替え */
-.settings-panel.dark {
-  background: #212225 !important;
-  color: #E8EAED !important;
-}
-.settings-panel.light {
-  background: #fff !important;
-  color: #212225 !important;
-}
-
-/* 楽曲ヘッダー用アニメーション */
-.table-head-animated {
-  transition: background-color 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1);
-}
-.table-head-dark {
-  background-color: #212225 !important;
-  color: #E8EAED !important;
-}
-.table-head-light {
-  background-color: #fff !important;
-  color: #212225 !important;
-}
-
-/* <td>要素のホバー時の背景色を完全に無効化 */
-td {
-  background-color: transparent !important; /* デフォルトの背景色を透明に */
-  transition: none !important; /* アニメーションを無効化 */
-}
-
-td:hover, tr:hover {
-  background-color: transparent !important; /* 背景色を完全に無効化 */
-}
-
-/* <tr>要素のホバー時の背景色を無効化 */
-tr:hover {
-  background-color: transparent !important; /* ホバー時も背景色を変えない */
-}
-
-/* table全体のホバー背景色を無効化 */
-table:hover {
-  background-color: transparent !important;
-}
-
+td, 
+td:hover, 
+tr:hover, 
+table:hover, 
 table tr:hover {
   background-color: transparent !important;
+  transition: none !important;
 }
