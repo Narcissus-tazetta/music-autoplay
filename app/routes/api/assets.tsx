@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import type { Route } from "./+types/assets";
+import { keywords } from "./keywords";
 
 export const action = async ({ request }: Route.ActionArgs) => {
     const formData = await request.formData();
@@ -36,22 +37,6 @@ export const action = async ({ request }: Route.ActionArgs) => {
     if (isAgeRestricted) {
         return new Response("年齢制限付き動画は登録できません", { status: 400 });
     }
-    // 判定キーワード
-    const keywords = [
-        "music",
-        "音楽",
-        "records",
-        "official",
-        "label",
-        "ミュージック",
-        "mv",
-        "op",
-        "ed",
-        "ライブ",
-        "live",
-        "ost",
-        "soundtrack",
-    ];
     const lower = (s: string) => s.toLowerCase();
     const text = `${title} ${description} ${channelTitle}`.toLowerCase();
     const hasKeyword = keywords.some((kw) => text.includes(kw.toLowerCase()));
