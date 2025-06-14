@@ -13,7 +13,7 @@ export const action = async ({ request }: Route.ActionArgs) => {
     const res = await google
         .youtube({
             version: "v3",
-            auth: import.meta.env.VITE_YOUTUBE_API_KEY,
+            auth: process.env.YOUTUBE_API_KEY,
         })
         .videos.list({
             id: [videoId],
