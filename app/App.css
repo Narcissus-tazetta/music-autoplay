@@ -218,6 +218,19 @@ body.light-mode {
   color: #334155;
 }
 
+/* リスト外動画用の色（ライトモード） */
+.youtube-status-unlisted.youtube-status-playing {
+  background-color: #faf5ff;
+  border-color: #a855f7;
+  color: #7c2d92;
+}
+
+.youtube-status-unlisted.youtube-status-paused {
+  background-color: #f0f9ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
 /* YouTube状態ごとの色（ダークモード） */
 body.dark-mode .youtube-status-playing {
   background-color: #26302a;
@@ -235,6 +248,19 @@ body.dark-mode .youtube-status-closed {
   background-color: #23272e;
   border-color: #94a3b8;
   color: #bfc9d1;
+}
+
+/* リスト外動画用の色（ダークモード） */
+body.dark-mode .youtube-status-unlisted.youtube-status-playing {
+  background-color: #332a3f;
+  border-color: #a855f7;
+  color: #d8b4fe;
+}
+
+body.dark-mode .youtube-status-unlisted.youtube-status-paused {
+  background-color: #1e3a8a;
+  border-color: #3b82f6;
+  color: #93c5fd;
 }
 
 /* ===== テーブル・リストのホバー背景色無効化 ===== */

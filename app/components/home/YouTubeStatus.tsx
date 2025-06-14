@@ -6,6 +6,7 @@ import { Textfit } from "react-textfit";
 interface YouTubeStatusProps {
   ytStatus: {
     state: 'playing' | 'paused' | 'window_close';
+    match: boolean;
     music: {
       url: string;
       title: string;
@@ -16,23 +17,32 @@ interface YouTubeStatusProps {
 
 export const YouTubeStatus: React.FC<YouTubeStatusProps> = ({ ytStatus }) => {
   if (!ytStatus || !ytStatus.music) return null;
-  const { state, music } = ytStatus;
+  const { state, match, music } = ytStatus;
   let stateLabel = "";
   let containerClass = "youtube-status-container youtube-status-closed";
+  
   if (state === "playing") {
     stateLabel = "再生中";
-    containerClass = "youtube-status-container youtube-status-playing";
+    containerClass = match 
+      ? "youtube-status-container youtube-status-playing"
+      : "youtube-status-container youtube-status-playing youtube-status-unlisted";
   } else if (state === "paused") {
     stateLabel = "停止中";
-    containerClass = "youtube-status-container youtube-status-paused";
+    containerClass = match
+      ? "youtube-status-container youtube-status-paused"
+      : "youtube-status-container youtube-status-paused youtube-status-unlisted";
   } else if (state === "window_close") {
     stateLabel = "タブが閉じました";
   }
+
+  // リスト外動画の場合はラベルにインジケーターを追加
+  const displayLabel = match ? stateLabel : `${stateLabel} (リスト外)`;
+  
   return (
     <div className="w-full flex items-center justify-center my-2">
       <div className={containerClass}>
         <Textfit mode="single" max={22} min={1} style={{ marginRight: "2px" }}>
-          {stateLabel}：
+          {displayLabel}：
         </Textfit>
         <HoverCard>
           <HoverCardTrigger

@@ -8,9 +8,14 @@ import type { C2S, S2C } from "~/socket";
 import { musics, clients } from "./youtubeState";
 import { registerSocketHandlers } from "./socketHandlers";
 
+// 環境変数を明示的に読み込み
+import dotenv from "dotenv";
+dotenv.config();
+
 console.log("🚀 Starting Music Auto-Play Server...");
 console.log(`📋 Environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`🔧 Node.js: ${process.version}`);
+console.log(`🔑 YouTube API Key: ${process.env.YOUTUBE_API_KEY ? '✅ Loaded' : '❌ Missing'}`);
 
 let reactRouterHandler: any;
 let viteDevServer: any = undefined;

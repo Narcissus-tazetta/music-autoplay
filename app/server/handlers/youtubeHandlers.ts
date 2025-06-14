@@ -2,12 +2,13 @@ import type { Server, Socket } from "socket.io";
 import type { C2S, S2C } from "~/socket";
 import { musics, currentState } from "../youtubeState";
 import { extractYouTubeId } from "../utils";
+import { fetchVideoInfo } from "../youtubeApi";
 
 export function registerYouTubeHandlers(
   io: Server<C2S, S2C>,
   socket: Socket<C2S, S2C>
 ) {
-  socket.on("youtube_video_state", (data) => {
+  socket.on("youtube_video_state", async (data) => {
     currentState.currentYoutubeState.state = data.state;
     currentState.currentYoutubeState.url = data.url;
     if (data.state === "playing") {
@@ -35,6 +36,31 @@ export function registerYouTubeHandlers(
       isMatch = nowMusic && nowMusic.url === data.url;
     }
 
+    // リスト外動画の場合、YouTube APIで情報を取得
+    if (!isMatch && data.url) {
+      const videoId = extractYouTubeId(data.url);
+      if (videoId) {
+        console.log(`🔍 Fetching info for unlisted video: ${videoId}`);
+        const videoInfo = await fetchVideoInfo(videoId);
+        if (videoInfo) {
+          nowMusic = {
+            url: data.url,
+            title: videoInfo.title,
+            thumbnail: videoInfo.thumbnail,
+          };
+          console.log(`📺 Got unlisted video: "${videoInfo.title}"`);
+        } else {
+          // API取得に失敗した場合の代替表示
+          nowMusic = {
+            url: data.url,
+            title: "Unknown Video",
+            thumbnail: "",
+          };
+          console.log(`❓ Could not fetch video info for: ${videoId}`);
+        }
+      }
+    }
+
     console.log(`▶️  YouTube: ${data.state} | Match: ${isMatch ? '✅' : '❌'}`);
 
     if (data.state === "window_close") {
@@ -56,11 +82,38 @@ export function registerYouTubeHandlers(
     }
   });
 
-  socket.on("youtube_tab_closed", (data) => {
+  socket.on("youtube_tab_closed", async (data) => {
     currentState.currentYoutubeState.state = "window_close";
     currentState.currentYoutubeState.url = data.url;
-    const nowMusic = musics[0] || null;
-    const isMatch = nowMusic && nowMusic.url === data.url;
+    
+    let nowMusic = musics[0] || null;
+    let isMatch = nowMusic && nowMusic.url === data.url;
+    
+    // リスト外動画の場合、YouTube APIで情報を取得
+    if (!isMatch && data.url) {
+      const videoId = extractYouTubeId(data.url);
+      if (videoId) {
+        console.log(`🔍 Fetching info for closed unlisted video: ${videoId}`);
+        const videoInfo = await fetchVideoInfo(videoId);
+        if (videoInfo) {
+          nowMusic = {
+            url: data.url,
+            title: videoInfo.title,
+            thumbnail: videoInfo.thumbnail,
+          };
+          console.log(`📺 Got closed unlisted video: "${videoInfo.title}"`);
+        } else {
+          // API取得に失敗した場合の代替表示
+          nowMusic = {
+            url: data.url,
+            title: "Unknown Video",
+            thumbnail: "",
+          };
+          console.log(`❓ Could not fetch closed video info for: ${videoId}`);
+        }
+      }
+    }
+    
     console.log(`❌ YouTube tab closed | Match: ${isMatch ? '✅' : '❌'}`);
     currentState.lastYoutubeStatus = null;
     io.emit("current_youtube_status", {
