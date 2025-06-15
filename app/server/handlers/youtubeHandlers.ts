@@ -3,6 +3,7 @@ import type { C2S, S2C } from "~/socket";
 import { musics, currentState } from "../youtubeState";
 import { extractYouTubeId } from "../utils";
 import { fetchVideoInfo } from "../youtubeApi";
+import { log } from "../logger";
 
 export function registerYouTubeHandlers(
   io: Server<C2S, S2C>,
@@ -58,7 +59,7 @@ export function registerYouTubeHandlers(
       }
     }
 
-    console.log(`▶️  YouTube: ${data.state} | Match: ${isMatch ? '✅' : '❌'}`);
+    log.youtube(`▶️  YouTube: ${data.state} | Match: ${isMatch ? '✅' : '❌'}`);
 
     if (data.state === "window_close") {
       currentState.lastYoutubeStatus = null;
@@ -90,7 +91,7 @@ export function registerYouTubeHandlers(
     if (!isMatch && data.url) {
       const videoId = extractYouTubeId(data.url);
       if (videoId) {
-        console.log(`🔍 Fetching info for closed unlisted video: ${videoId}`);
+        log.youtube(`🔍 Fetching info for closed unlisted video: ${videoId}`);
         const videoInfo = await fetchVideoInfo(videoId);
         if (videoInfo) {
           nowMusic = {
@@ -98,7 +99,7 @@ export function registerYouTubeHandlers(
             title: videoInfo.title,
             thumbnail: videoInfo.thumbnail,
           };
-          console.log(`📺 Got closed unlisted video: "${videoInfo.title}"`);
+          log.youtube(`📺 Got closed unlisted video: "${videoInfo.title}"`);
         } else {
           // API取得に失敗した場合の代替表示
           nowMusic = {
@@ -106,12 +107,12 @@ export function registerYouTubeHandlers(
             title: "Unknown Video",
             thumbnail: "",
           };
-          console.log(`❓ Could not fetch closed video info for: ${videoId}`);
+          log.youtube(`❓ Could not fetch closed video info for: ${videoId}`);
         }
       }
     }
     
-    console.log(`❌ YouTube tab closed | Match: ${isMatch ? '✅' : '❌'}`);
+    log.youtube(`❌ YouTube tab closed | Match: ${isMatch ? '✅' : '❌'}`);
     currentState.lastYoutubeStatus = null;
     io.emit("current_youtube_status", {
       state: "window_close",

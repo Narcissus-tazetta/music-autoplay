@@ -3,6 +3,7 @@ import type { C2S, S2C } from "~/socket";
 import type { Music } from "~/stores/musicStore";
 import { musics } from "../youtubeState";
 import { extractYouTubeId } from "../utils";
+import { log } from "../logger";
 
 export function registerMusicHandlers(
   io: Server<C2S, S2C>,
@@ -14,7 +15,7 @@ export function registerMusicHandlers(
     const exists = musics.some((m) => extractYouTubeId(m.url) === newId);
 
     if (!exists) {
-      console.log(`🎵 Added: "${music.title}" (${musics.length + 1} total)`);
+      log.info(`🎵 Added: "${music.title}" (${musics.length + 1} total)`);
       musics.push(music);
       io.emit("url_list", musics);
 
@@ -34,17 +35,17 @@ export function registerMusicHandlers(
     const idx = musics.findIndex((m) => m.url === url);
     if (idx !== -1) {
       const removed = musics.splice(idx, 1)[0];
-      console.log(`🗑️  Removed: "${removed.title}" (${musics.length} total)`);
+      log.info(`🗑️  Removed: "${removed.title}" (${musics.length} total)`);
       io.emit("deleteMusic", removed.url);
     }
   });
 
   // 初期リスト送信
-  console.log(`📋 Sent ${musics.length} songs to ${socket.id.substring(0, 8)}...`);
+  log.socket(`📋 Sent ${musics.length} songs to ${socket.id.substring(0, 8)}...`);
   socket.emit("url_list", musics);
 
   socket.on("get_urls", () => {
-    console.log(`📋 Sent ${musics.length} songs to ${socket.id.substring(0, 8)}...`);
+    log.socket(`📋 Sent ${musics.length} songs to ${socket.id.substring(0, 8)}...`);
     socket.emit("url_list", musics);
   });
 
@@ -52,7 +53,7 @@ export function registerMusicHandlers(
     if (!url || musics.some((item) => item.url === url)) return;
     const videoData = { url, title: "", thumbnail: "" };
     musics.push(videoData);
-    console.log(`📎 URL submitted: ${musics.length} total`);
+    log.info(`📎 URL submitted: ${musics.length} total`);
     io.emit("url_list", musics);
     io.emit("new_url", videoData);
   });
@@ -66,7 +67,7 @@ export function registerMusicHandlers(
     );
     if (index !== -1) {
       const removed = musics.splice(index, 1)[0];
-      console.log(`🗑️  Deleted: "${removed.title}" (${musics.length} total)`);
+      log.info(`🗑️  Deleted: "${removed.title}" (${musics.length} total)`);
       io.emit("url_list", musics);
       io.emit("delete_url", url);
       io.emit("new_url", musics[0] || null);

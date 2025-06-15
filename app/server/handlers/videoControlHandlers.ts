@@ -2,13 +2,14 @@ import type { Server, Socket } from "socket.io";
 import type { C2S, S2C } from "~/socket";
 import { musics, currentState } from "../youtubeState";
 import { extractYouTubeId } from "../utils";
+import { log } from "../logger";
 
 export function registerVideoControlHandlers(
   io: Server<C2S, S2C>,
   socket: Socket<C2S, S2C>
 ) {
   socket.on("move_prev_video", (data: { url: string }) => {
-    console.log("⏮️  Previous video");
+    log.info("⏮️  Previous video");
     const videoId = extractYouTubeId(data.url);
     currentState.currentPlayingId = videoId;
     const nowMusic =
@@ -26,7 +27,7 @@ export function registerVideoControlHandlers(
   });
 
   socket.on("move_next_video", (data: { url: string }) => {
-    console.log("⏭️  Next video");
+    log.info("⏭️  Next video");
     const videoId = extractYouTubeId(data.url);
     currentState.currentPlayingId = videoId;
     const nowMusic =

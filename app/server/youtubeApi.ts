@@ -2,16 +2,17 @@ import { google } from "googleapis";
 import dotenv from "dotenv";
 import { DailyApiCounter } from "./apiCounter";
 import { VideoInfoCache, type YouTubeVideoInfo } from "./videoCache";
+import { log } from "./logger";
 
 // 念のため環境変数を確実に読み込み
 dotenv.config();
 
 // 環境変数の確認（起動時のみ）
 const apiKey = process.env.YOUTUBE_API_KEY;
-console.log("🔑 YouTube API Key status:", apiKey ? "✅ Available" : "❌ Missing");
+log.youtube(`🔑 YouTube API Key status: ${apiKey ? "✅ Available" : "❌ Missing"}`);
 if (apiKey) {
-  console.log("🔑 API Key length:", apiKey.length);
-  console.log("🔑 API Key prefix:", apiKey.substring(0, 10) + "...");
+  log.debug(`🔑 API Key length: ${apiKey.length}`);
+  log.debug(`🔑 API Key prefix: ${apiKey.substring(0, 10)}...`);
 }
 
 const youtube = google.youtube({
@@ -33,20 +34,20 @@ export async function fetchVideoInfo(videoId: string): Promise<YouTubeVideoInfo 
   // キャッシュチェック
   const cachedInfo = videoCache.get(videoId);
   if (cachedInfo) {
-    console.log(`💾 Using cached info for: ${videoId}`);
+    log.debug(`💾 Using cached info for: ${videoId}`);
     return cachedInfo;
   }
 
   // YouTube API キーが設定されていない場合はスキップ
   if (!process.env.YOUTUBE_API_KEY) {
-    console.warn(`⚠️  YouTube API Key not configured, skipping video info fetch for: ${videoId}`);
+    log.warn(`⚠️  YouTube API Key not configured, skipping video info fetch for: ${videoId}`);
     return null;
   }
 
   try {
     // API使用量をカウント
     const currentCount = apiCounter.increment();
-    console.log(`🌐 Fetching from YouTube API: ${videoId} (今日の使用回数: ${currentCount})`);
+    log.youtube(`🌐 Fetching from YouTube API: ${videoId} (今日の使用回数: ${currentCount})`);
     
     const response = await youtube.videos.list({
       part: ["snippet", "contentDetails"],
@@ -55,7 +56,7 @@ export async function fetchVideoInfo(videoId: string): Promise<YouTubeVideoInfo 
 
     const video = response.data.items?.[0];
     if (!video) {
-      console.warn(`📺 Video not found: ${videoId}`);
+      log.warn(`📺 Video not found: ${videoId}`);
       return null;
     }
 
@@ -63,7 +64,7 @@ export async function fetchVideoInfo(videoId: string): Promise<YouTubeVideoInfo 
     const contentDetails = video.contentDetails;
 
     if (!snippet || !contentDetails) {
-      console.warn(`📺 Incomplete video data: ${videoId}`);
+      log.warn(`📺 Incomplete video data: ${videoId}`);
       return null;
     }
 
@@ -120,12 +121,12 @@ export async function fetchVideoInfo(videoId: string): Promise<YouTubeVideoInfo 
 
     // キャッシュに保存
     videoCache.set(videoId, videoInfo);
-    console.log(`💾 Cached video info: "${title}" (cache size: ${videoCache.size()})`);
+    log.debug(`💾 Cached video info: "${title}" (cache size: ${videoCache.size()})`);
 
     return videoInfo;
 
   } catch (error) {
-    console.error(`❌ Failed to fetch video info for ${videoId}:`, error);
+    log.error(`❌ Failed to fetch video info for ${videoId}:`, error);
     return null;
   }
 }

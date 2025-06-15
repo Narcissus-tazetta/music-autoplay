@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { log } from "./logger";
 
 interface ApiUsageData {
   count: number;
@@ -31,7 +32,7 @@ export class DailyApiCounter {
     this.loadFromFile();
     // 初期化時に日付チェックを実行
     this.resetIfNewDay();
-    console.log(`📁 API counter: ${this.count} calls today (${this.lastResetDate})`);
+    log.apiUsage(`📁 API counter: ${this.count} calls today (${this.lastResetDate})`);
     
     // 定期的な保存（開発環境では30秒、本番環境では10秒）
     const saveInterval = process.env.NODE_ENV === 'production' ? 10000 : 30000;
@@ -63,7 +64,7 @@ export class DailyApiCounter {
         this.lastResetDate = "";
       }
     } catch (error) {
-      console.warn("⚠️  Failed to load API usage data:", error);
+      log.warn("⚠️  Failed to load API usage data:", error);
       this.count = 0;
       this.lastResetDate = "";
     }
@@ -94,14 +95,14 @@ export class DailyApiCounter {
       
       this.lastSaveTime = now;
     } catch (error) {
-      console.warn("⚠️  Failed to save API usage data:", error);
+      log.warn("⚠️  Failed to save API usage data:", error);
     }
   }
 
   private resetIfNewDay(): void {
     const today = this.getTodayDateString();
     if (this.lastResetDate !== today) {
-      console.log(`🔄 New day detected! Resetting API count from ${this.count} to 0`);
+      log.apiUsage(`🔄 New day detected! Resetting API count from ${this.count} to 0`);
       this.count = 0;
       this.lastResetDate = today;
       this.saveToFile(true);
@@ -133,7 +134,7 @@ export class DailyApiCounter {
       this.saveInterval = null;
     }
     this.saveToFile();
-    console.log(`🧹 API counter cleanup completed`);
+    log.apiUsage(`🧹 API counter cleanup completed`);
   }
 }
 

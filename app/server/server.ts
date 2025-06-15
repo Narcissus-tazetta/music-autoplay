@@ -2,37 +2,43 @@ import { createRequestHandler } from "@react-router/express";
 import compression from "compression";
 import cors from "cors";
 import express from "express";
-import morgan from "morgan";
 import { Server } from "socket.io";
 import type { C2S, S2C } from "~/socket";
 import { musics, clients } from "./youtubeState";
 import { registerSocketHandlers } from "./socketHandlers";
 import { displayApiUsageStats } from "./apiUsageDisplay";
+import { log } from "./logger";
+import { httpLogger } from "./httpLogger";
 
 // 環境変数を明示的に読み込み
 import dotenv from "dotenv";
 dotenv.config();
 
-console.log("🚀 Starting Music Auto-Play Server...");
-console.log(`📋 Environment: ${process.env.NODE_ENV || 'development'}`);
-console.log(`🔧 Node.js: ${process.version}`);
-console.log(`🔑 YouTube API Key: ${process.env.YOUTUBE_API_KEY ? '✅ Loaded' : '❌ Missing'}`);
+log.server("🚀 Starting Music Auto-Play Server...");
+log.server(`📋 Environment: ${process.env.NODE_ENV || 'development'}`);
+log.server(`🔧 Node.js: ${process.version}`);
+log.server(`🔑 YouTube API Key: ${process.env.YOUTUBE_API_KEY ? '✅ Loaded' : '❌ Missing'}`);
 
 // APIカウンターの状態を起動時に確認・表示
 import { getTodaysApiUsage } from "./apiCounter";
 const apiUsage = getTodaysApiUsage();
-console.log(`📊 Today's API Usage: ${apiUsage.count} calls`);
+log.apiUsage(`📊 Today's API Usage: ${apiUsage.count} calls`);
+
+// Winstonフォーマットテスト
+log.server("=== WINSTON FORMAT TEST ===");
+log.youtube("TEST: YouTube API Key status: ✅ Available");
+log.apiUsage("TEST: API counter test");
 
 let reactRouterHandler: any;
 let viteDevServer: any = undefined;
 if (process.env.NODE_ENV === "production") {
-  console.log("📦 Loading production build...");
+  log.server("📦 Loading production build...");
   // 本番はビルド成果物のSSRハンドラを関数としてrequire
   const ssrBuild = require("../../build/server/index.js");
   reactRouterHandler = createRequestHandler({ build: ssrBuild });
-  console.log("✅ Production build loaded successfully");
+  log.server("✅ Production build loaded successfully");
 } else {
-  console.log("🔄 Setting up Vite development server...");
+  log.server("🔄 Setting up Vite development server...");
   // 開発はVite SSR
   viteDevServer = await import("vite").then((vite) =>
     vite.createServer({ server: { middlewareMode: true } })
@@ -40,14 +46,14 @@ if (process.env.NODE_ENV === "production") {
   reactRouterHandler = createRequestHandler({
     build: () => viteDevServer.ssrLoadModule("virtual:react-router/server-build"),
   });
-  console.log("✅ Vite development server configured");
+  log.server("✅ Vite development server configured");
 }
 
 const port = process.env.PORT || 3000;
-console.log(`🌐 Port: ${port}`);
+log.server(`🌐 Port: ${port}`);
 
 const app = express();
-console.log("⚙️  Configuring middleware...");
+log.server("⚙️  Configuring middleware...");
 
 app.use(cors());
 app.use((req, res, next) => {
@@ -56,42 +62,42 @@ app.use((req, res, next) => {
     res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, access_token");
     next();
 });
-console.log("🔐 CORS and security headers configured");
+log.server("🔐 CORS and security headers configured");
 
 const server = app.listen(port, () => {
-    console.log(`🎵 Music Auto-Play Server [${process.env.NODE_ENV || 'development'}] running at http://localhost:${port} | Socket.IO enabled | ${new Date().toLocaleString('ja-JP')}`);
-    console.log(`📊 Memory usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
-    console.log("🎯 Ready to accept connections!");
+    log.server(`🎵 Music Auto-Play Server [${process.env.NODE_ENV || 'development'}] running at http://localhost:${port} | Socket.IO enabled | ${new Date().toLocaleString('ja-JP')}`);
+    log.server(`📊 Memory usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
+    log.server("🎯 Ready to accept connections!");
 });
 
 app.use(compression());
 app.disable("x-powered-by");
-console.log("📦 Compression enabled, x-powered-by header disabled");
+log.server("📦 Compression enabled, x-powered-by header disabled");
 
 if (viteDevServer) {
     app.use(viteDevServer.middlewares);
-    console.log("🔧 Vite middleware attached");
+    log.server("🔧 Vite middleware attached");
 } else {
     app.use("/assets", express.static("build/client/assets", { immutable: true, maxAge: "1y" }));
-    console.log("📁 Static assets serving configured (production)");
+    log.server("📁 Static assets serving configured (production)");
 }
 
 app.use(express.static("build/client", { maxAge: "1h" }));
-app.use(morgan("tiny"));
-console.log("📝 Static file serving and request logging configured");
+app.use(httpLogger);
+log.server("📝 Static file serving and HTTP logging configured");
 
 app.all("*splat", reactRouterHandler);
-console.log("🛣️  React Router handler configured");
+log.server("🛣️  React Router handler configured");
 
 const io = new Server<C2S, S2C>(server);
-console.log("🔌 Socket.IO server initialized");
+log.server("🔌 Socket.IO server initialized");
 
 io.on("connection", (socket) => {
-    console.log(`👤 Client connected: ${socket.id.substring(0, 8)}...`);
+    log.socket(`👤 Client connected: ${socket.id.substring(0, 8)}...`);
     registerSocketHandlers(io, socket, clients);
 });
 
 // API使用量を表示
 displayApiUsageStats();
 
-console.log("🎉 Server initialization complete!");
+log.server("🎉 Server initialization complete!");
