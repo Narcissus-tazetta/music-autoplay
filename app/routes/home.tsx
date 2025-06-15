@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useGamingToggle } from "~/hooks/use-gaming-toggle";
 import { Footer } from "~/components/footer/Footer";
 import { SettingsButton } from "~/components/settings/SettingsButton";
@@ -27,7 +27,13 @@ export default function Home() {
 
     const musics = useMusicStore((store) => store.musics);
     const error = useMusicStore((store) => store.error);
+    const initializeSocket = useMusicStore((store) => store.initializeSocket);
     const ytStatus = useYouTubeStatus();
+
+    // Socket初期化
+    useEffect(() => {
+        initializeSocket();
+    }, [initializeSocket]);
 
     // 設定パネルの開閉
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -104,7 +110,7 @@ export default function Home() {
                                             style={{ color: '#fff', background: '#dc2626' }}
                                             aria-label="この曲を削除"
                                             onClick={() => {
-                                              useMusicStore.getState().socket.emit('delete_url', music.url);
+                                              useMusicStore.getState().deleteMusic(music.url);
                                             }}
                                           >
                                             <TrashIcon size={16} />

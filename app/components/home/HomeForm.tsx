@@ -21,6 +21,8 @@ interface Inputs {
 export const HomeForm: React.FC<HomeFormProps> = ({ mode, onAdminModeChange }) => {
   const musics = useMusicStore((store) => store.musics);
   const error = useMusicStore((store) => store.error);
+  const addMusic = useMusicStore((store) => store.addMusic);
+  const resetError = useMusicStore((store) => store.resetError);
 
   const {
     register,
@@ -56,7 +58,12 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode, onAdminModeChange }) =
     }
     const formData = new FormData();
     formData.append("videoId", videoId);
-    let assets: any = null;
+    let assets: {
+      title: string;
+      thumbnail: string;
+      length: string;
+      isMusic: boolean;
+    } | null = null;
     try {
       const res = await fetch("/api/assets", {
         method: "POST",
@@ -78,6 +85,15 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode, onAdminModeChange }) =
       });
       return;
     }
+    
+    if (!assets) {
+      setError("url", {
+        type: "manual",
+        message: "動画情報の取得に失敗しました",
+      });
+      return;
+    }
+    
     if (convert(assets.length) > 60 * 10) {
       setError("url", {
         type: "onChange",
@@ -92,7 +108,7 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode, onAdminModeChange }) =
       });
       return;
     }
-    useMusicStore.getState().addMusic({ url, title: assets.title, thumbnail: assets.thumbnail });
+    addMusic({ url, title: assets.title, thumbnail: assets.thumbnail });
     resetField("url");
   };
 
@@ -109,7 +125,7 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode, onAdminModeChange }) =
               return true;
             },
             onChange() {
-              useMusicStore.getState().resetError();
+              resetError();
             },
           })}
           autoComplete="off"
