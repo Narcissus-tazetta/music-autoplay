@@ -1,11 +1,15 @@
-FROM oven/bun:1.2.13@sha256:a02c6162266611419fd84c8f96dbdbf3029532e2491314dee5172a27223e5428 AS build
+FROM node:18-alpine AS build
 WORKDIR /app
-COPY bun.lock package.json tsconfig.json ./
-RUN bun i --frozen-lockfile
+COPY package.json package-lock.json tsconfig.json ./
+RUN npm ci --legacy-peer-deps
 COPY . .
-RUN bun run build
+RUN npm run build
 
-FROM oven/bun:1.2.13@sha256:a02c6162266611419fd84c8f96dbdbf3029532e2491314dee5172a27223e5428
+FROM node:18-alpine
 WORKDIR /app
-COPY --from=build /app /app
-CMD [ "bun", "start" ]
+COPY --from=build /app/build ./build
+COPY --from=build /app/package.json ./
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/app ./app
+EXPOSE 3000
+CMD [ "npm", "start" ]
