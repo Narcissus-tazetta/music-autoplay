@@ -12,7 +12,7 @@ interface YouTubeStatusProps {
       title: string;
       thumbnail: string;
     } | null;
-  };
+  } | null;
 }
 
 export const YouTubeStatus: React.FC<YouTubeStatusProps> = ({ ytStatus }) => {

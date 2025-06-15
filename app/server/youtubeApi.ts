@@ -126,7 +126,9 @@ export async function fetchVideoInfo(videoId: string): Promise<YouTubeVideoInfo 
     return videoInfo;
 
   } catch (error) {
-    log.error(`❌ Failed to fetch video info for ${videoId}:`, error);
+    log.error(`❌ Failed to fetch video info for ${videoId}:`, 
+      error instanceof Error ? error : new Error(String(error))
+    );
     return null;
   }
 }

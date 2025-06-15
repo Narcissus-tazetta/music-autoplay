@@ -64,7 +64,9 @@ export class DailyApiCounter {
         this.lastResetDate = "";
       }
     } catch (error) {
-      log.warn("⚠️  Failed to load API usage data:", error);
+      log.warn("⚠️  Failed to load API usage data:", { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       this.count = 0;
       this.lastResetDate = "";
     }
@@ -95,7 +97,9 @@ export class DailyApiCounter {
       
       this.lastSaveTime = now;
     } catch (error) {
-      log.warn("⚠️  Failed to save API usage data:", error);
+      log.warn("⚠️  Failed to save API usage data:", { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
     }
   }
 

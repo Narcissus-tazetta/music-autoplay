@@ -3,6 +3,8 @@ import compression from "compression";
 import cors from "cors";
 import express from "express";
 import { Server } from "socket.io";
+import type { ViteDevServer } from "vite";
+import type { Express, RequestHandler } from "express";
 import type { C2S, S2C } from "~/socket";
 import { musics, clients } from "./youtubeState";
 import { registerSocketHandlers } from "./socketHandlers";
@@ -29,8 +31,8 @@ log.server("=== WINSTON FORMAT TEST ===");
 log.youtube("TEST: YouTube API Key status: ✅ Available");
 log.apiUsage("TEST: API counter test");
 
-let reactRouterHandler: any;
-let viteDevServer: any = undefined;
+let reactRouterHandler: RequestHandler;
+let viteDevServer: ViteDevServer | undefined = undefined;
 if (process.env.NODE_ENV === "production") {
   log.server("📦 Loading production build...");
   // 本番はビルド成果物のSSRハンドラを関数としてrequire
@@ -39,12 +41,13 @@ if (process.env.NODE_ENV === "production") {
   log.server("✅ Production build loaded successfully");
 } else {
   log.server("🔄 Setting up Vite development server...");
-  // 開発はVite SSR
+  // 開発はVite SSR - 型安全性のため一時的にanyを使用
   viteDevServer = await import("vite").then((vite) =>
     vite.createServer({ server: { middlewareMode: true } })
-  );
+  ) as ViteDevServer;
+  
   reactRouterHandler = createRequestHandler({
-    build: () => viteDevServer.ssrLoadModule("virtual:react-router/server-build"),
+    build: () => viteDevServer!.ssrLoadModule("virtual:react-router/server-build") as any,
   });
   log.server("✅ Vite development server configured");
 }

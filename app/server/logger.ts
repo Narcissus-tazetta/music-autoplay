@@ -1,4 +1,5 @@
 import winston from "winston";
+import type { LogData } from "./types";
 
 /**
  * Winstonロガー設定
@@ -90,61 +91,61 @@ export function createContextLogger(context: string) {
  */
 export const log = {
   // 一般的な情報ログ
-  info: (message: string, data?: any, ...args: any[]) => {
-    const logData: any = {};
+  info: (message: string, data?: LogData, ...args: unknown[]) => {
+    const logData: LogData = {};
     if (data !== undefined) logData.data = data;
     if (args.length > 0) logData.extra = args;
     logger.info(message, logData);
   },
   
   // 警告ログ
-  warn: (message: string, data?: any, ...args: any[]) => {
-    const logData: any = {};
+  warn: (message: string, data?: LogData, ...args: unknown[]) => {
+    const logData: LogData = {};
     if (data !== undefined) logData.data = data;
     if (args.length > 0) logData.extra = args;
     logger.warn(message, logData);
   },
   
   // エラーログ
-  error: (message: string, error?: any, ...args: any[]) => {
-    const logData: any = {};
+  error: (message: string, error?: Error | LogData, ...args: unknown[]) => {
+    const logData: LogData = {};
     if (error !== undefined) logData.error = error;
     if (args.length > 0) logData.extra = args;
     logger.error(message, logData);
   },
   
   // デバッグログ（開発時のみ）
-  debug: (message: string, data?: any, ...args: any[]) => {
-    const logData: any = {};
+  debug: (message: string, data?: LogData, ...args: unknown[]) => {
+    const logData: LogData = {};
     if (data !== undefined) logData.data = data;
     if (args.length > 0) logData.extra = args;
     logger.debug(message, logData);
   },
   
   // サーバー状態ログ
-  server: (message: string, data?: any) => {
-    const logData: any = { component: "server" };
+  server: (message: string, data?: LogData) => {
+    const logData: LogData = { component: "server" };
     if (data !== undefined) logData.data = data;
     logger.info(`🖥️  ${message}`, logData);
   },
   
   // YouTube API関連ログ
-  youtube: (message: string, data?: any) => {
-    const logData: any = { component: "youtube" };
+  youtube: (message: string, data?: LogData) => {
+    const logData: LogData = { component: "youtube" };
     if (data !== undefined) logData.data = data;
     logger.info(`📺 ${message}`, logData);
   },
   
   // Socket.IO関連ログ
-  socket: (message: string, data?: any) => {
-    const logData: any = { component: "socket" };
+  socket: (message: string, data?: LogData) => {
+    const logData: LogData = { component: "socket" };
     if (data !== undefined) logData.data = data;
     logger.info(`🔌 ${message}`, logData);
   },
   
   // API使用量ログ
-  apiUsage: (message: string, data?: any) => {
-    const logData: any = { component: "api-usage" };
+  apiUsage: (message: string, data?: LogData) => {
+    const logData: LogData = { component: "api-usage" };
     if (data !== undefined) logData.data = data;
     logger.info(`📊 ${message}`, logData);
   },

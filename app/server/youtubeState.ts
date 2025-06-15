@@ -1,9 +1,11 @@
 import type { Music } from "~/stores/musicStore";
+import type { AppState, ClientsMap } from "./types";
 
-export const currentState = {
+export const currentState: AppState = {
   currentYoutubeState: { state: "", url: "" },
-  lastYoutubeStatus: null as any,
-  currentPlayingId: null as string | null,
+  lastYoutubeStatus: null,
+  currentPlayingId: null,
 };
+
 export const musics: Music[] = [];
-export const clients = new Map();
+export const clients: ClientsMap = new Map();
