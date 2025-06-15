@@ -1,10 +1,12 @@
 import { google } from "googleapis";
 import dotenv from "dotenv";
+import { DailyApiCounter } from "./apiCounter";
+import { VideoInfoCache, type YouTubeVideoInfo } from "./videoCache";
 
 // 念のため環境変数を確実に読み込み
 dotenv.config();
 
-// 環境変数の確認（詳細版）
+// 環境変数の確認（起動時のみ）
 const apiKey = process.env.YOUTUBE_API_KEY;
 console.log("🔑 YouTube API Key status:", apiKey ? "✅ Available" : "❌ Missing");
 if (apiKey) {
@@ -17,63 +19,12 @@ const youtube = google.youtube({
   auth: process.env.YOUTUBE_API_KEY,
 });
 
-export interface YouTubeVideoInfo {
-  title: string;
-  thumbnail: string;
-  length: number;
-  isMusic: boolean;
-}
-
-// 改良されたキャッシュ（複数件、TTL付き）
-interface CachedVideoInfo {
-  info: YouTubeVideoInfo;
-  timestamp: number;
-}
-
-class VideoInfoCache {
-  private cache = new Map<string, CachedVideoInfo>();
-  private readonly maxSize = 50; // 最大50件
-  private readonly ttl = 30 * 60 * 1000; // 30分
-
-  get(videoId: string): YouTubeVideoInfo | null {
-    const cached = this.cache.get(videoId);
-    if (!cached) return null;
-
-    // TTL チェック
-    if (Date.now() - cached.timestamp > this.ttl) {
-      this.cache.delete(videoId);
-      return null;
-    }
-
-    return cached.info;
-  }
-
-  set(videoId: string, info: YouTubeVideoInfo): void {
-    // キャッシュサイズ制限
-    if (this.cache.size >= this.maxSize) {
-      // 最も古いエントリを削除（LRU風）
-      const oldestKey = this.cache.keys().next().value;
-      if (oldestKey) {
-        this.cache.delete(oldestKey);
-      }
-    }
-
-    this.cache.set(videoId, {
-      info,
-      timestamp: Date.now(),
-    });
-  }
-
-  clear(): void {
-    this.cache.clear();
-  }
-
-  size(): number {
-    return this.cache.size;
-  }
-}
-
+// キャッシュとカウンターのインスタンス
 const videoCache = new VideoInfoCache();
+const apiCounter = DailyApiCounter.getInstance();
+
+// YouTubeVideoInfoインターフェースを再エクスポート
+export type { YouTubeVideoInfo } from "./videoCache";
 
 /**
  * YouTube動画IDから動画情報を取得（キャッシュ付き）
@@ -93,7 +44,9 @@ export async function fetchVideoInfo(videoId: string): Promise<YouTubeVideoInfo 
   }
 
   try {
-    console.log(`🌐 Fetching from YouTube API: ${videoId}`);
+    // API使用量をカウント
+    const currentCount = apiCounter.increment();
+    console.log(`🌐 Fetching from YouTube API: ${videoId} (今日の使用回数: ${currentCount})`);
     
     const response = await youtube.videos.list({
       part: ["snippet", "contentDetails"],
@@ -175,4 +128,14 @@ export async function fetchVideoInfo(videoId: string): Promise<YouTubeVideoInfo 
     console.error(`❌ Failed to fetch video info for ${videoId}:`, error);
     return null;
   }
+}
+
+/**
+ * 今日のAPI使用量を取得
+ */
+export function getTodaysApiUsage(): { count: number; date: string } {
+  return {
+    count: apiCounter.getCount(),
+    date: apiCounter.getResetDate() || new Date().toISOString().split('T')[0]
+  };
 }

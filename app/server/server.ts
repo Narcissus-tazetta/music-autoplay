@@ -7,6 +7,7 @@ import { Server } from "socket.io";
 import type { C2S, S2C } from "~/socket";
 import { musics, clients } from "./youtubeState";
 import { registerSocketHandlers } from "./socketHandlers";
+import { displayApiUsageStats } from "./apiUsageDisplay";
 
 // 環境変数を明示的に読み込み
 import dotenv from "dotenv";
@@ -16,6 +17,11 @@ console.log("🚀 Starting Music Auto-Play Server...");
 console.log(`📋 Environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`🔧 Node.js: ${process.version}`);
 console.log(`🔑 YouTube API Key: ${process.env.YOUTUBE_API_KEY ? '✅ Loaded' : '❌ Missing'}`);
+
+// APIカウンターの状態を起動時に確認・表示
+import { getTodaysApiUsage } from "./apiCounter";
+const apiUsage = getTodaysApiUsage();
+console.log(`📊 Today's API Usage: ${apiUsage.count} calls`);
 
 let reactRouterHandler: any;
 let viteDevServer: any = undefined;
@@ -84,5 +90,8 @@ io.on("connection", (socket) => {
     console.log(`👤 Client connected: ${socket.id.substring(0, 8)}...`);
     registerSocketHandlers(io, socket, clients);
 });
+
+// API使用量を表示
+displayApiUsageStats();
 
 console.log("🎉 Server initialization complete!");

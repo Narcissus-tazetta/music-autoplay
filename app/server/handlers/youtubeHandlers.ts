@@ -40,7 +40,6 @@ export function registerYouTubeHandlers(
     if (!isMatch && data.url) {
       const videoId = extractYouTubeId(data.url);
       if (videoId) {
-        console.log(`🔍 Fetching info for unlisted video: ${videoId}`);
         const videoInfo = await fetchVideoInfo(videoId);
         if (videoInfo) {
           nowMusic = {
@@ -48,7 +47,6 @@ export function registerYouTubeHandlers(
             title: videoInfo.title,
             thumbnail: videoInfo.thumbnail,
           };
-          console.log(`📺 Got unlisted video: "${videoInfo.title}"`);
         } else {
           // API取得に失敗した場合の代替表示
           nowMusic = {
@@ -56,7 +54,6 @@ export function registerYouTubeHandlers(
             title: "Unknown Video",
             thumbnail: "",
           };
-          console.log(`❓ Could not fetch video info for: ${videoId}`);
         }
       }
     }
