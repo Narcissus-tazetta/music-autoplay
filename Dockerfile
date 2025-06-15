@@ -1,7 +1,9 @@
 FROM node:18-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json tsconfig.json ./
-RUN npm ci --legacy-peer-deps
+RUN npm cache clean --force
+RUN rm -rf node_modules package-lock.json
+RUN npm install --legacy-peer-deps
 COPY . .
 RUN npm run build
 

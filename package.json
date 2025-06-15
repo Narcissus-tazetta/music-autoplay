@@ -83,6 +83,7 @@
         "cross-env": "^7.0.3",
         "immer": "^10.1.1",
         "morgan": "^1.10.0",
+        "rollup": "^4.10.0",
         "socket.io-client": "^4.8.1",
         "tailwindcss": "^4.1.4",
         "tw-animate-css": "^1.3.0",
