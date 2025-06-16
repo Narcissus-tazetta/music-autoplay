@@ -38,8 +38,8 @@ export const action = async ({ request }: Route.ActionArgs) => {
     return new Response("年齢制限付き動画は登録できません", { status: 400 });
   }
   const lower = (s: string) => s.toLowerCase();
-  const text = `${title} ${description} ${channelTitle}`.toLowerCase();
-  const hasKeyword = keywords.some((kw) => text.includes(kw.toLowerCase()));
+  const text = lower(`${title} ${description} ${channelTitle}`);
+  const hasKeyword = keywords.some((kw) => text.includes(lower(kw)));
   const isMusic = snippet?.categoryId === "10" || hasKeyword;
 
   return { title, thumbnail, length, isMusic };

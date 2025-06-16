@@ -45,7 +45,7 @@ export function changeMode(mode: "dark" | "light") {
 
 // YouTube URLパターンとパース関数
 export const YOUTUBE_PATTERN =
-  /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/i;
+  /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/ ]{11})/i;
 export function parseYoutubeUrl(url: string): string | null {
   return url.match(YOUTUBE_PATTERN)?.[1] ?? null;
 }

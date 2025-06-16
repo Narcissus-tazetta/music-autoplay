@@ -6,7 +6,7 @@ import { Server } from "socket.io";
 import type { ViteDevServer } from "vite";
 import type { RequestHandler } from "express";
 import type { C2S, S2C } from "~/socket";
-import { musics, clients } from "./youtubeState";
+import { clients } from "./youtubeState";
 import { registerSocketHandlers } from "./socketHandlers";
 import { displayApiUsageStats } from "./apiUsageDisplay";
 import { log } from "./logger";

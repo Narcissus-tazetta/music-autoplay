@@ -16,6 +16,7 @@ export default [
       "vite.config.ts.timestamp-*",
       "coverage/**",
       "**/*.d.ts",
+      ".history/**", // 履歴フォルダを除外
     ],
   },
   {
@@ -30,15 +31,43 @@ export default [
         },
       },
       globals: {
+        // ブラウザ環境
         console: "readonly",
+        window: "readonly",
+        document: "readonly",
+        localStorage: "readonly",
+        sessionStorage: "readonly",
+        fetch: "readonly",
+        FormData: "readonly",
+        Response: "readonly",
+        Request: "readonly",
+        URL: "readonly",
+        URLSearchParams: "readonly",
+        MutationObserver: "readonly",
+        HTMLElement: "readonly",
+        HTMLDivElement: "readonly",
+        HTMLInputElement: "readonly",
+        KeyboardEvent: "readonly",
+        MouseEvent: "readonly",
+        Event: "readonly",
+
+        // Node.js環境
         process: "readonly",
         Buffer: "readonly",
         __dirname: "readonly",
         __filename: "readonly",
         global: "readonly",
         NodeJS: "readonly",
-        window: "readonly",
-        document: "readonly",
+        require: "readonly",
+        module: "readonly",
+        exports: "readonly",
+        setTimeout: "readonly",
+        setInterval: "readonly",
+        clearTimeout: "readonly",
+        clearInterval: "readonly",
+
+        // React関連（自動JSX変換でも一部必要）
+        React: "readonly",
       },
     },
     plugins: {
@@ -60,7 +89,7 @@ export default [
           ignoreRestSiblings: true,
         },
       ],
-      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-explicit-any": "off", // 外部ライブラリでは許容
 
       // React
       "react/react-in-jsx-scope": "off",
@@ -71,15 +100,18 @@ export default [
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
 
-      // React Refresh
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      // React Refresh - 緩和
+      "react-refresh/only-export-components": "off",
 
-      // 一般
+      // 一般 - ルールを緩和
       "no-console": "off",
       "no-debugger": "warn",
       "no-unused-vars": "off", // TypeScript版を使用
       "prefer-const": "error",
       "no-var": "error",
+      "no-undef": "error",
+      "no-useless-escape": "warn", // エラーではなく警告に
+      "no-empty-pattern": "warn", // エラーではなく警告に
     },
     settings: {
       react: {

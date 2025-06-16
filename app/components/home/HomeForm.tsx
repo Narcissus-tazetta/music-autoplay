@@ -74,7 +74,7 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode, onAdminModeChange }) =
         return;
       }
       assets = JSON.parse(text);
-    } catch (e) {
+    } catch {
       setError("url", {
         type: "manual",
         message: "サーバーとの通信に失敗しました",

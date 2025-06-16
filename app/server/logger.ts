@@ -11,41 +11,43 @@ const isDevelopment = process.env.NODE_ENV !== "production";
 const customFormat = winston.format.combine(
   winston.format.timestamp({ format: "HH:mm:ss" }),
   winston.format.errors({ stack: true }),
-  winston.format.printf(({ timestamp, level, message, component, data, extra, error, ...meta }) => {
-    // componentを先頭に配置
-    const componentPrefix = component ? `[${component}] ` : "";
+  winston.format.printf(
+    ({ timestamp, level, message, component, data, extra, error, ..._meta }) => {
+      // componentを先頭に配置
+      const componentPrefix = component ? `[${component}] ` : "";
 
-    // 基本的なログライン
-    let logLine = `${componentPrefix}${timestamp} [${level.toUpperCase()}] ${message}`;
+      // 基本的なログライン
+      let logLine = `${componentPrefix}${timestamp} [${level.toUpperCase()}] ${message}`;
 
-    // データがある場合、見やすい形で表示
-    if (data && typeof data === "object") {
-      logLine += ` | ${JSON.stringify(data, null, 0)}`;
-    } else if (data) {
-      logLine += ` | ${data}`;
-    }
-
-    // extraがある場合（console.logの残り引数）
-    if (extra && Array.isArray(extra) && extra.length > 0) {
-      logLine += ` | ${extra
-        .map((arg) => (typeof arg === "object" ? JSON.stringify(arg, null, 0) : String(arg)))
-        .join(" ")}`;
-    }
-
-    // エラーがある場合
-    if (error) {
-      if (error instanceof Error) {
-        logLine += ` | Error: ${error.message}`;
-        if (error.stack && level === "error") {
-          logLine += `\n${error.stack}`;
-        }
-      } else {
-        logLine += ` | ${JSON.stringify(error, null, 0)}`;
+      // データがある場合、見やすい形で表示
+      if (data && typeof data === "object") {
+        logLine += ` | ${JSON.stringify(data, null, 0)}`;
+      } else if (data) {
+        logLine += ` | ${data}`;
       }
-    }
 
-    return logLine;
-  })
+      // extraがある場合（console.logの残り引数）
+      if (extra && Array.isArray(extra) && extra.length > 0) {
+        logLine += ` | ${extra
+          .map((arg) => (typeof arg === "object" ? JSON.stringify(arg, null, 0) : String(arg)))
+          .join(" ")}`;
+      }
+
+      // エラーがある場合
+      if (error) {
+        if (error instanceof Error) {
+          logLine += ` | Error: ${error.message}`;
+          if (error.stack && level === "error") {
+            logLine += `\n${error.stack}`;
+          }
+        } else {
+          logLine += ` | ${JSON.stringify(error, null, 0)}`;
+        }
+      }
+
+      return logLine;
+    }
+  )
 );
 
 // 本番用フォーマット（JSON構造化ログ）

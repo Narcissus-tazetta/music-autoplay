@@ -21,7 +21,7 @@ import type { Route } from "./+types/home";
 import { useColorMode } from "~/hooks/use-color-mode";
 import { useYouTubeStatus } from "~/hooks/use-youtube-status";
 
-export function meta({}: Route.MetaArgs) {
+export function meta(_args: Route.MetaArgs) {
   return [
     { title: "音楽リクエストフォーム" },
     { name: "description", content: "浜松キャンパスの音楽リクエストフォームです。" },
