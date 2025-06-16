@@ -31,7 +31,7 @@ export const useMusicStore = create<MusicStore>((set, get) => {
       if (typeof window === "undefined") return;
 
       const store = get();
-      if (store.socket) return; // 既に初期化済み
+      if (store.socket) return;
 
       const socket: Socket<S2C, C2S> = io({ autoConnect: false });
 

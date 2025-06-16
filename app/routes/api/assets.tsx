@@ -27,7 +27,6 @@ export const action = async ({ request }: Route.ActionArgs) => {
   const channelTitle = snippet?.channelTitle || "";
   const thumbnail = snippet?.thumbnails?.high?.url;
   const length = item?.contentDetails?.duration;
-  // 年齢制限判定（他のバリデーションと同じ流れで統一）
   const ytRating = item?.contentDetails?.contentRating?.ytRating;
   const isAgeRestricted = ytRating === "ytAgeRestricted";
 

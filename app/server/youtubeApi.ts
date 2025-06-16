@@ -4,10 +4,8 @@ import { DailyApiCounter } from "./apiCounter";
 import { VideoInfoCache, type YouTubeVideoInfo } from "./videoCache";
 import { log } from "./logger";
 
-// 念のため環境変数を確実に読み込み
 dotenv.config();
 
-// 環境変数の確認（起動時のみ）
 const apiKey = process.env.YOUTUBE_API_KEY;
 log.youtube(`🔑 YouTube API Key status: ${apiKey ? "✅ Available" : "❌ Missing"}`);
 if (apiKey) {
@@ -20,32 +18,27 @@ const youtube = google.youtube({
   auth: process.env.YOUTUBE_API_KEY,
 });
 
-// キャッシュとカウンターのインスタンス
 const videoCache = new VideoInfoCache();
 const apiCounter = DailyApiCounter.getInstance();
 
-// YouTubeVideoInfoインターフェースを再エクスポート
 export type { YouTubeVideoInfo } from "./videoCache";
 
 /**
  * YouTube動画IDから動画情報を取得（キャッシュ付き）
  */
 export async function fetchVideoInfo(videoId: string): Promise<YouTubeVideoInfo | null> {
-  // キャッシュチェック
   const cachedInfo = videoCache.get(videoId);
   if (cachedInfo) {
     log.debug(`💾 Using cached info for: ${videoId}`);
     return cachedInfo;
   }
 
-  // YouTube API キーが設定されていない場合はスキップ
   if (!process.env.YOUTUBE_API_KEY) {
     log.warn(`⚠️  YouTube API Key not configured, skipping video info fetch for: ${videoId}`);
     return null;
   }
 
   try {
-    // API使用量をカウント
     const currentCount = apiCounter.increment();
     log.youtube(`🌐 Fetching from YouTube API: ${videoId} (今日の使用回数: ${currentCount})`);
 
@@ -68,7 +61,6 @@ export async function fetchVideoInfo(videoId: string): Promise<YouTubeVideoInfo 
       return null;
     }
 
-    // 長さをISO 8601からミリ秒に変換
     const duration = contentDetails.duration;
     let lengthMs = 0;
     if (duration) {
@@ -81,12 +73,10 @@ export async function fetchVideoInfo(videoId: string): Promise<YouTubeVideoInfo 
       }
     }
 
-    // 音楽判定（簡易版）
     const title = snippet.title || "";
     const description = snippet.description || "";
     const categoryId = snippet.categoryId;
 
-    // 音楽関連キーワード
     const musicKeywords = [
       "music",
       "音楽",
@@ -109,11 +99,9 @@ export async function fetchVideoInfo(videoId: string): Promise<YouTubeVideoInfo 
     const hasKeyword = musicKeywords.some((kw) => text.includes(kw.toLowerCase()));
     const isMusic = categoryId === "10" || hasKeyword;
 
-    // より高品質なサムネイルを優先的に取得
     const thumbnails = snippet.thumbnails;
     let thumbnailUrl = "";
     if (thumbnails) {
-      // 高品質から順に確認
       if ((thumbnails as any).maxres?.url) {
         thumbnailUrl = (thumbnails as any).maxres.url;
       } else if ((thumbnails as any).high?.url) {
@@ -132,7 +120,6 @@ export async function fetchVideoInfo(videoId: string): Promise<YouTubeVideoInfo 
       isMusic,
     };
 
-    // キャッシュに保存
     videoCache.set(videoId, videoInfo);
     log.debug(`💾 Cached video info: "${title}" (cache size: ${videoCache.size()})`);
 

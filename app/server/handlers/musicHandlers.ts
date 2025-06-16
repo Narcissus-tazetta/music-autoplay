@@ -7,7 +7,6 @@ import { log } from "../logger";
 
 export function registerMusicHandlers(io: Server<C2S, S2C>, socket: Socket<C2S, S2C>) {
   socket.on("addMusic", (music: Music, callback) => {
-    // YouTube動画IDで重複判定（現在のmusicsのみ）
     const newId = extractYouTubeId(music.url);
     const exists = musics.some((m) => extractYouTubeId(m.url) === newId);
 
@@ -16,12 +15,10 @@ export function registerMusicHandlers(io: Server<C2S, S2C>, socket: Socket<C2S, 
       musics.push(music);
       io.emit("url_list", musics);
 
-      // 成功時はエラーなしでコールバック実行
       if (typeof callback === "function") {
         callback();
       }
     } else {
-      // エラー時はエラーメッセージでコールバック実行
       if (typeof callback === "function") {
         callback("この楽曲はすでにリクエストされています");
       }
@@ -37,7 +34,6 @@ export function registerMusicHandlers(io: Server<C2S, S2C>, socket: Socket<C2S, 
     }
   });
 
-  // 初期リスト送信
   log.socket(`📋 Sent ${musics.length} songs to ${socket.id.substring(0, 8)}...`);
   socket.emit("url_list", musics);
 

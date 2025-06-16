@@ -1,4 +1,3 @@
-/* フッター専用のスタイル */
 .footer {
   transition:
     background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
@@ -8,12 +7,7 @@
 .footer-link-normal {
   color: inherit !important;
 }
+
 .dark-mode .footer-link-normal {
   color: inherit !important;
-}
-/* ===== フッターのアニメーション ===== */
-.footer {
-  transition:
-    background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }

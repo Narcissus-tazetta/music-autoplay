@@ -12,7 +12,6 @@ import { displayApiUsageStats } from "./apiUsageDisplay";
 import { log } from "./logger";
 import { httpLogger } from "./httpLogger";
 
-// 環境変数を明示的に読み込み
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -21,7 +20,6 @@ log.server(`📋 Environment: ${process.env.NODE_ENV || "development"}`);
 log.server(`🔧 Node.js: ${process.version}`);
 log.server(`🔑 YouTube API Key: ${process.env.YOUTUBE_API_KEY ? "✅ Loaded" : "❌ Missing"}`);
 
-// APIカウンターの状態を起動時に確認・表示
 import { getTodaysApiUsage } from "./apiCounter";
 const apiUsage = getTodaysApiUsage();
 log.apiUsage(`📊 Today's API Usage: ${apiUsage.count} calls`);
@@ -30,13 +28,11 @@ let reactRouterHandler: RequestHandler;
 let viteDevServer: ViteDevServer | undefined = undefined;
 if (process.env.NODE_ENV === "production") {
   log.server("📦 Loading production build...");
-  // 本番はビルド成果物のSSRハンドラを関数としてrequire
   const ssrBuild = require("../../build/server/index.js");
   reactRouterHandler = createRequestHandler({ build: ssrBuild });
   log.server("✅ Production build loaded successfully");
 } else {
   log.server("🔄 Setting up Vite development server...");
-  // 開発はVite SSR - 型安全性のため一時的にanyを使用
   viteDevServer = (await import("vite").then((vite) =>
     vite.createServer({ server: { middlewareMode: true } })
   )) as ViteDevServer;
@@ -97,7 +93,6 @@ io.on("connection", (socket) => {
   registerSocketHandlers(io, socket, clients);
 });
 
-// API使用量を表示
 displayApiUsageStats();
 
 log.server("🎉 Server initialization complete!");

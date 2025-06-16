@@ -29,7 +29,6 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode, onAdminModeChange }) =
     formState: { errors },
   } = useForm<Inputs>();
 
-  // フォーム送信処理
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     const url = data.url.trim();
     if (url.toLowerCase() === "admin") {

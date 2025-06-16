@@ -1,10 +1,9 @@
-/* ===== 長いタイトル用 ===== */
 .long-title {
   white-space: normal;
   word-break: break-all;
   overflow-wrap: anywhere;
 }
-/* ===== フッターのアニメーションはfooter.cssに移動 ===== */
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./footer.css";
@@ -129,14 +128,12 @@
   }
 }
 
-/* ===== 共通スタイル ===== */
 body {
   transition:
     background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
     color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ===== ダーク・ライトモード body色 ===== */
 body.dark-mode {
   background-color: #212225 !important;
   color: #e8eaed !important;
@@ -146,7 +143,6 @@ body.light-mode {
   color: #212225 !important;
 }
 
-/* ===== 設定パネル ===== */
 .settings-panel {
   transition:
     background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
@@ -161,7 +157,6 @@ body.light-mode {
   color: #212225 !important;
 }
 
-/* ===== 楽曲リストヘッダー ===== */
 .table-head-animated {
   transition:
     background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
@@ -176,7 +171,6 @@ body.light-mode {
   color: #212225 !important;
 }
 
-/* ===== YouTube状態表示コンテナ ===== */
 .youtube-status-container {
   display: flex;
   align-items: center;
@@ -204,7 +198,6 @@ body.light-mode {
   color: #2563eb;
 }
 
-/* YouTube状態ごとの色（ライトモード） */
 .youtube-status-playing {
   background-color: #f0fdf4;
   border-color: #22c55e;
@@ -223,7 +216,6 @@ body.light-mode {
   color: #334155;
 }
 
-/* リスト外動画用の色（ライトモード） */
 .youtube-status-unlisted.youtube-status-playing {
   background-color: #faf5ff;
   border-color: #a855f7;
@@ -236,7 +228,6 @@ body.light-mode {
   color: #1d4ed8;
 }
 
-/* YouTube状態ごとの色（ダークモード） */
 body.dark-mode .youtube-status-playing {
   background-color: #26302a;
   border-color: #22c55e;
@@ -255,7 +246,6 @@ body.dark-mode .youtube-status-closed {
   color: #bfc9d1;
 }
 
-/* リスト外動画用の色（ダークモード） */
 body.dark-mode .youtube-status-unlisted.youtube-status-playing {
   background-color: #332a3f;
   border-color: #a855f7;
@@ -268,7 +258,6 @@ body.dark-mode .youtube-status-unlisted.youtube-status-paused {
   color: #93c5fd;
 }
 
-/* ===== テーブル・リストのホバー背景色無効化 ===== */
 td,
 td:hover,
 tr:hover,

@@ -1,4 +1,3 @@
-// 共通色定義
 export const COLORS = {
   dark: {
     background: "#212225",
@@ -14,7 +13,6 @@ export const COLORS = {
   },
 };
 
-// body色をスムーズに切り替えるカスタムフック
 import { useEffect, useRef } from "react";
 export function useSmoothBodyColor(bg: string, fg: string) {
   const first = useRef(true);
@@ -36,14 +34,12 @@ export function useSmoothBodyColor(bg: string, fg: string) {
   }, [bg, fg]);
 }
 
-// ダーク/ライトモード切替
 export function changeMode(mode: "dark" | "light") {
   document.body.classList.remove("dark-mode", "light-mode");
   document.body.classList.add(mode === "dark" ? "dark-mode" : "light-mode");
   localStorage.setItem("selectedMode", mode);
 }
 
-// YouTube URLパターンとパース関数
 export const YOUTUBE_PATTERN =
   /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/ ]{11})/i;
 export function parseYoutubeUrl(url: string): string | null {

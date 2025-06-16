@@ -33,7 +33,6 @@ export const YouTubeStatus: React.FC<YouTubeStatusProps> = ({ ytStatus }) => {
     stateLabel = "タブが閉じました";
   }
 
-  // リスト外動画の場合はラベルにインジケーターを追加
   const displayLabel = match ? stateLabel : `${stateLabel} (リスト外)`;
 
   return (

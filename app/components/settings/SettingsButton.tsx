@@ -14,7 +14,6 @@ export function SettingsButton({ onClick }: { onClick: () => void }) {
         zIndex: 10,
       }}
     >
-      {/* ハンバーガーメニューアイコン（SVG） */}
       <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
         <rect y="6" width="28" height="2.5" rx="1.25" fill="#666" />
         <rect y="13" width="28" height="2.5" rx="1.25" fill="#666" />

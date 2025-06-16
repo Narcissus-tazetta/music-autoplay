@@ -9,7 +9,6 @@ export const httpLogger = (req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   const originalSend = res.send;
 
-  // レスポンス時間を計測
   res.send = function (body) {
     const duration = Date.now() - start;
     const logLevel = res.statusCode >= 500 ? "error" : res.statusCode >= 400 ? "warn" : "info";

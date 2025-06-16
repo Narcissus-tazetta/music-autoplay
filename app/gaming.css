@@ -1,6 +1,3 @@
-/* 🎮 ゲーミングカラーシステム v3.0 - Hue-Rotate版 */
-
-/* 確実動作版 - hue-rotate使用 */
 @keyframes gaming-hue {
   0% {
     filter: hue-rotate(0deg) saturate(1.8) brightness(1.2);
@@ -19,7 +16,6 @@
   }
 }
 
-/* ゲーミングカラースタイル - Hue-Rotate版（確実動作） */
 html body * .gaming-color,
 html body *.gaming-color,
 html body .gaming-links a,
@@ -33,7 +29,6 @@ html body .dark-mode span.gaming-color,
 html body .footer *.gaming-color,
 html body .footer .gaming-color,
 html body .footer a.gaming-color {
-  /* レインボーグラデーションベース */
   background: linear-gradient(
     90deg,
     #ff0000,
@@ -46,25 +41,20 @@ html body .footer a.gaming-color {
     #ff0080
   ) !important;
 
-  /* Hue-Rotateアニメーション */
   animation: gaming-hue 2s linear infinite !important;
 
-  /* テキストクリップ */
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   background-clip: text !important;
   color: transparent !important;
 
-  /* 確実な表示 */
   display: inline-block !important;
   position: relative !important;
   z-index: 999999 !important;
 
-  /* アニメーション強制 */
   animation-play-state: running !important;
 }
 
-/* アニメーション無効化を強制上書き */
 @media (prefers-reduced-motion: reduce) {
   html body * .gaming-color,
   html body *.gaming-color,

@@ -12,7 +12,7 @@ interface ApiUsageData {
  */
 function getJSTDateString(): string {
   const now = new Date();
-  const jstOffset = 9 * 60; // JST = UTC+9
+  const jstOffset = 9 * 60;
   const jstTime = new Date(now.getTime() + jstOffset * 60 * 1000);
   return jstTime.toISOString().split("T")[0];
 }
@@ -30,11 +30,9 @@ export class DailyApiCounter {
 
   private constructor() {
     this.loadFromFile();
-    // 初期化時に日付チェックを実行
     this.resetIfNewDay();
     log.apiUsage(`📁 API counter: ${this.count} calls today (${this.lastResetDate})`);
 
-    // 定期的な保存（開発環境では30秒、本番環境では10秒）
     const saveInterval = process.env.NODE_ENV === "production" ? 10000 : 30000;
     this.saveInterval = setInterval(() => {
       this.saveToFile();
@@ -74,10 +72,9 @@ export class DailyApiCounter {
 
   private saveToFile(force: boolean = false): void {
     try {
-      // 強制保存または1秒以上経過した場合のみ保存
       const now = Date.now();
       if (!force && now - this.lastSaveTime < 1000) {
-        return; // 1秒以内の連続保存を防ぐ
+        return;
       }
 
       const data: ApiUsageData = {
@@ -86,10 +83,8 @@ export class DailyApiCounter {
       };
       const jsonContent = JSON.stringify(data, null, 2);
 
-      // メインファイルに保存
       fs.writeFileSync(this.filePath, jsonContent);
 
-      // 本番環境でのみバックアップファイルを作成（開発時のViteリロードを防ぐ）
       if (process.env.NODE_ENV === "production") {
         const backupPath = this.filePath + ".backup";
         fs.writeFileSync(backupPath, jsonContent);
@@ -116,7 +111,7 @@ export class DailyApiCounter {
   increment(): number {
     this.resetIfNewDay();
     this.count++;
-    this.saveToFile(true); // 強制保存で確実にディスクに書き込み
+    this.saveToFile(true);
     return this.count;
   }
 
@@ -147,11 +142,11 @@ export class DailyApiCounter {
  */
 export function getTodaysApiUsage(): { count: number; date: string } {
   const counter = DailyApiCounter.getInstance();
-  const today = getJSTDateString(); // 共通のJST日付取得関数を使用
+  const today = getJSTDateString();
 
   return {
     count: counter.getCount(),
-    date: today, // JST基準の今日の日付を返す
+    date: today,
   };
 }
 
@@ -163,7 +158,6 @@ export function cleanupApiCounter(): void {
   counter.cleanup();
 }
 
-// プロセス終了時の自動クリーンアップ
 process.on("SIGINT", cleanupApiCounter);
 process.on("SIGTERM", cleanupApiCounter);
 process.on("exit", cleanupApiCounter);

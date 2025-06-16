@@ -1,4 +1,3 @@
-/* ダークモード専用の上書きスタイル */
 body.dark-mode a,
 .dark-mode a {
   color: #d1b3ff !important;

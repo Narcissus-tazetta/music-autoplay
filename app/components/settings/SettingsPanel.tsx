@@ -64,7 +64,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ open, onClose, mod
             </button>
           </label>
         </div>
-        {/* お問い合わせ先をパネルの最下部に絶対配置 */}
         <div
           className="text-xs opacity-80 border-t pt-4 border-zinc-400/30"
           style={{

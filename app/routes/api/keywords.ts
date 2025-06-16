@@ -1,4 +1,3 @@
-// 音楽判定用キーワード一覧
 export const keywords = [
   "music",
   "音楽",

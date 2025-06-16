@@ -69,10 +69,8 @@ export default function Home() {
         </h1>
         <HomeForm mode={mode} onAdminModeChange={setIsAdmin} />
 
-        {/* YouTube状態表示 */}
         <YouTubeStatus ytStatus={ytStatus} />
 
-        {/* 楽曲リスト */}
         <Table>
           <TableHeader>
             <TableRow>

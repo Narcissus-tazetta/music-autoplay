@@ -30,7 +30,6 @@ export function registerYouTubeHandlers(io: Server<C2S, S2C>, socket: Socket<C2S
       isMatch = nowMusic && nowMusic.url === data.url;
     }
 
-    // リスト外動画の場合、YouTube APIで情報を取得
     if (!isMatch && data.url) {
       const videoId = extractYouTubeId(data.url);
       if (videoId) {
@@ -42,7 +41,6 @@ export function registerYouTubeHandlers(io: Server<C2S, S2C>, socket: Socket<C2S
             thumbnail: videoInfo.thumbnail,
           };
         } else {
-          // API取得に失敗した場合の代替表示
           nowMusic = {
             url: data.url,
             title: "Unknown Video",
@@ -80,7 +78,6 @@ export function registerYouTubeHandlers(io: Server<C2S, S2C>, socket: Socket<C2S
     let nowMusic = musics[0] || null;
     const isMatch = nowMusic && nowMusic.url === data.url;
 
-    // リスト外動画の場合、YouTube APIで情報を取得
     if (!isMatch && data.url) {
       const videoId = extractYouTubeId(data.url);
       if (videoId) {
@@ -94,7 +91,6 @@ export function registerYouTubeHandlers(io: Server<C2S, S2C>, socket: Socket<C2S
           };
           log.youtube(`📺 Got closed unlisted video: "${videoInfo.title}"`);
         } else {
-          // API取得に失敗した場合の代替表示
           nowMusic = {
             url: data.url,
             title: "Unknown Video",

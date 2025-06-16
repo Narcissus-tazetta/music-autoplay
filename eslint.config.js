@@ -16,7 +16,7 @@ export default [
       "vite.config.ts.timestamp-*",
       "coverage/**",
       "**/*.d.ts",
-      ".history/**", // 履歴フォルダを除外
+      ".history/**",
     ],
   },
   {
@@ -31,7 +31,6 @@ export default [
         },
       },
       globals: {
-        // ブラウザ環境
         console: "readonly",
         window: "readonly",
         document: "readonly",
@@ -51,7 +50,6 @@ export default [
         MouseEvent: "readonly",
         Event: "readonly",
 
-        // Node.js環境
         process: "readonly",
         Buffer: "readonly",
         __dirname: "readonly",
@@ -66,7 +64,6 @@ export default [
         clearTimeout: "readonly",
         clearInterval: "readonly",
 
-        // React関連（自動JSX変換でも一部必要）
         React: "readonly",
       },
     },
@@ -77,10 +74,8 @@ export default [
       "react-refresh": reactRefresh,
     },
     rules: {
-      // 基本ルール
       ...js.configs.recommended.rules,
 
-      // TypeScript
       "@typescript-eslint/no-unused-vars": [
         "error",
         {
@@ -89,29 +84,25 @@ export default [
           ignoreRestSiblings: true,
         },
       ],
-      "@typescript-eslint/no-explicit-any": "off", // 外部ライブラリでは許容
+      "@typescript-eslint/no-explicit-any": "off",
 
-      // React
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
       "react/display-name": "off",
 
-      // React Hooks
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
 
-      // React Refresh - 緩和
       "react-refresh/only-export-components": "off",
 
-      // 一般 - ルールを緩和
       "no-console": "off",
       "no-debugger": "warn",
-      "no-unused-vars": "off", // TypeScript版を使用
+      "no-unused-vars": "off",
       "prefer-const": "error",
       "no-var": "error",
       "no-undef": "error",
-      "no-useless-escape": "warn", // エラーではなく警告に
-      "no-empty-pattern": "warn", // エラーではなく警告に
+      "no-useless-escape": "warn",
+      "no-empty-pattern": "warn",
     },
     settings: {
       react: {
