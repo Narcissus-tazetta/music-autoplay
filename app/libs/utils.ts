@@ -25,7 +25,8 @@ export function useSmoothBodyColor(bg: string, fg: string) {
       document.body.style.color = fg;
       first.current = false;
     } else {
-      document.body.style.transition = "background-color 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1)";
+      document.body.style.transition =
+        "background-color 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1)";
       document.body.style.backgroundColor = bg;
       document.body.style.color = fg;
     }
@@ -43,13 +44,14 @@ export function changeMode(mode: "dark" | "light") {
 }
 
 // YouTube URLパターンとパース関数
-export const YOUTUBE_PATTERN = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/i;
+export const YOUTUBE_PATTERN =
+  /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/i;
 export function parseYoutubeUrl(url: string): string | null {
   return url.match(YOUTUBE_PATTERN)?.[1] ?? null;
 }
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }

@@ -8,8 +8,8 @@ interface YouTubeStatusData {
   music: Music | null;
 }
 
-interface ProcessedYouTubeStatus extends Omit<YouTubeStatusData, 'state'> {
-  state: 'playing' | 'paused' | 'window_close';
+interface ProcessedYouTubeStatus extends Omit<YouTubeStatusData, "state"> {
+  state: "playing" | "paused" | "window_close";
 }
 
 export function useYouTubeStatus() {
@@ -19,11 +19,11 @@ export function useYouTubeStatus() {
   useEffect(() => {
     if (!socket) return;
     const handler = (data: YouTubeStatusData) => {
-      let state: 'playing' | 'paused' | 'window_close' = 'paused';
-      if (data.state === 'playing' || data.state === 'paused' || data.state === 'window_close') {
+      let state: "playing" | "paused" | "window_close" = "paused";
+      if (data.state === "playing" || data.state === "paused" || data.state === "window_close") {
         state = data.state;
-      } else if (data.state === 'closed') {
-        state = 'window_close';
+      } else if (data.state === "closed") {
+        state = "window_close";
       }
       setYtStatus({ ...data, state });
     };

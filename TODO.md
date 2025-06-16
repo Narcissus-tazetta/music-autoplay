@@ -36,6 +36,7 @@
 ## 🎉 完了済み機能
 
 ### ✅ **ログシステム（Winston）**
+
 - **構造化ログ**: JSON形式で詳細情報を記録
 - **レベル分け**: DEBUG, INFO, WARN, ERROR
 - **開発環境**: 色付きコンソール出力、見やすいフォーマット
@@ -44,12 +45,14 @@
 - **コンポーネント別ログ**: server, youtube, socket, api-usage
 
 ### ✅ **リスト外動画のstatus表示**
+
 - **YouTube Data API統合**: 非リスト動画の情報取得
 - **動画情報表示**: タイトル、サムネイル自動取得
 - **API使用量管理**: 日次リセット、永続化、バックアップ
 - **リスト外動画識別**: UIで非リスト動画を区別表示
 
 ### ✅ **型安全化（TypeScript）**
+
 - **サーバー型定義**: ClientInfo, YouTubeStatus, AppState, LogData型を新規作成
 - **any型の完全排除**: `Map<any, any>` → `ClientsMap`、ログ関数の型安全化
 - **クライアント管理**: 接続時刻、ユーザーエージェント、IPアドレスの型定義
@@ -62,6 +65,7 @@
 ## 開発メモ
 
 テスト用 YouTube URL:
+
 - https://youtu.be/evtoG-4dLM4?si=Pe9U8kOOsEUVE_6T
 - https://www.youtube.com/watch?v=evtoG-4dLM4&list=PLRjclqGHr0meRVsb96mZyooRM8qE_tdmf&index=1
 - https://www.youtube.com/watch?v=evtoG-4dLM4

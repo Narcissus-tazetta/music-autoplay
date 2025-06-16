@@ -4,16 +4,12 @@ import { musics, currentState } from "../youtubeState";
 import { extractYouTubeId } from "../utils";
 import { log } from "../logger";
 
-export function registerVideoControlHandlers(
-  io: Server<C2S, S2C>,
-  socket: Socket<C2S, S2C>
-) {
+export function registerVideoControlHandlers(io: Server<C2S, S2C>, socket: Socket<C2S, S2C>) {
   socket.on("move_prev_video", (data: { url: string }) => {
     log.info("⏮️  Previous video");
     const videoId = extractYouTubeId(data.url);
     currentState.currentPlayingId = videoId;
-    const nowMusic =
-      musics.find((m) => extractYouTubeId(m.url) === videoId) || null;
+    const nowMusic = musics.find((m) => extractYouTubeId(m.url) === videoId) || null;
     const isMatch = !!nowMusic;
     currentState.currentYoutubeState.state = "prev_video";
     currentState.currentYoutubeState.url = data.url;
@@ -30,8 +26,7 @@ export function registerVideoControlHandlers(
     log.info("⏭️  Next video");
     const videoId = extractYouTubeId(data.url);
     currentState.currentPlayingId = videoId;
-    const nowMusic =
-      musics.find((m) => extractYouTubeId(m.url) === videoId) || null;
+    const nowMusic = musics.find((m) => extractYouTubeId(m.url) === videoId) || null;
     const isMatch = !!nowMusic;
     currentState.currentYoutubeState.state = "next_video";
     currentState.currentYoutubeState.url = data.url;

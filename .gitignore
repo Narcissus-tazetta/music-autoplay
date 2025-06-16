@@ -14,3 +14,7 @@ api-usage.json.backup
 
 # ログファイル
 logs/
+
+# ESLint と Prettier キャッシュ
+.eslintcache
+.prettiercache

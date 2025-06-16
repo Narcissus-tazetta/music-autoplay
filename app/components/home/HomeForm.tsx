@@ -1,4 +1,3 @@
-
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { useMusicStore } from "~/stores/musicStore";
 import { parseYoutubeUrl, YOUTUBE_PATTERN } from "~/libs/utils";
@@ -33,7 +32,7 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode, onAdminModeChange }) =
   // フォーム送信処理
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     const url = data.url.trim();
-    if (url.toLowerCase() === 'admin') {
+    if (url.toLowerCase() === "admin") {
       if (onAdminModeChange) onAdminModeChange(true);
       resetField("url");
       return;
@@ -82,7 +81,7 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode, onAdminModeChange }) =
       });
       return;
     }
-    
+
     if (!assets) {
       setError("url", {
         type: "manual",
@@ -90,7 +89,7 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode, onAdminModeChange }) =
       });
       return;
     }
-    
+
     if (convert(assets.length) > 60 * 10) {
       setError("url", {
         type: "onChange",
@@ -116,7 +115,7 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode, onAdminModeChange }) =
           className="w-[500px]"
           {...register("url", {
             validate: (value) => {
-              if (value.trim().toLowerCase() === 'admin') return true;
+              if (value.trim().toLowerCase() === "admin") return true;
               if (!value) return "URLを入力してください";
               if (!YOUTUBE_PATTERN.test(value)) return "有効なYouTubeのURLを入力してください";
               return true;
@@ -138,7 +137,7 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode, onAdminModeChange }) =
         style={{
           background: mode === "dark" ? "#E8EAED" : "#212225",
           color: mode === "dark" ? "#212225" : "#fff",
-          border: "none"
+          border: "none",
         }}
       >
         <SendIcon size={12} />

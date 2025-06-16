@@ -6,10 +6,14 @@ import { registerYouTubeHandlers } from "./handlers/youtubeHandlers";
 import { registerVideoControlHandlers } from "./handlers/videoControlHandlers";
 import type { ClientsMap } from "./types";
 
-export function registerSocketHandlers(io: Server<C2S, S2C>, socket: Socket<C2S, S2C>, clients: ClientsMap) {
-    // 各ハンドラーを登録
-    registerConnectionHandlers(io, socket, clients);
-    registerMusicHandlers(io, socket);
-    registerYouTubeHandlers(io, socket);
-    registerVideoControlHandlers(io, socket);
+export function registerSocketHandlers(
+  io: Server<C2S, S2C>,
+  socket: Socket<C2S, S2C>,
+  clients: ClientsMap
+) {
+  // 各ハンドラーを登録
+  registerConnectionHandlers(io, socket, clients);
+  registerMusicHandlers(io, socket);
+  registerYouTubeHandlers(io, socket);
+  registerVideoControlHandlers(io, socket);
 }

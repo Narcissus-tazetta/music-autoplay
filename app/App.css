@@ -129,16 +129,17 @@
   }
 }
 
-
 /* ===== 共通スタイル ===== */
 body {
-  transition: background-color 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1);
+  transition:
+    background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ===== ダーク・ライトモード body色 ===== */
 body.dark-mode {
   background-color: #212225 !important;
-  color: #E8EAED !important;
+  color: #e8eaed !important;
 }
 body.light-mode {
   background-color: #fff !important;
@@ -147,11 +148,13 @@ body.light-mode {
 
 /* ===== 設定パネル ===== */
 .settings-panel {
-  transition: background 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1);
+  transition:
+    background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .settings-panel.dark {
   background: #212225 !important;
-  color: #E8EAED !important;
+  color: #e8eaed !important;
 }
 .settings-panel.light {
   background: #fff !important;
@@ -160,11 +163,13 @@ body.light-mode {
 
 /* ===== 楽曲リストヘッダー ===== */
 .table-head-animated {
-  transition: background-color 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1);
+  transition:
+    background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .table-head-dark {
   background-color: #212225 !important;
-  color: #E8EAED !important;
+  color: #e8eaed !important;
 }
 .table-head-light {
   background-color: #fff !important;
@@ -264,10 +269,10 @@ body.dark-mode .youtube-status-unlisted.youtube-status-paused {
 }
 
 /* ===== テーブル・リストのホバー背景色無効化 ===== */
-td, 
-td:hover, 
-tr:hover, 
-table:hover, 
+td,
+td:hover,
+tr:hover,
+table:hover,
 table tr:hover {
   background-color: transparent !important;
   transition: none !important;

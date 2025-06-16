@@ -1,9 +1,9 @@
-import { useColorMode } from "~/hooks/use-color-mode"
-import { Toaster as Sonner } from "sonner"
-import type { ToasterProps } from "sonner"
+import { useColorMode } from "~/hooks/use-color-mode";
+import { Toaster as Sonner } from "sonner";
+import type { ToasterProps } from "sonner";
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { mode } = useColorMode()
+  const { mode } = useColorMode();
 
   return (
     <Sonner
@@ -18,7 +18,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }
       {...props}
     />
-  )
-}
+  );
+};
 
-export { Toaster }
+export { Toaster };

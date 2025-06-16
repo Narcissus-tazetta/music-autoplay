@@ -9,11 +9,7 @@ export function useGamingToggle(key: string) {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (
-        e.metaKey &&
-        e.shiftKey &&
-        e.key.toLowerCase() === key.toLowerCase()
-      ) {
+      if (e.metaKey && e.shiftKey && e.key.toLowerCase() === key.toLowerCase()) {
         setGaming((prev) => !prev);
       }
     };

@@ -13,37 +13,37 @@ const customFormat = winston.format.combine(
   winston.format.errors({ stack: true }),
   winston.format.printf(({ timestamp, level, message, component, data, extra, error, ...meta }) => {
     // componentを先頭に配置
-    const componentPrefix = component ? `[${component}] ` : '';
-    
+    const componentPrefix = component ? `[${component}] ` : "";
+
     // 基本的なログライン
     let logLine = `${componentPrefix}${timestamp} [${level.toUpperCase()}] ${message}`;
-    
+
     // データがある場合、見やすい形で表示
-    if (data && typeof data === 'object') {
+    if (data && typeof data === "object") {
       logLine += ` | ${JSON.stringify(data, null, 0)}`;
     } else if (data) {
       logLine += ` | ${data}`;
     }
-    
+
     // extraがある場合（console.logの残り引数）
     if (extra && Array.isArray(extra) && extra.length > 0) {
-      logLine += ` | ${extra.map(arg => 
-        typeof arg === 'object' ? JSON.stringify(arg, null, 0) : String(arg)
-      ).join(' ')}`;
+      logLine += ` | ${extra
+        .map((arg) => (typeof arg === "object" ? JSON.stringify(arg, null, 0) : String(arg)))
+        .join(" ")}`;
     }
-    
+
     // エラーがある場合
     if (error) {
       if (error instanceof Error) {
         logLine += ` | Error: ${error.message}`;
-        if (error.stack && level === 'error') {
+        if (error.stack && level === "error") {
           logLine += `\n${error.stack}`;
         }
       } else {
         logLine += ` | ${JSON.stringify(error, null, 0)}`;
       }
     }
-    
+
     return logLine;
   })
 );
@@ -63,19 +63,21 @@ export const logger = winston.createLogger({
   transports: [
     // コンソール出力（シンプル版）
     new winston.transports.Console({
-      format: isDevelopment ? customFormat : productionFormat
+      format: isDevelopment ? customFormat : productionFormat,
     }),
-    
+
     // 本番環境ではファイル出力も追加
-    ...(isDevelopment ? [] : [
-      new winston.transports.File({ 
-        filename: "logs/error.log", 
-        level: "error" 
-      }),
-      new winston.transports.File({ 
-        filename: "logs/combined.log" 
-      })
-    ])
+    ...(isDevelopment
+      ? []
+      : [
+          new winston.transports.File({
+            filename: "logs/error.log",
+            level: "error",
+          }),
+          new winston.transports.File({
+            filename: "logs/combined.log",
+          }),
+        ]),
   ],
 });
 
@@ -97,7 +99,7 @@ export const log = {
     if (args.length > 0) logData.extra = args;
     logger.info(message, logData);
   },
-  
+
   // 警告ログ
   warn: (message: string, data?: LogData, ...args: unknown[]) => {
     const logData: LogData = {};
@@ -105,7 +107,7 @@ export const log = {
     if (args.length > 0) logData.extra = args;
     logger.warn(message, logData);
   },
-  
+
   // エラーログ
   error: (message: string, error?: Error | LogData, ...args: unknown[]) => {
     const logData: LogData = {};
@@ -113,7 +115,7 @@ export const log = {
     if (args.length > 0) logData.extra = args;
     logger.error(message, logData);
   },
-  
+
   // デバッグログ（開発時のみ）
   debug: (message: string, data?: LogData, ...args: unknown[]) => {
     const logData: LogData = {};
@@ -121,28 +123,28 @@ export const log = {
     if (args.length > 0) logData.extra = args;
     logger.debug(message, logData);
   },
-  
+
   // サーバー状態ログ
   server: (message: string, data?: LogData) => {
     const logData: LogData = { component: "server" };
     if (data !== undefined) logData.data = data;
     logger.info(`🖥️  ${message}`, logData);
   },
-  
+
   // YouTube API関連ログ
   youtube: (message: string, data?: LogData) => {
     const logData: LogData = { component: "youtube" };
     if (data !== undefined) logData.data = data;
     logger.info(`📺 ${message}`, logData);
   },
-  
+
   // Socket.IO関連ログ
   socket: (message: string, data?: LogData) => {
     const logData: LogData = { component: "socket" };
     if (data !== undefined) logData.data = data;
     logger.info(`🔌 ${message}`, logData);
   },
-  
+
   // API使用量ログ
   apiUsage: (message: string, data?: LogData) => {
     const logData: LogData = { component: "api-usage" };

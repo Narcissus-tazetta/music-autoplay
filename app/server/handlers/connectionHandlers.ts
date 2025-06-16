@@ -34,6 +34,9 @@ export function registerConnectionHandlers(
 
   // エラー処理
   socket.on("error", (err) => {
-    log.error(`⚠️  Socket error [${socket.id.substring(0, 8)}...]:`, err instanceof Error ? err : new Error(String(err)));
+    log.error(
+      `⚠️  Socket error [${socket.id.substring(0, 8)}...]:`,
+      err instanceof Error ? err : new Error(String(err))
+    );
   });
 }

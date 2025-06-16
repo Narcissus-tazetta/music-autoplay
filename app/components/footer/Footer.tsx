@@ -2,24 +2,24 @@ import { useEffect, useState } from "react";
 import { useGamingToggle } from "~/hooks/use-gaming-toggle";
 
 export const Footer: React.FC = () => {
-  const [mode, setMode] = useState<'dark' | 'light'>('light');
-  const gamingAlinco = useGamingToggle('^');
-  const gamingNarcissus = useGamingToggle('¥');
+  const [mode, setMode] = useState<"dark" | "light">("light");
+  const gamingAlinco = useGamingToggle("^");
+  const gamingNarcissus = useGamingToggle("¥");
 
   useEffect(() => {
     const updateMode = () => {
-      if (document.body.classList.contains('dark-mode')) setMode('dark');
-      else setMode('light');
+      if (document.body.classList.contains("dark-mode")) setMode("dark");
+      else setMode("light");
     };
     updateMode();
     const observer = new MutationObserver(updateMode);
-    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
     return () => observer.disconnect();
   }, []);
 
-  const bg = mode === 'dark' ? '#212225' : '#fff';
-  const fg = mode === 'dark' ? '#E8EAED' : '#212225';
-  const border = mode === 'dark' ? '#444' : '#e5e7eb';
+  const bg = mode === "dark" ? "#212225" : "#fff";
+  const fg = mode === "dark" ? "#E8EAED" : "#212225";
+  const border = mode === "dark" ? "#444" : "#e5e7eb";
 
   return (
     <footer
@@ -29,7 +29,8 @@ export const Footer: React.FC = () => {
         color: fg,
         boxShadow: "0 -2px 12px 0 rgba(0,0,0,0.04)",
         borderTop: `1px solid ${border}`,
-        transition: "background 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1)",
+        transition:
+          "background 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1)",
       }}
     >
       <div className="leading-tight">
@@ -45,7 +46,15 @@ export const Footer: React.FC = () => {
         </a>
       </div>
       <div className="text-[10px] mt-1 opacity-70 select-none leading-tight">
-        &copy; {new Date().getFullYear()} <a href="https://github.com/Narcissus-tazetta" target="_blank" rel="noopener noreferrer" className={`footer-link-normal${gamingNarcissus ? " gaming-color" : ""}`}>Narcissus-tazetta</a>
+        &copy; {new Date().getFullYear()}{" "}
+        <a
+          href="https://github.com/Narcissus-tazetta"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`footer-link-normal${gamingNarcissus ? " gaming-color" : ""}`}
+        >
+          Narcissus-tazetta
+        </a>
       </div>
     </footer>
   );

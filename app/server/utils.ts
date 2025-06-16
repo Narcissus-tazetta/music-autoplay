@@ -1,16 +1,16 @@
 export function extractYouTubeId(url: string): string | null {
-    if (!url) return null;
-    try {
-        const urlObj = new URL(url);
-        if (urlObj.hostname === "youtu.be") {
-            return urlObj.pathname.replace(/^\//, "");
-        }
-        if (urlObj.hostname.includes("youtube.com")) {
-            return urlObj.searchParams.get("v");
-        }
-    } catch {
-        const match = url.match(/(?:v=|youtu\.be\/)([\w-]{11})/);
-        return match ? match[1] : null;
+  if (!url) return null;
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.hostname === "youtu.be") {
+      return urlObj.pathname.replace(/^\//, "");
     }
-    return null;
+    if (urlObj.hostname.includes("youtube.com")) {
+      return urlObj.searchParams.get("v");
+    }
+  } catch {
+    const match = url.match(/(?:v=|youtu\.be\/)([\w-]{11})/);
+    return match ? match[1] : null;
+  }
+  return null;
 }

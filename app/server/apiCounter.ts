@@ -14,7 +14,7 @@ function getJSTDateString(): string {
   const now = new Date();
   const jstOffset = 9 * 60; // JST = UTC+9
   const jstTime = new Date(now.getTime() + jstOffset * 60 * 1000);
-  return jstTime.toISOString().split('T')[0];
+  return jstTime.toISOString().split("T")[0];
 }
 
 /**
@@ -33,9 +33,9 @@ export class DailyApiCounter {
     // 初期化時に日付チェックを実行
     this.resetIfNewDay();
     log.apiUsage(`📁 API counter: ${this.count} calls today (${this.lastResetDate})`);
-    
+
     // 定期的な保存（開発環境では30秒、本番環境では10秒）
-    const saveInterval = process.env.NODE_ENV === 'production' ? 10000 : 30000;
+    const saveInterval = process.env.NODE_ENV === "production" ? 10000 : 30000;
     this.saveInterval = setInterval(() => {
       this.saveToFile();
     }, saveInterval);
@@ -55,7 +55,7 @@ export class DailyApiCounter {
   private loadFromFile(): void {
     try {
       if (fs.existsSync(this.filePath)) {
-        const fileContent = fs.readFileSync(this.filePath, 'utf8');
+        const fileContent = fs.readFileSync(this.filePath, "utf8");
         const data: ApiUsageData = JSON.parse(fileContent);
         this.count = data.count || 0;
         this.lastResetDate = data.date || "";
@@ -64,8 +64,8 @@ export class DailyApiCounter {
         this.lastResetDate = "";
       }
     } catch (error) {
-      log.warn("⚠️  Failed to load API usage data:", { 
-        error: error instanceof Error ? error.message : String(error) 
+      log.warn("⚠️  Failed to load API usage data:", {
+        error: error instanceof Error ? error.message : String(error),
       });
       this.count = 0;
       this.lastResetDate = "";
@@ -79,26 +79,26 @@ export class DailyApiCounter {
       if (!force && now - this.lastSaveTime < 1000) {
         return; // 1秒以内の連続保存を防ぐ
       }
-      
+
       const data: ApiUsageData = {
         count: this.count,
-        date: this.lastResetDate
+        date: this.lastResetDate,
       };
       const jsonContent = JSON.stringify(data, null, 2);
-      
+
       // メインファイルに保存
       fs.writeFileSync(this.filePath, jsonContent);
-      
+
       // 本番環境でのみバックアップファイルを作成（開発時のViteリロードを防ぐ）
-      if (process.env.NODE_ENV === 'production') {
-        const backupPath = this.filePath + '.backup';
+      if (process.env.NODE_ENV === "production") {
+        const backupPath = this.filePath + ".backup";
         fs.writeFileSync(backupPath, jsonContent);
       }
-      
+
       this.lastSaveTime = now;
     } catch (error) {
-      log.warn("⚠️  Failed to save API usage data:", { 
-        error: error instanceof Error ? error.message : String(error) 
+      log.warn("⚠️  Failed to save API usage data:", {
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   }
@@ -148,10 +148,10 @@ export class DailyApiCounter {
 export function getTodaysApiUsage(): { count: number; date: string } {
   const counter = DailyApiCounter.getInstance();
   const today = getJSTDateString(); // 共通のJST日付取得関数を使用
-  
+
   return {
     count: counter.getCount(),
-    date: today  // JST基準の今日の日付を返す
+    date: today, // JST基準の今日の日付を返す
   };
 }
 
@@ -164,6 +164,6 @@ export function cleanupApiCounter(): void {
 }
 
 // プロセス終了時の自動クリーンアップ
-process.on('SIGINT', cleanupApiCounter);
-process.on('SIGTERM', cleanupApiCounter);
-process.on('exit', cleanupApiCounter);
+process.on("SIGINT", cleanupApiCounter);
+process.on("SIGTERM", cleanupApiCounter);
+process.on("exit", cleanupApiCounter);

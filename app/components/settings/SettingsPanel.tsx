@@ -46,7 +46,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ open, onClose, mod
         </button>
         <h2 className="text-xl font-bold mb-6">設定</h2>
         <div className="flex flex-col gap-4">
-          <label className={`flex items-center gap-4 cursor-pointer py-2 ${mode === "dark" ? "text-white" : "text-black"}`}>
+          <label
+            className={`flex items-center gap-4 cursor-pointer py-2 ${mode === "dark" ? "text-white" : "text-black"}`}
+          >
             <span className="block font-medium">ダークモード</span>
             <button
               type="button"
@@ -78,9 +80,25 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ open, onClose, mod
           <div>
             <span className="font-bold">お問い合わせ:</span>
             <br />
-            📧 Gmail:<a href="mailto:clownfish11621@gmail.com?subject=%E9%9F%B3%E6%A5%BD%E3%83%AA%E3%82%AF%E3%82%A8%E3%82%B9%E3%83%88%E3%83%95%E3%82%A9%E3%83%BC%E3%83%A0%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6" className="text-blue-500 hover:underline mx-1">clownfish11621@gmail.com</a><br /> 💬 Slack: <a href="https://n-highschool.slack.com/team/U04VDPX7ZHV" target="_blank" className="text-blue-500 hover:underline mx-1">prason</a>
+            📧 Gmail:
+            <a
+              href="mailto:clownfish11621@gmail.com?subject=%E9%9F%B3%E6%A5%BD%E3%83%AA%E3%82%AF%E3%82%A8%E3%82%B9%E3%83%88%E3%83%95%E3%82%A9%E3%83%BC%E3%83%A0%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6"
+              className="text-blue-500 hover:underline mx-1"
+            >
+              clownfish11621@gmail.com
+            </a>
+            <br /> 💬 Slack:{" "}
+            <a
+              href="https://n-highschool.slack.com/team/U04VDPX7ZHV"
+              target="_blank"
+              className="text-blue-500 hover:underline mx-1"
+            >
+              prason
+            </a>
             <br />
-            <span className="text-gray-500 text-[10px]">※エラーやバグのご報告、ご意見・ご要望は、以下のメールアドレスまたはSlackにてお気軽にご連絡ください。</span>
+            <span className="text-gray-500 text-[10px]">
+              ※エラーやバグのご報告、ご意見・ご要望は、以下のメールアドレスまたはSlackにてお気軽にご連絡ください。
+            </span>
           </div>
         </div>
       </div>

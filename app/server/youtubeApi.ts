@@ -48,7 +48,7 @@ export async function fetchVideoInfo(videoId: string): Promise<YouTubeVideoInfo 
     // API使用量をカウント
     const currentCount = apiCounter.increment();
     log.youtube(`🌐 Fetching from YouTube API: ${videoId} (今日の使用回数: ${currentCount})`);
-    
+
     const response = await youtube.videos.list({
       part: ["snippet", "contentDetails"],
       id: [videoId],
@@ -85,15 +85,28 @@ export async function fetchVideoInfo(videoId: string): Promise<YouTubeVideoInfo 
     const title = snippet.title || "";
     const description = snippet.description || "";
     const categoryId = snippet.categoryId;
-    
+
     // 音楽関連キーワード
     const musicKeywords = [
-      "music", "音楽", "mv", "official", "ライブ", "live", "cover", "カバー",
-      "歌ってみた", "弾いてみた", "piano", "guitar", "vocal", "bgm", "ost"
+      "music",
+      "音楽",
+      "mv",
+      "official",
+      "ライブ",
+      "live",
+      "cover",
+      "カバー",
+      "歌ってみた",
+      "弾いてみた",
+      "piano",
+      "guitar",
+      "vocal",
+      "bgm",
+      "ost",
     ];
-    
+
     const text = (title + " " + description).toLowerCase();
-    const hasKeyword = musicKeywords.some(kw => text.includes(kw.toLowerCase()));
+    const hasKeyword = musicKeywords.some((kw) => text.includes(kw.toLowerCase()));
     const isMusic = categoryId === "10" || hasKeyword;
 
     // より高品質なサムネイルを優先的に取得
@@ -124,9 +137,9 @@ export async function fetchVideoInfo(videoId: string): Promise<YouTubeVideoInfo 
     log.debug(`💾 Cached video info: "${title}" (cache size: ${videoCache.size()})`);
 
     return videoInfo;
-
   } catch (error) {
-    log.error(`❌ Failed to fetch video info for ${videoId}:`, 
+    log.error(
+      `❌ Failed to fetch video info for ${videoId}:`,
       error instanceof Error ? error : new Error(String(error))
     );
     return null;
@@ -139,6 +152,6 @@ export async function fetchVideoInfo(videoId: string): Promise<YouTubeVideoInfo 
 export function getTodaysApiUsage(): { count: number; date: string } {
   return {
     count: apiCounter.getCount(),
-    date: apiCounter.getResetDate() || new Date().toISOString().split('T')[0]
+    date: apiCounter.getResetDate() || new Date().toISOString().split("T")[0],
   };
 }

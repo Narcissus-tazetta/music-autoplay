@@ -5,10 +5,7 @@ import { musics } from "../youtubeState";
 import { extractYouTubeId } from "../utils";
 import { log } from "../logger";
 
-export function registerMusicHandlers(
-  io: Server<C2S, S2C>,
-  socket: Socket<C2S, S2C>
-) {
+export function registerMusicHandlers(io: Server<C2S, S2C>, socket: Socket<C2S, S2C>) {
   socket.on("addMusic", (music: Music, callback) => {
     // YouTube動画IDで重複判定（現在のmusicsのみ）
     const newId = extractYouTubeId(music.url);
@@ -62,9 +59,7 @@ export function registerMusicHandlers(
     const url = typeof data === "string" ? data : data.url;
     const targetId = extractYouTubeId(url);
 
-    const index = musics.findIndex(
-      (item) => extractYouTubeId(item.url) === targetId
-    );
+    const index = musics.findIndex((item) => extractYouTubeId(item.url) === targetId);
     if (index !== -1) {
       const removed = musics.splice(index, 1)[0];
       log.info(`🗑️  Deleted: "${removed.title}" (${musics.length} total)`);

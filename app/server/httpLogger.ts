@@ -10,13 +10,12 @@ export const httpLogger = (req: Request, res: Response, next: NextFunction) => {
   const originalSend = res.send;
 
   // レスポンス時間を計測
-  res.send = function(body) {
+  res.send = function (body) {
     const duration = Date.now() - start;
-    const logLevel = res.statusCode >= 500 ? 'error' : 
-                    res.statusCode >= 400 ? 'warn' : 'info';
-    
+    const logLevel = res.statusCode >= 500 ? "error" : res.statusCode >= 400 ? "warn" : "info";
+
     const logMessage = `${req.method} ${req.url} - ${res.statusCode} (${duration}ms)`;
-    
+
     logger.log(logLevel, logMessage, {
       method: req.method,
       url: req.url,
@@ -24,7 +23,7 @@ export const httpLogger = (req: Request, res: Response, next: NextFunction) => {
       duration: `${duration}ms`,
       userAgent: req.get("user-agent"),
       ip: req.ip || req.socket.remoteAddress,
-      component: "http"
+      component: "http",
     });
 
     return originalSend.call(this, body);

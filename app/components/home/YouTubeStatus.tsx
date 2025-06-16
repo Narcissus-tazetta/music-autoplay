@@ -3,7 +3,7 @@ import { Textfit } from "react-textfit";
 
 interface YouTubeStatusProps {
   ytStatus: {
-    state: 'playing' | 'paused' | 'window_close';
+    state: "playing" | "paused" | "window_close";
     match: boolean;
     music: {
       url: string;
@@ -18,10 +18,10 @@ export const YouTubeStatus: React.FC<YouTubeStatusProps> = ({ ytStatus }) => {
   const { state, match, music } = ytStatus;
   let stateLabel = "";
   let containerClass = "youtube-status-container youtube-status-closed";
-  
+
   if (state === "playing") {
     stateLabel = "再生中";
-    containerClass = match 
+    containerClass = match
       ? "youtube-status-container youtube-status-playing"
       : "youtube-status-container youtube-status-playing youtube-status-unlisted";
   } else if (state === "paused") {
@@ -35,7 +35,7 @@ export const YouTubeStatus: React.FC<YouTubeStatusProps> = ({ ytStatus }) => {
 
   // リスト外動画の場合はラベルにインジケーターを追加
   const displayLabel = match ? stateLabel : `${stateLabel} (リスト外)`;
-  
+
   return (
     <div className="w-full flex items-center justify-center my-2">
       <div className={containerClass}>

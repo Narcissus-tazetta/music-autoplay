@@ -12,10 +12,7 @@ export function useColorMode() {
   }, []);
 
   // ダーク・ライトのbody色をスムーズに
-  useSmoothBodyColor(
-    mode === "dark" ? "#212225" : "#fff",
-    mode === "dark" ? "#E8EAED" : "#212225"
-  );
+  useSmoothBodyColor(mode === "dark" ? "#212225" : "#fff", mode === "dark" ? "#E8EAED" : "#212225");
 
   // モード変更時の副作用
   const setMode = (newMode: "dark" | "light") => {

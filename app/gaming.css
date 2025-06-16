@@ -2,11 +2,21 @@
 
 /* 確実動作版 - hue-rotate使用 */
 @keyframes gaming-hue {
-  0% { filter: hue-rotate(0deg) saturate(1.8) brightness(1.2); }
-  25% { filter: hue-rotate(90deg) saturate(1.8) brightness(1.2); }
-  50% { filter: hue-rotate(180deg) saturate(1.8) brightness(1.2); }
-  75% { filter: hue-rotate(270deg) saturate(1.8) brightness(1.2); }
-  100% { filter: hue-rotate(360deg) saturate(1.8) brightness(1.2); }
+  0% {
+    filter: hue-rotate(0deg) saturate(1.8) brightness(1.2);
+  }
+  25% {
+    filter: hue-rotate(90deg) saturate(1.8) brightness(1.2);
+  }
+  50% {
+    filter: hue-rotate(180deg) saturate(1.8) brightness(1.2);
+  }
+  75% {
+    filter: hue-rotate(270deg) saturate(1.8) brightness(1.2);
+  }
+  100% {
+    filter: hue-rotate(360deg) saturate(1.8) brightness(1.2);
+  }
 }
 
 /* ゲーミングカラースタイル - Hue-Rotate版（確実動作） */
@@ -24,22 +34,32 @@ html body .footer *.gaming-color,
 html body .footer .gaming-color,
 html body .footer a.gaming-color {
   /* レインボーグラデーションベース */
-  background: linear-gradient(90deg, #ff0000, #ff8000, #ffff00, #00ff00, #00ffff, #0080ff, #8000ff, #ff0080) !important;
-  
+  background: linear-gradient(
+    90deg,
+    #ff0000,
+    #ff8000,
+    #ffff00,
+    #00ff00,
+    #00ffff,
+    #0080ff,
+    #8000ff,
+    #ff0080
+  ) !important;
+
   /* Hue-Rotateアニメーション */
   animation: gaming-hue 2s linear infinite !important;
-  
+
   /* テキストクリップ */
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   background-clip: text !important;
   color: transparent !important;
-  
+
   /* 確実な表示 */
   display: inline-block !important;
   position: relative !important;
   z-index: 999999 !important;
-  
+
   /* アニメーション強制 */
   animation-play-state: running !important;
 }
