@@ -1,5 +1,7 @@
 # Music Auto Play
 
+> 📋 **[📖 技術仕様書 (TECHNICAL.md)](./TECHNICAL.md)** - システムアーキテクチャ・API仕様・開発ガイド
+
 ## 機能
 
 ### 音楽リクエスト
@@ -34,6 +36,8 @@
 - 動画の自動検証
 
 ## 技術スタック
+
+> 🔧 **詳細な技術仕様は [TECHNICAL.md](./TECHNICAL.md) をご確認ください**
 
 - **Frontend**: Remix, React, TypeScript, Tailwind CSS
 - **Backend**: Node.js, Socket.IO
