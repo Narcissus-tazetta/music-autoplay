@@ -1,6 +1,3 @@
-// 移動元: ../SettingsButton.tsx
-import React from "react";
-
 export function SettingsButton({ onClick }: { onClick: () => void }) {
   return (
     <button

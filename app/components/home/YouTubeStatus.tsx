@@ -1,5 +1,3 @@
-// 移動元: ../YouTubeStatus.tsx
-import React from "react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "~/components/ui/hover-card";
 import { Textfit } from "react-textfit";
 

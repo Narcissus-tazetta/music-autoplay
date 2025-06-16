@@ -1,13 +1,13 @@
-import { useTheme } from "next-themes"
+import { useColorMode } from "~/hooks/use-color-mode"
 import { Toaster as Sonner } from "sonner"
 import type { ToasterProps } from "sonner"
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
+  const { mode } = useColorMode()
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={mode as ToasterProps["theme"]}
       className="toaster group"
       style={
         {

@@ -4,7 +4,7 @@ import cors from "cors";
 import express from "express";
 import { Server } from "socket.io";
 import type { ViteDevServer } from "vite";
-import type { Express, RequestHandler } from "express";
+import type { RequestHandler } from "express";
 import type { C2S, S2C } from "~/socket";
 import { musics, clients } from "./youtubeState";
 import { registerSocketHandlers } from "./socketHandlers";
@@ -25,11 +25,6 @@ log.server(`🔑 YouTube API Key: ${process.env.YOUTUBE_API_KEY ? '✅ Loaded' :
 import { getTodaysApiUsage } from "./apiCounter";
 const apiUsage = getTodaysApiUsage();
 log.apiUsage(`📊 Today's API Usage: ${apiUsage.count} calls`);
-
-// Winstonフォーマットテスト
-log.server("=== WINSTON FORMAT TEST ===");
-log.youtube("TEST: YouTube API Key status: ✅ Available");
-log.apiUsage("TEST: API counter test");
 
 let reactRouterHandler: RequestHandler;
 let viteDevServer: ViteDevServer | undefined = undefined;

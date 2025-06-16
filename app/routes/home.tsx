@@ -11,10 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "~/components/ui/hover-card";
 import { useMusicStore } from "~/stores/musicStore";
 import type { Route } from "./+types/home";
-import { COLORS } from "~/libs/utils";
 import { useColorMode } from "~/hooks/use-color-mode";
 import { useYouTubeStatus } from "~/hooks/use-youtube-status";
-
 
 export function meta({}: Route.MetaArgs) {
     return [{ title: "音楽リクエストフォーム" }, { name: "description", content: "浜松キャンパスの音楽リクエストフォームです。" }];
@@ -22,26 +20,20 @@ export function meta({}: Route.MetaArgs) {
 
 export default function Home() {
     const [isAdmin, setIsAdmin] = useState(false);
-    // ゲーミングカラーモード（カスタムフックに分離）
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    
     const gaming = useGamingToggle('-');
-
     const musics = useMusicStore((store) => store.musics);
-    const error = useMusicStore((store) => store.error);
     const initializeSocket = useMusicStore((store) => store.initializeSocket);
     const ytStatus = useYouTubeStatus();
+    const { mode, setMode, darkClass } = useColorMode();
 
-    // Socket初期化
     useEffect(() => {
         initializeSocket();
     }, [initializeSocket]);
 
-    // 設定パネルの開閉
-    const [settingsOpen, setSettingsOpen] = useState(false);
-    const { mode, setMode, darkClass } = useColorMode();
-
-    // 設定ボタンのトグル動作に修正
     const handleSettingsButtonClick = () => {
-      setSettingsOpen((prev) => !prev);
+        setSettingsOpen((prev) => !prev);
     };
 
     return (

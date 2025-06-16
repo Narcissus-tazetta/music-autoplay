@@ -1,4 +1,3 @@
-// 移動元: ../Footer.tsx
 import { useEffect, useState } from "react";
 import { useGamingToggle } from "~/hooks/use-gaming-toggle";
 

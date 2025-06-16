@@ -1,6 +1,4 @@
 
-// 移動元: ../HomeForm.tsx
-import React from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { useMusicStore } from "~/stores/musicStore";
 import { parseYoutubeUrl, YOUTUBE_PATTERN } from "~/libs/utils";
@@ -31,7 +29,6 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode, onAdminModeChange }) =
     setError,
     formState: { errors },
   } = useForm<Inputs>();
-  // isAdmin状態は親(Home)で管理
 
   // フォーム送信処理
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
