@@ -17,7 +17,7 @@ export function useColorMode() {
     changeMode(newMode);
   };
 
-  const darkClass = mode === "dark" ? "dark-mode" : "";
+  const darkClass = mode === "dark" ? "dark" : "";
 
   return { mode, setMode, darkClass };
 }

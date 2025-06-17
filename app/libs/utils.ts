@@ -35,8 +35,8 @@ export function useSmoothBodyColor(bg: string, fg: string) {
 }
 
 export function changeMode(mode: "dark" | "light") {
-  document.body.classList.remove("dark-mode", "light-mode");
-  document.body.classList.add(mode === "dark" ? "dark-mode" : "light-mode");
+  document.body.classList.remove("dark", "light");
+  document.body.classList.add(mode);
   localStorage.setItem("selectedMode", mode);
 }
 

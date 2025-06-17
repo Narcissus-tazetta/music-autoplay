@@ -134,11 +134,11 @@ body {
     color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-body.dark-mode {
+body.dark {
   background-color: #212225 !important;
   color: #e8eaed !important;
 }
-body.light-mode {
+body.light {
   background-color: #fff !important;
   color: #212225 !important;
 }
@@ -228,31 +228,31 @@ body.light-mode {
   color: #1d4ed8;
 }
 
-body.dark-mode .youtube-status-playing {
+body.dark .youtube-status-playing {
   background-color: #26302a;
   border-color: #22c55e;
   color: #7fffa1;
 }
 
-body.dark-mode .youtube-status-paused {
+body.dark .youtube-status-paused {
   background-color: #3a3227;
   border-color: #f59e42;
   color: #ffd7a0;
 }
 
-body.dark-mode .youtube-status-closed {
+body.dark .youtube-status-closed {
   background-color: #23272e;
   border-color: #94a3b8;
   color: #bfc9d1;
 }
 
-body.dark-mode .youtube-status-unlisted.youtube-status-playing {
+body.dark .youtube-status-unlisted.youtube-status-playing {
   background-color: #332a3f;
   border-color: #a855f7;
   color: #d8b4fe;
 }
 
-body.dark-mode .youtube-status-unlisted.youtube-status-paused {
+body.dark .youtube-status-unlisted.youtube-status-paused {
   background-color: #1e3a8a;
   border-color: #3b82f6;
   color: #93c5fd;

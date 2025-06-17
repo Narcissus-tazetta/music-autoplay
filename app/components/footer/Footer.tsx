@@ -8,7 +8,7 @@ export const Footer: React.FC = () => {
 
   useEffect(() => {
     const updateMode = () => {
-      if (document.body.classList.contains("dark-mode")) setMode("dark");
+      if (document.body.classList.contains("dark")) setMode("dark");
       else setMode("light");
     };
     updateMode();
