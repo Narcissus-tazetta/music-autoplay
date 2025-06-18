@@ -28,10 +28,8 @@ export const useHomeForm = (onAdminModeChange?: (isAdmin: boolean) => void) => {
     formState: { errors },
   } = form;
 
-  // アラートを手動で閉じる
   const handleCloseAlert = useCallback(() => {
     setIsAnimating(true);
-    // フェードアウトアニメーション後に非表示
     setTimeout(() => {
       setShowAlert(false);
       setIsAnimating(false);
@@ -41,10 +39,8 @@ export const useHomeForm = (onAdminModeChange?: (isAdmin: boolean) => void) => {
     }, 200);
   }, [clearErrors, resetError]);
 
-  // 成功アラートを手動で閉じる
   const handleCloseSuccessAlert = useCallback(() => {
     setIsAnimating(true);
-    // フェードアウトアニメーション後に非表示
     setTimeout(() => {
       setShowAlert(false);
       setIsAnimating(false);
@@ -52,13 +48,11 @@ export const useHomeForm = (onAdminModeChange?: (isAdmin: boolean) => void) => {
     }, 200);
   }, []);
 
-  // エラーが発生したときのアラート表示制御
   useEffect(() => {
     if (errors.url || error) {
       setShowAlert(true);
       setIsAnimating(false);
       setSuccessMessage(undefined);
-      // 3秒後に自動で閉じる
       const timer = setTimeout(() => {
         handleCloseAlert();
       }, 3000);
@@ -66,12 +60,10 @@ export const useHomeForm = (onAdminModeChange?: (isAdmin: boolean) => void) => {
     }
   }, [errors.url, error, handleCloseAlert]);
 
-  // 成功メッセージの表示制御
   useEffect(() => {
     if (successMessage) {
       setShowAlert(true);
       setIsAnimating(false);
-      // 5秒後に自動で閉じる
       const timer = setTimeout(() => {
         handleCloseSuccessAlert();
       }, 5000);

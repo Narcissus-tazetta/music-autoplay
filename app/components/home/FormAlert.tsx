@@ -25,7 +25,6 @@ export const FormAlert: React.FC<FormAlertProps> = ({
 
   return (
     <>
-      {/* エラーアラート */}
       {isError && (
         <Alert
           variant="destructive"
@@ -47,7 +46,6 @@ export const FormAlert: React.FC<FormAlertProps> = ({
         </Alert>
       )}
 
-      {/* 成功アラート */}
       {isSuccess && (
         <Alert
           variant="default"

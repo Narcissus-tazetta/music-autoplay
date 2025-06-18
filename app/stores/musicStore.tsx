@@ -27,7 +27,6 @@ export const useMusicStore = create<MusicStore>((set, get) => {
     isConnected: false,
 
     initializeSocket() {
-      // SSR対応 - クライアントサイドでのみ実行
       if (typeof window === "undefined") return;
 
       const store = get();
