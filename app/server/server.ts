@@ -49,14 +49,30 @@ log.server(`🌐 Port: ${port}`);
 const app = express();
 log.server("⚙️  Configuring middleware...");
 
-app.use(cors());
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, access_token");
-  next();
-});
-log.server("🔐 CORS and security headers configured");
+const allowedOrigins =
+  process.env.NODE_ENV === "production"
+    ? [
+        "https://music-autoplay.onrender.com", // 本番環境
+        "https://music-autoplay.onrender.com/", // トレーリングスラッシュ対応
+      ]
+    : [
+        "http://localhost:3000", // 開発環境
+        "http://localhost:5173", // Vite開発サーバー
+        "http://127.0.0.1:3000", // IPv4ローカル
+        "http://127.0.0.1:5173", // Vite IPv4
+      ];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    optionsSuccessStatus: 200,
+  })
+);
+
+log.server(`🔐 CORS configured for origins: ${allowedOrigins.join(", ")}`);
 
 const server = app.listen(port, () => {
   log.server(
