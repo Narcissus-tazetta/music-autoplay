@@ -67,6 +67,18 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
   backgroundImage: _backgroundImage,
   setBackgroundImage: _setBackgroundImage,
 }) => {
+  const now = new Date();
+  const weekdayLabels = {
+    japanese: ["日", "月", "火", "水", "木", "金", "土"],
+    short: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    long: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+  };
+  const todayWeekday = {
+    japanese: `（${weekdayLabels.japanese[now.getDay()]}）`,
+    short: weekdayLabels.short[now.getDay()],
+    long: weekdayLabels.long[now.getDay()],
+  };
+
   return (
     <div className="flex flex-col gap-4">
       {/* 日付表示設定 */}
@@ -185,9 +197,9 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
                 onChange={(e) => setWeekdayFormat(e.target.value as WeekdayFormat)}
                 className="select select-sm select-bordered min-w-[100px] text-right"
               >
-                <option value="japanese">（木）</option>
-                <option value="short">Thu</option>
-                <option value="long">Thursday</option>
+                <option value="japanese">{todayWeekday.japanese}</option>
+                <option value="short">{todayWeekday.short}</option>
+                <option value="long">{todayWeekday.long}</option>
               </select>
             )}
           </div>

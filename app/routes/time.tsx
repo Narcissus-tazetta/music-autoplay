@@ -116,7 +116,8 @@ export default function Time() {
         short: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
         long: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
       };
-      const weekday = weekdays[weekdayFormat][now.getDay()];
+      const dayIndex = now.getDay(); // 0:日, 1:月, ..., 5:金, 6:土
+      const weekday = weekdays[weekdayFormat][dayIndex];
 
       if (weekdayFormat === "japanese") {
         dateString += `（${weekday}）`;
