@@ -55,6 +55,9 @@ interface SettingsPanelProps {
   backgroundImageFileName?: string;
   showBackgroundImage?: boolean;
   setShowBackgroundImage?: (v: boolean) => void;
+
+  // 隠し機能フラグ
+  backgroundFeatureEnabled?: boolean;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = (props) => {
@@ -97,6 +100,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = (props) => {
     backgroundImageFileName,
     showBackgroundImage,
     setShowBackgroundImage,
+    // 隠し機能フラグ
+    backgroundFeatureEnabled,
   } = props;
 
   const currentColors = COLORS[mode];
@@ -172,8 +177,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = (props) => {
           <div className="flex flex-col gap-4">
             <DarkModeToggle mode={mode} setMode={setMode} />
 
-            {/* 背景画像設定（timeページのみ） */}
+            {/* 背景画像設定（timeページのみ、隠し機能が有効な場合のみ） */}
             {isTimePage &&
+              backgroundFeatureEnabled &&
               showBackgroundImage !== undefined &&
               setShowBackgroundImage &&
               backgroundImage !== undefined &&

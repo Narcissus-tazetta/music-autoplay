@@ -22,23 +22,25 @@ export const BackgroundImageSettings: React.FC<BackgroundImageSettingsProps> = (
     if (file) {
       // 容量制限を100MBに拡大（IndexedDB使用）
       if (file.size > 100 * 1024 * 1024) {
-        alert("ファイルサイズは100MB以下にしてください");
+        window.alert("ファイルサイズは100MB以下にしてください");
         return;
       }
       if (!file.type.startsWith("image/")) {
-        alert("画像ファイルを選択してください");
+        window.alert("画像ファイルを選択してください");
         return;
       }
 
       // HEIC形式やサポートされていない形式を除外
       const supportedFormats = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
       if (!supportedFormats.includes(file.type.toLowerCase())) {
-        alert("サポートされている形式: JPEG, PNG, GIF, WebP\n（HEIC形式はサポートされていません）");
+        window.alert(
+          "サポートされている形式: JPEG, PNG, GIF, WebP\n（HEIC形式はサポートされていません）"
+        );
         return;
       }
 
       try {
-        const reader = new FileReader();
+        const reader = new window.FileReader();
         reader.onload = async (ev) => {
           const result = ev.target?.result as string;
           await setBackgroundImage(result, file.name);
@@ -46,7 +48,7 @@ export const BackgroundImageSettings: React.FC<BackgroundImageSettingsProps> = (
         reader.readAsDataURL(file);
       } catch (error) {
         console.error("画像の読み込みに失敗しました:", error);
-        alert("画像の読み込みに失敗しました");
+        window.alert("画像の読み込みに失敗しました");
       }
     }
   };

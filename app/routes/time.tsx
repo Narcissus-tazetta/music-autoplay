@@ -56,6 +56,8 @@ export default function Time() {
     backgroundImageFileName,
     showBackgroundImage,
     setShowBackgroundImage,
+    // 隠し機能フラグ
+    backgroundFeatureEnabled,
   } = useProgressSettings();
 
   // 現在の日付を取得（日本語曜日付き）
@@ -186,6 +188,7 @@ export default function Time() {
           backgroundImageFileName={backgroundImageFileName}
           showBackgroundImage={showBackgroundImage}
           setShowBackgroundImage={setShowBackgroundImage}
+          backgroundFeatureEnabled={backgroundFeatureEnabled}
         />
 
         <div className="text-center select-none space-y-4">

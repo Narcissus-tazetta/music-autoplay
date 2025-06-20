@@ -12,23 +12,23 @@ interface ImageData {
 }
 
 class IndexedDBManager {
-  private db: IDBDatabase | null = null;
+  private db: any = null;
 
   async init(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      const request = window.indexedDB.open(DB_NAME, DB_VERSION);
 
       request.onerror = () => {
         reject(new Error("IndexedDBの初期化に失敗しました"));
       };
 
       request.onsuccess = (event) => {
-        this.db = (event.target as IDBOpenDBRequest).result;
+        this.db = (event.target as any).result;
         resolve();
       };
 
       request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
+        const db = (event.target as any).result;
 
         // オブジェクトストアが存在しない場合は作成
         if (!db.objectStoreNames.contains(STORE_NAME)) {

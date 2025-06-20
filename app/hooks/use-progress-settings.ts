@@ -17,6 +17,7 @@ export function useProgressSettings() {
   const [backgroundImage, setBackgroundImageState] = useState<string>("");
   const [backgroundImageFileName, setBackgroundImageFileNameState] = useState<string>("");
   const [showBackgroundImage, setShowBackgroundImageState] = useState(false); // 背景画像のon/off
+  const [backgroundFeatureEnabled, setBackgroundFeatureEnabledState] = useState(false); // 背景画像機能の表示制御
 
   // 日付コンポーネント別設定
   const [showYear, setShowYearState] = useState(true);
@@ -29,7 +30,24 @@ export function useProgressSettings() {
   const [weekdayFormat, setWeekdayFormatState] = useState<WeekdayFormat>("short");
 
   useEffect(() => {
+    // Cmd+Shift+Space の同時押しを検出（トグル機能）
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey && event.shiftKey && event.key === " ") {
+        event.preventDefault(); // デフォルト動作を防ぐ
+        const newState = !backgroundFeatureEnabled;
+        setBackgroundFeatureEnabledState(newState);
+        localStorage.setItem("backgroundFeatureEnabled", newState.toString());
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
     // localStorage から設定を読み込み
+    const savedBackgroundFeatureEnabled = localStorage.getItem("backgroundFeatureEnabled");
+    if (savedBackgroundFeatureEnabled === "true") {
+      setBackgroundFeatureEnabledState(true);
+    }
+
     const savedShowProgress = localStorage.getItem("showProgress");
     const savedProgressColor = localStorage.getItem("progressColor") as ProgressColor;
     const savedShowRemainingText = localStorage.getItem("showRemainingText");
@@ -118,7 +136,12 @@ export function useProgressSettings() {
     if (savedWeekdayFormat && ["short", "long", "japanese"].includes(savedWeekdayFormat)) {
       setWeekdayFormatState(savedWeekdayFormat);
     }
-  }, []);
+
+    // クリーンアップ関数
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [backgroundFeatureEnabled]);
 
   const setShowProgress = (value: boolean) => {
     setShowProgressState(value);
@@ -161,7 +184,7 @@ export function useProgressSettings() {
           localStorage.setItem("backgroundImage", imageData);
         } catch (localStorageError) {
           console.error("localStorageへの保存も失敗しました:", localStorageError);
-          alert("画像が大きすぎて保存できませんでした。より小さい画像を選択してください。");
+          window.alert("画像が大きすぎて保存できませんでした。より小さい画像を選択してください。");
         }
       } else {
         localStorage.removeItem("backgroundImage");
@@ -247,5 +270,7 @@ export function useProgressSettings() {
     setDayFormat,
     weekdayFormat,
     setWeekdayFormat,
+    // 隠し機能フラグ
+    backgroundFeatureEnabled,
   };
 }

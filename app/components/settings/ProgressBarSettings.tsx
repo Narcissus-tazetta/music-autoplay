@@ -64,8 +64,8 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
   weekdayFormat,
   setWeekdayFormat,
   // 背景画像設定
-  backgroundImage,
-  setBackgroundImage,
+  backgroundImage: _backgroundImage,
+  setBackgroundImage: _setBackgroundImage,
 }) => {
   return (
     <div className="flex flex-col gap-4">
