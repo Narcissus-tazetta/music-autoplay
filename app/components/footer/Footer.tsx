@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useGamingToggle } from "~/hooks/use-gaming-toggle";
+import { useLocation } from "react-router";
 
 export const Footer: React.FC = () => {
   const [mode, setMode] = useState<"dark" | "light">("light");
   const gamingAlinco = useGamingToggle("^");
   const gamingNarcissus = useGamingToggle("¥");
+  const location = typeof window !== "undefined" ? window.location.pathname : "";
 
   useEffect(() => {
     const updateMode = () => {
@@ -33,18 +35,20 @@ export const Footer: React.FC = () => {
           "background 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1)",
       }}
     >
-      <div className="leading-tight">
-        supported by{" "}
-        <a
-          href="https://github.com/alinco8"
-          className={`text-blue-500 hover:underline mx-1${gamingAlinco ? " gaming-color" : ""}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ transition: "color 0.2s" }}
-        >
-          alinco8
-        </a>
-      </div>
+      {location !== "/time" && (
+        <div className="leading-tight">
+          supported by{" "}
+          <a
+            href="https://github.com/alinco8"
+            className={`text-blue-500 hover:underline mx-1${gamingAlinco ? " gaming-color" : ""}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ transition: "color 0.2s" }}
+          >
+            alinco8
+          </a>
+        </div>
+      )}
       <div className="text-[10px] mt-1 opacity-70 select-none leading-tight">
         &copy; {new Date().getFullYear()}{" "}
         <a
