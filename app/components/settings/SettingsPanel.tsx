@@ -7,10 +7,10 @@ import { ContactInfo } from "./ContactInfo";
 
 // 設定項目の型定義
 type ProgressColor = "blue" | "yellow" | "green" | "pink" | "purple" | "sky";
-type YearFormat = "western" | "reiwa" | "2025";
-type MonthFormat = "japanese" | "english" | "number";
-type DayFormat = "japanese" | "number" | "english";
-type WeekdayFormat = "short" | "long" | "japanese";
+type YearFormat = "western" | "reiwa" | "2025" | "none";
+type MonthFormat = "japanese" | "english" | "number" | "none";
+type DayFormat = "japanese" | "number" | "english" | "none";
+type WeekdayFormat = "short" | "long" | "japanese" | "none";
 
 interface SettingsPanelProps {
   open: boolean;

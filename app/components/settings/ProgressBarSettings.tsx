@@ -1,8 +1,8 @@
 type ProgressColor = "blue" | "yellow" | "green" | "pink" | "purple" | "sky";
-type YearFormat = "western" | "reiwa" | "2025";
-type MonthFormat = "japanese" | "english" | "number";
-type DayFormat = "japanese" | "number" | "english";
-type WeekdayFormat = "short" | "long" | "japanese";
+type YearFormat = "western" | "reiwa" | "2025" | "none";
+type MonthFormat = "japanese" | "english" | "number" | "none";
+type DayFormat = "japanese" | "number" | "english" | "none";
+type WeekdayFormat = "short" | "long" | "japanese" | "none";
 
 interface ProgressBarSettingsProps {
   mode: "dark" | "light";
@@ -67,16 +67,51 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
   backgroundImage: _backgroundImage,
   setBackgroundImage: _setBackgroundImage,
 }) => {
+  // 現在の日付情報を取得
   const now = new Date();
-  const weekdayLabels = {
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const currentDay = now.getDate();
+  const reiwaYear = currentYear - 2018;
+
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
+  const weekdays = {
     japanese: ["日", "月", "火", "水", "木", "金", "土"],
     short: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
     long: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
   };
-  const todayWeekday = {
-    japanese: `（${weekdayLabels.japanese[now.getDay()]}）`,
-    short: weekdayLabels.short[now.getDay()],
-    long: weekdayLabels.long[now.getDay()],
+  const currentWeekday = now.getDay();
+
+  // 英語の序数詞のサフィックスを取得
+  const getOrdinalSuffix = (day: number): string => {
+    if (day >= 11 && day <= 13) {
+      return "th";
+    }
+    const lastDigit = day % 10;
+    switch (lastDigit) {
+      case 1:
+        return "st";
+      case 2:
+        return "nd";
+      case 3:
+        return "rd";
+      default:
+        return "th";
+    }
   };
 
   return (
@@ -120,11 +155,12 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
               <select
                 value={yearFormat}
                 onChange={(e) => setYearFormat(e.target.value as YearFormat)}
-                className="select select-sm select-bordered max-w-xs"
+                className="select select-sm select-bordered max-w-xs text-right"
               >
-                <option value="western">2025年</option>
-                <option value="reiwa">令和7年</option>
-                <option value="2025">2025</option>
+                <option value="western">{currentYear}年</option>
+                <option value="reiwa">令和{reiwaYear}年</option>
+                <option value="2025">{currentYear}</option>
+                <option value="none">非表示</option>
               </select>
             )}
           </div>
@@ -146,11 +182,12 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
               <select
                 value={monthFormat}
                 onChange={(e) => setMonthFormat(e.target.value as MonthFormat)}
-                className="select select-sm select-bordered max-w-xs"
+                className="select select-sm select-bordered max-w-xs text-right"
               >
-                <option value="japanese">6月</option>
-                <option value="english">June</option>
-                <option value="number">06</option>
+                <option value="japanese">{currentMonth}月</option>
+                <option value="english">{monthNames[now.getMonth()]}</option>
+                <option value="number">{String(currentMonth).padStart(2, "0")}</option>
+                <option value="none">非表示</option>
               </select>
             )}
           </div>
@@ -172,11 +209,15 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
               <select
                 value={dayFormat}
                 onChange={(e) => setDayFormat(e.target.value as DayFormat)}
-                className="select select-sm select-bordered max-w-xs"
+                className="select select-sm select-bordered max-w-xs text-right"
               >
-                <option value="japanese">20日</option>
-                <option value="number">20</option>
-                <option value="english">20th</option>
+                <option value="japanese">{currentDay}日</option>
+                <option value="number">{currentDay}</option>
+                <option value="english">
+                  {currentDay}
+                  {getOrdinalSuffix(currentDay)}
+                </option>
+                <option value="none">非表示</option>
               </select>
             )}
           </div>
@@ -199,9 +240,10 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
                 onChange={(e) => setWeekdayFormat(e.target.value as WeekdayFormat)}
                 className="select select-sm select-bordered min-w-[100px] text-right"
               >
-                <option value="japanese">{todayWeekday.japanese}</option>
-                <option value="short">{todayWeekday.short}</option>
-                <option value="long">{todayWeekday.long}</option>
+                <option value="japanese">{weekdays.japanese[currentWeekday]}</option>
+                <option value="short">{weekdays.short[currentWeekday]}</option>
+                <option value="long">{weekdays.long[currentWeekday]}</option>
+                <option value="none">非表示</option>
               </select>
             )}
           </div>
