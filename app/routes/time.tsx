@@ -163,7 +163,7 @@ export default function Time() {
         <div className="text-center select-none space-y-4">
           {/* 日付表示 */}
           {showDate && (
-            <div className="text-lg font-medium text-base-content opacity-70 text-right">
+            <div className="text-lg font-medium text-base-content opacity-70">
               {getCurrentDate()}
             </div>
           )}
