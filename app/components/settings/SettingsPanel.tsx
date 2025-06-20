@@ -1,14 +1,46 @@
+import { useState } from "react";
 import { COLORS } from "~/libs/utils";
+import { DarkModeToggle } from "./DarkModeToggle";
+import { ProgressBarSettings } from "./ProgressBarSettings";
+import { ContactInfo } from "./ContactInfo";
 
 interface SettingsPanelProps {
   open: boolean;
   onClose: () => void;
   mode: "dark" | "light";
   setMode: (v: "dark" | "light") => void;
+  pageType?: string;
+  showProgress?: boolean;
+  setShowProgress?: (v: boolean) => void;
+  progressColor?: "blue" | "yellow" | "green" | "pink" | "purple" | "sky";
+  setProgressColor?: (v: "blue" | "yellow" | "green" | "pink" | "purple" | "sky") => void;
 }
 
-export const SettingsPanel: React.FC<SettingsPanelProps> = ({ open, onClose, mode, setMode }) => {
+export const SettingsPanel: React.FC<SettingsPanelProps> = (props) => {
+  const {
+    open,
+    onClose,
+    mode,
+    setMode,
+    pageType,
+    showProgress: showProgressProp,
+    setShowProgress: setShowProgressProp,
+    progressColor: progressColorProp,
+    setProgressColor: setProgressColorProp,
+  } = props;
   const currentColors = COLORS[mode];
+  const [activeTab, setActiveTab] = useState<"settings" | "advanced">("settings");
+  // showProgress, progressColor, setShowProgress, setProgressColorはpropsから受け取る
+  // fallbackは内部state（ただし/timeでは必ずpropsが渡る想定）
+  const [internalShowProgress, internalSetShowProgress] = useState(true);
+  const [internalProgressColor, internalSetProgressColor] = useState<
+    "blue" | "yellow" | "green" | "pink" | "purple" | "sky"
+  >("green");
+  const showProgress =
+    typeof showProgressProp === "boolean" ? showProgressProp : internalShowProgress;
+  const setShowProgress = setShowProgressProp || internalSetShowProgress;
+  const progressColor = progressColorProp || internalProgressColor;
+  const setProgressColor = setProgressColorProp || internalSetProgressColor;
   return (
     <div
       style={{
@@ -44,62 +76,52 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ open, onClose, mod
         >
           ×
         </button>
-        <h2 className="text-xl font-bold mb-6">設定</h2>
-        <div className="flex flex-col gap-4">
-          <label
-            className={`flex items-center gap-4 cursor-pointer py-2 ${mode === "dark" ? "text-white" : "text-black"}`}
+
+        {/* タブボタン */}
+        <div className="flex mb-6 border-b border-zinc-400/30">
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`px-4 py-2 font-semibold transition-colors duration-200 ${
+              activeTab === "settings"
+                ? "text-blue-500 border-b-2 border-blue-500"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
           >
-            <span className="block font-medium">ダークモード</span>
+            設定
+          </button>
+          {pageType === "time" && (
             <button
-              type="button"
-              aria-pressed={mode === "dark"}
-              onClick={() => setMode(mode === "dark" ? "light" : "dark")}
-              tabIndex={0}
-              className={`${mode === "dark" ? "bg-blue-600" : "bg-gray-200"} relative inline-flex h-[28px] w-[52px] items-center rounded-full transition-colors duration-200 ring-1 ring-zinc-600/5 outline-none`}
+              onClick={() => setActiveTab("advanced")}
+              className={`px-4 py-2 font-semibold transition-colors duration-200 ${
+                activeTab === "advanced"
+                  ? "text-blue-500 border-b-2 border-blue-500"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
             >
-              <span
-                className={`${mode === "dark" ? "translate-x-6" : "translate-x-1"} inline-block h-6 w-6 transform bg-white rounded-full transition-transform duration-200`}
-                style={{ background: mode === "dark" ? "#E8EAED" : "#fff" }}
-              ></span>
+              詳細設定
             </button>
-          </label>
+          )}
         </div>
-        <div
-          className="text-xs opacity-80 border-t pt-4 border-zinc-400/30"
-          style={{
-            position: "absolute",
-            left: 0,
-            bottom: 0,
-            width: "100%",
-            background: "inherit",
-            padding: "16px 24px",
-            boxSizing: "border-box",
-          }}
-        >
-          <div>
-            <span className="font-bold">お問い合わせ:</span>
-            <br />
-            📧 Gmail:
-            <a
-              href="mailto:clownfish11621@gmail.com?subject=%E9%9F%B3%E6%A5%BD%E3%83%AA%E3%82%AF%E3%82%A8%E3%82%B9%E3%83%88%E3%83%95%E3%82%A9%E3%83%BC%E3%83%A0%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6"
-              className="text-blue-500 hover:underline mx-1"
-            >
-              clownfish11621@gmail.com
-            </a>
-            <br /> 💬 Slack:{" "}
-            <a
-              href="https://n-highschool.slack.com/team/U04VDPX7ZHV"
-              target="_blank"
-              className="text-blue-500 hover:underline mx-1"
-            >
-              prason
-            </a>
-            <br />
-            <span className="text-gray-500 text-[10px]">
-              ※エラーやバグのご報告、ご意見・ご要望は、以下のメールアドレスまたはSlackにてお気軽にご連絡ください。
-            </span>
+
+        {/* 設定タブの内容 */}
+        {activeTab === "settings" && (
+          <div className="flex flex-col gap-4">
+            <DarkModeToggle mode={mode} setMode={setMode} />
           </div>
-        </div>
+        )}
+
+        {/* 詳細設定タブの内容（/timeページでのみ表示） */}
+        {activeTab === "advanced" && pageType === "time" && (
+          <ProgressBarSettings
+            mode={mode}
+            showProgress={showProgress}
+            setShowProgress={setShowProgress}
+            progressColor={progressColor}
+            setProgressColor={setProgressColor}
+          />
+        )}
+
+        <ContactInfo />
       </div>
     </div>
   );

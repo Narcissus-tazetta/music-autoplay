@@ -9,6 +9,7 @@
 @import "./footer.css";
 @import "./darkmode.css";
 @import "./gaming.css";
+@import "./time.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -265,4 +266,21 @@ table:hover,
 table tr:hover {
   background-color: transparent !important;
   transition: none !important;
+}
+
+/* 明るい進捗バー用カスタムクラス */
+.progress-bright::-webkit-progress-bar {
+  background-color: #fffbe6;
+  border-radius: 0.5rem;
+}
+.progress-bright::-webkit-progress-value {
+  background-color: #ffe066;
+  border-radius: 0.5rem;
+}
+.progress-bright::-moz-progress-bar {
+  background-color: #ffe066;
+  border-radius: 0.5rem;
+}
+.progress-bright {
+  background-color: #fffbe6;
 }
