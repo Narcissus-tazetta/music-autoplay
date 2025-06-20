@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useGamingToggle } from "~/hooks/use-gaming-toggle";
-import { useLocation } from "react-router";
+// import { useLocation } from "react-router";
 
 export const Footer: React.FC = () => {
   const [mode, setMode] = useState<"dark" | "light">("light");

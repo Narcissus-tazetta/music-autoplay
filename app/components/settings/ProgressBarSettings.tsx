@@ -1,4 +1,8 @@
 type ProgressColor = "blue" | "yellow" | "green" | "pink" | "purple" | "sky";
+type YearFormat = "western" | "reiwa";
+type MonthFormat = "japanese" | "english" | "number";
+type DayFormat = "japanese" | "number";
+type WeekdayFormat = "short" | "long" | "japanese";
 
 interface ProgressBarSettingsProps {
   mode: "dark" | "light";
@@ -6,6 +10,27 @@ interface ProgressBarSettingsProps {
   setShowProgress: (v: boolean) => void;
   progressColor: ProgressColor;
   setProgressColor: (v: ProgressColor) => void;
+  showRemainingText: boolean;
+  setShowRemainingText: (v: boolean) => void;
+  showDate: boolean;
+  setShowDate: (v: boolean) => void;
+  // 日付コンポーネント設定
+  showYear: boolean;
+  setShowYear: (v: boolean) => void;
+  showMonth: boolean;
+  setShowMonth: (v: boolean) => void;
+  showDay: boolean;
+  setShowDay: (v: boolean) => void;
+  showWeekday: boolean;
+  setShowWeekday: (v: boolean) => void;
+  yearFormat: YearFormat;
+  setYearFormat: (v: YearFormat) => void;
+  monthFormat: MonthFormat;
+  setMonthFormat: (v: MonthFormat) => void;
+  dayFormat: DayFormat;
+  setDayFormat: (v: DayFormat) => void;
+  weekdayFormat: WeekdayFormat;
+  setWeekdayFormat: (v: WeekdayFormat) => void;
 }
 
 export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
@@ -14,26 +39,179 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
   setShowProgress,
   progressColor,
   setProgressColor,
+  showRemainingText,
+  setShowRemainingText,
+  showDate,
+  setShowDate,
+  // 日付コンポーネント設定
+  showYear,
+  setShowYear,
+  showMonth,
+  setShowMonth,
+  showDay,
+  setShowDay,
+  showWeekday,
+  setShowWeekday,
+  yearFormat,
+  setYearFormat,
+  monthFormat,
+  setMonthFormat,
+  dayFormat,
+  setDayFormat,
+  weekdayFormat,
+  setWeekdayFormat,
 }) => {
   return (
     <div className="flex flex-col gap-4">
+      {/* 日付表示設定 */}
+      <label
+        className={`flex items-center justify-between cursor-pointer py-2 ${mode === "dark" ? "text-white" : "text-black"}`}
+      >
+        <span className="block font-medium">日付表示</span>
+        <input
+          type="checkbox"
+          className="toggle toggle-primary"
+          checked={showDate}
+          onChange={(e) => setShowDate(e.target.checked)}
+        />
+      </label>
+
+      {/* 日付詳細設定（日付表示がONの場合のみ） */}
+      {showDate && (
+        <div className="ml-4 flex flex-col gap-3 p-3 border rounded-lg border-gray-200 dark:border-gray-700">
+          <h4
+            className={`font-medium text-sm ${mode === "dark" ? "text-gray-300" : "text-gray-700"}`}
+          >
+            日付表示の詳細設定
+          </h4>
+
+          {/* 年表示 */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                className="toggle toggle-primary scale-75"
+                checked={showYear}
+                onChange={(e) => setShowYear(e.target.checked)}
+              />
+              <span className={`text-sm ${mode === "dark" ? "text-white" : "text-black"}`}>
+                年表示
+              </span>
+            </div>
+            {showYear && (
+              <select
+                value={yearFormat}
+                onChange={(e) => setYearFormat(e.target.value as YearFormat)}
+                className="select select-sm select-bordered max-w-xs"
+              >
+                <option value="western">2025年</option>
+                <option value="reiwa">令和7年</option>
+              </select>
+            )}
+          </div>
+
+          {/* 月表示 */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                className="toggle toggle-primary scale-75"
+                checked={showMonth}
+                onChange={(e) => setShowMonth(e.target.checked)}
+              />
+              <span className={`text-sm ${mode === "dark" ? "text-white" : "text-black"}`}>
+                月表示
+              </span>
+            </div>
+            {showMonth && (
+              <select
+                value={monthFormat}
+                onChange={(e) => setMonthFormat(e.target.value as MonthFormat)}
+                className="select select-sm select-bordered max-w-xs"
+              >
+                <option value="japanese">6月</option>
+                <option value="english">June</option>
+                <option value="number">06</option>
+              </select>
+            )}
+          </div>
+
+          {/* 日表示 */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                className="toggle toggle-primary scale-75"
+                checked={showDay}
+                onChange={(e) => setShowDay(e.target.checked)}
+              />
+              <span className={`text-sm ${mode === "dark" ? "text-white" : "text-black"}`}>
+                日表示
+              </span>
+            </div>
+            {showDay && (
+              <select
+                value={dayFormat}
+                onChange={(e) => setDayFormat(e.target.value as DayFormat)}
+                className="select select-sm select-bordered max-w-xs"
+              >
+                <option value="japanese">20日</option>
+                <option value="number">20</option>
+              </select>
+            )}
+          </div>
+
+          {/* 曜日表示 */}
+          <div className="w-full flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="toggle toggle-primary scale-75"
+              checked={showWeekday}
+              onChange={(e) => setShowWeekday(e.target.checked)}
+            />
+            <span className={`text-sm ${mode === "dark" ? "text-white" : "text-black"}`}>
+              曜日表示
+            </span>
+            <div className="flex-1"></div>
+            {showWeekday && (
+              <select
+                value={weekdayFormat}
+                onChange={(e) => setWeekdayFormat(e.target.value as WeekdayFormat)}
+                className="select select-sm select-bordered min-w-[100px] text-right"
+              >
+                <option value="japanese">（木）</option>
+                <option value="short">Thu</option>
+                <option value="long">Thursday</option>
+              </select>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 残り時間テキスト表示設定 */}
+      <label
+        className={`flex items-center justify-between cursor-pointer py-2 ${mode === "dark" ? "text-white" : "text-black"}`}
+      >
+        <span className="block font-medium">次の時間割表示</span>
+        <input
+          type="checkbox"
+          className="toggle toggle-primary"
+          checked={showRemainingText}
+          onChange={(e) => setShowRemainingText(e.target.checked)}
+        />
+      </label>
+
       {/* 進捗表示設定 */}
       <label
-        className={`flex items-center gap-4 cursor-pointer py-2 ${mode === "dark" ? "text-white" : "text-black"}`}
+        className={`flex items-center justify-between cursor-pointer py-2 ${mode === "dark" ? "text-white" : "text-black"}`}
       >
         <span className="block font-medium">進捗バー表示</span>
-        <button
-          type="button"
-          aria-pressed={showProgress}
-          onClick={() => setShowProgress(!showProgress)}
-          tabIndex={0}
-          className={`${showProgress ? "bg-blue-600" : "bg-gray-200"} relative inline-flex h-[28px] w-[52px] items-center rounded-full transition-colors duration-200 ring-1 ring-zinc-600/5 outline-none`}
-        >
-          <span
-            className={`${showProgress ? "translate-x-6" : "translate-x-1"} inline-block h-6 w-6 transform bg-white rounded-full transition-transform duration-200`}
-            style={{ background: showProgress ? "#E8EAED" : "#fff" }}
-          ></span>
-        </button>
+        <input
+          type="checkbox"
+          className="toggle toggle-primary"
+          checked={showProgress}
+          onChange={(e) => setShowProgress(e.target.checked)}
+        />
       </label>
 
       {/* 進捗バー色選択（進捗表示がONの場合のみ） */}

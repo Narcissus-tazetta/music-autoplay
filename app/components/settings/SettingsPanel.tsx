@@ -14,6 +14,27 @@ interface SettingsPanelProps {
   setShowProgress?: (v: boolean) => void;
   progressColor?: "blue" | "yellow" | "green" | "pink" | "purple" | "sky";
   setProgressColor?: (v: "blue" | "yellow" | "green" | "pink" | "purple" | "sky") => void;
+  showRemainingText?: boolean;
+  setShowRemainingText?: (v: boolean) => void;
+  showDate?: boolean;
+  setShowDate?: (v: boolean) => void;
+  // 日付コンポーネント設定
+  showYear?: boolean;
+  setShowYear?: (v: boolean) => void;
+  showMonth?: boolean;
+  setShowMonth?: (v: boolean) => void;
+  showDay?: boolean;
+  setShowDay?: (v: boolean) => void;
+  showWeekday?: boolean;
+  setShowWeekday?: (v: boolean) => void;
+  yearFormat?: "western" | "reiwa";
+  setYearFormat?: (v: "western" | "reiwa") => void;
+  monthFormat?: "japanese" | "english" | "number";
+  setMonthFormat?: (v: "japanese" | "english" | "number") => void;
+  dayFormat?: "japanese" | "number";
+  setDayFormat?: (v: "japanese" | "number") => void;
+  weekdayFormat?: "short" | "long" | "japanese";
+  setWeekdayFormat?: (v: "short" | "long" | "japanese") => void;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = (props) => {
@@ -27,20 +48,82 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = (props) => {
     setShowProgress: setShowProgressProp,
     progressColor: progressColorProp,
     setProgressColor: setProgressColorProp,
+    showRemainingText: showRemainingTextProp,
+    setShowRemainingText: setShowRemainingTextProp,
+    showDate: showDateProp,
+    setShowDate: setShowDateProp,
+    // 日付コンポーネント設定
+    showYear: showYearProp,
+    setShowYear: setShowYearProp,
+    showMonth: showMonthProp,
+    setShowMonth: setShowMonthProp,
+    showDay: showDayProp,
+    setShowDay: setShowDayProp,
+    showWeekday: showWeekdayProp,
+    setShowWeekday: setShowWeekdayProp,
+    yearFormat: yearFormatProp,
+    setYearFormat: setYearFormatProp,
+    monthFormat: monthFormatProp,
+    setMonthFormat: setMonthFormatProp,
+    dayFormat: dayFormatProp,
+    setDayFormat: setDayFormatProp,
+    weekdayFormat: weekdayFormatProp,
+    setWeekdayFormat: setWeekdayFormatProp,
   } = props;
   const currentColors = COLORS[mode];
   const [activeTab, setActiveTab] = useState<"settings" | "advanced">("settings");
+
   // showProgress, progressColor, setShowProgress, setProgressColorはpropsから受け取る
   // fallbackは内部state（ただし/timeでは必ずpropsが渡る想定）
   const [internalShowProgress, internalSetShowProgress] = useState(true);
   const [internalProgressColor, internalSetProgressColor] = useState<
     "blue" | "yellow" | "green" | "pink" | "purple" | "sky"
   >("green");
+  const [internalShowRemainingText, internalSetShowRemainingText] = useState(true);
+  const [internalShowDate, internalSetShowDate] = useState(false);
+
+  // 日付コンポーネント用の内部state
+  const [internalShowYear, internalSetShowYear] = useState(true);
+  const [internalShowMonth, internalSetShowMonth] = useState(true);
+  const [internalShowDay, internalSetShowDay] = useState(true);
+  const [internalShowWeekday, internalSetShowWeekday] = useState(true);
+  const [internalYearFormat, internalSetYearFormat] = useState<"western" | "reiwa">("western");
+  const [internalMonthFormat, internalSetMonthFormat] = useState<"japanese" | "english" | "number">(
+    "japanese"
+  );
+  const [internalDayFormat, internalSetDayFormat] = useState<"japanese" | "number">("japanese");
+  const [internalWeekdayFormat, internalSetWeekdayFormat] = useState<"short" | "long" | "japanese">(
+    "short"
+  );
+
   const showProgress =
     typeof showProgressProp === "boolean" ? showProgressProp : internalShowProgress;
   const setShowProgress = setShowProgressProp || internalSetShowProgress;
   const progressColor = progressColorProp || internalProgressColor;
   const setProgressColor = setProgressColorProp || internalSetProgressColor;
+  const showRemainingText =
+    typeof showRemainingTextProp === "boolean" ? showRemainingTextProp : internalShowRemainingText;
+  const setShowRemainingText = setShowRemainingTextProp || internalSetShowRemainingText;
+  const showDate = typeof showDateProp === "boolean" ? showDateProp : internalShowDate;
+  const setShowDate = setShowDateProp || internalSetShowDate;
+
+  // 日付コンポーネント設定
+  const showYear = typeof showYearProp === "boolean" ? showYearProp : internalShowYear;
+  const setShowYear = setShowYearProp || internalSetShowYear;
+  const showMonth = typeof showMonthProp === "boolean" ? showMonthProp : internalShowMonth;
+  const setShowMonth = setShowMonthProp || internalSetShowMonth;
+  const showDay = typeof showDayProp === "boolean" ? showDayProp : internalShowDay;
+  const setShowDay = setShowDayProp || internalSetShowDay;
+  const showWeekday = typeof showWeekdayProp === "boolean" ? showWeekdayProp : internalShowWeekday;
+  const setShowWeekday = setShowWeekdayProp || internalSetShowWeekday;
+  const yearFormat = yearFormatProp || internalYearFormat;
+  const setYearFormat = setYearFormatProp || internalSetYearFormat;
+  const monthFormat = monthFormatProp || internalMonthFormat;
+  const setMonthFormat = setMonthFormatProp || internalSetMonthFormat;
+  const dayFormat = dayFormatProp || internalDayFormat;
+  const setDayFormat = setDayFormatProp || internalSetDayFormat;
+  const weekdayFormat = weekdayFormatProp || internalWeekdayFormat;
+  const setWeekdayFormat = setWeekdayFormatProp || internalSetWeekdayFormat;
   return (
     <div
       style={{
@@ -118,6 +201,26 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = (props) => {
             setShowProgress={setShowProgress}
             progressColor={progressColor}
             setProgressColor={setProgressColor}
+            showRemainingText={showRemainingText}
+            setShowRemainingText={setShowRemainingText}
+            showDate={showDate}
+            setShowDate={setShowDate}
+            showYear={showYear}
+            setShowYear={setShowYear}
+            showMonth={showMonth}
+            setShowMonth={setShowMonth}
+            showDay={showDay}
+            setShowDay={setShowDay}
+            showWeekday={showWeekday}
+            setShowWeekday={setShowWeekday}
+            yearFormat={yearFormat}
+            setYearFormat={setYearFormat}
+            monthFormat={monthFormat}
+            setMonthFormat={setMonthFormat}
+            dayFormat={dayFormat}
+            setDayFormat={setDayFormat}
+            weekdayFormat={weekdayFormat}
+            setWeekdayFormat={setWeekdayFormat}
           />
         )}
 
