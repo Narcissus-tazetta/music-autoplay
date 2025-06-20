@@ -1,4 +1,5 @@
 import type { Time, Schedule, ScheduleItem, ClassStatus } from "../types/schedule";
+import { holidays } from "./holidays";
 
 // Timeオブジェクトをミリ秒に変換
 export const timeToMs = (time: Time): number => {
@@ -44,8 +45,14 @@ export const getCurrentStatus = (now: Date = new Date(), schedule: Schedule): Cl
   const currentTimeMs = getCurrentTimeMs(now);
   const dayOfWeek = now.getDay(); // 0=日曜日, 6=土曜日
 
-  // 土日は授業なし
-  if (dayOfWeek === 0 || dayOfWeek === 6) {
+  // 祝日判定
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  const todayStr = `${yyyy}-${mm}-${dd}`;
+
+  // 土日または祝日は授業なし
+  if (dayOfWeek === 0 || dayOfWeek === 6 || holidays.includes(todayStr)) {
     return { type: "finished" };
   }
 
