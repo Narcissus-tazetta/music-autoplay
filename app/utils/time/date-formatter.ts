@@ -7,9 +7,9 @@ export interface DateFormatSettings {
   showMonth: boolean;
   showDay: boolean;
   showWeekday: boolean;
-  yearFormat: "western" | "reiwa";
+  yearFormat: "western" | "reiwa" | "2025";
   monthFormat: "japanese" | "english" | "number";
-  dayFormat: "japanese" | "number";
+  dayFormat: "japanese" | "number" | "english";
   weekdayFormat: "japanese" | "short" | "long";
 }
 
@@ -25,6 +25,8 @@ export function formatCurrentDate(settings: DateFormatSettings): string {
     if (settings.yearFormat === "reiwa") {
       const reiwaYear = now.getFullYear() - 2018; // 令和元年は2019年
       dateString += `令和${reiwaYear}年`;
+    } else if (settings.yearFormat === "2025") {
+      dateString += `${now.getFullYear()}`;
     } else {
       dateString += `${now.getFullYear()}年`;
     }
@@ -59,6 +61,10 @@ export function formatCurrentDate(settings: DateFormatSettings): string {
   if (settings.showDay) {
     if (settings.dayFormat === "japanese") {
       dateString += `${now.getDate()}日`;
+    } else if (settings.dayFormat === "english") {
+      const day = now.getDate();
+      const suffix = getOrdinalSuffix(day);
+      dateString += `${day}${suffix}`;
     } else {
       dateString += `${now.getDate()}`;
     }
@@ -82,4 +88,25 @@ export function formatCurrentDate(settings: DateFormatSettings): string {
   }
 
   return dateString.trim();
+}
+
+/**
+ * 英語の序数詞のサフィックスを取得（1st, 2nd, 3rd, 4th...）
+ */
+function getOrdinalSuffix(day: number): string {
+  if (day >= 11 && day <= 13) {
+    return "th";
+  }
+  
+  const lastDigit = day % 10;
+  switch (lastDigit) {
+    case 1:
+      return "st";
+    case 2:
+      return "nd";
+    case 3:
+      return "rd";
+    default:
+      return "th";
+  }
 }

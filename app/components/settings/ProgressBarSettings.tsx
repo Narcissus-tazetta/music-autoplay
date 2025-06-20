@@ -1,7 +1,7 @@
 type ProgressColor = "blue" | "yellow" | "green" | "pink" | "purple" | "sky";
-type YearFormat = "western" | "reiwa";
+type YearFormat = "western" | "reiwa" | "2025";
 type MonthFormat = "japanese" | "english" | "number";
-type DayFormat = "japanese" | "number";
+type DayFormat = "japanese" | "number" | "english";
 type WeekdayFormat = "short" | "long" | "japanese";
 
 interface ProgressBarSettingsProps {
@@ -124,6 +124,7 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
               >
                 <option value="western">2025年</option>
                 <option value="reiwa">令和7年</option>
+                <option value="2025">2025</option>
               </select>
             )}
           </div>
@@ -175,6 +176,7 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
               >
                 <option value="japanese">20日</option>
                 <option value="number">20</option>
+                <option value="english">20th</option>
               </select>
             )}
           </div>

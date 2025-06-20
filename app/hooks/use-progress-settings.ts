@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { indexedDBManager } from "~/libs/indexedDB";
 
 type ProgressColor = "blue" | "yellow" | "green" | "pink" | "purple" | "sky";
-type YearFormat = "western" | "reiwa";
+type YearFormat = "western" | "reiwa" | "2025";
 type MonthFormat = "japanese" | "english" | "number";
-type DayFormat = "japanese" | "number";
+type DayFormat = "japanese" | "number" | "english";
 type WeekdayFormat = "short" | "long" | "japanese";
 
 export function useProgressSettings() {
@@ -124,13 +124,13 @@ export function useProgressSettings() {
     if (savedShowDay !== null) setShowDayState(savedShowDay === "true");
     if (savedShowWeekday !== null) setShowWeekdayState(savedShowWeekday === "true");
 
-    if (savedYearFormat && ["western", "reiwa"].includes(savedYearFormat)) {
+    if (savedYearFormat && ["western", "reiwa", "2025"].includes(savedYearFormat)) {
       setYearFormatState(savedYearFormat);
     }
     if (savedMonthFormat && ["japanese", "english", "number"].includes(savedMonthFormat)) {
       setMonthFormatState(savedMonthFormat);
     }
-    if (savedDayFormat && ["japanese", "number"].includes(savedDayFormat)) {
+    if (savedDayFormat && ["japanese", "number", "english"].includes(savedDayFormat)) {
       setDayFormatState(savedDayFormat);
     }
     if (savedWeekdayFormat && ["short", "long", "japanese"].includes(savedWeekdayFormat)) {
