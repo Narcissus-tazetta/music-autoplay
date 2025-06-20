@@ -7,9 +7,9 @@ import { ContactInfo } from "./ContactInfo";
 
 // 設定項目の型定義
 type ProgressColor = "blue" | "yellow" | "green" | "pink" | "purple" | "sky";
-type YearFormat = "western" | "reiwa";
+type YearFormat = "western" | "reiwa" | "2025";
 type MonthFormat = "japanese" | "english" | "number";
-type DayFormat = "japanese" | "number";
+type DayFormat = "japanese" | "number" | "english";
 type WeekdayFormat = "short" | "long" | "japanese";
 
 interface SettingsPanelProps {
