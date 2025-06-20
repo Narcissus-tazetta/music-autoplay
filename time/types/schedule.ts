@@ -11,7 +11,7 @@ export interface ScheduleItem {
 }
 
 export interface ClassStatus {
-  type: "class" | "rest" | "finished" | "before";
+  type: "class" | "rest" | "finished" | "before" | "closed";
   current?: ScheduleItem;
   next?: ScheduleItem;
   timeRemaining?: string; // "1時間23分45.67秒"

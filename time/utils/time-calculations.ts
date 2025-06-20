@@ -51,9 +51,9 @@ export const getCurrentStatus = (now: Date = new Date(), schedule: Schedule): Cl
   const dd = String(now.getDate()).padStart(2, "0");
   const todayStr = `${yyyy}-${mm}-${dd}`;
 
-  // 土日または祝日は授業なし
+  // 土日または祝日は休校日
   if (dayOfWeek === 0 || dayOfWeek === 6 || holidays.includes(todayStr)) {
-    return { type: "finished" };
+    return { type: "closed" };
   }
 
   // 現在進行中のアイテムを見つける

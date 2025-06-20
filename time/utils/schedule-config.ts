@@ -16,7 +16,8 @@ const createScheduleItem = (label: string, type: "class" | "rest", time: Time): 
 
 export const DEFAULT_SCHEDULE: Schedule = {
   items: [
-    createScheduleItem("朝礼前", "rest", createTime(9, 0, 0)),
+    createScheduleItem("始業前", "rest", createTime(8, 30, 0)),
+    createScheduleItem("キャンパスが開く", "rest", createTime(9, 0, 0)),
     createScheduleItem("朝礼開始", "rest", createTime(9, 30, 0)),
     createScheduleItem("1時間目", "class", createTime(9, 45, 0)),
     createScheduleItem("1時間目休憩", "rest", createTime(10, 35, 0)),
