@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { indexedDBManager } from "~/libs/indexedDB";
 
 type ProgressColor = "blue" | "yellow" | "green" | "pink" | "purple" | "sky";
 type YearFormat = "western" | "reiwa";
@@ -11,6 +12,11 @@ export function useProgressSettings() {
   const [progressColor, setProgressColorState] = useState<ProgressColor>("green");
   const [showRemainingText, setShowRemainingTextState] = useState(true);
   const [showDate, setShowDateState] = useState(false); // デフォルトはoff
+
+  // 背景画像設定
+  const [backgroundImage, setBackgroundImageState] = useState<string>("");
+  const [backgroundImageFileName, setBackgroundImageFileNameState] = useState<string>("");
+  const [showBackgroundImage, setShowBackgroundImageState] = useState(false); // 背景画像のon/off
 
   // 日付コンポーネント別設定
   const [showYear, setShowYearState] = useState(true);
@@ -46,6 +52,43 @@ export function useProgressSettings() {
 
     if (savedShowDate !== null) {
       setShowDateState(savedShowDate === "true");
+    }
+
+    // 背景画像設定をIndexedDBから読み込み（エラーハンドリング強化）
+    const loadBackgroundImage = async () => {
+      try {
+        // IndexedDBが利用可能かチェック
+        if (typeof window === "undefined" || !window.indexedDB) {
+          return;
+        }
+
+        const savedBackgroundImageData = await indexedDBManager.getImage();
+        if (savedBackgroundImageData && savedBackgroundImageData.data) {
+          setBackgroundImageState(savedBackgroundImageData.data);
+          setBackgroundImageFileNameState(savedBackgroundImageData.fileName || "");
+        }
+      } catch (error) {
+        console.error("背景画像の読み込みに失敗しました:", error);
+        // フォールバックとしてlocalStorageからも試す
+        try {
+          const fallbackImage = localStorage.getItem("backgroundImage");
+          if (fallbackImage) {
+            setBackgroundImageState(fallbackImage);
+          }
+        } catch (fallbackError) {
+          console.error("localStorageからのフォールバック読み込みも失敗:", fallbackError);
+        }
+      }
+    };
+
+    // 非同期処理を安全に実行
+    loadBackgroundImage().catch((error) => {
+      console.error("loadBackgroundImage実行中にエラー:", error);
+    });
+
+    const savedShowBackgroundImage = localStorage.getItem("showBackgroundImage");
+    if (savedShowBackgroundImage !== null) {
+      setShowBackgroundImageState(savedShowBackgroundImage === "true");
     }
 
     // 日付コンポーネント設定の読み込み
@@ -95,6 +138,40 @@ export function useProgressSettings() {
   const setShowDate = (value: boolean) => {
     setShowDateState(value);
     localStorage.setItem("showDate", value.toString());
+  };
+
+  // 背景画像設定のセッター関数
+  const setBackgroundImage = async (imageData: string, fileName?: string) => {
+    setBackgroundImageState(imageData);
+    setBackgroundImageFileNameState(fileName || "");
+    try {
+      if (imageData) {
+        await indexedDBManager.saveImage(imageData, fileName);
+        // 成功したらlocalStorageからは削除（容量節約）
+        localStorage.removeItem("backgroundImage");
+      } else {
+        await indexedDBManager.deleteImage();
+        localStorage.removeItem("backgroundImage");
+      }
+    } catch (error) {
+      console.error("背景画像の保存に失敗しました:", error);
+      // フォールバックとしてlocalStorageに保存を試行
+      if (imageData) {
+        try {
+          localStorage.setItem("backgroundImage", imageData);
+        } catch (localStorageError) {
+          console.error("localStorageへの保存も失敗しました:", localStorageError);
+          alert("画像が大きすぎて保存できませんでした。より小さい画像を選択してください。");
+        }
+      } else {
+        localStorage.removeItem("backgroundImage");
+      }
+    }
+  };
+
+  const setShowBackgroundImage = (value: boolean) => {
+    setShowBackgroundImageState(value);
+    localStorage.setItem("showBackgroundImage", value.toString());
   };
 
   // 日付コンポーネント設定のセッター関数
@@ -147,6 +224,12 @@ export function useProgressSettings() {
     setShowRemainingText,
     showDate,
     setShowDate,
+    // 背景画像設定
+    backgroundImage,
+    setBackgroundImage,
+    backgroundImageFileName,
+    showBackgroundImage,
+    setShowBackgroundImage,
     // 日付コンポーネント設定
     showYear,
     setShowYear,

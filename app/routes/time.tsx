@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useClassSchedule } from "../../time/hooks/use-class-schedule";
 import { Footer } from "~/components/footer/Footer";
 import { SettingsButton } from "~/components/settings/SettingsButton";
@@ -14,9 +14,15 @@ export function meta() {
 }
 
 export default function Time() {
+  const [isClient, setIsClient] = useState(false);
   const status = useClassSchedule();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { mode, setMode, darkClass } = useColorMode();
+
+  // クライアント側でのみ時間を表示するためのフラグ
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
   // プログレスバー設定を永続化対応のカスタムフックで管理
   const {
     showProgress,
@@ -44,6 +50,12 @@ export default function Time() {
     setDayFormat,
     weekdayFormat,
     setWeekdayFormat,
+    // 背景画像設定
+    backgroundImage,
+    setBackgroundImage,
+    backgroundImageFileName,
+    showBackgroundImage,
+    setShowBackgroundImage,
   } = useProgressSettings();
 
   // 現在の日付を取得（日本語曜日付き）
@@ -124,9 +136,20 @@ export default function Time() {
     sky: "progress-sky-400",
   }[progressColor];
 
+  // 背景画像のスタイル
+  const backgroundStyle = {
+    backgroundImage: showBackgroundImage && backgroundImage ? `url(${backgroundImage})` : undefined,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    backgroundRepeat: "no-repeat",
+  };
+
   return (
     <>
-      <div className={`min-h-screen bg-base-200 flex items-center justify-center p-4 ${darkClass}`}>
+      <div
+        className={`min-h-screen bg-base-200 flex items-center justify-center p-4 ${darkClass}`}
+        style={backgroundStyle}
+      >
         <SettingsButton onClick={() => setSettingsOpen(!settingsOpen)} />
         <SettingsPanel
           open={settingsOpen}
@@ -158,6 +181,11 @@ export default function Time() {
           setDayFormat={setDayFormat}
           weekdayFormat={weekdayFormat}
           setWeekdayFormat={setWeekdayFormat}
+          backgroundImage={backgroundImage}
+          setBackgroundImage={setBackgroundImage}
+          backgroundImageFileName={backgroundImageFileName}
+          showBackgroundImage={showBackgroundImage}
+          setShowBackgroundImage={setShowBackgroundImage}
         />
 
         <div className="text-center select-none space-y-4">
@@ -168,8 +196,8 @@ export default function Time() {
             </div>
           )}
 
-          {/* 次の時間割まで残り表示 */}
-          {status.timeRemaining && status.next && (
+          {/* 次の時間割まで残り表示（クライアント側のみ） */}
+          {isClient && status.timeRemaining && status.next && (
             <>
               {showRemainingText && (
                 <div className="text-xl font-bold text-base-content opacity-80">
@@ -179,8 +207,8 @@ export default function Time() {
               <div className="text-4xl font-mono font-bold text-primary">
                 {status.timeRemaining}
               </div>
-              {/* 進捗バー */}
-              {showProgress && (
+              {/* 進捗バー（クライアント側のみ） */}
+              {isClient && showProgress && (
                 <div className="w-80 max-w-full mx-auto mt-6">
                   <progress
                     className={`progress w-full h-3 ${progressClass}`}
@@ -197,8 +225,8 @@ export default function Time() {
             </>
           )}
 
-          {/* 現在進行中の場合 */}
-          {status.timeRemaining && !status.next && (
+          {/* 現在進行中の場合（クライアント側のみ） */}
+          {isClient && status.timeRemaining && !status.next && (
             <>
               {showRemainingText && (
                 <div className="text-xl font-bold text-base-content opacity-80">
@@ -208,8 +236,8 @@ export default function Time() {
               <div className="text-4xl font-mono font-bold text-primary">
                 {status.timeRemaining}
               </div>
-              {/* 進捗バー */}
-              {showProgress && (
+              {/* 進捗バー（クライアント側のみ） */}
+              {isClient && showProgress && (
                 <div className="w-80 max-w-full mx-auto mt-6">
                   <progress
                     className={`progress w-full h-3 ${progressClass}`}
@@ -226,8 +254,8 @@ export default function Time() {
             </>
           )}
 
-          {/* 終了時 */}
-          {!status.timeRemaining && (
+          {/* 終了時（クライアント側のみ） */}
+          {isClient && !status.timeRemaining && (
             <div className="text-3xl font-bold text-base-content">終了</div>
           )}
         </div>

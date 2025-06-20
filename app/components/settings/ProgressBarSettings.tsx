@@ -31,6 +31,9 @@ interface ProgressBarSettingsProps {
   setDayFormat: (v: DayFormat) => void;
   weekdayFormat: WeekdayFormat;
   setWeekdayFormat: (v: WeekdayFormat) => void;
+  // 背景画像設定
+  backgroundImage: string;
+  setBackgroundImage: (v: string) => void;
 }
 
 export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
@@ -60,6 +63,9 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
   setDayFormat,
   weekdayFormat,
   setWeekdayFormat,
+  // 背景画像設定
+  backgroundImage,
+  setBackgroundImage,
 }) => {
   return (
     <div className="flex flex-col gap-4">
