@@ -31,6 +31,21 @@ export const formatTimeRemaining = (remainingMs: number): string => {
   return `${formattedMinutes}:${formattedSeconds}.${formattedCentiseconds}`;
 };
 
+/**
+ * 現在の期間の総時間（ミリ秒）を計算
+ */
+export const calculateCurrentPeriodDuration = (
+  currentItem: ScheduleItem,
+  nextItem: ScheduleItem | undefined
+): number => {
+  if (!nextItem) return 0;
+
+  const currentStartMs = timeToMs(currentItem.startTime);
+  const nextStartMs = timeToMs(nextItem.startTime);
+
+  return nextStartMs - currentStartMs;
+};
+
 // 次のスケジュールアイテムを見つける
 export const findNextItem = (
   schedule: Schedule,
@@ -86,8 +101,11 @@ export const getCurrentStatus = (now: Date = new Date(), schedule: Schedule): Cl
 
   if (currentItem) {
     let remainingMs = 0;
+    let totalDurationMs = 0;
+
     if (nextItem) {
       remainingMs = timeToMs(nextItem.startTime) - currentTimeMs;
+      totalDurationMs = calculateCurrentPeriodDuration(currentItem, nextItem);
     }
 
     return {
@@ -96,6 +114,7 @@ export const getCurrentStatus = (now: Date = new Date(), schedule: Schedule): Cl
       next: nextItem,
       timeRemaining: nextItem ? formatTimeRemaining(remainingMs) : undefined,
       remainingMs: nextItem ? remainingMs : undefined,
+      totalDurationMs: nextItem ? totalDurationMs : undefined,
     };
   }
 

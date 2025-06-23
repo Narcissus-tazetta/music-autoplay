@@ -15,6 +15,7 @@ interface TimePageLayoutProps {
     next?: { label: string } | null;
     current?: { label: string } | null;
     remainingMs?: number | null;
+    totalDurationMs?: number;
   };
 }
 
@@ -132,6 +133,7 @@ export function TimePageLayout({ status }: TimePageLayoutProps) {
             next={status.next}
             current={status.current}
             remainingMs={status.remainingMs}
+            totalDurationMs={status.totalDurationMs}
             showRemainingText={showRemainingText}
             showProgress={showProgress}
             progressColor={progressColor}

@@ -7,6 +7,7 @@ interface TimeDisplayProps {
   next?: { label: string } | null;
   current?: { label: string } | null;
   remainingMs?: number | null;
+  totalDurationMs?: number;
   showRemainingText: boolean;
   showProgress: boolean;
   progressColor: ProgressColor;
@@ -21,6 +22,7 @@ export function TimeDisplay({
   next,
   current,
   remainingMs,
+  totalDurationMs,
   showRemainingText,
   showProgress,
   progressColor,
@@ -37,6 +39,7 @@ export function TimeDisplay({
           show={showProgress}
           color={progressColor}
           remainingMs={remainingMs}
+          totalDurationMs={totalDurationMs}
           isClient={isClient}
         />
       </>
@@ -57,6 +60,7 @@ export function TimeDisplay({
           show={showProgress}
           color={progressColor}
           remainingMs={remainingMs}
+          totalDurationMs={totalDurationMs}
           isClient={isClient}
         />
       </>

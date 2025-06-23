@@ -16,6 +16,7 @@ export interface ClassStatus {
   next?: ScheduleItem;
   timeRemaining?: string;
   remainingMs?: number;
+  totalDurationMs?: number;
 }
 
 export interface Schedule {

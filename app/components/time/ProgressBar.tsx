@@ -8,17 +8,24 @@ interface ProgressBarProps {
   show: boolean;
   color: ProgressColor;
   remainingMs?: number | null;
+  totalDurationMs?: number;
   isClient: boolean;
 }
 
 /**
  * 進捗バーを表示するコンポーネント
  */
-export function ProgressBar({ show, color, remainingMs, isClient }: ProgressBarProps) {
+export function ProgressBar({
+  show,
+  color,
+  remainingMs,
+  totalDurationMs,
+  isClient,
+}: ProgressBarProps) {
   if (!isClient || !show) return null;
 
   const progressClass = getProgressClass(color);
-  const progressValue = calculateProgressValue(remainingMs);
+  const progressValue = calculateProgressValue(remainingMs, totalDurationMs);
 
   return (
     <div className="w-80 max-w-full mx-auto mt-6">

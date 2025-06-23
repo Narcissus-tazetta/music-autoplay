@@ -22,11 +22,15 @@ export function getProgressClass(color: ProgressColor): string {
 
 /**
  * 残り時間（ミリ秒）から進捗バーの値（0-100）を計算
+ * 実際の期間の長さに基づいて正確な進捗を表示
  */
-export function calculateProgressValue(remainingMs?: number | null): number {
-  if (!remainingMs) return 0;
+export function calculateProgressValue(
+  remainingMs?: number | null,
+  totalDurationMs?: number
+): number {
+  if (!remainingMs || !totalDurationMs) return 0;
 
-  // 50分を基準として進捗を計算
-  const maxDurationMs = 50 * 60 * 1000;
-  return Math.max(0, 100 - (remainingMs / maxDurationMs) * 100);
+  // 実際の期間の長さに基づいて進捗を計算
+  const progress = Math.max(0, 100 - (remainingMs / totalDurationMs) * 100);
+  return Math.min(100, progress); // 100%を超えないようにクランプ
 }
