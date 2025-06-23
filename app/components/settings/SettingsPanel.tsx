@@ -200,39 +200,42 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = (props) => {
           </div>
         )}
         {/* 詳細設定タブの内容（timeページのみ） */}
-        {activeTab === "advanced" && isTimePage && (
-          <ProgressBarSettings
-            mode={mode}
-            showProgress={showProgress}
-            setShowProgress={setShowProgress}
-            progressColor={progressColor!}
-            setProgressColor={setProgressColor!}
-            showRemainingText={showRemainingText!}
-            setShowRemainingText={setShowRemainingText!}
-            showCurrentSchedule={showCurrentSchedule!}
-            setShowCurrentSchedule={setShowCurrentSchedule!}
-            showDate={showDate!}
-            setShowDate={setShowDate!}
-            showYear={showYear!}
-            setShowYear={setShowYear!}
-            showMonth={showMonth!}
-            setShowMonth={setShowMonth!}
-            showDay={showDay!}
-            setShowDay={setShowDay!}
-            showWeekday={showWeekday!}
-            setShowWeekday={setShowWeekday!}
-            yearFormat={yearFormat!}
-            setYearFormat={setYearFormat!}
-            monthFormat={monthFormat!}
-            setMonthFormat={setMonthFormat!}
-            dayFormat={dayFormat!}
-            setDayFormat={setDayFormat!}
-            weekdayFormat={weekdayFormat!}
-            setWeekdayFormat={setWeekdayFormat!}
-            backgroundImage={backgroundImage!}
-            setBackgroundImage={setBackgroundImage!}
-          />
-        )}
+        {activeTab === "advanced" &&
+          isTimePage &&
+          showProgress !== undefined &&
+          setShowProgress && (
+            <ProgressBarSettings
+              mode={mode}
+              showProgress={showProgress}
+              setShowProgress={setShowProgress}
+              progressColor={progressColor!}
+              setProgressColor={setProgressColor!}
+              showRemainingText={showRemainingText!}
+              setShowRemainingText={setShowRemainingText!}
+              showCurrentSchedule={showCurrentSchedule!}
+              setShowCurrentSchedule={setShowCurrentSchedule!}
+              showDate={showDate!}
+              setShowDate={setShowDate!}
+              showYear={showYear!}
+              setShowYear={setShowYear!}
+              showMonth={showMonth!}
+              setShowMonth={setShowMonth!}
+              showDay={showDay!}
+              setShowDay={setShowDay!}
+              showWeekday={showWeekday!}
+              setShowWeekday={setShowWeekday!}
+              yearFormat={yearFormat!}
+              setYearFormat={setYearFormat!}
+              monthFormat={monthFormat!}
+              setMonthFormat={setMonthFormat!}
+              dayFormat={dayFormat!}
+              setDayFormat={setDayFormat!}
+              weekdayFormat={weekdayFormat!}
+              setWeekdayFormat={setWeekdayFormat!}
+              backgroundImage={backgroundImage!}
+              setBackgroundImage={setBackgroundImage!}
+            />
+          )}
 
         <ContactInfo />
       </div>

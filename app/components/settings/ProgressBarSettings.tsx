@@ -278,7 +278,10 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
         <label
           className={`flex items-center justify-between cursor-pointer py-2 ml-4 ${mode === "dark" ? "text-white" : "text-black"}`}
         >
-          <span className="block font-medium">現在の時間割表示</span>
+          <span className="block font-medium">
+            <span className="ml-1 ">{">"}</span>
+            現在の時間割表示
+          </span>
           <input
             type="checkbox"
             className="toggle toggle-primary"
