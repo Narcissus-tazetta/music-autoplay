@@ -17,6 +17,7 @@ logs/
 
 # 音楽リクエストデータ
 data/
+*.json
 
 # ESLint と Prettier キャッシュ
 .eslintcache

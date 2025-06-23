@@ -10,7 +10,7 @@ interface Inputs {
   url: string;
 }
 
-export const useHomeForm = (onAdminModeChange?: (isAdmin: boolean) => void) => {
+export const useHomeForm = () => {
   const musics = useMusicStore((store) => store.musics);
   const error = useMusicStore((store) => store.error);
   const addMusic = useMusicStore((store) => store.addMusic);
@@ -80,7 +80,6 @@ export const useHomeForm = (onAdminModeChange?: (isAdmin: boolean) => void) => {
     if (url.length >= 32 && !/^https?:\/\//.test(url)) {
       socket.emit("adminAuth", url, (result: { success: boolean; error?: string }) => {
         if (result.success) {
-          if (onAdminModeChange) onAdminModeChange(true);
           setAdminStatus(true);
           setSuccessMessage("管理者認証に成功しました");
         } else {

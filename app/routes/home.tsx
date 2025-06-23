@@ -18,6 +18,7 @@ import {
 } from "~/components/ui/table";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "~/components/ui/hover-card";
 import { useMusicStore } from "~/stores/musicStore";
+import { useAdminStore } from "~/stores/adminStore";
 import type { Route } from "./+types/home";
 import { useColorMode } from "~/hooks/use-color-mode";
 import { useYouTubeStatus } from "~/hooks/use-youtube-status";
@@ -30,12 +31,12 @@ export function meta(_args: Route.MetaArgs) {
 }
 
 export default function Home() {
-  const [isAdmin, setIsAdmin] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const gaming = useGamingToggle("-");
   const musics = useMusicStore((store) => store.musics);
   const initializeSocket = useMusicStore((store) => store.initializeSocket);
+  const isAdmin = useAdminStore((store) => store.isAdmin);
   const ytStatus = useYouTubeStatus();
   const { mode, setMode, darkClass } = useColorMode();
 
@@ -71,7 +72,7 @@ export default function Home() {
 
         <AdminStatus mode={mode} />
 
-        <HomeForm mode={mode} onAdminModeChange={setIsAdmin} />
+        <HomeForm mode={mode} />
 
         <YouTubeStatus ytStatus={ytStatus} />
 

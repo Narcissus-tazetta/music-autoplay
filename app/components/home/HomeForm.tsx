@@ -7,10 +7,9 @@ import { YOUTUBE_PATTERN } from "~/libs/utils";
 
 interface HomeFormProps {
   mode: "dark" | "light";
-  onAdminModeChange?: (isAdmin: boolean) => void;
 }
 
-export const HomeForm: React.FC<HomeFormProps> = ({ mode, onAdminModeChange }) => {
+export const HomeForm: React.FC<HomeFormProps> = ({ mode }) => {
   const {
     register,
     handleSubmit,
@@ -21,7 +20,7 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode, onAdminModeChange }) =
     handleCloseAlert,
     handleCloseSuccessAlert,
     resetError,
-  } = useHomeForm(onAdminModeChange);
+  } = useHomeForm();
 
   return (
     <form className="flex flex-col items-center gap-4" onSubmit={handleSubmit}>

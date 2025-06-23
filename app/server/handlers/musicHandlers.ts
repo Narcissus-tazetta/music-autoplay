@@ -101,7 +101,9 @@ export function registerMusicHandlers(io: Server<C2S, S2C>, socket: Socket<C2S, 
       log.info(`🗑️  Removed: "${removed.title}" (${musics.length} total)`);
 
       // JSONファイルからも削除
+      log.debug(`💾 About to save ${musics.length} music requests after deletion`);
       saveMusicRequests(musics);
+      log.debug(`✅ JSON save completed for deletion`);
 
       io.emit("deleteMusic", removed.url);
       logValidationEvent("deleteMusic", socket.id);
