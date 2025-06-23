@@ -703,11 +703,21 @@ const useTimeCalculation = () => {
 ### 環境変数
 
 ```bash
-NODE_ENV=production
-YOUTUBE_API_KEY=your_api_key_here
-ADMIN_SECRET=your_admin_secret_here
-PORT=3000
+NODE_ENV=production                    # 実行環境 (development/production)
+YOUTUBE_API_KEY=your_api_key_here     # YouTube Data API v3キー (必須)
+ADMIN_SECRET=your_admin_secret_here   # 管理者認証コード (必須、32文字以上推奨)
+PORT=3000                             # サーバーポート番号 (デフォルト: 3000)
 ```
+
+**環境変数の説明：**
+
+- `YOUTUBE_API_KEY`: YouTube Data API v3のAPIキー
+  - Google Cloud Consoleで取得
+  - サーバー起動時に読み込み状況をログ出力
+- `ADMIN_SECRET`: 管理者認証用の秘密コード
+  - 32文字以上の英数字記号で構成（推奨）
+  - サーバー起動時に設定状況と文字数をログ出力
+  - 未設定の場合は管理者機能が無効化される
 
 ### ビルド・起動方法
 

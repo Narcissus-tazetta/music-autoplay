@@ -19,7 +19,19 @@ log.server("🚀 Starting Music Auto-Play Server...");
 log.server(`📋 Environment: ${process.env.NODE_ENV || "development"}`);
 log.server(`🔧 Node.js: ${process.version}`);
 log.server(`🔑 YouTube API Key: ${process.env.YOUTUBE_API_KEY ? "✅ Loaded" : "❌ Missing"}`);
+log.server(`🔒 Admin Secret: ${process.env.ADMIN_SECRET ? "✅ Loaded" : "❌ Missing"}`);
 
+// 管理者認証が正しく設定されているかのより詳細なチェック
+if (process.env.ADMIN_SECRET) {
+  const secretLength = process.env.ADMIN_SECRET.length;
+  if (secretLength >= 32) {
+    log.server(`🔐 Admin Secret validation: ✅ Valid (${secretLength} characters)`);
+  } else {
+    log.warn(`⚠️ Admin Secret validation: Weak (${secretLength} characters, recommended: 32+)`);
+  }
+} else {
+  log.warn("⚠️ Admin Secret not configured - admin features disabled");
+}
 import { getTodaysApiUsage } from "./apiCounter";
 const apiUsage = getTodaysApiUsage();
 log.apiUsage(`📊 Today's API Usage: ${apiUsage.count} calls`);
