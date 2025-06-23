@@ -94,9 +94,11 @@ if (viteDevServer) {
   log.server("📁 Static assets serving configured (production)");
 }
 
+// Public static files (favicon, etc.)
+app.use(express.static("public", { maxAge: "1d" }));
 app.use(express.static("build/client", { maxAge: "1h" }));
 app.use(httpLogger);
-log.server("📝 Static file serving and HTTP logging configured");
+log.server("📝 Static file serving (public + build) and HTTP logging configured");
 
 app.all("*splat", reactRouterHandler);
 log.server("🛣️  React Router handler configured");

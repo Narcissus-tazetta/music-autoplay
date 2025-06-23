@@ -10,7 +10,11 @@ import {
 import type { Route } from "./+types/root";
 import appCss from "./App.css?url";
 
-export const links: Route.LinksFunction = () => [{ rel: "stylesheet", href: appCss }];
+export const links: Route.LinksFunction = () => [
+  { rel: "stylesheet", href: appCss },
+  { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+  { rel: "icon", href: "/favicon.ico", sizes: "any" }, // fallback
+];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
