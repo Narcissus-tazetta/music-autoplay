@@ -28,8 +28,7 @@ export const DEFAULT_SCHEDULE: Schedule = {
     createScheduleItem("5時間目休憩", "rest", createTime(15, 5, 0)),
     createScheduleItem("6時間目", "class", createTime(15, 15, 0)),
     createScheduleItem("終礼", "rest", createTime(16, 5, 0)),
-    createScheduleItem("終礼後", "rest", createTime(16, 20, 0)),
-    createScheduleItem("放課後", "rest", createTime(16, 30, 0)),
+    createScheduleItem("放課後", "rest", createTime(16, 15, 0)),
     createScheduleItem("最終下校時間", "rest", createTime(17, 30, 0)),
   ],
 };
