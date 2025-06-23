@@ -28,6 +28,8 @@ interface SettingsPanelProps {
   // 表示設定（timeページのみ）
   showRemainingText?: boolean;
   setShowRemainingText?: (v: boolean) => void;
+  showCurrentSchedule?: boolean;
+  setShowCurrentSchedule?: (v: boolean) => void;
   showDate?: boolean;
   setShowDate?: (v: boolean) => void;
 
@@ -75,6 +77,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = (props) => {
     // 表示設定
     showRemainingText,
     setShowRemainingText,
+    showCurrentSchedule,
+    setShowCurrentSchedule,
     showDate,
     setShowDate,
     // 日付詳細設定
@@ -205,6 +209,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = (props) => {
             setProgressColor={setProgressColor!}
             showRemainingText={showRemainingText!}
             setShowRemainingText={setShowRemainingText!}
+            showCurrentSchedule={showCurrentSchedule!}
+            setShowCurrentSchedule={setShowCurrentSchedule!}
             showDate={showDate!}
             setShowDate={setShowDate!}
             showYear={showYear!}

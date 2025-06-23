@@ -35,6 +35,8 @@ export function TimePageLayout({ status }: TimePageLayoutProps) {
     setProgressColor,
     showRemainingText,
     setShowRemainingText,
+    showCurrentSchedule,
+    setShowCurrentSchedule,
     showDate,
     setShowDate,
     // 日付コンポーネント設定
@@ -86,6 +88,8 @@ export function TimePageLayout({ status }: TimePageLayoutProps) {
           setProgressColor={setProgressColor}
           showRemainingText={showRemainingText}
           setShowRemainingText={setShowRemainingText}
+          showCurrentSchedule={showCurrentSchedule}
+          setShowCurrentSchedule={setShowCurrentSchedule}
           showDate={showDate}
           setShowDate={setShowDate}
           showYear={showYear}
@@ -135,6 +139,7 @@ export function TimePageLayout({ status }: TimePageLayoutProps) {
             remainingMs={status.remainingMs}
             totalDurationMs={status.totalDurationMs}
             showRemainingText={showRemainingText}
+            showCurrentSchedule={showCurrentSchedule}
             showProgress={showProgress}
             progressColor={progressColor}
           />

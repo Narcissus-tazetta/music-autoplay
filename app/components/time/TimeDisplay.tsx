@@ -9,6 +9,7 @@ interface TimeDisplayProps {
   remainingMs?: number | null;
   totalDurationMs?: number;
   showRemainingText: boolean;
+  showCurrentSchedule: boolean;
   showProgress: boolean;
   progressColor: ProgressColor;
 }
@@ -24,6 +25,7 @@ export function TimeDisplay({
   remainingMs,
   totalDurationMs,
   showRemainingText,
+  showCurrentSchedule,
   showProgress,
   progressColor,
 }: TimeDisplayProps) {
@@ -31,6 +33,11 @@ export function TimeDisplay({
   if (isClient && timeRemaining && next) {
     return (
       <>
+        {showCurrentSchedule && current && (
+          <div className="text-lg font-bold text-base-content opacity-70 mb-2">
+            現在は{current.label}
+          </div>
+        )}
         {showRemainingText && (
           <div className="text-xl font-bold text-base-content opacity-80">{next.label}まで残り</div>
         )}
@@ -50,6 +57,11 @@ export function TimeDisplay({
   if (isClient && timeRemaining && !next) {
     return (
       <>
+        {showCurrentSchedule && current && (
+          <div className="text-lg font-bold text-base-content opacity-70 mb-2">
+            現在は{current.label}
+          </div>
+        )}
         {showRemainingText && (
           <div className="text-xl font-bold text-base-content opacity-80">
             現在: {current?.label || "不明"}

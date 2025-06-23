@@ -11,6 +11,7 @@ export function useProgressSettings() {
   const [showProgress, setShowProgressState] = useState(true);
   const [progressColor, setProgressColorState] = useState<ProgressColor>("green");
   const [showRemainingText, setShowRemainingTextState] = useState(true);
+  const [showCurrentSchedule, setShowCurrentScheduleState] = useState(false); // 現在の時間割表示（デフォルトはoff）
   const [showDate, setShowDateState] = useState(false); // デフォルトはoff
 
   // 背景画像設定
@@ -66,6 +67,11 @@ export function useProgressSettings() {
 
     if (savedShowRemainingText !== null) {
       setShowRemainingTextState(savedShowRemainingText === "true");
+    }
+
+    const savedShowCurrentSchedule = localStorage.getItem("showCurrentSchedule");
+    if (savedShowCurrentSchedule !== null) {
+      setShowCurrentScheduleState(savedShowCurrentSchedule === "true");
     }
 
     if (savedShowDate !== null) {
@@ -158,6 +164,11 @@ export function useProgressSettings() {
     localStorage.setItem("showRemainingText", value.toString());
   };
 
+  const setShowCurrentSchedule = (value: boolean) => {
+    setShowCurrentScheduleState(value);
+    localStorage.setItem("showCurrentSchedule", value.toString());
+  };
+
   const setShowDate = (value: boolean) => {
     setShowDateState(value);
     localStorage.setItem("showDate", value.toString());
@@ -245,6 +256,8 @@ export function useProgressSettings() {
     setProgressColor,
     showRemainingText,
     setShowRemainingText,
+    showCurrentSchedule,
+    setShowCurrentSchedule,
     showDate,
     setShowDate,
     // 背景画像設定

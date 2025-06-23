@@ -12,6 +12,8 @@ interface ProgressBarSettingsProps {
   setProgressColor: (v: ProgressColor) => void;
   showRemainingText: boolean;
   setShowRemainingText: (v: boolean) => void;
+  showCurrentSchedule: boolean;
+  setShowCurrentSchedule: (v: boolean) => void;
   showDate: boolean;
   setShowDate: (v: boolean) => void;
   // 日付コンポーネント設定
@@ -44,6 +46,8 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
   setProgressColor,
   showRemainingText,
   setShowRemainingText,
+  showCurrentSchedule,
+  setShowCurrentSchedule,
   showDate,
   setShowDate,
   // 日付コンポーネント設定
@@ -259,9 +263,30 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
           type="checkbox"
           className="toggle toggle-primary"
           checked={showRemainingText}
-          onChange={(e) => setShowRemainingText(e.target.checked)}
+          onChange={(e) => {
+            setShowRemainingText(e.target.checked);
+            // 次の時間割表示がOFFになったら現在の時間割表示もOFFにする
+            if (!e.target.checked) {
+              setShowCurrentSchedule(false);
+            }
+          }}
         />
       </label>
+
+      {/* 現在の時間割表示設定 */}
+      {showRemainingText && (
+        <label
+          className={`flex items-center justify-between cursor-pointer py-2 ml-4 ${mode === "dark" ? "text-white" : "text-black"}`}
+        >
+          <span className="block font-medium">現在の時間割表示</span>
+          <input
+            type="checkbox"
+            className="toggle toggle-primary"
+            checked={showCurrentSchedule}
+            onChange={(e) => setShowCurrentSchedule(e.target.checked)}
+          />
+        </label>
+      )}
 
       {/* 進捗表示設定 */}
       <label
