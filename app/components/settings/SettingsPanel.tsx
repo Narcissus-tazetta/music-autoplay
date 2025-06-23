@@ -200,7 +200,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = (props) => {
           </div>
         )}
         {/* 詳細設定タブの内容（timeページのみ） */}
-        {activeTab === "advanced" && isTimePage && showProgress && setShowProgress && (
+        {activeTab === "advanced" && isTimePage && (
           <ProgressBarSettings
             mode={mode}
             showProgress={showProgress}
