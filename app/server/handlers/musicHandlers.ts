@@ -101,9 +101,7 @@ export function registerMusicHandlers(io: Server<C2S, S2C>, socket: Socket<C2S, 
       log.info(`🗑️  Removed: "${removed.title}" (${musics.length} total)`);
 
       // JSONファイルからも削除
-      log.debug(`💾 About to save ${musics.length} music requests after deletion`);
       saveMusicRequests(musics);
-      log.debug(`✅ JSON save completed for deletion`);
 
       io.emit("deleteMusic", removed.url);
       logValidationEvent("deleteMusic", socket.id);
@@ -112,11 +110,10 @@ export function registerMusicHandlers(io: Server<C2S, S2C>, socket: Socket<C2S, 
     }
   });
 
-  log.socket(`📋 Sent ${musics.length} songs to ${socket.id.substring(0, 8)}...`);
+  // 初回接続時の楽曲リスト送信
   socket.emit("url_list", musics);
 
   socket.on("get_urls", () => {
-    log.socket(`📋 Sent ${musics.length} songs to ${socket.id.substring(0, 8)}...`);
     socket.emit("url_list", musics);
   });
 

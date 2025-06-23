@@ -104,11 +104,9 @@ export function saveMusicRequests(musics: Music[]): void {
   };
 
   try {
-    log.debug(`📂 Saving to: ${MUSIC_FILE}`);
     const jsonString = JSON.stringify(data, null, 2);
     writeFileSync(MUSIC_FILE, jsonString, "utf-8");
     log.info(`💾 Saved ${data.requests.length} music requests to file (${data.date})`);
-    log.debug(`📄 JSON content preview: ${jsonString.substring(0, 150)}...`);
   } catch (error) {
     log.error("❌ Failed to save music requests:", error as Error);
   }

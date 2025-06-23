@@ -9,7 +9,7 @@ export function registerConnectionHandlers(
   socket: Socket<C2S, S2C>,
   clients: ClientsMap
 ) {
-  log.socket(`🔗 Client connected: ${socket.id.substring(0, 8)}...`);
+  log.socket(`🔗 Connected: ${socket.id.substring(0, 8)}...`);
   clients.set(socket.id, {
     connectedAt: new Date(),
     userAgent: socket.handshake.headers["user-agent"],
@@ -26,7 +26,7 @@ export function registerConnectionHandlers(
   }
 
   socket.on("disconnect", (reason) => {
-    log.socket(`❌ Client disconnected: ${socket.id.substring(0, 8)}... (${reason})`);
+    log.socket(`❌ Disconnected: ${socket.id.substring(0, 8)}... (${reason})`);
     clients.delete(socket.id);
   });
 

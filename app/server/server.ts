@@ -119,7 +119,6 @@ const io = new Server<C2S, S2C>(server);
 log.server("🔌 Socket.IO server initialized");
 
 io.on("connection", (socket) => {
-  log.socket(`👤 Client connected: ${socket.id.substring(0, 8)}...`);
   registerSocketHandlers(io, socket, clients);
 });
 
