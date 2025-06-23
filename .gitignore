@@ -15,6 +15,9 @@ api-usage.json.backup
 # ログファイル
 logs/
 
+# 音楽リクエストデータ
+data/
+
 # ESLint と Prettier キャッシュ
 .eslintcache
 .prettiercache

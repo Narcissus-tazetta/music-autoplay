@@ -4,6 +4,7 @@ import type { Music } from "~/stores/musicStore";
 import { musics } from "../youtubeState";
 import { extractYouTubeId } from "../utils";
 import { log } from "../logger";
+import { saveMusicRequests } from "../musicPersistence";
 import {
   validateMusicData,
   validateUrlForDelete,
@@ -65,7 +66,12 @@ export function registerMusicHandlers(io: Server<C2S, S2C>, socket: Socket<C2S, 
 
     if (!exists) {
       log.info(`🎵 Added: "${sanitizedMusic.title}" (${musics.length + 1} total)`);
+
+      // メモリ配列に追加
       musics.push(sanitizedMusic);
+      // JSONファイルに保存
+      saveMusicRequests(musics);
+
       io.emit("url_list", musics);
       logValidationEvent("addMusic", socket.id);
 
@@ -93,6 +99,10 @@ export function registerMusicHandlers(io: Server<C2S, S2C>, socket: Socket<C2S, 
     if (idx !== -1) {
       const removed = musics.splice(idx, 1)[0];
       log.info(`🗑️  Removed: "${removed.title}" (${musics.length} total)`);
+
+      // JSONファイルからも削除
+      saveMusicRequests(musics);
+
       io.emit("deleteMusic", removed.url);
       logValidationEvent("deleteMusic", socket.id);
     } else {
@@ -128,8 +138,19 @@ export function registerMusicHandlers(io: Server<C2S, S2C>, socket: Socket<C2S, 
       return;
     }
 
-    const videoData = { url: sanitizedUrl, title: "", thumbnail: "" };
+    const videoData = {
+      url: sanitizedUrl,
+      title: "",
+      thumbnail: "",
+      channel: "",
+      duration: "",
+      addedAt: new Date().toISOString(),
+    };
+
+    // メモリとJSONファイルの両方に追加
     musics.push(videoData);
+    saveMusicRequests(musics);
+
     log.info(`📎 URL submitted: ${musics.length} total`);
     io.emit("url_list", musics);
     io.emit("new_url", videoData);
@@ -150,6 +171,10 @@ export function registerMusicHandlers(io: Server<C2S, S2C>, socket: Socket<C2S, 
     if (index !== -1) {
       const removed = musics.splice(index, 1)[0];
       log.info(`🗑️  Deleted: "${removed.title}" (${musics.length} total)`);
+
+      // JSONファイルからも削除
+      saveMusicRequests(musics);
+
       io.emit("url_list", musics);
       io.emit("delete_url", sanitizedUrl);
       io.emit("new_url", musics[0] || null);

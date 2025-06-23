@@ -1,5 +1,7 @@
 import type { Music } from "~/stores/musicStore";
 import type { AppState, ClientsMap } from "./types";
+import { loadMusicRequests } from "./musicPersistence";
+import { log } from "./logger";
 
 export const currentState: AppState = {
   currentYoutubeState: { state: "", url: "" },
@@ -7,5 +9,9 @@ export const currentState: AppState = {
   currentPlayingId: null,
 };
 
-export const musics: Music[] = [];
+// 永続化されたリクエストを読み込み
+export const musics: Music[] = loadMusicRequests();
 export const clients: ClientsMap = new Map();
+
+// 初期化ログ
+log.info(`🎵 Initialized with ${musics.length} persistent music requests`);

@@ -6,6 +6,9 @@ export interface Music {
   url: string;
   title: string;
   thumbnail: string;
+  channel?: string;
+  duration?: string;
+  addedAt?: string;
 }
 
 interface MusicStore {
