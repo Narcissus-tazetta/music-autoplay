@@ -5,6 +5,7 @@ import { SettingsButton } from "~/components/settings/SettingsButton";
 import { SettingsPanel } from "~/components/settings/SettingsPanel";
 import { YouTubeStatus } from "~/components/home/YouTubeStatus";
 import { HomeForm } from "~/components/home/HomeForm";
+import { AdminStatus } from "~/components/home/AdminStatus";
 import { Button } from "~/components/ui/button";
 import { TrashIcon } from "lucide-react";
 import {
@@ -67,6 +68,9 @@ export default function Home() {
         >
           楽曲リクエストフォーム
         </h1>
+
+        <AdminStatus mode={mode} />
+
         <HomeForm mode={mode} onAdminModeChange={setIsAdmin} />
 
         <YouTubeStatus ytStatus={ytStatus} />

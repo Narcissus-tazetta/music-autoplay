@@ -2,7 +2,7 @@ import type { LoaderFunctionArgs } from "react-router";
 import { readFileSync } from "fs";
 import { join } from "path";
 
-export async function loader({ request }: LoaderFunctionArgs) {
+export async function loader({ request: _request }: LoaderFunctionArgs) {
   try {
     // publicディレクトリからfaviconを読み込み
     const faviconPath = join(process.cwd(), "public", "favicon.ico");
@@ -17,6 +17,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     });
   } catch (error) {
     // ファイルが見つからない場合は404を返す
+    console.error("Failed to load favicon:", error);
     return new Response("Not Found", { status: 404 });
   }
 }

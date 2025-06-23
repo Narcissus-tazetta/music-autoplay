@@ -31,6 +31,8 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode, onAdminModeChange }) =
           {...register("url", {
             validate: (value) => {
               if (value.trim().toLowerCase() === "admin") return true;
+              // 管理者コードの長さをチェック（32文字以上なら管理者コードとして扱う）
+              if (value.length >= 32 && !/^https?:\/\//.test(value)) return true;
               if (!value) return "URLを入力してください";
               if (!YOUTUBE_PATTERN.test(value)) return "有効なYouTubeのURLを入力してください";
               return true;

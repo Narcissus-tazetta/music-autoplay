@@ -12,6 +12,34 @@ import {
 } from "../middleware/validation";
 
 export function registerMusicHandlers(io: Server<C2S, S2C>, socket: Socket<C2S, S2C>) {
+  /**
+   * 管理者認証ハンドラー
+   * 環境変数ADMIN_SECRETと照合して管理者権限を付与
+   */
+  socket.on("adminAuth", (code: string, callback) => {
+    const adminSecret = process.env.ADMIN_SECRET;
+
+    if (!adminSecret) {
+      log.error("管理者認証: ADMIN_SECRET環境変数が設定されていません");
+      if (typeof callback === "function") {
+        callback({ success: false, error: "管理者認証が利用できません" });
+      }
+      return;
+    }
+
+    if (code === adminSecret) {
+      log.info(`管理者認証成功: ${socket.id.substring(0, 8)}...`);
+      if (typeof callback === "function") {
+        callback({ success: true });
+      }
+    } else {
+      log.warn(`管理者認証失敗: ${socket.id.substring(0, 8)}... - 無効なコード`);
+      if (typeof callback === "function") {
+        callback({ success: false, error: "無効な管理者コードです" });
+      }
+    }
+  });
+
   socket.on("addMusic", (music: Music, callback) => {
     const validation = validateMusicData(music);
     if (!validation.isValid) {

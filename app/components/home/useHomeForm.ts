@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { useMusicStore } from "~/stores/musicStore";
+import { useAdminStore } from "~/stores/adminStore";
 import { parseYoutubeUrl } from "~/libs/utils";
 import convert from "convert-iso8601-duration";
+import { socket } from "~/socket";
 
 interface Inputs {
   url: string;
@@ -13,6 +15,7 @@ export const useHomeForm = (onAdminModeChange?: (isAdmin: boolean) => void) => {
   const error = useMusicStore((store) => store.error);
   const addMusic = useMusicStore((store) => store.addMusic);
   const resetError = useMusicStore((store) => store.resetError);
+  const setAdminStatus = useAdminStore((store) => store.setAdminStatus);
 
   const [showAlert, setShowAlert] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -73,11 +76,25 @@ export const useHomeForm = (onAdminModeChange?: (isAdmin: boolean) => void) => {
 
   const onSubmit = async (data: Inputs) => {
     const url = data.url.trim();
-    if (url.toLowerCase() === "admin") {
-      if (onAdminModeChange) onAdminModeChange(true);
+
+    if (url.length >= 32 && !/^https?:\/\//.test(url)) {
+      socket.emit("adminAuth", url, (result: { success: boolean; error?: string }) => {
+        if (result.success) {
+          if (onAdminModeChange) onAdminModeChange(true);
+          setAdminStatus(true);
+          setSuccessMessage("管理者認証に成功しました");
+        } else {
+          setError("url", {
+            type: "manual",
+            message: result.error || "管理者認証に失敗しました",
+          });
+        }
+      });
       resetField("url");
       return;
     }
+
+    // ...existing code...
     if (musics.length >= 50) {
       setError("url", {
         type: "manual",
