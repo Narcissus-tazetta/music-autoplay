@@ -1,4 +1,3 @@
-// 祝日・特別休校日・長期休暇（YYYY-MM-DD形式）
 export const holidays: string[] = [
   // 2025年 祝日
   "2025-01-01", // 元日

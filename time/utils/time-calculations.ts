@@ -19,12 +19,11 @@ export const formatTimeRemaining = (remainingMs: number): string => {
   if (remainingMs <= 0) return "00:00.00";
 
   const totalSeconds = Math.floor(remainingMs / 1000);
-  const centiseconds = Math.floor((remainingMs % 1000) / 10); // 0.01秒単位
+  const centiseconds = Math.floor((remainingMs % 1000) / 10);
 
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
 
-  // 固定幅でフォーマット（MM:SS.CC）
   const formattedMinutes = minutes.toString().padStart(2, "0");
   const formattedSeconds = seconds.toString().padStart(2, "0");
   const formattedCentiseconds = centiseconds.toString().padStart(2, "0");
@@ -43,20 +42,17 @@ export const findNextItem = (
 // 現在のスケジュール状況を判定
 export const getCurrentStatus = (now: Date = new Date(), schedule: Schedule): ClassStatus => {
   const currentTimeMs = getCurrentTimeMs(now);
-  const dayOfWeek = now.getDay(); // 0=日曜日, 6=土曜日
+  const dayOfWeek = now.getDay();
 
-  // 祝日判定
   const yyyy = now.getFullYear();
   const mm = String(now.getMonth() + 1).padStart(2, "0");
   const dd = String(now.getDate()).padStart(2, "0");
   const todayStr = `${yyyy}-${mm}-${dd}`;
 
-  // 土日または祝日は休校日
   if (dayOfWeek === 0 || dayOfWeek === 6 || holidays.includes(todayStr)) {
     return { type: "closed" };
   }
 
-  // 現在進行中のアイテムを見つける
   let currentItem: ScheduleItem | undefined;
   let nextItem: ScheduleItem | undefined;
 
@@ -72,14 +68,12 @@ export const getCurrentStatus = (now: Date = new Date(), schedule: Schedule): Cl
       break;
     }
 
-    // まだ最初のアイテムの時間前の場合
     if (currentTimeMs < itemStartMs) {
       nextItem = item;
       break;
     }
   }
 
-  // 時間前の場合
   if (!currentItem && nextItem) {
     const remainingMs = timeToMs(nextItem.startTime) - currentTimeMs;
     return {
@@ -90,7 +84,6 @@ export const getCurrentStatus = (now: Date = new Date(), schedule: Schedule): Cl
     };
   }
 
-  // 現在進行中のアイテムがある場合
   if (currentItem) {
     let remainingMs = 0;
     if (nextItem) {
@@ -106,6 +99,5 @@ export const getCurrentStatus = (now: Date = new Date(), schedule: Schedule): Cl
     };
   }
 
-  // 全て終了
   return { type: "finished" };
 };

@@ -17,17 +17,13 @@ export const useClassSchedule = () => {
   };
 
   useEffect(() => {
-    // 初回実行
     updateStatus();
 
-    // 0.01秒ごとに更新
     intervalRef.current = setInterval(updateStatus, 10);
 
-    // タブのアクティブ状態を監視
     const handleVisibilityChange = () => {
       isActiveRef.current = document.visibilityState === "visible";
       if (isActiveRef.current) {
-        // タブがアクティブになったら即座に更新
         updateStatus();
       }
     };

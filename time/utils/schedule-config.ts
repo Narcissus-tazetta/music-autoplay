@@ -1,13 +1,10 @@
 import type { Schedule, ScheduleItem, Time } from "../types/schedule";
 
-// 時間を作成するヘルパー関数
 const createTime = (hours: number, minutes: number, seconds: number = 0): Time => ({
   hours,
   minutes,
   seconds,
 });
-
-// スケジュールアイテムを作成するヘルパー関数
 const createScheduleItem = (label: string, type: "class" | "rest", time: Time): ScheduleItem => ({
   label,
   type,
