@@ -2,332 +2,160 @@
 
 ## システム概要
 
-Music Auto Playは、YouTubeの音楽動画をリアルタイムで管理できる機能と、学校の授業スケジュールを自動で表示・管理できる機能をひとつにまとめたWebアプリです。WebSocketによるリアルタイムな同期や、YouTube Data APIを使った動画情報の取得、授業時間の自動計算・進捗表示など、日常的に便利に使える仕組みです。
+音楽自動再生システムは、YouTube動画の再生管理と学校の時間割表示を統合したWebアプリです。
 
-### 主な機能
+### 🎵 主な機能
 
-- **音楽管理（/home）**: YouTube動画の追加・削除・リアルタイム同期
-- **スケジュール管理（/time）**: 授業時間の自動表示・進捗バー・日付表示のカスタマイズ
+- **音楽管理** (`/home`) - YouTube動画の追加・削除・リアルタイム同期
+- **時間割表示** (`/time`) - 授業時間のカウントダウン・進捗表示
+
+### 🏗️ 技術スタック
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        フロントエンド                        │
+├─────────────────────────────────────────────────────────────┤
+│ React Router v7  │ TypeScript    │ Tailwind CSS v4          │
+│ Socket.IO Client │ Zustand       │ shadcn/ui                │
+│ React Hook Form  │ date-fns      │ IndexedDB                │
+└─────────────────────────────────────────────────────────────┘
+                                │
+                      WebSocket + REST API
+                                │
+┌─────────────────────────────────────────────────────────────┐
+│                        バックエンド                         │
+├─────────────────────────────────────────────────────────────┤
+│ Node.js          │ Socket.IO     │ Express                  │
+│ Winston Logger   │ YouTube API   │ File System             │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ## アーキテクチャ
 
-### システム構成
+### 🔄 データフロー
 
 ```
-┌───────────────────────────────────────────────────────────────────────────┐
-│                              ユーザー                                     │
-└──────────────────────────┬────────────────────────────────────────────────┘
-                           │ ブラウザ (HTTP/WebSocket)
-┌──────────────────────────┴────────────────────────────────────────────────┐
-│                      フロントエンド (React SPA)                            │
-│ ┌──────────────────────┬──────────────────────┬───────────────────────────┐ │
-│ │       /home          │        /time         │      共通コンポーネント      │ │
-│ │    音楽管理ページ       │   スケジュール管理     │  Settings, UI Library   │ │
-│ │                      │                      │  Footer, Themes など     │ │
-│ └──────────────────────┴──────────────────────┴───────────────────────────┘ │
-│                                                                            │
-│ ┌────────────────────────────────────────────────────────────────────────┐ │
-│ │          フロントエンド技術スタック                                        │ │
-│ │  React Router v7 | TypeScript | Tailwind CSS v4 | Socket.IO Client    │ │
-│ │  Zustand | shadcn/ui | date-fns | React Hook Form                     │ │
-│ └────────────────────────────────────────────────────────────────────────┘ │
-└──────────────────────────┬────────────────────────────────────────────────┘
-                           │ Socket.IO + REST API
-┌──────────────────────────┴────────────────────────────────────────────────┐
-│                     バックエンド (Node.js)                                │
-│                                                                            │
-│ ┌────────────────────────────────────────────────────────────────────────┐ │
-│ │                        API Layer                                       │ │
-│ │  ┌─────────────────┐              ┌─────────────────────────────────┐   │ │
-│ │  │   REST API      │              │       Socket.IO Server          │   │ │
-│ │  │  (/api/assets)  │              │   (リアルタイム音楽管理)          │   │ │
-│ │  └─────────────────┘              └─────────────────────────────────┘   │ │
-│ └────────────────────────────────────────────────────────────────────────┘ │
-│                                                                            │
-│ ┌────────────────────────────────────────────────────────────────────────┐ │
-│ │                      Business Logic                                    │ │
-│ │  ┌─────────────────┐              ┌─────────────────────────────────┐   │ │
-│ │  │   音楽管理       │              │      スケジュール処理             │   │ │
-│ │  │   Handler       │              │      Processor                 │   │ │
-│ │  │ ・楽曲追加/削除   │              │ ・時間計算(0.01秒間隔)           │   │ │
-│ │  │ ・YouTube連携   │              │ ・進捗バー表示                   │   │ │
-│ │  └─────────────────┘              └─────────────────────────────────┘   │ │
-│ └────────────────────────────────────────────────────────────────────────┘ │
-│                                                                            │
-│ ┌────────────────────────────────────────────────────────────────────────┐ │
-│ │                      Utilities & Services                             │ │
-│ │  ┌─────────────────┐  ┌──────────────┐  ┌────────────────────────────┐  │ │
-│ │  │    Logger       │  │    Cache     │  │      API Counter           │  │ │
-│ │  │   (Winston)     │  │ (In-Memory)  │  │   (YouTube API使用量)      │  │ │
-│ │  └─────────────────┘  └──────────────┘  └────────────────────────────┘  │ │
-│ └────────────────────────────────────────────────────────────────────────┘ │
-└──────────────────────────┬────────────────────────────────────────────────┘
-                           │ HTTPS API Calls
-┌──────────────────────────┴────────────────────────────────────────────────┐
-│                        外部サービス                                        │
-│                                                                            │
-│  ┌─────────────────────────────────┐  ┌──────────────────────────────────┐  │
-│  │        YouTube Data API v3       │  │         Chrome拡張機能           │  │
-│  │  ・動画情報取得 (1 quota/req)     │  │   (YouTube再生状態監視)          │  │
-│  │  ・24時間キャッシュ               │  │                                  │  │
-│  └─────────────────────────────────┘  └──────────────────────────────────┘  │
-└───────────────────────────────────────────────────────────────────────────┘
-
-                           ┌──────────────────┐
-                           │  ファイルシステム   │
-                           ├──────────────────┤
-                           │  logs/app.log    │
-                           │  api-usage.json  │
-                           │  build/          │
-                           │  node_modules/   │
-                           └──────────────────┘
+ユーザー操作
+    │
+    ▼
+フロントエンド (React)
+    │ WebSocket/HTTP
+    ▼
+バックエンド (Node.js)
+    │ HTTPS
+    ▼
+YouTube Data API
 ```
 
-### データフロー図
+### 📁 ディレクトリ構成
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                ユーザー操作                                   │
-└──────────────┬────────────┬────────────┬────────────┬─────────────────────────┘
-               │            │            │            │
-            音楽追加       音楽削除      設定変更      ページ遷移
-               │            │            │            │
-               ▼            ▼            ▼            ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                         フロントエンド State                                  │
-│                                                                              │
-│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ ┌──────────────┐ │
-│  │   musicStore    │ │  settingsStore  │ │  socketConnection│ │  routeState  │ │
-│  │   (Zustand)     │ │   (Zustand)     │ │   (Socket.IO)    │ │  (Router)    │ │
-│  │                 │ │                 │ │                  │ │              │ │
-│  │ ・楽曲リスト      │ │ ・音量設定       │ │ ・接続状態        │ │ ・現在ページ  │ │
-│  │ ・再生状態       │ │ ・テーマ設定     │ │ ・エラー状態      │ │ ・履歴管理   │ │
-│  └─────────────────┘ └─────────────────┘ └─────────────────┘ └──────────────┘ │
-└────────────────┬─────────────────────────────────────────────────────────────┘
-                 │ Socket.IO Events / HTTP Requests
-                 ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                          サーバーサイド処理                                     │
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────────┐ │
-│  │                         Event Handlers                                  │ │
-│  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────┐  │ │
-│  │  │  musicHandlers  │  │connectionHandlers│  │  videoControlHandlers  │  │ │
-│  │  │                 │  │                 │  │                         │  │ │
-│  │  │ ・addMusic      │  │ ・connect        │  │ ・play/pause/skip      │  │ │
-│  │  │ ・deleteMusic   │  │ ・disconnect     │  │ ・volume control       │  │ │
-│  │  │ ・updateOrder   │  │ ・error handling │  │ ・shuffle              │  │ │
-│  │  └─────────────────┘  └─────────────────┘  └─────────────────────────┘  │ │
-│  └─────────────────────────────────────────────────────────────────────────┘ │
-│                                   │                                          │
-│                                   ▼                                          │
-│  ┌─────────────────────────────────────────────────────────────────────────┐ │
-│  │                       Business Logic                                    │ │
-│  │  ┌─────────────────┐  ┌────────────────┐  ┌─────────────────────────── │ │
-│  │  │  YouTube API    │  │  Music State   │  │    Cache Management       │ │
-│  │  │  Integration    │  │  Management    │  │                           │ │
-│  │  │                 │  │                │  │ ・video metadata cache    │ │
-│  │  │ ・video info    │  │ ・playlist     │  │ ・24時間有効期限           │ │
-│  │  │ ・quota tracking│  │ ・current song │  │ ・API使用量節約            │ │
-│  │  └─────────────────┘  └────────────────┘  └───────────────────────────┘ │ │
-│  └─────────────────────────────────────────────────────────────────────────┘ │
-│                                   │                                          │
-│                                   ▼                                          │
-│  ┌─────────────────────────────────────────────────────────────────────────┐ │
-│  │                          Data Layer                                     │ │
-│  │  ┌─────────────────┐  ┌────────────────┐  ┌─────────────────────────── │ │
-│  │  │    Memory       │  │   File System  │  │    External APIs           │ │
-│  │  │    Storage      │  │    Storage     │  │                           │ │
-│  │  │                 │  │                │  │ ・YouTube Data API v3     │ │
-│  │  │ ・runtime state │  │ ・logs/app.log │  │ ・Chrome Extension API    │ │
-│  │  │ ・cache data    │  │ ・api-usage.json│  │ ・Spotify API (将来)      │ │
-│  │  └─────────────────┘  └────────────────┘  └───────────────────────────┘ │ │
-│  └─────────────────────────────────────────────────────────────────────────┘ │
-└────────────────┬─────────────────────────────────────────────────────────────┘
-                 │ Real-time Updates
-                 ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                      クライアントへの応答                                       │
-│                                                                              │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────────┐  │
-│  │   Socket.IO     │  │   HTTP Response │  │       UI Updates             │  │
-│  │   Events        │  │                 │  │                             │  │
-│  │                 │  │ ・API responses │  │ ・楽曲リスト更新             │  │
-│  │ ・music-added   │  │ ・error messages│  │ ・再生状態表示               │  │
-│  │ ・music-deleted │  │ ・status codes  │  │ ・エラーメッセージ           │  │
-│  │ ・state-updated │  │                 │  │ ・ローディング状態           │  │
-│  └─────────────────┘  └─────────────────┘  └─────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────────────────────┘
+app/
+├── components/         # UIコンポーネント
+│   ├── footer/         # フッターコンポーネント
+│   ├── home/           # 音楽管理コンポーネント
+│   ├── settings/       # 設定関連コンポーネント
+│   ├── time/           # 時間表示コンポーネント
+│   └── ui/             # 共通UIコンポーネント (shadcn/ui)
+├── hooks/              # カスタムフック
+│   ├── time/           # 時間表示関連フック
+│   ├── use-color-mode.ts        # ダークモード管理
+│   ├── use-gaming-toggle.ts     # ゲーミングモード管理
+│   ├── use-mobile.ts            # モバイル判定
+│   ├── use-progress-settings.ts # 進捗バー設定管理
+│   └── use-youtube-status.ts    # YouTube状態管理
+├── libs/               # ユーティリティ関数
+├── routes/             # ルーティング定義
+│   ├── api/            # API エンドポイント
+│   ├── home/           # ホーム画面関連
+│   ├── home.tsx        # 音楽管理ページ
+│   └── time.tsx        # スケジュール管理ページ
+├── server/             # サーバーサイドコード
+│   ├── handlers/       # Socket.IOハンドラー
+│   ├── middleware/     # Expressミドルウェア
+│   ├── apiCounter.ts   # API使用量カウンター
+│   ├── logger.ts       # ログ設定
+│   ├── server.ts       # メインサーバー
+│   ├── youtubeApi.ts   # YouTube API統合
+│   └── youtubeState.ts # YouTube状態管理
+├── stores/             # 状態管理 (Zustand)
+│   ├── musicStore.tsx  # 音楽リスト
+│   └── adminStore.ts   # 管理者権限
+├── utils/              # ユーティリティ関数
+│   └── time/           # 時間計算・フォーマット関連
+├── types/              # 型定義
+├── *.css               # スタイルシート
+└── socket.ts           # Socket.IO型定義
+
+time/                   # スケジュール管理専用モジュール
+├── components/         # 時間表示コンポーネント
+├── hooks/              # 時間計算フック
+├── types/              # スケジュール型定義
+└── utils/              # 時間計算ユーティリティ
 ```
 
-### 技術スタック
+### 技術スタック詳細
 
-#### フロントエンド
+**フロントエンド**
 
 - React Router v7（SPA）
 - TypeScript
 - Tailwind CSS v4, DaisyUI
-- Zustand, ReactのuseState/useEffect
+- Zustand, React hooks
 - shadcn/ui, Radix UI
 - Socket.IO Client
 - date-fns（日付・時間処理）
 - React Hook Form, Zod（フォーム）
 
-#### バックエンド
+**バックエンド**
 
-- Node.js
-- Express
+- Node.js, Express
 - TypeScript
 - Socket.IO Server
 - Winston（ログ）
 - YouTube Data API v3
 
-#### 開発ツール
+**開発ツール**
 
 - Vite（バンドラ）
 - ESLint, TypeScript ESLint（静的解析）
 - Prettier（コード整形）
-- TypeScript（型チェック）
-- Watchexec（プロセスマネージャ）
 - bun（推奨パッケージ管理）
 - Lucide React, React Icons
 
-## ディレクトリ構成
+## 🔧 API・データ仕様
 
-```
-app/
-├── components/          # UIコンポーネント
-│   ├── footer/         # フッターコンポーネント
-│   ├── home/           # ホーム画面（音楽管理）コンポーネント
-│   ├── settings/       # 設定関連コンポーネント
-│   ├── time/           # 時間表示（スケジュール管理）コンポーネント
-│   └── ui/            # 共通UIコンポーネント (shadcn/ui)
-├── hooks/              # カスタムフック
-│   ├── time/          # 時間表示関連フック
-│   ├── use-color-mode.ts    # ダークモード管理
-│   ├── use-gaming-toggle.ts # ゲーミングモード管理
-│   ├── use-mobile.ts        # モバイル判定
-│   ├── use-progress-settings.ts # 進捗バー設定管理
-│   └── use-youtube-status.ts    # YouTube状態管理
-├── libs/               # ユーティリティ関数
-├── routes/             # ルーティング定義
-│   ├── api/           # API エンドポイント
-│   ├── home/          # ホーム画面関連
-│   ├── home.tsx       # 音楽管理ページ
-│   └── time.tsx       # スケジュール管理ページ
-├── server/             # サーバーサイドコード
-│   ├── handlers/      # Socket.IOハンドラー
-│   ├── middleware/    # Expressミドルウェア
-│   ├── apiCounter.ts  # API使用量カウンター
-│   ├── logger.ts      # ログ設定
-│   ├── server.ts      # メインサーバー
-│   ├── youtubeApi.ts  # YouTube API統合
-│   └── youtubeState.ts # YouTube状態管理
-├── stores/             # 状態管理 (Zustand)
-├── utils/              # ユーティリティ関数
-│   └── time/          # 時間計算・フォーマット関連
-├── types/              # 型定義
-├── *.css              # スタイルシート
-└── socket.ts          # Socket.IO型定義
+### WebSocket通信 (Socket.IO)
 
-time/                   # スケジュール管理専用モジュール
-├── components/         # 時間表示コンポーネント
-├── hooks/             # 時間計算フック
-├── types/             # スケジュール型定義
-└── utils/             # 時間計算ユーティリティ
-```
-
-## API仕様・データモデル
-
-### 主なルート
-
-- `/home`: 音楽管理（YouTube動画の追加・削除・同期）
-- `/time`: スケジュール管理（授業時間・進捗バー・設定）
-
-### Socket.IOイベント（音楽管理）
-
-#### サーバー → クライアント（S2C）
+**音楽管理のリアルタイム同期**
 
 ```typescript
-interface ServerToClientEvents {
-  // 楽曲管理イベント
-  addMusic: (music: Music) => void;
-  initMusics: (musics: Music[]) => void;
-  deleteMusic: (url: string) => void;
+// サーバー → クライアント
+interface S2C {
+  addMusic: (music: Music) => void; // 楽曲追加
+  deleteMusic: (url: string) => void; // 楽曲削除
+  initMusics: (musics: Music[]) => void; // 初期データ
+  error: (message: string) => void; // エラー通知
+}
 
-  // URLリスト管理
-  url_list: (musics: Music[]) => void;
-  new_url: (music: Music | null) => void;
-  delete_url: (url: string) => void;
-
-  // YouTube状態同期
-  current_youtube_status: (data: {
-    state: string; // 'playing' | 'paused' | 'stopped'
-    url: string; // 現在再生中のURL
-    match: boolean; // プレイリストとの一致状況
-    music: Music | null; // マッチした楽曲情報
-  }) => void;
-
-  // エラー・通知
-  error: (message: string) => void;
-  notification: (message: string) => void;
+// クライアント → サーバー
+interface C2S {
+  addMusic: (url: string) => void; // YouTube URL追加
+  deleteMusic: (url: string) => void; // 楽曲削除
+  updateYoutubeStatus: (status) => void; // 再生状態更新
 }
 ```
 
-#### クライアント → サーバー（C2S）
+### REST API
 
-```typescript
-interface ClientToServerEvents {
-  // 楽曲操作
-  addMusic: (url: string) => void;
-  deleteMusic: (url: string) => void;
-  updateMusicOrder: (musics: Music[]) => void;
-
-  // YouTube連携
-  updateYoutubeStatus: (status: { state: string; url: string }) => void;
-
-  // 接続管理
-  disconnect: () => void;
-}
-```
-
-```
-
-}
-```
-
-### REST API エンドポイント
-
-#### アセット情報取得
+**システム情報取得**
 
 ```http
 GET /api/assets
+→ APIクォータ、キャッシュ状況、サーバー状態
 ```
 
-**レスポンス例:**
-
-```json
-{
-  "api_usage": {
-    "daily_quota": 10000,
-    "used_today": 150,
-    "remaining": 9850,
-    "reset_time": "2024-01-02T00:00:00Z"
-  },
-  "cache_status": {
-    "total_entries": 45,
-    "cache_hit_rate": 0.87,
-    "last_cleanup": "2024-01-01T12:00:00Z"
-  },
-  "server_status": {
-    "uptime": "2 days, 4 hours",
-    "active_connections": 3,
-    "memory_usage": "128MB"
-  }
-}
-```
-
-#### YouTube動画情報取得（内部API）
+**YouTube動画情報取得**
 
 ```http
 GET /internal/youtube/video-info?url={youtube_url}
@@ -351,122 +179,28 @@ GET /internal/youtube/video-info?url={youtube_url}
 }
 ```
 
-#### GET /api/assets
+### データ型定義
 
-- **説明**: アプリケーション設定と統計情報を取得
-- **レスポンス**: JSON形式の設定データ
-
-### YouTube Data API連携
-
-#### 利用エンドポイント
-
-```
-GET https://www.googleapis.com/youtube/v3/videos
-```
-
-**パラメータ:**
-
-- `part`: snippet,contentDetails
-- `id`: 動画ID
-- `key`: API キー
-
-**使用quota:** 1 unit per request
-
-#### キャッシュ戦略
-
-```typescript
-interface CacheEntry {
-  data: VideoInfo;
-  timestamp: number;
-  expires: number;
-}
-
-interface CacheConfig {
-  ttl: number; // 24時間 (86400秒)
-  maxEntries: number; // 最大1000エントリ
-  cleanupInterval: number; // 1時間毎のクリーンアップ
-}
-```
-
-**実装詳細:**
-
-- **ストレージ**: In-memory Map + 定期的なファイル書き込み
-- **キャッシュキー**: `youtube:video:{videoId}`
-- **ヒット率**: 約87%（通常運用時）
-- **クリーンアップ**: 期限切れエントリを1時間毎に削除
-
-## データモデル
-
-### 楽曲データ（Music型）
+**音楽データ**
 
 ```typescript
 interface Music {
-  url: string; // YouTube URL (一意識別子)
+  id: string; // 一意識別子
+  url: string; // YouTube URL
   title: string; // 動画タイトル
-  duration: string; // 再生時間 (MM:SS形式)
-  thumbnail: string; // サムネイル画像URL
   channel: string; // チャンネル名
-  addedAt: string; // 追加日時 (ISO 8601文字列)
-  order?: number; // 表示順序 (オプション)
+  duration: string; // 再生時間 (例: "3:45")
+  addedAt: Date; // 追加日時
 }
 ```
 
-### YouTube状態管理
+**スケジュール設定**
 
 ```typescript
-interface YouTubeState {
-  state: "playing" | "paused" | "stopped" | "buffering";
-  url: string; // 現在のYouTube URL
-  match: boolean; // プレイリスト内の楽曲かどうか
-  music: Music | null; // マッチした楽曲データ
-  currentTime?: number; // 再生位置（秒）
-  totalTime?: number; // 総再生時間（秒）
-}
-```
-
-### API使用量追跡
-
-```typescript
-interface ApiUsage {
-  date: string; // YYYY-MM-DD形式
-  quotaUsed: number; // 使用済みquota
-  dailyLimit: number; // 日次制限値
-  requests: number; // リクエスト回数
-  cacheHits: number; // キャッシュヒット数
-  lastUpdated: string; // 最終更新時刻
-}
-```
-
-### スケジュール管理データ
-
-```typescript
-interface ClassSchedule {
-  period: number; // 時限数
-  startTime: string; // 開始時刻 (HH:MM)
-  endTime: string; // 終了時刻 (HH:MM)
-  duration: number; // 授業時間（分）
-  breakTime: number; // 休憩時間（分）
-}
-
-interface ProgressSettings {
-  showProgressBar: boolean; // 進捗バー表示
-  showTimeRemaining: boolean; // 残り時間表示
-  updateInterval: number; // 更新間隔（ミリ秒）
-  theme: "light" | "dark" | "auto";
-}
-```
-
-```typescript
-interface Time {
-  hours: number;
-  minutes: number;
-  seconds: number;
-}
-
 interface ScheduleItem {
-  label: string;
-  type: "class" | "rest";
-  startTime: Time;
+  label: string; // "1時間目", "昼休み" など
+  type: "class" | "rest"; // 授業 or 休憩
+  startTime: Time; // 開始時刻
 }
 
 interface ClassStatus {
@@ -476,13 +210,9 @@ interface ClassStatus {
   timeRemaining?: string; // "1時間23分45.67秒"
   remainingMs?: number; // ミリ秒での残り時間
 }
-
-interface Schedule {
-  items: ScheduleItem[];
-}
 ```
 
-### 設定データ
+**設定データ**
 
 ```typescript
 interface ProgressSettings {
@@ -503,6 +233,120 @@ interface DateSettings {
   weekdayFormat: "full" | "short" | "none";
   separator: " " | "/" | "-" | ".";
 }
+```
+
+### YouTube Data API連携
+
+**利用エンドポイント**
+
+```
+GET https://www.googleapis.com/youtube/v3/videos
+```
+
+**パラメータ:** `part=snippet,contentDetails`
+
+## 🔐 セキュリティ・認証
+
+### 管理者権限システム
+
+**認証方法**
+
+```
+URL: /home?admin={ADMIN_SECRET}
+→ 管理者権限を付与（楽曲削除可能）
+→ localStorage に永続化
+```
+
+**実装**
+
+```typescript
+// サーバーサイド認証
+if (query.admin === process.env.ADMIN_SECRET) {
+  socket.emit("admin-authenticated", true);
+}
+
+// クライアントサイド永続化
+localStorage.setItem("isAdmin", "true");
+```
+
+**認証フロー**
+
+1. 管理者がURL入力欄に管理者コード（32文字以上）を入力
+2. サーバー側で `process.env.ADMIN_SECRET` と照合
+3. 一致した場合、フロントエンドの管理者ストア（Zustand）で権限フラグを有効化
+4. 管理者権限でのUI表示・機能アクセスが可能になる
+5. ログアウトボタンで権限を無効化
+
+**セキュリティ対策**
+
+- ✅ 環境変数でシークレット管理
+- ✅ クライアント・サーバー両側で権限チェック
+- ✅ URLパラメータは表示後にクリア
+- ✅ 管理者操作のログ記録
+- ✅ 管理者コードの定期的な更新・変更を推奨
+- ✅ 不正アクセス試行の監視・検出
+
+### APIキー管理
+
+- 環境変数 `YOUTUBE_API_KEY` での管理
+- サーバーサイドでのみ使用、クライアントには非公開
+
+### 入力検証
+
+- YouTube URL形式の検証
+- 動画時間制限 (10分以内)
+- 音楽動画キーワードフィルタリング
+
+### レート制限
+
+- YouTube API: 1日10,000 quota
+- 実際の使用量監視とログ記録
+
+## 💾 データ永続化
+
+### 音楽リクエスト (JSON)
+
+**ファイル:** `data/musicRequests.json`
+
+```json
+{
+  "date": "2025-06-23",
+  "requests": [
+    {
+      "url": "https://youtube.com/watch?v=...",
+      "title": "楽曲タイトル",
+      "addedAt": "2025-06-23T10:30:00Z"
+    }
+  ]
+}
+```
+
+**特徴**
+
+- 📅 毎日午前0時に自動リセット
+- 🔄 楽曲追加・削除時に即座に更新
+- 🛡️ 型安全な読み書き
+- 📁 `.gitignore`で本番環境から除外
+
+### 設定データ (localStorage)
+
+**UI設定**
+
+```typescript
+// 進捗バー設定
+showProgress: boolean;
+progressColor: string;
+showRemainingText: boolean;
+showCurrentSchedule: boolean;
+
+// 日付表示設定
+showDate: boolean;
+yearFormat: "western" | "reiwa";
+monthFormat: "japanese" | "english";
+
+// 背景画像 (IndexedDB)
+backgroundImage: Blob;
+showBackgroundImage: boolean;
 ```
 
 ## 機能詳細・実装方針
@@ -630,180 +474,145 @@ const useTimeCalculation = () => {
 };
 ```
 
-## セキュリティ
+## 🚀 運用・パフォーマンス
 
-### APIキー管理
+### ログ管理
 
-- 環境変数 `YOUTUBE_API_KEY` での管理
-- サーバーサイドでのみ使用、クライアントには非公開
+**ログレベル**
 
-### 管理者権限の付与方法
-
-#### 環境変数による管理者認証
-
-- 環境変数 `ADMIN_SECRET` に管理者用の秘密コードを設定
-- 音楽リクエストフォームのURL入力欄に管理者コードを入力することで認証
-- 認証成功時にセッション内で管理者権限を一時的に付与
-- 管理者コードは32文字以上の英数字記号で構成（推奨）
-
-#### 認証フロー
-
-1. 管理者がURL入力欄に管理者コード（32文字以上）を入力
-2. サーバー側で `process.env.ADMIN_SECRET` と照合
-3. 一致した場合、フロントエンドの管理者ストア（Zustand）で権限フラグを有効化
-4. 管理者権限でのUI表示・機能アクセスが可能になる
-5. ログアウトボタンで権限を無効化
-
-#### セキュリティ考慮事項
-
-- 管理者コードは定期的に更新・変更することを推奨
-- コードは管理者に直接伝達（口頭・物理的手段）
-- セッション・ページリロード時は再認証が必要
-- ログの監視により不正アクセス試行を検出
-
-### 入力チェック
-
-- YouTube URL形式の検証
-- 動画時間制限 (10分以内)
-- 音楽動画キーワードフィルタリング
-
-### レート制限
-
-- YouTube API: 1日10,000 quota
-- 実際の使用量監視とログ記録
-
-## ログ設定
-
-### ログレベル
-
-- **ERROR**: エラー情報
-- **WARN**: 警告情報
-- **INFO**: 一般情報
-- **DEBUG**: デバッグ情報
-
-### ログ出力先
-
-- **Console**: 開発環境
-- **File**: `logs/app.log` (本番環境)
-- **Rotation**: 日次ローテーション
-
-## パフォーマンス
-
-### 最適化ポイント
-
-- **Bundle Splitting**: React Routerの自動コード分割
-- **Tree Shaking**: 未使用コードの除去
-- **CSS Optimization**: Tailwind CSS v4のPurge機能
-- **Image Optimization**: YouTube サムネイル遅延読み込み
-- **タブ管理**: 非アクティブタブでの計算停止
-- **リアルタイム更新**: 必要最小限の再レンダリング
-
-### モニタリング
-
-- API使用量の追跡 (`api-usage.json`)
-- WebSocket接続数の監視
-- エラー率の測定
-- スケジュール計算のパフォーマンス監視
-
-## デプロイ・運用
-
-### 環境変数
-
-```bash
-NODE_ENV=production                    # 実行環境 (development/production)
-YOUTUBE_API_KEY=your_api_key_here     # YouTube Data API v3キー (必須)
-ADMIN_SECRET=your_admin_secret_here   # 管理者認証コード (必須、32文字以上推奨)
-PORT=3000                             # サーバーポート番号 (デフォルト: 3000)
+```
+ERROR → システムエラー、API失敗
+WARN  → 制限値超過、予期しない状況
+INFO  → 接続・操作・状態変更
+DEBUG → 詳細な動作ログ
 ```
 
-**環境変数の説明：**
+**出力先**
 
-- `YOUTUBE_API_KEY`: YouTube Data API v3のAPIキー
-  - Google Cloud Consoleで取得
-  - サーバー起動時に読み込み状況をログ出力
-- `ADMIN_SECRET`: 管理者認証用の秘密コード
-  - 32文字以上の英数字記号で構成（推奨）
-  - サーバー起動時に設定状況と文字数をログ出力
-  - 未設定の場合は管理者機能が無効化される
+- 開発環境: コンソール出力
+- 本番環境: `logs/app.log` (日次ローテーション)
 
-### ビルド・起動方法
+### パフォーマンス最適化
+
+**フロントエンド**
+
+- ✅ React Router v7の自動コード分割
+- ✅ Tailwind CSS v4のPurge機能
+- ✅ 非アクティブタブでの更新停止
+- ✅ 遅延ローディング (YouTube サムネイル)
+
+**バックエンド**
+
+- ✅ YouTube API 24時間キャッシュ
+- ✅ APIクォータ使用量追跡
+- ✅ Socket.IO接続プール管理
+- ✅ メモリリーク防止
+
+### 監視・保守
+
+**API使用量**
+
+```
+日次制限: 10,000 quota
+通常使用: ~150 quota/日
+キャッシュヒット率: 87%
+```
+
+**ファイル管理**
+
+```
+logs/app.log          → 日次ローテーション
+data/musicRequests.json → 毎日0時リセット
+api-usage.json        → クォータ追跡
+```
+
+## 🔧 開発・デプロイ
+
+### 開発環境構築
 
 ```bash
+# 1. 依存関係インストール
+bun install
+
+# 2. 環境変数設定
+cp .env.example .env
+# YOUTUBE_API_KEY=your_api_key
+# ADMIN_SECRET=your_secret_key
+
+# 3. 開発サーバー起動
+bun run dev
+```
+
+### ビルド・デプロイ
+
+```bash
+# 型チェック
+bun run typecheck
+
 # 本番ビルド
 bun run build
-# サーバー起動
+
+# 本番サーバー起動
 bun run start
 ```
 
-### 本番ファイル構成
+### 環境設定
 
-```
-build/           # ビルド成果物
-├── client/      # クライアントサイドバンドル
-├── server/      # サーバーサイドバンドル
-logs/           # ログファイル
-api-usage.json  # API使用量記録
-```
-
-## 開発ワークフロー
-
-### コード品質チェック
+**必須環境変数**
 
 ```bash
-bun run typecheck   # TypeScriptの型チェック
-bun run lint        # ESLintで静的解析
-bun run format      # Prettierでコード整形
-bun run quality     # 型・Lint・フォーマット一括チェック
+YOUTUBE_API_KEY=AIzaSy...    # YouTube Data API v3
+ADMIN_SECRET=ADM1N_AUTH...   # 管理者認証キー (32文字以上推奨)
 ```
 
-### 推奨Gitフック
-
-- **pre-commit**: lintとformatを自動で実行
-- **pre-push**: typecheckとテストを自動で実行
-
-## トラブルシューティング
-
-### よくあるトラブルと対処法
-
-1. **YouTube APIの利用上限に達した場合**
-
-   - `api-usage.json`でAPI使用量を確認しましょう。
-   - 必要に応じてキャッシュ期間を延ばすことでリクエスト数を抑えられます。
-
-2. **WebSocketが接続できない場合**
-
-   - ネットワーク環境やCORSの設定を見直してください。
-
-3. **ビルドエラーが発生した場合**
-   - `node_modules`ディレクトリを削除し、`bun install`で依存関係を再インストールしましょう。
-   - TypeScriptの型エラーがないかも確認してください。
-
-### ログの確認方法
+**オプション設定**
 
 ```bash
-# ログをリアルタイムで確認
-tail -f logs/app.log
-
-# エラーのみ抽出
-grep "ERROR" logs/app.log
+PORT=3000                    # サーバーポート
+NODE_ENV=production          # 環境設定
+LOG_LEVEL=info              # ログレベル
 ```
 
-## 今後の拡張予定
+### トラブルシューティング
 
-- [x] **音楽リクエストの永続化機能** ✅ 完了
-  - JSONファイルによるリクエストデータの保存・復元
-  - サーバー再起動後もリクエストが維持される仕組み
-  - 1日ごとの自動リセット機能
-  - 音楽再生完了時の自動削除機能
-- [ ] 音楽管理システムのUI改善 (DaisyUI統合)
-- [ ] セキュリティ脆弱性の修正
-- [ ] 管理者権限の機能拡張（楽曲削除・設定変更等）
-- [ ] スケジュール設定のUI改善
-- [ ] 複数スケジュールプロファイル対応
-- [ ] 通知機能の追加
-- [ ] モバイル版の対応
-- [ ] PWAを用いたモバイルアプリ化
+**よくある問題**
+
+```bash
+# API制限超過
+tail -f logs/app.log | grep "quota"
+
+# TypeScript型エラー
+bun run typecheck
+
+# 依存関係の問題
+rm -rf node_modules && bun install
+```
 
 ---
 
-最終更新: 2025年6月23日
+## 📋 今後の改善計画
+
+### ✅ 完了済み
+
+- 音楽リクエストの永続化 (JSON)
+- 管理者権限システム
+- 進捗バー正確計算
+- 型安全性の確保
+
+### 🚧 短期 (1-2週間)
+
+- [ ] モバイルUI改善
+- [ ] エラーハンドリング強化
+- [ ] ログ出力最適化
+
+### 🔮 中長期 (1-3ヶ月)
+
+- [ ] Spotify API連携
+- [ ] PWA対応
+- [ ] 楽曲推薦機能
+- [ ] データベース移行
+
+---
+
+**最終更新:** 2025年6月23日  
+**バージョン:** v2.0.0
