@@ -234,7 +234,9 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
               checked={showWeekday}
               onChange={(e) => setShowWeekday(e.target.checked)}
             />
-            <span className={`text-sm ${mode === "dark" ? "text-white" : "text-black"}`}>
+            <span
+              className={`text-sm whitespace-nowrap ${mode === "dark" ? "text-white" : "text-black"}`}
+            >
               曜日表示
             </span>
             <div className="flex-1"></div>

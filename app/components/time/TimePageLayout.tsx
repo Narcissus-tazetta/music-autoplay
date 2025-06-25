@@ -34,24 +34,6 @@ export function TimePageLayout({ status }: TimePageLayoutProps) {
     setShowRemainingText,
     showCurrentSchedule,
     setShowCurrentSchedule,
-    showDate,
-    setShowDate,
-    showYear,
-    setShowYear,
-    showMonth,
-    setShowMonth,
-    showDay,
-    setShowDay,
-    showWeekday,
-    setShowWeekday,
-    yearFormat,
-    setYearFormat,
-    monthFormat,
-    setMonthFormat,
-    dayFormat,
-    setDayFormat,
-    weekdayFormat,
-    setWeekdayFormat,
     backgroundImage,
     setBackgroundImage,
     backgroundImageFileName,
@@ -59,6 +41,26 @@ export function TimePageLayout({ status }: TimePageLayoutProps) {
     setShowBackgroundImage,
     backgroundFeatureEnabled,
   } = useProgressSettings();
+
+  // 日付表示設定はZustandストアから取得
+  const showDate = useProgressSettingsStore((s) => s.showDate);
+  const setShowDate = useProgressSettingsStore((s) => s.setShowDate);
+  const showYear = useProgressSettingsStore((s) => s.showYear);
+  const setShowYear = useProgressSettingsStore((s) => s.setShowYear);
+  const showMonth = useProgressSettingsStore((s) => s.showMonth);
+  const setShowMonth = useProgressSettingsStore((s) => s.setShowMonth);
+  const showDay = useProgressSettingsStore((s) => s.showDay);
+  const setShowDay = useProgressSettingsStore((s) => s.setShowDay);
+  const showWeekday = useProgressSettingsStore((s) => s.showWeekday);
+  const setShowWeekday = useProgressSettingsStore((s) => s.setShowWeekday);
+  const yearFormat = useProgressSettingsStore((s) => s.yearFormat);
+  const setYearFormat = useProgressSettingsStore((s) => s.setYearFormat);
+  const monthFormat = useProgressSettingsStore((s) => s.monthFormat);
+  const setMonthFormat = useProgressSettingsStore((s) => s.setMonthFormat);
+  const dayFormat = useProgressSettingsStore((s) => s.dayFormat);
+  const setDayFormat = useProgressSettingsStore((s) => s.setDayFormat);
+  const weekdayFormat = useProgressSettingsStore((s) => s.weekdayFormat);
+  const setWeekdayFormat = useProgressSettingsStore((s) => s.setWeekdayFormat);
 
   // showProgress, progressColorはZustandストアから取得
   const showProgress = useProgressSettingsStore((s) => s.showProgress);
