@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Footer } from "~/components/footer/Footer";
 import { SettingsButton } from "~/components/settings/SettingsButton";
 import { SettingsPanel } from "~/components/settings/SettingsPanel";
@@ -23,7 +23,7 @@ interface TimePageLayoutProps {
 /**
  * 時間ページのメインレイアウトコンポーネント
  */
-export function TimePageLayout({ status }: TimePageLayoutProps) {
+const TimePageLayout: React.FC<TimePageLayoutProps> = ({ status }) => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { mode, setMode, darkClass } = useColorMode();
   const isClient = useClientOnly();
@@ -36,11 +36,16 @@ export function TimePageLayout({ status }: TimePageLayoutProps) {
     setShowCurrentSchedule,
     backgroundImage,
     setBackgroundImage,
-    backgroundImageFileName,
-    showBackgroundImage,
-    setShowBackgroundImage,
-    backgroundFeatureEnabled,
   } = useProgressSettings();
+
+  // 背景画像設定はZustandストアから取得
+  const showBackgroundImage = useProgressSettingsStore((s) => s.showBackgroundImage);
+  const setShowBackgroundImage = useProgressSettingsStore((s) => s.setShowBackgroundImage);
+  const backgroundImageFileName = useProgressSettingsStore((s) => s.backgroundImageFileName);
+  const backgroundFeatureEnabled = useProgressSettingsStore((s) => s.backgroundFeatureEnabled);
+  const setBackgroundFeatureEnabled = useProgressSettingsStore(
+    (s) => s.setBackgroundFeatureEnabled
+  );
 
   // 日付表示設定はZustandストアから取得
   const showDate = useProgressSettingsStore((s) => s.showDate);
@@ -67,6 +72,18 @@ export function TimePageLayout({ status }: TimePageLayoutProps) {
   const progressColor = useProgressSettingsStore((s) => s.progressColor);
   const setProgressColor = useProgressSettingsStore((s) => s.setProgressColor);
   const setShowProgress = useProgressSettingsStore((s) => s.setShowProgress);
+
+  // Cmd+Shift+Space で背景画像機能トグル
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey && event.shiftKey && event.key === " ") {
+        event.preventDefault();
+        setBackgroundFeatureEnabled(!backgroundFeatureEnabled);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [backgroundFeatureEnabled, setBackgroundFeatureEnabled]);
 
   // 背景画像のスタイル
   const backgroundStyle = createBackgroundStyle(showBackgroundImage, backgroundImage);
@@ -151,4 +168,6 @@ export function TimePageLayout({ status }: TimePageLayoutProps) {
       <Footer />
     </>
   );
-}
+};
+
+export default TimePageLayout;

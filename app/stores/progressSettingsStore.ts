@@ -1,11 +1,54 @@
+// --- Zustandストアのセレクタ利用例 ---
+// 必要な値だけ取得することで再レンダリングを最適化できます。
+// const showDate = useProgressSettingsStore((s) => s.showDate);
+// 複数値をまとめて取得する場合は下記のように：
+// const { showDate, showYear } = useProgressSettingsStore((s) => ({
+//   showDate: s.showDate,
+//   showYear: s.showYear,
+// }));
+// デフォルト値を一元管理
+export const DEFAULT_PROGRESS_SETTINGS: Omit<
+  ProgressSettingsState,
+  | "setShowProgress"
+  | "setProgressColor"
+  | "setShowDate"
+  | "setShowYear"
+  | "setShowMonth"
+  | "setShowDay"
+  | "setShowWeekday"
+  | "setYearFormat"
+  | "setMonthFormat"
+  | "setDayFormat"
+  | "setWeekdayFormat"
+  | "setShowBackgroundImage"
+  | "setBackgroundImageFileName"
+  | "setBackgroundFeatureEnabled"
+  | "updateSettings"
+> = {
+  showProgress: true,
+  progressColor: "green",
+  showDate: false,
+  showYear: true,
+  showMonth: true,
+  showDay: true,
+  showWeekday: true,
+  yearFormat: "western",
+  monthFormat: "japanese",
+  dayFormat: "japanese",
+  weekdayFormat: "short",
+  showBackgroundImage: false,
+  backgroundImageFileName: "",
+  backgroundFeatureEnabled: false,
+};
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-
-type ProgressColor = "blue" | "yellow" | "green" | "pink" | "purple" | "sky";
-type YearFormat = "western" | "reiwa" | "2025" | "none";
-type MonthFormat = "japanese" | "english" | "number" | "none";
-type DayFormat = "japanese" | "number" | "english" | "none";
-type WeekdayFormat = "short" | "long" | "japanese" | "none";
+import type {
+  ProgressColor,
+  YearFormat,
+  MonthFormat,
+  DayFormat,
+  WeekdayFormat,
+} from "../types/progressSettings";
 
 interface ProgressSettingsState {
   showProgress: boolean;
@@ -31,37 +74,48 @@ interface ProgressSettingsState {
   setDayFormat: (value: DayFormat) => void;
   weekdayFormat: WeekdayFormat;
   setWeekdayFormat: (value: WeekdayFormat) => void;
+  // 背景画像設定
+  showBackgroundImage: boolean;
+  setShowBackgroundImage: (value: boolean) => void;
+  backgroundImageFileName: string;
+  setBackgroundImageFileName: (value: string) => void;
+  backgroundFeatureEnabled: boolean;
+  setBackgroundFeatureEnabled: (value: boolean) => void;
+  // 汎用アップデート
+  updateSettings: (values: Partial<Omit<ProgressSettingsState, "updateSettings">>) => void;
 }
 
 export const useProgressSettingsStore = create<ProgressSettingsState>()(
   persist(
-    (set) => ({
-      showProgress: true,
-      setShowProgress: (value) => set({ showProgress: value }),
-      progressColor: "green",
-      setProgressColor: (color) => set({ progressColor: color }),
-      // 日付表示設定
-      showDate: false,
-      setShowDate: (value) => set({ showDate: value }),
-      showYear: true,
-      setShowYear: (value) => set({ showYear: value }),
-      showMonth: true,
-      setShowMonth: (value) => set({ showMonth: value }),
-      showDay: true,
-      setShowDay: (value) => set({ showDay: value }),
-      showWeekday: true,
-      setShowWeekday: (value) => set({ showWeekday: value }),
-      yearFormat: "western",
-      setYearFormat: (value) => set({ yearFormat: value }),
-      monthFormat: "japanese",
-      setMonthFormat: (value) => set({ monthFormat: value }),
-      dayFormat: "japanese",
-      setDayFormat: (value) => set({ dayFormat: value }),
-      weekdayFormat: "short",
-      setWeekdayFormat: (value) => set({ weekdayFormat: value }),
-    }),
+    (set) => {
+      const base = { ...DEFAULT_PROGRESS_SETTINGS };
+      // setter自動生成
+      const setters: Partial<ProgressSettingsState> = {};
+      (Object.keys(base) as (keyof typeof base)[]).forEach((key) => {
+        const setterName = "set" + key.charAt(0).toUpperCase() + key.slice(1);
+        // @ts-expect-error 型安全性はinterfaceで担保
+        setters[setterName] = (value: any) => set({ [key]: value });
+      });
+      return {
+        ...base,
+        ...setters,
+        updateSettings: (values) => set(values),
+      } as ProgressSettingsState;
+    },
     {
       name: "progress-settings",
+      version: 1,
+      // 必要に応じて保存対象を限定したい場合は下記を有効化
+      // partialize: (state) => ({
+      //   showProgress: state.showProgress,
+      //   progressColor: state.progressColor,
+      //   ...
+      // }),
+      // ストア構造変更時のマイグレーション例
+      migrate: (persistedState, _version) => {
+        // 今後バージョンアップ時にここで変換処理を追加可能
+        return persistedState;
+      },
     }
   )
 );

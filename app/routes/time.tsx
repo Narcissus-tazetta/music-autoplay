@@ -1,5 +1,5 @@
 import { useClassSchedule } from "~/hooks/use-class-schedule";
-import { TimePageLayout } from "~/components/time/TimePageLayout";
+import TimePageLayout from "~/components/time/TimePageLayout";
 
 export function meta() {
   return [

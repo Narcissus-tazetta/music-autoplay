@@ -176,11 +176,16 @@ export function useProgressSettings() {
 
   // 背景画像設定のセッター関数
   const setBackgroundImage = async (imageData: string, fileName?: string) => {
+    let nameToSave = fileName;
+    if (!nameToSave) {
+      // ファイル名が未指定なら自動生成（例: 日時ベース）
+      nameToSave = `image_${Date.now()}.png`;
+    }
     setBackgroundImageState(imageData);
-    setBackgroundImageFileNameState(fileName || "");
+    setBackgroundImageFileNameState(nameToSave);
     try {
       if (imageData) {
-        await indexedDBManager.saveImage(imageData, fileName);
+        await indexedDBManager.saveImage(imageData, nameToSave);
         // 成功したらlocalStorageからは削除（容量節約）
         localStorage.removeItem("backgroundImage");
       } else {
