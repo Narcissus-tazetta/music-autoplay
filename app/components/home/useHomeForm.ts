@@ -15,7 +15,7 @@ export const useHomeForm = () => {
   const error = useMusicStore((store) => store.error);
   const addMusic = useMusicStore((store) => store.addMusic);
   const resetError = useMusicStore((store) => store.resetError);
-  const setAdminStatus = useAdminStore((store) => store.setAdminStatus);
+  const setAdminStatus = useAdminStore((store) => store.setIsAdmin);
 
   const [showAlert, setShowAlert] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
