@@ -251,16 +251,6 @@ export const BackgroundImageSettings: React.FC<BackgroundImageSettingsProps> = (
               </div>
             </div>
           )}
-
-          {/* 削除ボタン（画像が設定されている場合のみ） */}
-          {backgroundImage && (
-            <button
-              onClick={async () => await setBackgroundImage("", "")}
-              className="w-full btn btn-sm btn-outline"
-            >
-              画像を削除
-            </button>
-          )}
         </div>
       )}
     </div>
