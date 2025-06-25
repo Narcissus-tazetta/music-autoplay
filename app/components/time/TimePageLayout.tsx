@@ -6,6 +6,7 @@ import { DateDisplay } from "./DateDisplay";
 import { TimeDisplay } from "./TimeDisplay";
 import { useColorMode } from "~/hooks/use-color-mode";
 import { useProgressSettings } from "~/hooks/use-progress-settings";
+import { useProgressSettingsStore } from "~/stores/progressSettingsStore";
 import { useClientOnly } from "~/hooks/time/use-client-only";
 import { createBackgroundStyle } from "~/utils/time/background-utils";
 
@@ -29,17 +30,12 @@ export function TimePageLayout({ status }: TimePageLayoutProps) {
 
   // プログレスバー設定を永続化対応のカスタムフックで管理
   const {
-    showProgress,
-    setShowProgress,
-    progressColor,
-    setProgressColor,
     showRemainingText,
     setShowRemainingText,
     showCurrentSchedule,
     setShowCurrentSchedule,
     showDate,
     setShowDate,
-    // 日付コンポーネント設定
     showYear,
     setShowYear,
     showMonth,
@@ -56,15 +52,19 @@ export function TimePageLayout({ status }: TimePageLayoutProps) {
     setDayFormat,
     weekdayFormat,
     setWeekdayFormat,
-    // 背景画像設定
     backgroundImage,
     setBackgroundImage,
     backgroundImageFileName,
     showBackgroundImage,
     setShowBackgroundImage,
-    // 隠し機能フラグ
     backgroundFeatureEnabled,
   } = useProgressSettings();
+
+  // showProgress, progressColorはZustandストアから取得
+  const showProgress = useProgressSettingsStore((s) => s.showProgress);
+  const progressColor = useProgressSettingsStore((s) => s.progressColor);
+  const setProgressColor = useProgressSettingsStore((s) => s.setProgressColor);
+  const setShowProgress = useProgressSettingsStore((s) => s.setShowProgress);
 
   // 背景画像のスタイル
   const backgroundStyle = createBackgroundStyle(showBackgroundImage, backgroundImage);
