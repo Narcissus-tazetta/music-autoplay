@@ -20,7 +20,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "~/components/ui/h
 import { useMusicStore } from "~/stores/musicStore";
 import { useAdminStore } from "~/stores/adminStore";
 import type { Route } from "./+types/home";
-import { useColorMode } from "~/hooks/use-color-mode";
+import { useColorModeStore } from "~/stores/colorModeStore";
 import { useYouTubeStatus } from "~/hooks/use-youtube-status";
 
 export function meta(_args: Route.MetaArgs) {
@@ -38,7 +38,9 @@ export default function Home() {
   const initializeSocket = useMusicStore((store) => store.initializeSocket);
   const isAdmin = useAdminStore((store) => store.isAdmin);
   const ytStatus = useYouTubeStatus();
-  const { mode, setMode, darkClass } = useColorMode();
+  const mode = useColorModeStore((s) => s.mode);
+  const setMode = useColorModeStore((s) => s.setMode);
+  const darkClass = useColorModeStore((s) => s.darkClass);
 
   useEffect(() => {
     initializeSocket();
@@ -60,6 +62,7 @@ export default function Home() {
           onClose={() => setSettingsOpen(false)}
           mode={mode}
           setMode={setMode}
+          pageType="home"
         />
         <h1
           className="text-2xl font-bold m-4"

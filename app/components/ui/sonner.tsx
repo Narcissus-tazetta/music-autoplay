@@ -1,9 +1,9 @@
-import { useColorMode } from "~/hooks/use-color-mode";
+import { useColorModeStore } from "~/stores/colorModeStore";
 import { Toaster as Sonner } from "sonner";
 import type { ToasterProps } from "sonner";
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { mode } = useColorMode();
+  const mode = useColorModeStore((s) => s.mode);
 
   return (
     <Sonner

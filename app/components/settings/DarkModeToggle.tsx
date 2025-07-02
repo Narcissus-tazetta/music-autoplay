@@ -4,6 +4,11 @@ interface DarkModeToggleProps {
 }
 
 export const DarkModeToggle: React.FC<DarkModeToggleProps> = ({ mode, setMode }) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newMode = e.target.checked ? "dark" : "light";
+    setMode(newMode);
+  };
+
   return (
     <label
       className={`flex items-center justify-between cursor-pointer py-2 ${mode === "dark" ? "text-white" : "text-black"}`}
@@ -13,7 +18,7 @@ export const DarkModeToggle: React.FC<DarkModeToggleProps> = ({ mode, setMode })
         type="checkbox"
         className="toggle toggle-primary"
         checked={mode === "dark"}
-        onChange={(e) => setMode(e.target.checked ? "dark" : "light")}
+        onChange={handleChange}
       />
     </label>
   );

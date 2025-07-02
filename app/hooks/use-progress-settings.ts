@@ -7,6 +7,8 @@ export function useProgressSettings() {
   const [backgroundImageFileName, setBackgroundImageFileNameState] = useState<string>("");
 
   useEffect(() => {
+    let isMounted = true;
+
     // 背景画像設定をIndexedDBから読み込み
     const loadBackgroundImage = async () => {
       try {
@@ -15,15 +17,16 @@ export function useProgressSettings() {
         }
 
         const savedBackgroundImageData = await indexedDBManager.getImage();
-        if (savedBackgroundImageData && savedBackgroundImageData.data) {
+        if (savedBackgroundImageData && savedBackgroundImageData.data && isMounted) {
           setBackgroundImageState(savedBackgroundImageData.data);
           setBackgroundImageFileNameState(savedBackgroundImageData.fileName || "");
         }
       } catch (error) {
+        if (!isMounted) return;
         console.error("背景画像の読み込みに失敗しました:", error);
         try {
           const fallbackImage = localStorage.getItem("backgroundImage");
-          if (fallbackImage) {
+          if (fallbackImage && isMounted) {
             setBackgroundImageState(fallbackImage);
           }
         } catch (fallbackError) {
@@ -32,9 +35,12 @@ export function useProgressSettings() {
       }
     };
 
-    loadBackgroundImage().catch((error) => {
-      console.error("loadBackgroundImage実行中にエラー:", error);
-    });
+    // 非ブロッキング実行
+    loadBackgroundImage();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const setBackgroundImage = async (imageData: string, fileName?: string) => {

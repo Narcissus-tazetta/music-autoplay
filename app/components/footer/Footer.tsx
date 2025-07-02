@@ -1,23 +1,11 @@
-import { useEffect, useState } from "react";
 import { useGamingToggle } from "~/hooks/use-gaming-toggle";
-// import { useLocation } from "react-router";
+import { useColorModeStore } from "~/stores/colorModeStore";
 
 export const Footer: React.FC = () => {
-  const [mode, setMode] = useState<"dark" | "light">("light");
+  const mode = useColorModeStore((s) => s.mode);
   const gamingAlinco = useGamingToggle("^");
   const gamingNarcissus = useGamingToggle("¥");
   const location = typeof window !== "undefined" ? window.location.pathname : "";
-
-  useEffect(() => {
-    const updateMode = () => {
-      if (document.body.classList.contains("dark")) setMode("dark");
-      else setMode("light");
-    };
-    updateMode();
-    const observer = new MutationObserver(updateMode);
-    observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
-  }, []);
 
   const bg = mode === "dark" ? "#212225" : "#fff";
   const fg = mode === "dark" ? "#E8EAED" : "#212225";

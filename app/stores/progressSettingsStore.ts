@@ -1,12 +1,13 @@
-// --- Zustandストアのセレクタ利用例 ---
-// 必要な値だけ取得することで再レンダリングを最適化できます。
-// const showDate = useProgressSettingsStore((s) => s.showDate);
-// 複数値をまとめて取得する場合は下記のように：
-// const { showDate, showYear } = useProgressSettingsStore((s) => ({
-//   showDate: s.showDate,
-//   showYear: s.showYear,
-// }));
-// デフォルト値を一元管理
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import type {
+  ProgressColor,
+  YearFormat,
+  MonthFormat,
+  DayFormat,
+  WeekdayFormat,
+} from "../types/progressSettings";
+
 export const DEFAULT_PROGRESS_SETTINGS: Omit<
   ProgressSettingsState,
   | "setShowProgress"
@@ -44,15 +45,6 @@ export const DEFAULT_PROGRESS_SETTINGS: Omit<
   backgroundImageFileName: "",
   backgroundFeatureEnabled: false,
 };
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import type {
-  ProgressColor,
-  YearFormat,
-  MonthFormat,
-  DayFormat,
-  WeekdayFormat,
-} from "../types/progressSettings";
 
 interface ProgressSettingsState {
   showProgress: boolean;
@@ -89,39 +81,43 @@ interface ProgressSettingsState {
   setBackgroundImageFileName: (value: string) => void;
   backgroundFeatureEnabled: boolean;
   setBackgroundFeatureEnabled: (value: boolean) => void;
-  // 汎用アップデート
   updateSettings: (values: Partial<Omit<ProgressSettingsState, "updateSettings">>) => void;
 }
 
 export const useProgressSettingsStore = create<ProgressSettingsState>()(
   persist(
-    (set) => {
-      const base = { ...DEFAULT_PROGRESS_SETTINGS };
-      // setter自動生成
-      const setters: Partial<ProgressSettingsState> = {};
-      (Object.keys(base) as (keyof typeof base)[]).forEach((key) => {
-        const setterName = "set" + key.charAt(0).toUpperCase() + key.slice(1);
-        // @ts-expect-error 型安全性はinterfaceで担保
-        setters[setterName] = (value: any) => set({ [key]: value });
-      });
-      return {
-        ...base,
-        ...setters,
-        updateSettings: (values) => set(values),
-      } as ProgressSettingsState;
-    },
+    (set) => ({
+      ...DEFAULT_PROGRESS_SETTINGS,
+
+      // 進捗設定
+      setShowProgress: (value: boolean) => set({ showProgress: value }),
+      setProgressColor: (color: ProgressColor) => set({ progressColor: color }),
+      setShowRemainingText: (value: boolean) => set({ showRemainingText: value }),
+      setShowCurrentSchedule: (value: boolean) => set({ showCurrentSchedule: value }),
+
+      // 日付設定
+      setShowDate: (value: boolean) => set({ showDate: value }),
+      setShowYear: (value: boolean) => set({ showYear: value }),
+      setShowMonth: (value: boolean) => set({ showMonth: value }),
+      setShowDay: (value: boolean) => set({ showDay: value }),
+      setShowWeekday: (value: boolean) => set({ showWeekday: value }),
+      setYearFormat: (value: YearFormat) => set({ yearFormat: value }),
+      setMonthFormat: (value: MonthFormat) => set({ monthFormat: value }),
+      setDayFormat: (value: DayFormat) => set({ dayFormat: value }),
+      setWeekdayFormat: (value: WeekdayFormat) => set({ weekdayFormat: value }),
+
+      // 背景画像設定
+      setShowBackgroundImage: (value: boolean) => set({ showBackgroundImage: value }),
+      setBackgroundImageFileName: (value: string) => set({ backgroundImageFileName: value }),
+      setBackgroundFeatureEnabled: (value: boolean) => set({ backgroundFeatureEnabled: value }),
+
+      // 汎用更新
+      updateSettings: (values) => set(values),
+    }),
     {
       name: "progress-settings",
       version: 1,
-      // 必要に応じて保存対象を限定したい場合は下記を有効化
-      // partialize: (state) => ({
-      //   showProgress: state.showProgress,
-      //   progressColor: state.progressColor,
-      //   ...
-      // }),
-      // ストア構造変更時のマイグレーション例
       migrate: (persistedState, _version) => {
-        // 今後バージョンアップ時にここで変換処理を追加可能
         return persistedState;
       },
     }

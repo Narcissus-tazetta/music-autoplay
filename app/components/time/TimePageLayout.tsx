@@ -4,7 +4,7 @@ import { SettingsButton } from "~/components/settings/SettingsButton";
 import { SettingsPanel } from "~/components/settings/SettingsPanel";
 import { DateDisplay } from "./DateDisplay";
 import { TimeDisplay } from "./TimeDisplay";
-import { useColorMode } from "~/hooks/use-color-mode";
+import { useColorModeStore } from "~/stores/colorModeStore";
 import { useProgressSettings } from "~/hooks/use-progress-settings";
 import { useProgressSettingsStore } from "~/stores/progressSettingsStore";
 import { useClientOnly } from "~/hooks/time/use-client-only";
@@ -25,65 +25,90 @@ interface TimePageLayoutProps {
  */
 const TimePageLayout: React.FC<TimePageLayoutProps> = ({ status }) => {
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const { mode, setMode, darkClass } = useColorMode();
+
+  // カラーモード設定
+  const { mode, setMode, darkClass, hasHydrated } = useColorModeStore((s) => ({
+    mode: s.mode,
+    setMode: s.setMode,
+    darkClass: s.darkClass,
+    hasHydrated: s.hasHydrated,
+  }));
+
+  // 初回ハイドレーション後にDOM同期
+  useEffect(() => {
+    if (hasHydrated && typeof window !== "undefined") {
+      const currentBodyClass = document.body.className;
+      const expectedClass = mode;
+
+      if (!currentBodyClass.includes(expectedClass)) {
+        setMode(mode); // 現在のモードでDOM同期
+      }
+    }
+  }, [hasHydrated, mode, setMode]);
+
   const isClient = useClientOnly();
 
-  // 背景画像のみカスタムフックから（IndexedDB用）
   const { backgroundImage, setBackgroundImage } = useProgressSettings();
 
-  // 全ての設定をZustandストアから取得
-  const showRemainingText = useProgressSettingsStore((s) => s.showRemainingText);
-  const setShowRemainingText = useProgressSettingsStore((s) => s.setShowRemainingText);
-  const showCurrentSchedule = useProgressSettingsStore((s) => s.showCurrentSchedule);
-  const setShowCurrentSchedule = useProgressSettingsStore((s) => s.setShowCurrentSchedule);
-  const showDate = useProgressSettingsStore((s) => s.showDate);
-  const setShowDate = useProgressSettingsStore((s) => s.setShowDate);
-  const showYear = useProgressSettingsStore((s) => s.showYear);
-  const setShowYear = useProgressSettingsStore((s) => s.setShowYear);
-  const showMonth = useProgressSettingsStore((s) => s.showMonth);
-  const setShowMonth = useProgressSettingsStore((s) => s.setShowMonth);
-  const showDay = useProgressSettingsStore((s) => s.showDay);
-  const setShowDay = useProgressSettingsStore((s) => s.setShowDay);
-  const showWeekday = useProgressSettingsStore((s) => s.showWeekday);
-  const setShowWeekday = useProgressSettingsStore((s) => s.setShowWeekday);
-  const yearFormat = useProgressSettingsStore((s) => s.yearFormat);
-  const setYearFormat = useProgressSettingsStore((s) => s.setYearFormat);
-  const monthFormat = useProgressSettingsStore((s) => s.monthFormat);
-  const setMonthFormat = useProgressSettingsStore((s) => s.setMonthFormat);
-  const dayFormat = useProgressSettingsStore((s) => s.dayFormat);
-  const setDayFormat = useProgressSettingsStore((s) => s.setDayFormat);
-  const weekdayFormat = useProgressSettingsStore((s) => s.weekdayFormat);
-  const setWeekdayFormat = useProgressSettingsStore((s) => s.setWeekdayFormat);
+  const progressSettings = useProgressSettingsStore((s) => ({
+    showRemainingText: s.showRemainingText,
+    setShowRemainingText: s.setShowRemainingText,
+    showCurrentSchedule: s.showCurrentSchedule,
+    setShowCurrentSchedule: s.setShowCurrentSchedule,
+    showProgress: s.showProgress,
+    setShowProgress: s.setShowProgress,
+    progressColor: s.progressColor,
+    setProgressColor: s.setProgressColor,
+  }));
 
-  // 背景画像設定はZustandストアから取得
-  const showBackgroundImage = useProgressSettingsStore((s) => s.showBackgroundImage);
-  const setShowBackgroundImage = useProgressSettingsStore((s) => s.setShowBackgroundImage);
-  const backgroundImageFileName = useProgressSettingsStore((s) => s.backgroundImageFileName);
-  const backgroundFeatureEnabled = useProgressSettingsStore((s) => s.backgroundFeatureEnabled);
-  const setBackgroundFeatureEnabled = useProgressSettingsStore(
-    (s) => s.setBackgroundFeatureEnabled
-  );
+  const dateSettings = useProgressSettingsStore((s) => ({
+    showDate: s.showDate,
+    setShowDate: s.setShowDate,
+    showYear: s.showYear,
+    setShowYear: s.setShowYear,
+    showMonth: s.showMonth,
+    setShowMonth: s.setShowMonth,
+    showDay: s.showDay,
+    setShowDay: s.setShowDay,
+    showWeekday: s.showWeekday,
+    setShowWeekday: s.setShowWeekday,
+    yearFormat: s.yearFormat,
+    setYearFormat: s.setYearFormat,
+    monthFormat: s.monthFormat,
+    setMonthFormat: s.setMonthFormat,
+    dayFormat: s.dayFormat,
+    setDayFormat: s.setDayFormat,
+    weekdayFormat: s.weekdayFormat,
+    setWeekdayFormat: s.setWeekdayFormat,
+  }));
 
-  // showProgress, progressColorはZustandストアから取得
-  const showProgress = useProgressSettingsStore((s) => s.showProgress);
-  const progressColor = useProgressSettingsStore((s) => s.progressColor);
-  const setProgressColor = useProgressSettingsStore((s) => s.setProgressColor);
-  const setShowProgress = useProgressSettingsStore((s) => s.setShowProgress);
+  const backgroundSettings = useProgressSettingsStore((s) => ({
+    showBackgroundImage: s.showBackgroundImage,
+    setShowBackgroundImage: s.setShowBackgroundImage,
+    backgroundImageFileName: s.backgroundImageFileName,
+    backgroundFeatureEnabled: s.backgroundFeatureEnabled,
+    setBackgroundFeatureEnabled: s.setBackgroundFeatureEnabled,
+  }));
 
-  // Cmd+Shift+Space で背景画像機能トグル
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.metaKey && event.shiftKey && event.key === " ") {
         event.preventDefault();
-        setBackgroundFeatureEnabled(!backgroundFeatureEnabled);
+        backgroundSettings.setBackgroundFeatureEnabled(
+          !backgroundSettings.backgroundFeatureEnabled
+        );
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [backgroundFeatureEnabled, setBackgroundFeatureEnabled]);
+  }, [backgroundSettings]);
 
-  // 背景画像のスタイル
-  const backgroundStyle = createBackgroundStyle(showBackgroundImage, backgroundImage);
+  const backgroundStyle = createBackgroundStyle(
+    backgroundSettings.showBackgroundImage,
+    backgroundImage
+  );
 
   return (
     <>
@@ -98,52 +123,52 @@ const TimePageLayout: React.FC<TimePageLayoutProps> = ({ status }) => {
           mode={mode}
           setMode={setMode}
           pageType="time"
-          showProgress={showProgress}
-          setShowProgress={setShowProgress}
-          progressColor={progressColor}
-          setProgressColor={setProgressColor}
-          showRemainingText={showRemainingText}
-          setShowRemainingText={setShowRemainingText}
-          showCurrentSchedule={showCurrentSchedule}
-          setShowCurrentSchedule={setShowCurrentSchedule}
-          showDate={showDate}
-          setShowDate={setShowDate}
-          showYear={showYear}
-          setShowYear={setShowYear}
-          showMonth={showMonth}
-          setShowMonth={setShowMonth}
-          showDay={showDay}
-          setShowDay={setShowDay}
-          showWeekday={showWeekday}
-          setShowWeekday={setShowWeekday}
-          yearFormat={yearFormat}
-          setYearFormat={setYearFormat}
-          monthFormat={monthFormat}
-          setMonthFormat={setMonthFormat}
-          dayFormat={dayFormat}
-          setDayFormat={setDayFormat}
-          weekdayFormat={weekdayFormat}
-          setWeekdayFormat={setWeekdayFormat}
+          showProgress={progressSettings.showProgress}
+          setShowProgress={progressSettings.setShowProgress}
+          progressColor={progressSettings.progressColor}
+          setProgressColor={progressSettings.setProgressColor}
+          showRemainingText={progressSettings.showRemainingText}
+          setShowRemainingText={progressSettings.setShowRemainingText}
+          showCurrentSchedule={progressSettings.showCurrentSchedule}
+          setShowCurrentSchedule={progressSettings.setShowCurrentSchedule}
+          showDate={dateSettings.showDate}
+          setShowDate={dateSettings.setShowDate}
+          showYear={dateSettings.showYear}
+          setShowYear={dateSettings.setShowYear}
+          showMonth={dateSettings.showMonth}
+          setShowMonth={dateSettings.setShowMonth}
+          showDay={dateSettings.showDay}
+          setShowDay={dateSettings.setShowDay}
+          showWeekday={dateSettings.showWeekday}
+          setShowWeekday={dateSettings.setShowWeekday}
+          yearFormat={dateSettings.yearFormat}
+          setYearFormat={dateSettings.setYearFormat}
+          monthFormat={dateSettings.monthFormat}
+          setMonthFormat={dateSettings.setMonthFormat}
+          dayFormat={dateSettings.dayFormat}
+          setDayFormat={dateSettings.setDayFormat}
+          weekdayFormat={dateSettings.weekdayFormat}
+          setWeekdayFormat={dateSettings.setWeekdayFormat}
           backgroundImage={backgroundImage}
           setBackgroundImage={setBackgroundImage}
-          backgroundImageFileName={backgroundImageFileName}
-          showBackgroundImage={showBackgroundImage}
-          setShowBackgroundImage={setShowBackgroundImage}
-          backgroundFeatureEnabled={backgroundFeatureEnabled}
+          backgroundImageFileName={backgroundSettings.backgroundImageFileName}
+          showBackgroundImage={backgroundSettings.showBackgroundImage}
+          setShowBackgroundImage={backgroundSettings.setShowBackgroundImage}
+          backgroundFeatureEnabled={backgroundSettings.backgroundFeatureEnabled}
         />
 
         <div className="text-center select-none space-y-4">
           {/* 日付表示 */}
           <DateDisplay
-            show={showDate}
-            showYear={showYear}
-            showMonth={showMonth}
-            showDay={showDay}
-            showWeekday={showWeekday}
-            yearFormat={yearFormat}
-            monthFormat={monthFormat}
-            dayFormat={dayFormat}
-            weekdayFormat={weekdayFormat}
+            show={dateSettings.showDate}
+            showYear={dateSettings.showYear}
+            showMonth={dateSettings.showMonth}
+            showDay={dateSettings.showDay}
+            showWeekday={dateSettings.showWeekday}
+            yearFormat={dateSettings.yearFormat}
+            monthFormat={dateSettings.monthFormat}
+            dayFormat={dateSettings.dayFormat}
+            weekdayFormat={dateSettings.weekdayFormat}
           />
 
           {/* 時間表示 */}
@@ -154,10 +179,10 @@ const TimePageLayout: React.FC<TimePageLayoutProps> = ({ status }) => {
             current={status.current}
             remainingMs={status.remainingMs}
             totalDurationMs={status.totalDurationMs}
-            showRemainingText={showRemainingText}
-            showCurrentSchedule={showCurrentSchedule}
-            showProgress={showProgress}
-            progressColor={progressColor}
+            showRemainingText={progressSettings.showRemainingText}
+            showCurrentSchedule={progressSettings.showCurrentSchedule}
+            showProgress={progressSettings.showProgress}
+            progressColor={progressSettings.progressColor}
           />
         </div>
       </div>
