@@ -31,6 +31,31 @@ export const useHomeForm = () => {
     formState: { errors },
   } = form;
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const adminParam = urlParams.get("admin");
+
+      if (adminParam) {
+        socket.emit(
+          "adminAuthByQuery",
+          adminParam,
+          (result: { success: boolean; error?: string }) => {
+            if (result.success) {
+              setAdminStatus(true);
+              setSuccessMessage("URL経由で管理者認証に成功しました");
+              const newUrl = new URL(window.location.href);
+              newUrl.searchParams.delete("admin");
+              window.history.replaceState({}, "", newUrl.toString());
+            } else {
+              console.warn("URL管理者認証に失敗:", result.error);
+            }
+          }
+        );
+      }
+    }
+  }, [setAdminStatus]);
+
   const handleCloseAlert = useCallback(() => {
     setIsAnimating(true);
     setTimeout(() => {
@@ -123,9 +148,15 @@ export const useHomeForm = () => {
       });
       const text = await res.text();
       if (!res.ok) {
+        let errorMessage = text || "動画情報の取得に失敗しました";
+
+        if (res.status === 429) {
+          errorMessage = "リクエストが多すぎます。しばらくしてからもう一度お試しください。";
+        }
+
         setError("url", {
           type: "manual",
-          message: text || "動画情報の取得に失敗しました",
+          message: errorMessage,
         });
         return;
       }

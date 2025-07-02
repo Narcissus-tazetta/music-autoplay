@@ -11,12 +11,21 @@ import {
   validatePlaylistSize,
   logValidationEvent,
 } from "../middleware/validation";
+import { createSocketRateLimit } from "../middleware/rateLimit";
+
+const adminAuthLimit = createSocketRateLimit({
+  windowMs: 1000,
+  maxRequests: 1,
+  message: "認証試行が制限されています。",
+});
+
+const musicActionLimit = createSocketRateLimit({
+  windowMs: 1000,
+  maxRequests: 1,
+  message: "楽曲操作が制限されています。",
+});
 
 export function registerMusicHandlers(io: Server<C2S, S2C>, socket: Socket<C2S, S2C>) {
-  /**
-   * 管理者認証ハンドラー
-   * 環境変数ADMIN_SECRETと照合して管理者権限を付与
-   */
   socket.on("adminAuth", (code: string, callback) => {
     const adminSecret = process.env.ADMIN_SECRET;
 
@@ -41,7 +50,45 @@ export function registerMusicHandlers(io: Server<C2S, S2C>, socket: Socket<C2S, 
     }
   });
 
+  socket.on("adminAuthByQuery", (queryParam: string, callback) => {
+    if (!adminAuthLimit(socket.id)) {
+      if (typeof callback === "function") {
+        callback({ success: false, error: "認証試行が制限されています。1秒後にお試しください。" });
+      }
+      return;
+    }
+
+    const adminSecret = process.env.ADMIN_SECRET;
+
+    if (!adminSecret) {
+      log.error("URL管理者認証: ADMIN_SECRET環境変数が設定されていません");
+      if (typeof callback === "function") {
+        callback({ success: false, error: "管理者認証が利用できません" });
+      }
+      return;
+    }
+
+    if (queryParam === adminSecret) {
+      log.info(`URL管理者認証成功: ${socket.id.substring(0, 8)}...`);
+      if (typeof callback === "function") {
+        callback({ success: true });
+      }
+    } else {
+      log.warn(`URL管理者認証失敗: ${socket.id.substring(0, 8)}... - 無効なクエリパラメータ`);
+      if (typeof callback === "function") {
+        callback({ success: false, error: "無効な管理者クエリパラメータです" });
+      }
+    }
+  });
+
   socket.on("addMusic", (music: Music, callback) => {
+    if (!musicActionLimit(socket.id)) {
+      if (typeof callback === "function") {
+        callback("楽曲追加が制限されています。1秒後にお試しください。");
+      }
+      return;
+    }
+
     const validation = validateMusicData(music);
     if (!validation.isValid) {
       logValidationEvent("addMusic", socket.id, validation.error, music);

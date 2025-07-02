@@ -37,4 +37,8 @@ export interface C2S {
   move_next_video(data: { url: string }): void;
 
   adminAuth(code: string, callback: (result: { success: boolean; error?: string }) => void): void;
+  adminAuthByQuery(
+    queryParam: string,
+    callback: (result: { success: boolean; error?: string }) => void
+  ): void;
 }
