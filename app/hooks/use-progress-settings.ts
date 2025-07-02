@@ -8,7 +8,6 @@ type DayFormat = "japanese" | "number" | "english" | "none";
 type WeekdayFormat = "short" | "long" | "japanese" | "none";
 
 export function useProgressSettings() {
-  const [showProgress, setShowProgressState] = useState(true);
   const [progressColor, setProgressColorState] = useState<ProgressColor>("green");
   const [showRemainingText, setShowRemainingTextState] = useState(true);
   const [showCurrentSchedule, setShowCurrentScheduleState] = useState(false); // 現在の時間割表示（デフォルトはoff）
@@ -49,14 +48,9 @@ export function useProgressSettings() {
       setBackgroundFeatureEnabledState(true);
     }
 
-    const savedShowProgress = localStorage.getItem("showProgress");
     const savedProgressColor = localStorage.getItem("progressColor") as ProgressColor;
     const savedShowRemainingText = localStorage.getItem("showRemainingText");
     const savedShowDate = localStorage.getItem("showDate");
-
-    if (savedShowProgress !== null) {
-      setShowProgressState(savedShowProgress === "true");
-    }
 
     if (
       savedProgressColor &&
@@ -148,11 +142,6 @@ export function useProgressSettings() {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [backgroundFeatureEnabled]);
-
-  const setShowProgress = (value: boolean) => {
-    setShowProgressState(value);
-    localStorage.setItem("showProgress", value.toString());
-  };
 
   const setProgressColor = (color: ProgressColor) => {
     setProgressColorState(color);
@@ -255,8 +244,6 @@ export function useProgressSettings() {
   };
 
   return {
-    showProgress,
-    setShowProgress,
     progressColor,
     setProgressColor,
     showRemainingText,
