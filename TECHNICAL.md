@@ -1,70 +1,76 @@
-# 技術仕様書
-
-## システム概要
-
-本プロジェクトは、YouTube動画の音楽再生管理と学校の時間割表示を統合したWebアプリケーションです。リアルタイム同期や管理者機能、柔軟なUIカスタマイズを備え、教育現場やイベントでの利用を想定しています。
-
----
-
-## 機能一覧
-
-### 音楽管理（/home）
-
-- YouTube動画の追加・削除・並び替え
-- 楽曲情報の自動取得（タイトル・時間・サムネイル）
-- プレイリストのリアルタイム同期（Socket.IO）
-- Chrome拡張との連携による再生状態監視
-- 管理者権限による操作制御
-
-### 時間割表示（/time）
-
-- 授業・休憩時間のカウントダウン・進捗表示
-- 柔軟なスケジュール設定・祝日対応
-- 高度な日付・進捗バー表示カスタマイズ
-- タブ非アクティブ時の自動停止による省リソース化
+# TECHNICAL.md - 技術仕様書
 
 ---
 
 ## 技術スタック
 
-| レイヤー           | 技術・ライブラリ                                                                                                                                                |
-| :----------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **フロントエンド** | - React<br>- TypeScript<br>- Tailwind CSS v4<br>- Zustand<br>- shadcn/ui<br>- React Router v7<br>- Socket.IO Client<br>- date-fns<br>- React Hook Form<br>- Zod |
-| **バックエンド**   | - Node.js<br>- Express<br>- TypeScript<br>- Socket.IO<br>- Winston<br>- YouTube Data API v3                                                                     |
-| **開発ツール**     | - Vite<br>- bun<br>- ESLint<br>- Prettier<br>- Lucide React<br>- React Icons                                                                                    |
+| レイヤー           | 技術・ライブラリ                                                                          |
+| :----------------- | :---------------------------------------------------------------------------------------- |
+| **フロントエンド** | React, TypeScript, Tailwind CSS v4, Zustand, shadcn/ui, React Router v7, Socket.IO Client |
+| **バックエンド**   | Node.js, Express, TypeScript, Socket.IO, Winston, YouTube Data API v3                     |
+| **開発ツール**     | Vite, bun, ESLint, Prettier, Lucide React, React Icons                                    |
 
 ---
 
-## アーキテクチャ・構成
+## ドメイン駆動型ディレクトリ構成
 
-### データフロー
+```
+src/
+├── features/              # ドメイン別機能
+│   ├── music/             # 音楽管理（/home）
+│   │   ├── components/    # HomeForm, YouTubeStatus, etc.
+│   │   ├── hooks/         # use-youtube-status
+│   │   ├── stores/        # musicStore
+│   │   ├── api/           # YouTube API関連
+│   │   └── utils/         # 音楽固有ユーティリティ
+│   ├── schedule/          # 時間割（/time）
+│   │   ├── components/    # TimeDisplay, ProgressBar, etc.
+│   │   ├── hooks/         # use-class-schedule, time/*
+│   │   ├── stores/        # classScheduleStore
+│   │   ├── api/           # スケジュールAPI
+│   │   └── utils/         # 時間計算・祝日処理
+│   └── settings/          # 共通設定・テーマ
+│       ├── components/    # SettingsPanel, DarkModeToggle, etc.
+│       ├── hooks/         # use-progress-settings
+│       ├── stores/        # progressSettingsStore, colorModeStore
+│       └── utils/         # 設定関連ユーティリティ
+├── shared/                # 共通リソース
+│   ├── components/        # UI共通コンポーネント（shadcn/ui, Footer）
+│   ├── hooks/             # use-gaming-toggle, use-mobile
+│   ├── stores/            # adminStore
+│   ├── libs/              # indexedDB, utils
+│   ├── types/             # 型定義, socket.ts
+│   └── utils/             # 汎用関数
+├── server/                # サーバーサイド
+│   ├── api/               # APIハンドラー
+│   ├── middleware/        # レート制限・バリデーション
+│   ├── utils/             # サーバーユーティリティ
+│   └── types/             # サーバー型定義
+└── app/                   # アプリケーション層
+    ├── routes/            # React Router設定
+    ├── root.tsx           # ルートコンポーネント
+    └── routes.ts          # ルート定義
+```
+
+---
+
+## 状態管理・データフロー
 
 ```
 ユーザー操作
   ↓
-フロントエンド（React, WebSocket/HTTP）
+フロントエンド（React, Zustand, WebSocket/HTTP）
   ↓
 バックエンド（Node.js, Express, Socket.IO）
   ↓
 YouTube Data API
 ```
 
-### ディレクトリ構成（抜粋）
+### 状態管理のポイント
 
-```
-app/
-├── components/      # UIコンポーネント
-├── hooks/           # カスタムフック
-├── libs/            # ユーティリティ
-├── routes/          # ルーティング・API
-├── server/          # サーバーサイド
-├── stores/          # Zustandストア
-├── utils/           # 汎用関数
-├── types/           # 型定義
-└── socket.ts        # Socket.IO型定義
-
-time/                # スケジュール管理モジュール
-```
+- **Zustand**で全UI状態を一元管理（カラーモード・進捗設定・スケジュール等）
+- **IndexedDB**は背景画像のみ（大容量対応）
+- **localStorage**はZustand persist経由のみ利用
 
 ---
 
@@ -107,34 +113,7 @@ interface Music {
 ## データ永続化
 
 - 楽曲リクエストは `data/musicRequests.json` で日次リセット・型安全保存
-- UI設定は localStorage/IndexedDB で管理
-
----
-
-## 実装例
-
-### 楽曲追加フロー
-
-```typescript
-const addMusic = async (url: string) => {
-  if (!isValidYouTubeUrl(url)) throw new Error("無効なURL");
-  const cached = await cache.get(extractVideoId(url));
-  if (cached) return cached;
-  const videoInfo = await youtubeApi.getVideoInfo(url);
-  if (videoInfo.duration > 600) throw new Error("10分以内のみ");
-  const music = await musicStore.add(videoInfo);
-  io.emit("addMusic", music);
-  return music;
-};
-```
-
-### 時間計算フック例
-
-```typescript
-const useTimeCalculation = () => {
-  // ...省略（詳細は元仕様参照）
-};
-```
+- UI設定は Zustand persist/IndexedDB で管理
 
 ---
 
@@ -182,5 +161,5 @@ bun run start
 
 ---
 
-**最終更新:** 2025年6月23日  
-**バージョン:** v2.0.0
+**最終更新:** 2025年7月2日  
+**バージョン:** v2.1.0
