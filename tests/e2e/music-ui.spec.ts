@@ -25,30 +25,19 @@ test.describe('Music Auto-Play UI E2E', () => {
   });
 
   test('有効なYouTube URLを追加・削除できる', async ({ page }) => {
-    // 各テスト実行時に一意のURLを生成
-    const VALID_YOUTUBE_URL = `https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=${Date.now()}&test=${Math.random()}`;
-    
+    const VALID_YOUTUBE_URL = 'https://youtu.be/BVvvUGP0MFw?si=zLCnZFPpyWuLgVRX';
     await page.locator('input[placeholder*="youtube.com"]').fill(VALID_YOUTUBE_URL);
     await page.getByRole('button', { name: /送信/ }).click();
-
-    // アラートが表示されるまで待機（成功・失敗どちらでも）
     const alert = page.locator('[role="alert"]');
     await expect(alert).toBeVisible({ timeout: 15000 });
-    
-    // 成功メッセージまたは重複エラーメッセージをチェック
     const alertText = await alert.textContent();
-    
     if (alertText?.includes('追加しました')) {
-      // 成功の場合：テーブルに楽曲が追加されたことを確認
       await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 5000 });
-
-      // 削除ボタン（ゴミ箱アイコン）をクリック
       const deleteButton = page.getByRole('button', { name: /この曲を削除/ }).first();
       if (await deleteButton.count() > 0) {
         await deleteButton.click();
       }
     } else if (alertText?.includes('すでにリクエストされています')) {
-      // 重複エラーの場合もテスト成功とみなす（楽曲が存在することを確認）
       console.log('楽曲は既に存在しています - テスト成功');
     } else {
       throw new Error(`予期しないアラートメッセージ: ${alertText}`);
@@ -56,19 +45,13 @@ test.describe('Music Auto-Play UI E2E', () => {
   });
 
   test('楽曲リストの表示確認', async ({ page }) => {
-    // テーブルヘッダーが表示されているか確認（thセレクター）
     await expect(page.locator('table th:has-text("楽曲")')).toBeVisible();
-    // テーブル本体が存在するか確認
     await expect(page.locator('table')).toBeVisible();
   });
 
 
   test('設定パネルの表示・非表示', async ({ page }) => {
-    // 設定ボタンをクリック
     await page.locator('button[aria-label="設定"]').click();
-    
-    // 設定パネルが表示されるかテスト（具体的な内容は実装次第）
-    // 例: ダークモード切り替えボタンなど
   });
 
   test('ネットワーク障害時の挙動テスト - API接続失敗', async ({ page }) => {
