@@ -1,81 +1,15 @@
 import { useState, useEffect } from "react";
 import { indexedDBManager } from "~/libs/indexedDB";
 
-type ProgressColor = "blue" | "yellow" | "green" | "pink" | "purple" | "sky";
-type YearFormat = "western" | "reiwa" | "2025" | "none";
-type MonthFormat = "japanese" | "english" | "number" | "none";
-type DayFormat = "japanese" | "number" | "english" | "none";
-type WeekdayFormat = "short" | "long" | "japanese" | "none";
-
 export function useProgressSettings() {
-  const [progressColor, setProgressColorState] = useState<ProgressColor>("green");
-  const [showRemainingText, setShowRemainingTextState] = useState(true);
-  const [showCurrentSchedule, setShowCurrentScheduleState] = useState(false); // 現在の時間割表示（デフォルトはoff）
-  const [showDate, setShowDateState] = useState(false); // デフォルトはoff
-
-  // 背景画像設定
+  // 背景画像設定のみ残す（IndexedDB使用のため）
   const [backgroundImage, setBackgroundImageState] = useState<string>("");
   const [backgroundImageFileName, setBackgroundImageFileNameState] = useState<string>("");
-  const [showBackgroundImage, setShowBackgroundImageState] = useState(false); // 背景画像のon/off
-  const [backgroundFeatureEnabled, setBackgroundFeatureEnabledState] = useState(false); // 背景画像機能の表示制御
-
-  // 日付コンポーネント別設定
-  const [showYear, setShowYearState] = useState(true);
-  const [showMonth, setShowMonthState] = useState(true);
-  const [showDay, setShowDayState] = useState(true);
-  const [showWeekday, setShowWeekdayState] = useState(true);
-  const [yearFormat, setYearFormatState] = useState<YearFormat>("western");
-  const [monthFormat, setMonthFormatState] = useState<MonthFormat>("japanese");
-  const [dayFormat, setDayFormatState] = useState<DayFormat>("japanese");
-  const [weekdayFormat, setWeekdayFormatState] = useState<WeekdayFormat>("short");
 
   useEffect(() => {
-    // Cmd+Shift+Space の同時押しを検出（トグル機能）
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.metaKey && event.shiftKey && event.key === " ") {
-        event.preventDefault(); // デフォルト動作を防ぐ
-        const newState = !backgroundFeatureEnabled;
-        setBackgroundFeatureEnabledState(newState);
-        localStorage.setItem("backgroundFeatureEnabled", newState.toString());
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    // localStorage から設定を読み込み
-    const savedBackgroundFeatureEnabled = localStorage.getItem("backgroundFeatureEnabled");
-    if (savedBackgroundFeatureEnabled === "true") {
-      setBackgroundFeatureEnabledState(true);
-    }
-
-    const savedProgressColor = localStorage.getItem("progressColor") as ProgressColor;
-    const savedShowRemainingText = localStorage.getItem("showRemainingText");
-    const savedShowDate = localStorage.getItem("showDate");
-
-    if (
-      savedProgressColor &&
-      ["blue", "yellow", "green", "pink", "purple", "sky"].includes(savedProgressColor)
-    ) {
-      setProgressColorState(savedProgressColor);
-    }
-
-    if (savedShowRemainingText !== null) {
-      setShowRemainingTextState(savedShowRemainingText === "true");
-    }
-
-    const savedShowCurrentSchedule = localStorage.getItem("showCurrentSchedule");
-    if (savedShowCurrentSchedule !== null) {
-      setShowCurrentScheduleState(savedShowCurrentSchedule === "true");
-    }
-
-    if (savedShowDate !== null) {
-      setShowDateState(savedShowDate === "true");
-    }
-
-    // 背景画像設定をIndexedDBから読み込み（エラーハンドリング強化）
+    // 背景画像設定をIndexedDBから読み込み
     const loadBackgroundImage = async () => {
       try {
-        // IndexedDBが利用可能かチェック
         if (typeof window === "undefined" || !window.indexedDB) {
           return;
         }
@@ -87,7 +21,6 @@ export function useProgressSettings() {
         }
       } catch (error) {
         console.error("背景画像の読み込みに失敗しました:", error);
-        // フォールバックとしてlocalStorageからも試す
         try {
           const fallbackImage = localStorage.getItem("backgroundImage");
           if (fallbackImage) {
@@ -99,75 +32,14 @@ export function useProgressSettings() {
       }
     };
 
-    // 非同期処理を安全に実行
     loadBackgroundImage().catch((error) => {
       console.error("loadBackgroundImage実行中にエラー:", error);
     });
+  }, []);
 
-    const savedShowBackgroundImage = localStorage.getItem("showBackgroundImage");
-    if (savedShowBackgroundImage !== null) {
-      setShowBackgroundImageState(savedShowBackgroundImage === "true");
-    }
-
-    // 日付コンポーネント設定の読み込み
-    const savedShowYear = localStorage.getItem("showYear");
-    const savedShowMonth = localStorage.getItem("showMonth");
-    const savedShowDay = localStorage.getItem("showDay");
-    const savedShowWeekday = localStorage.getItem("showWeekday");
-    const savedYearFormat = localStorage.getItem("yearFormat") as YearFormat;
-    const savedMonthFormat = localStorage.getItem("monthFormat") as MonthFormat;
-    const savedDayFormat = localStorage.getItem("dayFormat") as DayFormat;
-    const savedWeekdayFormat = localStorage.getItem("weekdayFormat") as WeekdayFormat;
-
-    if (savedShowYear !== null) setShowYearState(savedShowYear === "true");
-    if (savedShowMonth !== null) setShowMonthState(savedShowMonth === "true");
-    if (savedShowDay !== null) setShowDayState(savedShowDay === "true");
-    if (savedShowWeekday !== null) setShowWeekdayState(savedShowWeekday === "true");
-
-    if (savedYearFormat && ["western", "reiwa", "2025", "none"].includes(savedYearFormat)) {
-      setYearFormatState(savedYearFormat);
-    }
-    if (savedMonthFormat && ["japanese", "english", "number", "none"].includes(savedMonthFormat)) {
-      setMonthFormatState(savedMonthFormat);
-    }
-    if (savedDayFormat && ["japanese", "number", "english", "none"].includes(savedDayFormat)) {
-      setDayFormatState(savedDayFormat);
-    }
-    if (savedWeekdayFormat && ["short", "long", "japanese", "none"].includes(savedWeekdayFormat)) {
-      setWeekdayFormatState(savedWeekdayFormat);
-    }
-
-    // クリーンアップ関数
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [backgroundFeatureEnabled]);
-
-  const setProgressColor = (color: ProgressColor) => {
-    setProgressColorState(color);
-    localStorage.setItem("progressColor", color);
-  };
-
-  const setShowRemainingText = (value: boolean) => {
-    setShowRemainingTextState(value);
-    localStorage.setItem("showRemainingText", value.toString());
-  };
-
-  const setShowCurrentSchedule = (value: boolean) => {
-    setShowCurrentScheduleState(value);
-    localStorage.setItem("showCurrentSchedule", value.toString());
-  };
-
-  const setShowDate = (value: boolean) => {
-    setShowDateState(value);
-    localStorage.setItem("showDate", value.toString());
-  };
-
-  // 背景画像設定のセッター関数
   const setBackgroundImage = async (imageData: string, fileName?: string) => {
     let nameToSave = fileName;
     if (!nameToSave) {
-      // ファイル名が未指定なら自動生成（例: 日時ベース）
       nameToSave = `image_${Date.now()}.png`;
     }
     setBackgroundImageState(imageData);
@@ -175,7 +47,6 @@ export function useProgressSettings() {
     try {
       if (imageData) {
         await indexedDBManager.saveImage(imageData, nameToSave);
-        // 成功したらlocalStorageからは削除（容量節約）
         localStorage.removeItem("backgroundImage");
       } else {
         await indexedDBManager.deleteImage();
@@ -183,7 +54,6 @@ export function useProgressSettings() {
       }
     } catch (error) {
       console.error("背景画像の保存に失敗しました:", error);
-      // フォールバックとしてlocalStorageに保存を試行
       if (imageData) {
         try {
           localStorage.setItem("backgroundImage", imageData);
@@ -197,85 +67,9 @@ export function useProgressSettings() {
     }
   };
 
-  const setShowBackgroundImage = (value: boolean) => {
-    setShowBackgroundImageState(value);
-    localStorage.setItem("showBackgroundImage", value.toString());
-  };
-
-  // 日付コンポーネント設定のセッター関数
-  const setShowYear = (value: boolean) => {
-    setShowYearState(value);
-    localStorage.setItem("showYear", value.toString());
-  };
-
-  const setShowMonth = (value: boolean) => {
-    setShowMonthState(value);
-    localStorage.setItem("showMonth", value.toString());
-  };
-
-  const setShowDay = (value: boolean) => {
-    setShowDayState(value);
-    localStorage.setItem("showDay", value.toString());
-  };
-
-  const setShowWeekday = (value: boolean) => {
-    setShowWeekdayState(value);
-    localStorage.setItem("showWeekday", value.toString());
-  };
-
-  const setYearFormat = (format: YearFormat) => {
-    setYearFormatState(format);
-    localStorage.setItem("yearFormat", format);
-  };
-
-  const setMonthFormat = (format: MonthFormat) => {
-    setMonthFormatState(format);
-    localStorage.setItem("monthFormat", format);
-  };
-
-  const setDayFormat = (format: DayFormat) => {
-    setDayFormatState(format);
-    localStorage.setItem("dayFormat", format);
-  };
-
-  const setWeekdayFormat = (format: WeekdayFormat) => {
-    setWeekdayFormatState(format);
-    localStorage.setItem("weekdayFormat", format);
-  };
-
   return {
-    progressColor,
-    setProgressColor,
-    showRemainingText,
-    setShowRemainingText,
-    showCurrentSchedule,
-    setShowCurrentSchedule,
-    showDate,
-    setShowDate,
-    // 背景画像設定
     backgroundImage,
     setBackgroundImage,
     backgroundImageFileName,
-    showBackgroundImage,
-    setShowBackgroundImage,
-    // 日付コンポーネント設定
-    showYear,
-    setShowYear,
-    showMonth,
-    setShowMonth,
-    showDay,
-    setShowDay,
-    showWeekday,
-    setShowWeekday,
-    yearFormat,
-    setYearFormat,
-    monthFormat,
-    setMonthFormat,
-    dayFormat,
-    setDayFormat,
-    weekdayFormat,
-    setWeekdayFormat,
-    // 隠し機能フラグ
-    backgroundFeatureEnabled,
   };
 }

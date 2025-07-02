@@ -28,26 +28,14 @@ const TimePageLayout: React.FC<TimePageLayoutProps> = ({ status }) => {
   const { mode, setMode, darkClass } = useColorMode();
   const isClient = useClientOnly();
 
-  // プログレスバー設定を永続化対応のカスタムフックで管理
-  const {
-    showRemainingText,
-    setShowRemainingText,
-    showCurrentSchedule,
-    setShowCurrentSchedule,
-    backgroundImage,
-    setBackgroundImage,
-  } = useProgressSettings();
+  // 背景画像のみカスタムフックから（IndexedDB用）
+  const { backgroundImage, setBackgroundImage } = useProgressSettings();
 
-  // 背景画像設定はZustandストアから取得
-  const showBackgroundImage = useProgressSettingsStore((s) => s.showBackgroundImage);
-  const setShowBackgroundImage = useProgressSettingsStore((s) => s.setShowBackgroundImage);
-  const backgroundImageFileName = useProgressSettingsStore((s) => s.backgroundImageFileName);
-  const backgroundFeatureEnabled = useProgressSettingsStore((s) => s.backgroundFeatureEnabled);
-  const setBackgroundFeatureEnabled = useProgressSettingsStore(
-    (s) => s.setBackgroundFeatureEnabled
-  );
-
-  // 日付表示設定はZustandストアから取得
+  // 全ての設定をZustandストアから取得
+  const showRemainingText = useProgressSettingsStore((s) => s.showRemainingText);
+  const setShowRemainingText = useProgressSettingsStore((s) => s.setShowRemainingText);
+  const showCurrentSchedule = useProgressSettingsStore((s) => s.showCurrentSchedule);
+  const setShowCurrentSchedule = useProgressSettingsStore((s) => s.setShowCurrentSchedule);
   const showDate = useProgressSettingsStore((s) => s.showDate);
   const setShowDate = useProgressSettingsStore((s) => s.setShowDate);
   const showYear = useProgressSettingsStore((s) => s.showYear);
@@ -66,6 +54,15 @@ const TimePageLayout: React.FC<TimePageLayoutProps> = ({ status }) => {
   const setDayFormat = useProgressSettingsStore((s) => s.setDayFormat);
   const weekdayFormat = useProgressSettingsStore((s) => s.weekdayFormat);
   const setWeekdayFormat = useProgressSettingsStore((s) => s.setWeekdayFormat);
+
+  // 背景画像設定はZustandストアから取得
+  const showBackgroundImage = useProgressSettingsStore((s) => s.showBackgroundImage);
+  const setShowBackgroundImage = useProgressSettingsStore((s) => s.setShowBackgroundImage);
+  const backgroundImageFileName = useProgressSettingsStore((s) => s.backgroundImageFileName);
+  const backgroundFeatureEnabled = useProgressSettingsStore((s) => s.backgroundFeatureEnabled);
+  const setBackgroundFeatureEnabled = useProgressSettingsStore(
+    (s) => s.setBackgroundFeatureEnabled
+  );
 
   // showProgress, progressColorはZustandストアから取得
   const showProgress = useProgressSettingsStore((s) => s.showProgress);

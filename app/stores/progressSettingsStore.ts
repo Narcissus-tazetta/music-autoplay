@@ -11,6 +11,8 @@ export const DEFAULT_PROGRESS_SETTINGS: Omit<
   ProgressSettingsState,
   | "setShowProgress"
   | "setProgressColor"
+  | "setShowRemainingText"
+  | "setShowCurrentSchedule"
   | "setShowDate"
   | "setShowYear"
   | "setShowMonth"
@@ -27,6 +29,8 @@ export const DEFAULT_PROGRESS_SETTINGS: Omit<
 > = {
   showProgress: true,
   progressColor: "green",
+  showRemainingText: true,
+  showCurrentSchedule: false,
   showDate: false,
   showYear: true,
   showMonth: true,
@@ -55,6 +59,10 @@ interface ProgressSettingsState {
   setShowProgress: (value: boolean) => void;
   progressColor: ProgressColor;
   setProgressColor: (color: ProgressColor) => void;
+  showRemainingText: boolean;
+  setShowRemainingText: (value: boolean) => void;
+  showCurrentSchedule: boolean;
+  setShowCurrentSchedule: (value: boolean) => void;
   // 日付表示設定
   showDate: boolean;
   setShowDate: (value: boolean) => void;
