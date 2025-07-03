@@ -15,7 +15,7 @@ import { useColorModeStore } from "../features/settings/stores/colorModeStore";
 export const links: Route.LinksFunction = () => [
   { rel: "stylesheet", href: appCss },
   { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
-  { rel: "icon", href: "/favicon.ico", sizes: "any" }, // fallback
+  { rel: "icon", href: "/favicon.ico", sizes: "any" },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -26,7 +26,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
-        {/* ダークモードのちらつき防止 - 高速化 */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -69,11 +68,9 @@ export default function App() {
   const { hasHydrated } = useColorModeStore();
 
   useEffect(() => {
-    // ハイドレーション完了後に一度だけトランジションを有効化
     if (hasHydrated && typeof window !== "undefined") {
       const body = document.body;
       if (body.style.transition === "none") {
-        // 少し遅延してからトランジションを有効化
         setTimeout(() => {
           body.style.transition =
             "background-color 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1)";

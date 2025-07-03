@@ -2,14 +2,12 @@ import { useState, useEffect } from "react";
 import { indexedDBManager } from "../../../shared/libs/indexedDB";
 
 export function useProgressSettings() {
-  // 背景画像設定のみ残す（IndexedDB使用のため）
   const [backgroundImage, setBackgroundImageState] = useState<string>("");
   const [backgroundImageFileName, setBackgroundImageFileNameState] = useState<string>("");
 
   useEffect(() => {
     let isMounted = true;
 
-    // 背景画像設定をIndexedDBから読み込み
     const loadBackgroundImage = async () => {
       try {
         if (typeof window === "undefined" || !window.indexedDB) {
@@ -35,7 +33,6 @@ export function useProgressSettings() {
       }
     };
 
-    // 非ブロッキング実行
     loadBackgroundImage();
 
     return () => {

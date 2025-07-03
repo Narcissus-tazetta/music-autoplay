@@ -25,7 +25,6 @@ export const BackgroundImageSettings: React.FC<BackgroundImageSettingsProps> = (
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // 容量制限を100MBに拡大（IndexedDB使用）
       if (file.size > 100 * 1024 * 1024) {
         window.alert("ファイルサイズは100MB以下にしてください");
         return;
@@ -35,7 +34,6 @@ export const BackgroundImageSettings: React.FC<BackgroundImageSettingsProps> = (
         return;
       }
 
-      // HEIC形式やサポートされていない形式を除外
       const supportedFormats = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
       if (!supportedFormats.includes(file.type.toLowerCase())) {
         window.alert(
@@ -66,13 +64,11 @@ export const BackgroundImageSettings: React.FC<BackgroundImageSettingsProps> = (
 
     setIsLoadingUrl(true);
     try {
-      // URLの基本的な検証
       const url = new URL(imageUrl.trim());
       if (!url.protocol.startsWith("http")) {
         throw new Error("HTTPまたはHTTPSのURLを入力してください");
       }
 
-      // 画像をfetchして検証
       const response = await fetch(imageUrl.trim());
       if (!response.ok) {
         throw new Error(`画像の読み込みに失敗しました: ${response.status}`);
@@ -83,13 +79,10 @@ export const BackgroundImageSettings: React.FC<BackgroundImageSettingsProps> = (
         throw new Error("指定されたURLは画像ではありません");
       }
 
-      // サポートされている形式かチェック
       const supportedFormats = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
       if (!supportedFormats.some((format) => contentType.includes(format.split("/")[1]))) {
         throw new Error("サポートされている形式: JPEG, PNG, GIF, WebP");
       }
-
-      // データURLに変換
       const blob = await response.blob();
       if (blob.size > 100 * 1024 * 1024) {
         throw new Error("ファイルサイズは100MB以下にしてください");
@@ -129,15 +122,12 @@ export const BackgroundImageSettings: React.FC<BackgroundImageSettingsProps> = (
         />
       </label>
 
-      {/* 背景画像の詳細設定（on/offがtrueの場合のみ） */}
       {showBackgroundImage && (
         <div className="ml-4 space-y-3">
-          {/* 現在の背景画像情報表示 */}
           {backgroundImage && (
             <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 border">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  {/* HEIC形式の場合は警告アイコン */}
                   {backgroundImage.includes("data:image/png;base64,AAAAIGZ0eXBoZWlj") ? (
                     <HiX className="w-5 h-5 text-red-500" />
                   ) : (
@@ -165,7 +155,6 @@ export const BackgroundImageSettings: React.FC<BackgroundImageSettingsProps> = (
             </div>
           )}
 
-          {/* 入力方法の切り替えタブ */}
           <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
             <button
               onClick={() => setInputMethod("file")}
@@ -191,7 +180,6 @@ export const BackgroundImageSettings: React.FC<BackgroundImageSettingsProps> = (
             </button>
           </div>
 
-          {/* ファイル選択エリア */}
           {inputMethod === "file" && (
             <div className="space-y-2">
               <label className="block">
@@ -226,7 +214,6 @@ export const BackgroundImageSettings: React.FC<BackgroundImageSettingsProps> = (
             </div>
           )}
 
-          {/* URL入力エリア */}
           {inputMethod === "url" && (
             <div className="space-y-2">
               <div className="flex gap-2">

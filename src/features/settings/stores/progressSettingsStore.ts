@@ -55,7 +55,6 @@ interface ProgressSettingsState {
   setShowRemainingText: (value: boolean) => void;
   showCurrentSchedule: boolean;
   setShowCurrentSchedule: (value: boolean) => void;
-  // 日付表示設定
   showDate: boolean;
   setShowDate: (value: boolean) => void;
   showYear: boolean;
@@ -74,7 +73,6 @@ interface ProgressSettingsState {
   setDayFormat: (value: DayFormat) => void;
   weekdayFormat: WeekdayFormat;
   setWeekdayFormat: (value: WeekdayFormat) => void;
-  // 背景画像設定
   showBackgroundImage: boolean;
   setShowBackgroundImage: (value: boolean) => void;
   backgroundImageFileName: string;
@@ -89,13 +87,11 @@ export const useProgressSettingsStore = create<ProgressSettingsState>()(
     (set) => ({
       ...DEFAULT_PROGRESS_SETTINGS,
 
-      // 進捗設定
       setShowProgress: (value: boolean) => set({ showProgress: value }),
       setProgressColor: (color: ProgressColor) => set({ progressColor: color }),
       setShowRemainingText: (value: boolean) => set({ showRemainingText: value }),
       setShowCurrentSchedule: (value: boolean) => set({ showCurrentSchedule: value }),
 
-      // 日付設定
       setShowDate: (value: boolean) => set({ showDate: value }),
       setShowYear: (value: boolean) => set({ showYear: value }),
       setShowMonth: (value: boolean) => set({ showMonth: value }),
@@ -106,12 +102,10 @@ export const useProgressSettingsStore = create<ProgressSettingsState>()(
       setDayFormat: (value: DayFormat) => set({ dayFormat: value }),
       setWeekdayFormat: (value: WeekdayFormat) => set({ weekdayFormat: value }),
 
-      // 背景画像設定
       setShowBackgroundImage: (value: boolean) => set({ showBackgroundImage: value }),
       setBackgroundImageFileName: (value: string) => set({ backgroundImageFileName: value }),
       setBackgroundFeatureEnabled: (value: boolean) => set({ backgroundFeatureEnabled: value }),
 
-      // 汎用更新
       updateSettings: (values) => set(values),
     }),
     {

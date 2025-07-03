@@ -26,7 +26,6 @@ interface TimePageLayoutProps {
 const TimePageLayout: React.FC<TimePageLayoutProps> = ({ status }) => {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // カラーモード設定
   const { mode, setMode, darkClass, hasHydrated } = useColorModeStore((s) => ({
     mode: s.mode,
     setMode: s.setMode,
@@ -34,14 +33,13 @@ const TimePageLayout: React.FC<TimePageLayoutProps> = ({ status }) => {
     hasHydrated: s.hasHydrated,
   }));
 
-  // 初回ハイドレーション後にDOM同期
   useEffect(() => {
     if (hasHydrated && typeof window !== "undefined") {
       const currentBodyClass = document.body.className;
       const expectedClass = mode;
 
       if (!currentBodyClass.includes(expectedClass)) {
-        setMode(mode); // 現在のモードでDOM同期
+        setMode(mode);
       }
     }
   }, [hasHydrated, mode, setMode]);
@@ -158,7 +156,6 @@ const TimePageLayout: React.FC<TimePageLayoutProps> = ({ status }) => {
         />
 
         <div className="text-center select-none space-y-4">
-          {/* 日付表示 */}
           <DateDisplay
             show={dateSettings.showDate}
             showYear={dateSettings.showYear}

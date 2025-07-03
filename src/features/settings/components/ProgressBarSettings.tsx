@@ -16,7 +16,6 @@ interface ProgressBarSettingsProps {
   setShowCurrentSchedule: (v: boolean) => void;
   showDate: boolean;
   setShowDate: (v: boolean) => void;
-  // 日付コンポーネント設定
   showYear: boolean;
   setShowYear: (v: boolean) => void;
   showMonth: boolean;
@@ -33,7 +32,6 @@ interface ProgressBarSettingsProps {
   setDayFormat: (v: DayFormat) => void;
   weekdayFormat: WeekdayFormat;
   setWeekdayFormat: (v: WeekdayFormat) => void;
-  // 背景画像設定
   backgroundImage: string;
   setBackgroundImage: (v: string) => void;
 }
@@ -50,7 +48,6 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
   setShowCurrentSchedule,
   showDate,
   setShowDate,
-  // 日付コンポーネント設定
   showYear,
   setShowYear,
   showMonth,
@@ -67,11 +64,9 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
   setDayFormat,
   weekdayFormat,
   setWeekdayFormat,
-  // 背景画像設定
   backgroundImage: _backgroundImage,
   setBackgroundImage: _setBackgroundImage,
 }) => {
-  // 現在の日付情報を取得
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
@@ -100,7 +95,6 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
   };
   const currentWeekday = now.getDay();
 
-  // 英語の序数詞のサフィックスを取得
   const getOrdinalSuffix = (day: number): string => {
     if (day >= 11 && day <= 13) {
       return "th";
@@ -120,7 +114,6 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* 日付表示設定 */}
       <label
         className={`flex items-center justify-between cursor-pointer py-2 ${mode === "dark" ? "text-white" : "text-black"}`}
       >
@@ -133,7 +126,6 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
         />
       </label>
 
-      {/* 日付詳細設定（日付表示がONの場合のみ） */}
       {showDate && (
         <div className="ml-4 flex flex-col gap-3 p-3 border rounded-lg border-gray-200 dark:border-gray-700">
           <h4
@@ -142,7 +134,6 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
             日付表示の詳細設定
           </h4>
 
-          {/* 年表示 */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <input
@@ -169,7 +160,6 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
             )}
           </div>
 
-          {/* 月表示 */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <input
@@ -196,7 +186,6 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
             )}
           </div>
 
-          {/* 日表示 */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <input
@@ -226,7 +215,6 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
             )}
           </div>
 
-          {/* 曜日表示 */}
           <div className="w-full flex items-center gap-2">
             <input
               type="checkbox"
@@ -256,7 +244,6 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
         </div>
       )}
 
-      {/* 残り時間テキスト表示設定 */}
       <label
         className={`flex items-center justify-between cursor-pointer py-2 ${mode === "dark" ? "text-white" : "text-black"}`}
       >
@@ -267,7 +254,6 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
           checked={showRemainingText}
           onChange={(e) => {
             setShowRemainingText(e.target.checked);
-            // 次の時間割表示がOFFになったら現在の時間割表示もOFFにする
             if (!e.target.checked) {
               setShowCurrentSchedule(false);
             }
@@ -275,7 +261,6 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
         />
       </label>
 
-      {/* 現在の時間割表示設定 */}
       {showRemainingText && (
         <label
           className={`flex items-center justify-between cursor-pointer py-2 ml-4 ${mode === "dark" ? "text-white" : "text-black"}`}
@@ -293,7 +278,6 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
         </label>
       )}
 
-      {/* 進捗表示設定 */}
       <label
         className={`flex items-center justify-between cursor-pointer py-2 ${mode === "dark" ? "text-white" : "text-black"}`}
       >
@@ -306,7 +290,6 @@ export const ProgressBarSettings: React.FC<ProgressBarSettingsProps> = ({
         />
       </label>
 
-      {/* 進捗バー色選択（進捗表示がONの場合のみ） */}
       {showProgress && (
         <div className="flex flex-col gap-2">
           <span className={`block font-medium ${mode === "dark" ? "text-white" : "text-black"}`}>

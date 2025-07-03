@@ -1,5 +1,3 @@
-// IndexedDB用のユーティリティ関数
-
 const DB_NAME = "MusicAutoPlayDB";
 const DB_VERSION = 1;
 const STORE_NAME = "backgroundImages";
@@ -30,7 +28,6 @@ class IndexedDBManager {
       request.onupgradeneeded = (event) => {
         const db = (event.target as any).result;
 
-        // オブジェクトストアが存在しない場合は作成
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           const store = db.createObjectStore(STORE_NAME, { keyPath: "id" });
           store.createIndex("timestamp", "timestamp", { unique: false });
