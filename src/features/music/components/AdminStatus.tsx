@@ -3,15 +3,11 @@ import { Badge } from "../../../shared/components/badge";
 import { Button } from "../../../shared/components/button";
 import { ShieldCheck, LogOut } from "lucide-react";
 
-interface AdminStatusProps {
-  mode: "dark" | "light";
-}
-
 /**
  * 管理者権限状態の表示コンポーネント
  * 管理者ログイン時にのみ表示され、ログアウト機能も提供
  */
-export const AdminStatus: React.FC<AdminStatusProps> = ({ mode }) => {
+export const AdminStatus: React.FC = () => {
   const { isAdmin, logout } = useAdminStore();
 
   if (!isAdmin) return null;
@@ -20,8 +16,11 @@ export const AdminStatus: React.FC<AdminStatusProps> = ({ mode }) => {
     <div
       className="flex items-center gap-2 mb-4 p-3 border rounded-lg"
       style={{
-        backgroundColor: mode === "dark" ? "rgba(59, 130, 246, 0.1)" : "rgba(59, 130, 246, 0.05)",
-        borderColor: mode === "dark" ? "rgba(59, 130, 246, 0.3)" : "rgba(59, 130, 246, 0.2)",
+        backgroundColor: "rgba(59, 130, 246, 0.1)",
+        borderColor: "rgba(59, 130, 246, 0.3)",
+        color: "var(--color-fg, #212225)",
+        transition:
+          "var(--transition-colors, background-color 0.2s cubic-bezier(0.4,0,0.2,1), border-color 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1))",
       }}
     >
       <Badge variant="secondary" className="bg-blue-500 text-white hover:bg-blue-600">

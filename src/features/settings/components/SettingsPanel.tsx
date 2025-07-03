@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { COLORS } from "../../../shared/libs/utils";
 import { DarkModeToggle } from "./DarkModeToggle";
 import { ProgressBarSettings } from "./ProgressBarSettings";
 import { BackgroundImageSettings } from "./BackgroundImageSettings";
@@ -97,7 +96,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = (props) => {
     backgroundFeatureEnabled,
   } = props;
 
-  const currentColors = COLORS[mode];
+  const currentColors = {
+    background: "var(--color-bg, #fff)",
+    text: "var(--color-fg, #212225)",
+  };
   const [activeTab, setActiveTab] = useState<"settings" | "advanced">("settings");
 
   const isTimePage = pageType === "time";
@@ -121,6 +123,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = (props) => {
           boxShadow: open ? "-6px 0 24px #0002" : "none",
           background: currentColors.background,
           color: currentColors.text,
+          transition:
+            "var(--transition-colors, background-color 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1)), transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out",
         }}
       >
         <button
@@ -132,7 +136,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = (props) => {
             background: "none",
             border: "none",
           }}
-          className="text-xl block p-2 hover:bg-zinc-100/20 rounded transition"
+          className="text-xl block p-2 hover:bg-zinc-100/20 rounded transition-all duration-200 ease-in-out"
           aria-label="閉じる"
         >
           ×
@@ -141,7 +145,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = (props) => {
         <div className="flex mb-6 border-b border-zinc-400/30">
           <button
             onClick={() => setActiveTab("settings")}
-            className={`px-4 py-2 font-semibold transition-colors duration-200 ${
+            className={`px-4 py-2 font-semibold transition-all 0.2s cubic-bezier(0.4,0,0.2,1) ${
               activeTab === "settings"
                 ? "text-blue-500 border-b-2 border-blue-500"
                 : "text-gray-500 hover:text-gray-700"
@@ -152,7 +156,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = (props) => {
           {isTimePage && (
             <button
               onClick={() => setActiveTab("advanced")}
-              className={`px-4 py-2 font-semibold transition-colors duration-200 ${
+              className={`px-4 py-2 font-semibold transition-all 0.2s cubic-bezier(0.4,0,0.2,1) ${
                 activeTab === "advanced"
                   ? "text-blue-500 border-b-2 border-blue-500"
                   : "text-gray-500 hover:text-gray-700"

@@ -7,7 +7,7 @@ export function useClassSchedule() {
 
   useEffect(() => {
     updateStatus();
-    const interval = setInterval(updateStatus, 100);
+    const interval = setInterval(updateStatus, 10);
     return () => clearInterval(interval);
   }, [updateStatus]);
 

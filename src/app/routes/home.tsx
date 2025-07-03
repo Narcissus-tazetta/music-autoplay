@@ -50,11 +50,19 @@ export default function Home() {
     setSettingsOpen((prev) => !prev);
   };
 
+  const colors = mode === "dark" ? { bg: "#212225", fg: "#E8EAED" } : { bg: "#fff", fg: "#212225" };
+
   return (
     <>
       <div
         className={`relative flex flex-col items-center justify-center mt-4 gap-4 w-xl mx-auto ${darkClass} ${gaming ? "gaming-links" : ""}`}
-        style={{ paddingBottom: "80px" }}
+        style={{
+          paddingBottom: "80px",
+          backgroundColor: colors.bg,
+          color: colors.fg,
+          transition:
+            "background-color 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1)",
+        }}
       >
         <SettingsButton onClick={handleSettingsButtonClick} />
         <SettingsPanel
@@ -67,15 +75,16 @@ export default function Home() {
         <h1
           className="text-2xl font-bold m-4"
           style={{
-            color: mode === "dark" ? "#E8EAED" : "#212225",
+            color: colors.fg,
+            transition: "color 0.2s cubic-bezier(0.4,0,0.2,1)",
           }}
         >
           楽曲リクエストフォーム
         </h1>
 
-        <AdminStatus mode={mode} />
+        <AdminStatus />
 
-        <HomeForm mode={mode} />
+        <HomeForm />
 
         <YouTubeStatus ytStatus={ytStatus} />
 
@@ -83,7 +92,11 @@ export default function Home() {
           <TableHeader>
             <TableRow>
               <TableHead
-                className={`text-center table-head-animated ${mode === "dark" ? "table-head-dark" : "table-head-light"}`}
+                className="text-center table-head-animated"
+                style={{
+                  color: colors.fg,
+                  transition: "color 0.2s cubic-bezier(0.4,0,0.2,1)",
+                }}
               >
                 楽曲
               </TableHead>

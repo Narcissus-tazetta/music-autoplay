@@ -5,11 +5,7 @@ import { FormAlert } from "./FormAlert";
 import { useHomeForm } from "./useHomeForm";
 import { YOUTUBE_PATTERN } from "../../../shared/libs/utils";
 
-interface HomeFormProps {
-  mode: "dark" | "light";
-}
-
-export const HomeForm: React.FC<HomeFormProps> = ({ mode }) => {
+export const HomeForm: React.FC = () => {
   const {
     register,
     handleSubmit,
@@ -40,7 +36,7 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode }) => {
             },
           })}
           autoComplete="off"
-          placeholder="YouTubeのURLまたは管理者コード"
+          placeholder="https://www.youtube.com/watch?v=..."
           aria-label="YouTubeのURL"
         />
 
@@ -57,9 +53,11 @@ export const HomeForm: React.FC<HomeFormProps> = ({ mode }) => {
         type="submit"
         className="flex w-xs gap-2"
         style={{
-          background: mode === "dark" ? "#E8EAED" : "#212225",
-          color: mode === "dark" ? "#212225" : "#fff",
+          background: "var(--color-fg, #212225)",
+          color: "var(--color-bg, #fff)",
           border: "none",
+          transition:
+            "var(--transition-colors, background-color 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1))",
         }}
       >
         <SendIcon size={12} />

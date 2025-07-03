@@ -26,67 +26,53 @@ interface TimePageLayoutProps {
 const TimePageLayout: React.FC<TimePageLayoutProps> = ({ status }) => {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const { mode, setMode, darkClass, hasHydrated } = useColorModeStore((s) => ({
-    mode: s.mode,
-    setMode: s.setMode,
-    darkClass: s.darkClass,
-    hasHydrated: s.hasHydrated,
-  }));
-
-  useEffect(() => {
-    if (hasHydrated && typeof window !== "undefined") {
-      const currentBodyClass = document.body.className;
-      const expectedClass = mode;
-
-      if (!currentBodyClass.includes(expectedClass)) {
-        setMode(mode);
-      }
-    }
-  }, [hasHydrated, mode, setMode]);
+  // ColorModeStoreから必要最小限の状態のみを取得
+  const mode = useColorModeStore((s) => s.mode);
+  const setMode = useColorModeStore((s) => s.setMode);
+  const darkClass = useColorModeStore((s) => s.darkClass);
 
   const isClient = useClientOnly();
 
   const { backgroundImage, setBackgroundImage } = useProgressSettings();
 
-  const progressSettings = useProgressSettingsStore((s) => ({
-    showRemainingText: s.showRemainingText,
-    setShowRemainingText: s.setShowRemainingText,
-    showCurrentSchedule: s.showCurrentSchedule,
-    setShowCurrentSchedule: s.setShowCurrentSchedule,
-    showProgress: s.showProgress,
-    setShowProgress: s.setShowProgress,
-    progressColor: s.progressColor,
-    setProgressColor: s.setProgressColor,
-  }));
+  // ProgressSettingsStoreからも必要最小限の状態のみを個別に取得
+  const showRemainingText = useProgressSettingsStore((s) => s.showRemainingText);
+  const setShowRemainingText = useProgressSettingsStore((s) => s.setShowRemainingText);
+  const showCurrentSchedule = useProgressSettingsStore((s) => s.showCurrentSchedule);
+  const setShowCurrentSchedule = useProgressSettingsStore((s) => s.setShowCurrentSchedule);
+  const showProgress = useProgressSettingsStore((s) => s.showProgress);
+  const setShowProgress = useProgressSettingsStore((s) => s.setShowProgress);
+  const progressColor = useProgressSettingsStore((s) => s.progressColor);
+  const setProgressColor = useProgressSettingsStore((s) => s.setProgressColor);
 
-  const dateSettings = useProgressSettingsStore((s) => ({
-    showDate: s.showDate,
-    setShowDate: s.setShowDate,
-    showYear: s.showYear,
-    setShowYear: s.setShowYear,
-    showMonth: s.showMonth,
-    setShowMonth: s.setShowMonth,
-    showDay: s.showDay,
-    setShowDay: s.setShowDay,
-    showWeekday: s.showWeekday,
-    setShowWeekday: s.setShowWeekday,
-    yearFormat: s.yearFormat,
-    setYearFormat: s.setYearFormat,
-    monthFormat: s.monthFormat,
-    setMonthFormat: s.setMonthFormat,
-    dayFormat: s.dayFormat,
-    setDayFormat: s.setDayFormat,
-    weekdayFormat: s.weekdayFormat,
-    setWeekdayFormat: s.setWeekdayFormat,
-  }));
+  // Date settings
+  const showDate = useProgressSettingsStore((s) => s.showDate);
+  const setShowDate = useProgressSettingsStore((s) => s.setShowDate);
+  const showYear = useProgressSettingsStore((s) => s.showYear);
+  const setShowYear = useProgressSettingsStore((s) => s.setShowYear);
+  const showMonth = useProgressSettingsStore((s) => s.showMonth);
+  const setShowMonth = useProgressSettingsStore((s) => s.setShowMonth);
+  const showDay = useProgressSettingsStore((s) => s.showDay);
+  const setShowDay = useProgressSettingsStore((s) => s.setShowDay);
+  const showWeekday = useProgressSettingsStore((s) => s.showWeekday);
+  const setShowWeekday = useProgressSettingsStore((s) => s.setShowWeekday);
+  const yearFormat = useProgressSettingsStore((s) => s.yearFormat);
+  const setYearFormat = useProgressSettingsStore((s) => s.setYearFormat);
+  const monthFormat = useProgressSettingsStore((s) => s.monthFormat);
+  const setMonthFormat = useProgressSettingsStore((s) => s.setMonthFormat);
+  const dayFormat = useProgressSettingsStore((s) => s.dayFormat);
+  const setDayFormat = useProgressSettingsStore((s) => s.setDayFormat);
+  const weekdayFormat = useProgressSettingsStore((s) => s.weekdayFormat);
+  const setWeekdayFormat = useProgressSettingsStore((s) => s.setWeekdayFormat);
 
-  const backgroundSettings = useProgressSettingsStore((s) => ({
-    showBackgroundImage: s.showBackgroundImage,
-    setShowBackgroundImage: s.setShowBackgroundImage,
-    backgroundImageFileName: s.backgroundImageFileName,
-    backgroundFeatureEnabled: s.backgroundFeatureEnabled,
-    setBackgroundFeatureEnabled: s.setBackgroundFeatureEnabled,
-  }));
+  // Background settings
+  const showBackgroundImage = useProgressSettingsStore((s) => s.showBackgroundImage);
+  const setShowBackgroundImage = useProgressSettingsStore((s) => s.setShowBackgroundImage);
+  const backgroundImageFileName = useProgressSettingsStore((s) => s.backgroundImageFileName);
+  const backgroundFeatureEnabled = useProgressSettingsStore((s) => s.backgroundFeatureEnabled);
+  const setBackgroundFeatureEnabled = useProgressSettingsStore(
+    (s) => s.setBackgroundFeatureEnabled
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -94,25 +80,29 @@ const TimePageLayout: React.FC<TimePageLayoutProps> = ({ status }) => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.metaKey && event.shiftKey && event.key === " ") {
         event.preventDefault();
-        backgroundSettings.setBackgroundFeatureEnabled(
-          !backgroundSettings.backgroundFeatureEnabled
-        );
+        setBackgroundFeatureEnabled(!backgroundFeatureEnabled);
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [backgroundSettings]);
+  }, [backgroundFeatureEnabled, setBackgroundFeatureEnabled]);
 
-  const backgroundStyle = createBackgroundStyle(
-    backgroundSettings.showBackgroundImage,
-    backgroundImage
-  );
+  const backgroundStyle = createBackgroundStyle(showBackgroundImage, backgroundImage);
+
+  const colors = mode === "dark" ? { bg: "#212225", fg: "#E8EAED" } : { bg: "#fff", fg: "#212225" };
+  const finalStyle = {
+    ...backgroundStyle,
+    backgroundColor: colors.bg,
+    color: colors.fg,
+    transition:
+      "background-color 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1)",
+  };
 
   return (
     <>
       <div
         className={`min-h-screen bg-base-200 flex items-center justify-center p-4 ${darkClass}`}
-        style={backgroundStyle}
+        style={finalStyle}
       >
         <SettingsButton onClick={() => setSettingsOpen(!settingsOpen)} />
         <SettingsPanel
@@ -121,54 +111,53 @@ const TimePageLayout: React.FC<TimePageLayoutProps> = ({ status }) => {
           mode={mode}
           setMode={setMode}
           pageType="time"
-          showProgress={progressSettings.showProgress}
-          setShowProgress={progressSettings.setShowProgress}
-          progressColor={progressSettings.progressColor}
-          setProgressColor={progressSettings.setProgressColor}
-          showRemainingText={progressSettings.showRemainingText}
-          setShowRemainingText={progressSettings.setShowRemainingText}
-          showCurrentSchedule={progressSettings.showCurrentSchedule}
-          setShowCurrentSchedule={progressSettings.setShowCurrentSchedule}
-          showDate={dateSettings.showDate}
-          setShowDate={dateSettings.setShowDate}
-          showYear={dateSettings.showYear}
-          setShowYear={dateSettings.setShowYear}
-          showMonth={dateSettings.showMonth}
-          setShowMonth={dateSettings.setShowMonth}
-          showDay={dateSettings.showDay}
-          setShowDay={dateSettings.setShowDay}
-          showWeekday={dateSettings.showWeekday}
-          setShowWeekday={dateSettings.setShowWeekday}
-          yearFormat={dateSettings.yearFormat}
-          setYearFormat={dateSettings.setYearFormat}
-          monthFormat={dateSettings.monthFormat}
-          setMonthFormat={dateSettings.setMonthFormat}
-          dayFormat={dateSettings.dayFormat}
-          setDayFormat={dateSettings.setDayFormat}
-          weekdayFormat={dateSettings.weekdayFormat}
-          setWeekdayFormat={dateSettings.setWeekdayFormat}
+          showProgress={showProgress}
+          setShowProgress={setShowProgress}
+          progressColor={progressColor}
+          setProgressColor={setProgressColor}
+          showRemainingText={showRemainingText}
+          setShowRemainingText={setShowRemainingText}
+          showCurrentSchedule={showCurrentSchedule}
+          setShowCurrentSchedule={setShowCurrentSchedule}
+          showDate={showDate}
+          setShowDate={setShowDate}
+          showYear={showYear}
+          setShowYear={setShowYear}
+          showMonth={showMonth}
+          setShowMonth={setShowMonth}
+          showDay={showDay}
+          setShowDay={setShowDay}
+          showWeekday={showWeekday}
+          setShowWeekday={setShowWeekday}
+          yearFormat={yearFormat}
+          setYearFormat={setYearFormat}
+          monthFormat={monthFormat}
+          setMonthFormat={setMonthFormat}
+          dayFormat={dayFormat}
+          setDayFormat={setDayFormat}
+          weekdayFormat={weekdayFormat}
+          setWeekdayFormat={setWeekdayFormat}
           backgroundImage={backgroundImage}
           setBackgroundImage={setBackgroundImage}
-          backgroundImageFileName={backgroundSettings.backgroundImageFileName}
-          showBackgroundImage={backgroundSettings.showBackgroundImage}
-          setShowBackgroundImage={backgroundSettings.setShowBackgroundImage}
-          backgroundFeatureEnabled={backgroundSettings.backgroundFeatureEnabled}
+          backgroundImageFileName={backgroundImageFileName}
+          showBackgroundImage={showBackgroundImage}
+          setShowBackgroundImage={setShowBackgroundImage}
+          backgroundFeatureEnabled={backgroundFeatureEnabled}
         />
 
         <div className="text-center select-none space-y-4">
           <DateDisplay
-            show={dateSettings.showDate}
-            showYear={dateSettings.showYear}
-            showMonth={dateSettings.showMonth}
-            showDay={dateSettings.showDay}
-            showWeekday={dateSettings.showWeekday}
-            yearFormat={dateSettings.yearFormat}
-            monthFormat={dateSettings.monthFormat}
-            dayFormat={dateSettings.dayFormat}
-            weekdayFormat={dateSettings.weekdayFormat}
+            show={showDate}
+            showYear={showYear}
+            showMonth={showMonth}
+            showDay={showDay}
+            showWeekday={showWeekday}
+            yearFormat={yearFormat}
+            monthFormat={monthFormat}
+            dayFormat={dayFormat}
+            weekdayFormat={weekdayFormat}
           />
 
-          {/* 時間表示 */}
           <TimeDisplay
             isClient={isClient}
             timeRemaining={status.timeRemaining}
@@ -176,10 +165,10 @@ const TimePageLayout: React.FC<TimePageLayoutProps> = ({ status }) => {
             current={status.current}
             remainingMs={status.remainingMs}
             totalDurationMs={status.totalDurationMs}
-            showRemainingText={progressSettings.showRemainingText}
-            showCurrentSchedule={progressSettings.showCurrentSchedule}
-            showProgress={progressSettings.showProgress}
-            progressColor={progressSettings.progressColor}
+            showRemainingText={showRemainingText}
+            showCurrentSchedule={showCurrentSchedule}
+            showProgress={showProgress}
+            progressColor={progressColor}
           />
         </div>
       </div>

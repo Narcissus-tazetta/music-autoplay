@@ -7,20 +7,19 @@ export const Footer: React.FC = () => {
   const gamingNarcissus = useGamingToggle("¥");
   const location = typeof window !== "undefined" ? window.location.pathname : "";
 
-  const bg = mode === "dark" ? "#212225" : "#fff";
-  const fg = mode === "dark" ? "#E8EAED" : "#212225";
-  const border = mode === "dark" ? "#444" : "#e5e7eb";
+  const colors = mode === "dark" ? { bg: "#212225", fg: "#E8EAED" } : { bg: "#fff", fg: "#212225" };
+  const borderColor = mode === "dark" ? "#444" : "#e5e7eb";
 
   return (
     <footer
       className="footer w-full py-2 flex flex-col items-center justify-center text-[11px] opacity-80 fixed left-0 bottom-0 z-50"
       style={{
-        background: bg,
-        color: fg,
+        background: colors.bg,
+        color: colors.fg,
         boxShadow: "0 -2px 12px 0 rgba(0,0,0,0.04)",
-        borderTop: `1px solid ${border}`,
+        borderTop: `1px solid ${borderColor}`,
         transition:
-          "background 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1)",
+          "background-color 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1), border-color 0.2s cubic-bezier(0.4,0,0.2,1)",
       }}
     >
       {location !== "/time" && (
@@ -31,7 +30,7 @@ export const Footer: React.FC = () => {
             className={`text-blue-500 hover:underline mx-1${gamingAlinco ? " gaming-color" : ""}`}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ transition: "color 0.2s" }}
+            style={{ transition: "color 0.2s cubic-bezier(0.4,0,0.2,1)" }}
           >
             alinco8
           </a>
