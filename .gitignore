@@ -19,6 +19,4 @@ logs/
 data/
 *.json
 
-# ESLint と Prettier キャッシュ
 .eslintcache
-.prettiercache
