@@ -1,6 +1,6 @@
 # TECHNICAL.md - 技術仕様書
 
-> 📋 **アプリケーション詳細仕様書**: [APPLICATION_SPEC.md](./APPLICATION_SPEC.md)  
+> 📋 **アプリケーション詳細仕様書**: [APPLICATION_SPEC.md](./APPLICATION_SPEC.md)\
 > より詳細な機能仕様・UI/UX・データフローについてはこちらを参照してください。
 
 ---
@@ -93,12 +93,12 @@ YouTube Data API
 
 ```typescript
 interface Music {
-  id: string;
-  url: string;
-  title: string;
-  channel: string;
-  duration: string;
-  addedAt: Date;
+    id: string;
+    url: string;
+    title: string;
+    channel: string;
+    duration: string;
+    addedAt: Date;
 }
 ```
 
@@ -156,5 +156,5 @@ bun run start
 
 ---
 
-**最終更新:** 2025年7月3日  
+**最終更新:** 2025年7月3日\
 **バージョン:** v2.1.0

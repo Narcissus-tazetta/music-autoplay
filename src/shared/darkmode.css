@@ -1,19 +1,19 @@
 body.dark a,
 .dark a {
-  color: #d1b3ff !important;
+    color: #d1b3ff !important;
 }
 body.dark a:hover,
 .dark a:hover {
-  color: #b698ff !important;
+    color: #b698ff !important;
 }
 .dark .footer-link-normal {
-  color: inherit !important;
+    color: inherit !important;
 }
 body.dark {
-  background-color: #212225 !important;
-  color: #e8eaed !important;
+    background-color: #212225 !important;
+    color: #e8eaed !important;
 }
 body.light {
-  background-color: #fff !important;
-  color: #212225 !important;
+    background-color: #fff !important;
+    color: #212225 !important;
 }

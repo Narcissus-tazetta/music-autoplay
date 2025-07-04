@@ -1,123 +1,123 @@
 /* ピンクの進捗バー */
 .progress-pink-500 {
-  background-color: #e5e7eb;
-  border-radius: 0.5rem;
-  overflow: hidden;
-  appearance: none;
-  -webkit-appearance: none;
+    background-color: #e5e7eb;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    appearance: none;
+    -webkit-appearance: none;
 }
 .progress-pink-500::-webkit-progress-bar {
-  background-color: #e5e7eb;
-  border-radius: 0.5rem;
+    background-color: #e5e7eb;
+    border-radius: 0.5rem;
 }
 .progress-pink-500::-webkit-progress-value {
-  background-color: #ec4899;
-  border-radius: 0.5rem;
+    background-color: #ec4899;
+    border-radius: 0.5rem;
 }
 .progress-pink-500::-moz-progress-bar {
-  background-color: #ec4899;
-  border-radius: 0.5rem;
+    background-color: #ec4899;
+    border-radius: 0.5rem;
 }
 
 /* 紫の進捗バー */
 .progress-purple-500 {
-  background-color: #e5e7eb;
-  border-radius: 0.5rem;
-  overflow: hidden;
-  appearance: none;
-  -webkit-appearance: none;
+    background-color: #e5e7eb;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    appearance: none;
+    -webkit-appearance: none;
 }
 .progress-purple-500::-webkit-progress-bar {
-  background-color: #e5e7eb;
-  border-radius: 0.5rem;
+    background-color: #e5e7eb;
+    border-radius: 0.5rem;
 }
 .progress-purple-500::-webkit-progress-value {
-  background-color: #a21caf;
-  border-radius: 0.5rem;
+    background-color: #a21caf;
+    border-radius: 0.5rem;
 }
 .progress-purple-500::-moz-progress-bar {
-  background-color: #a21caf;
-  border-radius: 0.5rem;
+    background-color: #a21caf;
+    border-radius: 0.5rem;
 }
 
 /* 水色の進捗バー */
 .progress-sky-400 {
-  background-color: #e5e7eb;
-  border-radius: 0.5rem;
-  overflow: hidden;
-  appearance: none;
-  -webkit-appearance: none;
+    background-color: #e5e7eb;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    appearance: none;
+    -webkit-appearance: none;
 }
 .progress-sky-400::-webkit-progress-bar {
-  background-color: #e5e7eb;
-  border-radius: 0.5rem;
+    background-color: #e5e7eb;
+    border-radius: 0.5rem;
 }
 .progress-sky-400::-webkit-progress-value {
-  background-color: #38bdf8;
-  border-radius: 0.5rem;
+    background-color: #38bdf8;
+    border-radius: 0.5rem;
 }
 .progress-sky-400::-moz-progress-bar {
-  background-color: #38bdf8;
-  border-radius: 0.5rem;
+    background-color: #38bdf8;
+    border-radius: 0.5rem;
 }
 /* 青色の進捗バー */
 .progress-blue-500 {
-  background-color: #e5e7eb;
-  border-radius: 0.5rem;
-  overflow: hidden;
-  appearance: none;
-  -webkit-appearance: none;
+    background-color: #e5e7eb;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    appearance: none;
+    -webkit-appearance: none;
 }
 .progress-blue-500::-webkit-progress-bar {
-  background-color: #e5e7eb;
-  border-radius: 0.5rem;
+    background-color: #e5e7eb;
+    border-radius: 0.5rem;
 }
 .progress-blue-500::-webkit-progress-value {
-  background-color: #3b82f6;
-  border-radius: 0.5rem;
+    background-color: #3b82f6;
+    border-radius: 0.5rem;
 }
 .progress-blue-500::-moz-progress-bar {
-  background-color: #3b82f6;
-  border-radius: 0.5rem;
+    background-color: #3b82f6;
+    border-radius: 0.5rem;
 }
 
 /* 黄色の進捗バー */
 .progress-yellow-400 {
-  background-color: #e5e7eb;
-  border-radius: 0.5rem;
-  overflow: hidden;
-  appearance: none;
-  -webkit-appearance: none;
+    background-color: #e5e7eb;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    appearance: none;
+    -webkit-appearance: none;
 }
 .progress-yellow-400::-webkit-progress-bar {
-  background-color: #e5e7eb;
-  border-radius: 0.5rem;
+    background-color: #e5e7eb;
+    border-radius: 0.5rem;
 }
 .progress-yellow-400::-webkit-progress-value {
-  background-color: #facc15;
-  border-radius: 0.5rem;
+    background-color: #facc15;
+    border-radius: 0.5rem;
 }
 .progress-yellow-400::-moz-progress-bar {
-  background-color: #facc15;
-  border-radius: 0.5rem;
+    background-color: #facc15;
+    border-radius: 0.5rem;
 }
 /* #008000の緑と灰色の進捗バー */
 .progress-bright-green {
-  background-color: #e5e7eb;
-  border-radius: 0.5rem;
-  overflow: hidden;
-  appearance: none;
-  -webkit-appearance: none;
+    background-color: #e5e7eb;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    appearance: none;
+    -webkit-appearance: none;
 }
 .progress-bright-green::-webkit-progress-bar {
-  background-color: #e5e7eb;
-  border-radius: 0.5rem;
+    background-color: #e5e7eb;
+    border-radius: 0.5rem;
 }
 .progress-bright-green::-webkit-progress-value {
-  background-color: #4cd964;
-  border-radius: 0.5rem;
+    background-color: #4cd964;
+    border-radius: 0.5rem;
 }
 .progress-bright-green::-moz-progress-bar {
-  background-color: #4cd964;
-  border-radius: 0.5rem;
+    background-color: #4cd964;
+    border-radius: 0.5rem;
 }

@@ -1,19 +1,14 @@
 .send-animate {
-  transition:
-    box-shadow 0.2s,
-    transform 0.15s,
-    background 0.2s;
+    transition: box-shadow 0.2s, transform 0.15s, background 0.2s;
 }
 .send-animate:hover,
 .send-animate:focus-visible {
-  box-shadow:
-    0 0 0 3px #00ffe7,
-    0 2px 16px 0 #00ffe799;
-  transform: translateY(-2px) scale(1.04) rotate(-1deg);
-  background: linear-gradient(90deg, #00ffe7, #00ffae, #00ffea, #00eaff, #00ffe7);
-  filter: brightness(1.1) saturate(1.2);
+    box-shadow: 0 0 0 3px #00ffe7, 0 2px 16px 0 #00ffe799;
+    transform: translateY(-2px) scale(1.04) rotate(-1deg);
+    background: linear-gradient(90deg, #00ffe7, #00ffae, #00ffea, #00eaff, #00ffe7);
+    filter: brightness(1.1) saturate(1.2);
 }
 .send-animate:active {
-  transform: scale(0.98);
-  filter: brightness(0.95);
+    transform: scale(0.98);
+    filter: brightness(0.95);
 }

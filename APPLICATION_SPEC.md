@@ -103,9 +103,9 @@
 
 ```typescript
 interface ClassPeriod {
-  name: string; // 授業名
-  startTime: string; // 開始時刻 "HH:MM"
-  endTime: string; // 終了時刻 "HH:MM"
+    name: string; // 授業名
+    startTime: string; // 開始時刻 "HH:MM"
+    endTime: string; // 終了時刻 "HH:MM"
 }
 ```
 
@@ -205,12 +205,12 @@ interface ClassPeriod {
 
 ```typescript
 interface Music {
-  id: string; // ユニークID (UUID)
-  url: string; // YouTube URL
-  title: string; // 動画タイトル
-  channel: string; // チャンネル名
-  duration: string; // 動画時間 "MM:SS"
-  addedAt: Date; // 追加日時
+    id: string; // ユニークID (UUID)
+    url: string; // YouTube URL
+    title: string; // 動画タイトル
+    channel: string; // チャンネル名
+    duration: string; // 動画時間 "MM:SS"
+    addedAt: Date; // 追加日時
 }
 ```
 
@@ -218,29 +218,29 @@ interface Music {
 
 ```typescript
 interface ProgressSettings {
-  // 表示切り替え
-  showProgress: boolean; // 進捗バー表示
-  showRemainingText: boolean; // 残り時間テキスト表示
-  showCurrentSchedule: boolean; // 現在の授業表示
-  showDate: boolean; // 日付表示
+    // 表示切り替え
+    showProgress: boolean; // 進捗バー表示
+    showRemainingText: boolean; // 残り時間テキスト表示
+    showCurrentSchedule: boolean; // 現在の授業表示
+    showDate: boolean; // 日付表示
 
-  // 日付詳細設定
-  showYear: boolean; // 年表示
-  showMonth: boolean; // 月表示
-  showDay: boolean; // 日表示
-  showWeekday: boolean; // 曜日表示
+    // 日付詳細設定
+    showYear: boolean; // 年表示
+    showMonth: boolean; // 月表示
+    showDay: boolean; // 日表示
+    showWeekday: boolean; // 曜日表示
 
-  // フォーマット設定
-  yearFormat: "western" | "reiwa" | "2025" | "none";
-  monthFormat: "japanese" | "english" | "number" | "none";
-  dayFormat: "japanese" | "number" | "english" | "none";
-  weekdayFormat: "short" | "long" | "japanese" | "none";
+    // フォーマット設定
+    yearFormat: 'western' | 'reiwa' | '2025' | 'none';
+    monthFormat: 'japanese' | 'english' | 'number' | 'none';
+    dayFormat: 'japanese' | 'number' | 'english' | 'none';
+    weekdayFormat: 'short' | 'long' | 'japanese' | 'none';
 
-  // 進捗バー設定
-  progressColor: "blue" | "yellow" | "green" | "pink" | "purple" | "sky";
+    // 進捗バー設定
+    progressColor: 'blue' | 'yellow' | 'green' | 'pink' | 'purple' | 'sky';
 
-  // 背景画像設定
-  showBackgroundImage: boolean;
+    // 背景画像設定
+    showBackgroundImage: boolean;
 }
 ```
 
@@ -248,10 +248,10 @@ interface ProgressSettings {
 
 ```typescript
 interface ColorModeState {
-  mode: "dark" | "light"; // 現在のモード
-  hasHydrated: boolean; // ハイドレーション完了フラグ
-  darkClass: string; // CSS クラス名
-  setMode: (mode: "dark" | "light") => void;
+    mode: 'dark' | 'light'; // 現在のモード
+    hasHydrated: boolean; // ハイドレーション完了フラグ
+    darkClass: string; // CSS クラス名
+    setMode: (mode: 'dark' | 'light') => void;
 }
 ```
 
@@ -259,8 +259,8 @@ interface ColorModeState {
 
 ```typescript
 interface AdminState {
-  isAdmin: boolean; // 管理者権限フラグ
-  setIsAdmin: (isAdmin: boolean) => void;
+    isAdmin: boolean; // 管理者権限フラグ
+    setIsAdmin: (isAdmin: boolean) => void;
 }
 ```
 
@@ -304,11 +304,11 @@ YouTube動画情報を取得
 
 ```typescript
 {
-  id: string; // 動画ID
-  title: string; // タイトル
-  channel: string; // チャンネル名
-  duration: string; // 動画時間 "MM:SS"
-  thumbnail: string; // サムネイルURL
+    id: string; // 動画ID
+    title: string; // タイトル
+    channel: string; // チャンネル名
+    duration: string; // 動画時間 "MM:SS"
+    thumbnail: string; // サムネイルURL
 }
 ```
 
@@ -353,12 +353,12 @@ YouTube動画情報を取得
 
 ```typescript
 const corsOptions = {
-  origin: [
-    "https://music-autoplay.onrender.com", // 本番環境
-    "http://localhost:3000", // 開発環境
-    "http://localhost:5173", // Vite開発サーバー
-  ],
-  credentials: true,
+    origin: [
+        'https://music-autoplay.onrender.com', // 本番環境
+        'http://localhost:3000', // 開発環境
+        'http://localhost:5173', // Vite開発サーバー
+    ],
+    credentials: true,
 };
 ```
 
@@ -506,6 +506,6 @@ bun run dev
 
 ---
 
-**作成日:** 2025年7月3日  
-**バージョン:** v2.1.0  
+**作成日:** 2025年7月3日\
+**バージョン:** v2.1.0\
 **作成者:** Narcissus-tazetta
