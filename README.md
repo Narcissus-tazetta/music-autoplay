@@ -35,6 +35,7 @@ YouTube音楽動画のリアルタイム管理を行うWebアプリケーショ�
 ## 技術スタック
 
 > 🔧 **詳細な技術仕様は [TECHNICAL.md](./TECHNICAL.md) をご確認ください**
+> 🧩 **[Chrome拡張機能の詳細はこちら (chromeextension.md)](./chromeextension.md)**
 
 - **Frontend**: React Router v7, React, TypeScript, Tailwind CSS v4 + DaisyUI
 - **Backend**: Node.js, Express, Socket.IO
