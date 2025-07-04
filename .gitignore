@@ -17,6 +17,5 @@ logs/
 
 # 音楽リクエストデータ
 data/
-*.json
 
 .eslintcache
