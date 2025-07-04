@@ -25,6 +25,18 @@ export default tseslint.config(
     {
         files: ['**/*.{ts,tsx}'],
         languageOptions: { parserOptions: { project: true, tsconfigRootDir: import.meta.dirname } },
-        rules: { '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }] },
+        settings: {
+            react: {
+                version: 'detect',
+            },
+        },
+        rules: {
+            '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
+            // TODO: shadcn系統だけオフにしたいが、ぐちゃぐちゃすぎてshadcnがどれだか分からないので一旦全体オフ
+            'react-refresh/only-export-components': 'off',
+            // 'react-refresh/only-export-components': ['error', {
+            //     allowExportNames: ['meta', 'links', 'headers', 'loader', 'action'],
+            // }],
+        },
     },
 );

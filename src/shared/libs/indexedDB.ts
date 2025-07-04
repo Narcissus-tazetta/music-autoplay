@@ -1,124 +1,118 @@
-const DB_NAME = "MusicAutoPlayDB";
+const DB_NAME = 'MusicAutoPlayDB';
 const DB_VERSION = 1;
-const STORE_NAME = "backgroundImages";
+const STORE_NAME = 'backgroundImages';
 
 interface ImageData {
-  id: string;
-  data: string;
-  fileName?: string;
-  timestamp: number;
+    id: string;
+    data: string;
+    fileName?: string;
+    timestamp: number;
 }
 
 class IndexedDBManager {
-  private db: any = null;
+    private db: IDBDatabase | null = null;
 
-  async init(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const request = window.indexedDB.open(DB_NAME, DB_VERSION);
+    async init(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const request = window.indexedDB.open(DB_NAME, DB_VERSION);
 
-      request.onerror = () => {
-        reject(new Error("IndexedDBの初期化に失敗しました"));
-      };
+            request.onerror = () => {
+                reject(new Error('IndexedDBの初期化に失敗しました'));
+            };
 
-      request.onsuccess = (event) => {
-        this.db = (event.target as any).result;
-        resolve();
-      };
+            request.onsuccess = () => {
+                this.db = request.result;
+                resolve();
+            };
 
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as any).result;
+            request.onupgradeneeded = () => {
+                const db = request.result;
 
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          const store = db.createObjectStore(STORE_NAME, { keyPath: "id" });
-          store.createIndex("timestamp", "timestamp", { unique: false });
-        }
-      };
-    });
-  }
-
-  async saveImage(imageData: string, fileName?: string): Promise<void> {
-    if (!this.db) {
-      await this.init();
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    store.createIndex('timestamp', 'timestamp', { unique: false });
+                }
+            };
+        });
     }
 
-    return new Promise((resolve, reject) => {
-      if (!this.db) {
-        reject(new Error("データベースが初期化されていません"));
-        return;
-      }
+    async saveImage(imageData: string, fileName?: string): Promise<void> {
+        if (!this.db) await this.init();
 
-      const transaction = this.db.transaction([STORE_NAME], "readwrite");
-      const store = transaction.objectStore(STORE_NAME);
+        return new Promise((resolve, reject) => {
+            if (!this.db) {
+                reject(new Error('データベースが初期化されていません'));
+                return;
+            }
 
-      const data: ImageData = {
-        id: "backgroundImage",
-        data: imageData,
-        fileName: fileName,
-        timestamp: Date.now(),
-      };
+            const transaction = this.db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
 
-      const request = store.put(data);
+            const data: ImageData = {
+                id: 'backgroundImage',
+                data: imageData,
+                fileName: fileName,
+                timestamp: Date.now(),
+            };
 
-      request.onerror = () => {
-        reject(new Error("画像の保存に失敗しました"));
-      };
+            const request = store.put(data);
 
-      request.onsuccess = () => {
-        resolve();
-      };
-    });
-  }
+            request.onerror = () => {
+                reject(new Error('画像の保存に失敗しました'));
+            };
 
-  async getImage(): Promise<{ data: string; fileName?: string } | null> {
-    if (!this.db) {
-      await this.init();
+            request.onsuccess = () => {
+                resolve();
+            };
+        });
     }
 
-    return new Promise((resolve, reject) => {
-      if (!this.db) {
-        reject(new Error("データベースが初期化されていません"));
-        return;
-      }
+    async getImage(): Promise<{ data: string; fileName?: string } | null> {
+        if (!this.db) await this.init();
 
-      const transaction = this.db.transaction([STORE_NAME], "readonly");
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.get("backgroundImage");
+        return new Promise((resolve, reject) => {
+            if (!this.db) {
+                reject(new Error('データベースが初期化されていません'));
+                return;
+            }
 
-      request.onerror = () => {
-        reject(new Error("画像の取得に失敗しました"));
-      };
+            const transaction = this.db.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.get('backgroundImage');
 
-      request.onsuccess = () => {
-        const result = request.result as ImageData | undefined;
-        resolve(result ? { data: result.data, fileName: result.fileName } : null);
-      };
-    });
-  }
+            request.onerror = () => {
+                reject(new Error('画像の取得に失敗しました'));
+            };
 
-  async deleteImage(): Promise<void> {
-    if (!this.db) {
-      await this.init();
+            request.onsuccess = () => {
+                const result = request.result as ImageData | undefined;
+                resolve(result ? { data: result.data, fileName: result.fileName } : null);
+            };
+        });
     }
 
-    return new Promise((resolve, reject) => {
-      if (!this.db) {
-        reject(new Error("データベースが初期化されていません"));
-        return;
-      }
+    async deleteImage(): Promise<void> {
+        if (!this.db) await this.init();
 
-      const transaction = this.db.transaction([STORE_NAME], "readwrite");
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.delete("backgroundImage");
+        return new Promise((resolve, reject) => {
+            if (!this.db) {
+                reject(new Error('データベースが初期化されていません'));
+                return;
+            }
 
-      request.onerror = () => {
-        reject(new Error("画像の削除に失敗しました"));
-      };
+            const transaction = this.db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.delete('backgroundImage');
 
-      request.onsuccess = () => {
-        resolve();
-      };
-    });
-  }
+            request.onerror = () => {
+                reject(new Error('画像の削除に失敗しました'));
+            };
+
+            request.onsuccess = () => {
+                resolve();
+            };
+        });
+    }
 }
 
 export const indexedDBManager = new IndexedDBManager();

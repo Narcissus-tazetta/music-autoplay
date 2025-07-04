@@ -7,13 +7,14 @@
     "dev": "watchexec -c -w src/server/ -r jiti src/server/server.ts",
     "start": "cross-env NODE_ENV=production jiti src/server/server.ts",
     "typecheck": "react-router typegen && tsc",
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
-    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "lint": "eslint . --cache",
+    "lint:fix": "eslint . --cache --fix",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "quality": "npm run typecheck && npm run lint && npm run format:check",
     "test:e2e": "bunx playwright test",
-    "test:e2e:ui": "bunx playwright test --ui"
+    "test:e2e:ui": "bunx playwright test --ui",
+    "prepare": "husky"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
@@ -82,6 +83,8 @@
   },
   "devDependencies": {
     "@ben_12/eslint-plugin-dprint": "^1.5.0",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@eslint/js": "^9.29.0",
     "@playwright/test": "^1.53.2",
     "@react-router/dev": "^7.5.3",
@@ -101,7 +104,9 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
+    "husky": "^9.1.7",
     "immer": "^10.1.1",
+    "lint-staged": "^16.1.2",
     "morgan": "^1.10.0",
     "prettier": "^3.6.2",
     "rollup": "^4.44.1",
@@ -114,5 +119,10 @@
     "vite": "^6.3.3",
     "vite-tsconfig-paths": "^5.1.4",
     "zustand": "^5.0.6"
+  },
+  "lint-staged": {
+    "*": [
+      "dprint fmt"
+    ]
   }
 }
