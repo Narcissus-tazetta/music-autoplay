@@ -8,10 +8,6 @@
 
 .history/
 
-# API使用量データ
-api-usage.json
-api-usage.json.backup
-
 # ログファイル
 logs/
 

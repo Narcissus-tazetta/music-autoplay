@@ -4,14 +4,14 @@
   "type": "module",
   "scripts": {
     "build": "react-router build",
-    "dev": "watchexec -c -w src/server/ -r jiti src/server/server.ts",
-    "start": "cross-env NODE_ENV=production jiti src/server/server.ts",
+    "dev": "watchexec -c -w src/server/ -r bun run --watch src/server/server.ts",
+    "start": "cross-env NODE_ENV=production bun run src/server/server.ts",
     "typecheck": "react-router typegen && tsc",
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --cache --fix",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
-    "quality": "npm run typecheck && npm run lint && npm run format:check",
+    "quality": "bun run typecheck && bun run lint && bun run format:check",
     "test:e2e": "bunx playwright test",
     "test:e2e:ui": "bunx playwright test --ui",
     "prepare": "husky"
