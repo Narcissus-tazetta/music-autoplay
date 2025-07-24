@@ -10,7 +10,9 @@
     "rootDirs": [".", "./.react-router/types"],
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./src/app/*"]
+      "~/*": ["./src/app/*"],
+      "@/*": ["./src/*"],
+      "@shadcn/*": ["src/app/components/ui/shadcn/*"]
     },
     "esModuleInterop": true,
     "verbatimModuleSyntax": true,

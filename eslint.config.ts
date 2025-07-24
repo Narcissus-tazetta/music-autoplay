@@ -37,6 +37,7 @@ export default tseslint.config(
             // 'react-refresh/only-export-components': ['error', {
             //     allowExportNames: ['meta', 'links', 'headers', 'loader', 'action'],
             // }],
+            'react/self-closing-comp': 'error',
         },
     },
 );

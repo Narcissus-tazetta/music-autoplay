@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Footer } from '../../../shared/components/Footer';
 import { createBackgroundStyle } from '../../../shared/utils/time/background-utils';
 import { SettingsButton } from '../../settings/components/SettingsButton';
 import { SettingsPanel } from '../../settings/components/SettingsPanel';
@@ -179,8 +178,6 @@ const TimePageLayout = ({ status }: TimePageLayoutProps) => {
                     />
                 </div>
             </div>
-
-            <Footer />
         </>
     );
 };

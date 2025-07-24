@@ -5,15 +5,15 @@
   "tsx": true,
   "tailwind": {
     "config": "",
-    "css": "app/App.css",
+    "css": "src/app/App.css",
     "baseColor": "neutral",
     "cssVariables": true,
     "prefix": ""
   },
   "aliases": {
-    "components": "~/components",
-    "utils": "~/libs/utils",
-    "ui": "~/components/ui",
+    "components": "~/components/ui",
+    "utils": "~/libs/utils.ts",
+    "ui": "~/components/ui/shadcn",
     "lib": "~/libs",
     "hooks": "~/hooks"
   },

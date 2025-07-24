@@ -123,7 +123,7 @@ export const BackgroundImageSettings = ({
                                 <div className='flex items-center space-x-2'>
                                     {backgroundImage.includes('data:image/png;base64,AAAAIGZ0eXBoZWlj')
                                         ? <HiX className='w-5 h-5 text-red-500' />
-                                        : <HiCheck className='w-5 h-5 text-blue-500' />}
+                                        : <HiCheck className='w-5 h-5 text-blue-500 dark:text-purple-400' />}
                                     <div>
                                         <div className='text-sm font-medium text-gray-900 dark:text-gray-100'>
                                             {backgroundImageFileName || '選択された画像'}
@@ -192,7 +192,7 @@ export const BackgroundImageSettings = ({
                                     <div className='space-y-2'>
                                         <div className='flex justify-center'>
                                             {backgroundImage
-                                                ? <HiCheck className='w-8 h-8 text-blue-500' />
+                                                ? <HiCheck className='w-8 h-8  dark:text-purple-400' />
                                                 : <HiFolder className='w-8 h-8 text-gray-400' />}
                                         </div>
                                         <div className='text-sm font-medium'>

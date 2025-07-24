@@ -8,10 +8,4 @@
 
 .history/
 
-# ログファイル
-logs/
-
-# 音楽リクエストデータ
-data/
-
 .eslintcache

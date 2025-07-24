@@ -1,9 +1,11 @@
-import { useEffect } from 'react';
-import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration } from 'react-router';
-
-import { useColorModeStore } from '../features/settings/stores/colorModeStore';
-import appCss from '../shared/App.css?url';
-import type { Route } from './+types/root';
+import type { Route } from '.react-router/types/src/app/+types/root';
+import clsx from 'clsx';
+import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from 'react-router';
+import { PreventFlashOnWrongTheme, ThemeProvider, useTheme } from 'remix-themes';
+import { Header } from '~/components/ui/header';
+import { themeSessionResolver } from '~/sessions.server';
+import { loginSession } from '~/sessions.server';
+import appCss from './App.css?url';
 
 export const links: Route.LinksFunction = () => [
     { rel: 'stylesheet', href: appCss },
@@ -11,76 +13,38 @@ export const links: Route.LinksFunction = () => [
     { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
 ];
 
+export const loader = async ({ request }: Route.LoaderArgs) => {
+    const { getTheme } = await themeSessionResolver(request);
+    const session = await loginSession.getSession(request.headers.get('Cookie'));
+    const user = session.get('user');
+
+    return {
+        theme: getTheme(),
+        user,
+    };
+};
+
 export function Layout({ children }: { children: React.ReactNode }) {
     return (
-        <html lang='ja'>
+        <Providers>
+            <InnerLayout>
+                {children}
+            </InnerLayout>
+        </Providers>
+    );
+}
+function InnerLayout({ children }: { children: React.ReactNode }) {
+    const data = useLoaderData<typeof loader>();
+    const [theme] = useTheme();
+
+    return (
+        <html lang='ja' className={clsx(theme)}>
             <head>
                 <meta charSet='utf-8' />
                 <meta name='viewport' content='width=device-width, initial-scale=1' />
                 <Meta />
+                <PreventFlashOnWrongTheme ssrTheme={Boolean(data.theme)} />
                 <Links />
-                <script
-                    dangerouslySetInnerHTML={{
-                        __html: `
-              (function() {
-                try {
-                  var stored = localStorage.getItem('color-mode-storage');
-                  var mode = 'light';
-                  
-                  if (stored) {
-                    var data = JSON.parse(stored);
-                    mode = (data.state && data.state.mode) || 'light';
-                  }
-                  
-                  var html = document.documentElement;
-                  
-                  if (!html || !html.style) return;
-                  
-                  if (mode === 'dark') {
-                    html.style.setProperty('--color-bg', '#212225');
-                    html.style.setProperty('--color-fg', '#E8EAED');
-                    html.style.setProperty('--color-border', '#444');
-                    html.classList.add('dark');
-                  } else {
-                    html.style.setProperty('--color-bg', '#fff');
-                    html.style.setProperty('--color-fg', '#212225');
-                    html.style.setProperty('--color-border', '#e5e7eb');
-                    html.classList.remove('dark');
-                  }
-                  
-                  function applyBodyStyles() {
-                    var body = document.body;
-                    if (!body || !body.style) return;
-                    
-                    if (mode === 'dark') {
-                      body.style.setProperty('background-color', '#212225', 'important');
-                      body.style.setProperty('color', '#E8EAED', 'important');
-                    } else {
-                      body.style.setProperty('background-color', '#fff', 'important');
-                      body.style.setProperty('color', '#212225', 'important');
-                    }
-                    body.style.setProperty('transition', 'none', 'important');
-                  }
-                  
-                  applyBodyStyles();
-                  if (!document.body) {
-                    document.addEventListener('DOMContentLoaded', applyBodyStyles);
-                  }
-                } catch (e) {
-                  try {
-                    var html = document.documentElement;
-                    if (html && html.style) {
-                      html.style.setProperty('--color-bg', '#fff');
-                      html.style.setProperty('--color-fg', '#212225');
-                      html.style.setProperty('--color-border', '#e5e7eb');
-                    }
-                  } catch (fallbackError) {
-                  }
-                }
-              })();
-            `,
-                    }}
-                />
             </head>
             <body>
                 {children}
@@ -92,42 +56,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-    const mode = useColorModeStore(state => state.mode);
+    const { user } = useLoaderData<typeof loader>();
 
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const body = document.body;
-            const html = document.documentElement;
+    return (
+        <>
+            <Header userName={user?.name} />
+            <div className='flex flex-col items-center'>
+                <Outlet />
+            </div>
+        </>
+    );
+}
 
-            const colors = mode === 'dark' ? { bg: '#212225', fg: '#E8EAED' } : { bg: '#fff', fg: '#212225' };
-            const borderColor = mode === 'dark' ? '#444' : '#e5e7eb';
+function Providers({ children }: { children?: React.ReactNode }) {
+    const { theme } = useLoaderData<typeof loader>();
 
-            if (mode === 'dark') {
-                html.classList.add('dark');
-                body.classList.add('dark');
-            } else {
-                html.classList.remove('dark');
-                body.classList.remove('dark');
-            }
-
-            body.style.setProperty('background-color', colors.bg, 'important');
-            body.style.setProperty('color', colors.fg, 'important');
-
-            html.style.setProperty('--color-bg', colors.bg);
-            html.style.setProperty('--color-fg', colors.fg);
-            html.style.setProperty('--color-border', borderColor);
-
-            const transition =
-                'background-color 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1), border-color 0.2s cubic-bezier(0.4,0,0.2,1)';
-            html.style.setProperty('--transition-colors', transition);
-
-            setTimeout(() => {
-                body.style.setProperty('transition', transition, 'important');
-            }, 50);
-        }
-    }, [mode]);
-
-    return <Outlet />;
+    return (
+        <ThemeProvider specifiedTheme={theme} themeAction='/action/set-theme'>
+            {children}
+        </ThemeProvider>
+    );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
@@ -149,7 +97,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
             <p>{details}</p>
             {stack && (
                 <pre className='w-full p-4 overflow-x-auto'>
-          <code>{stack}</code>
+                    <code>{stack}</code>
                 </pre>
             )}
         </main>
