@@ -1,7 +1,7 @@
 import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
 
-import appCss from "../shared/App.css?url";
-import { ThemeInitializer } from "../shared/components/ThemeInitializer";
+import appCss from "../App.css?url";
+import { ThemeInitializer } from "../components/ThemeInitializer";
 import type { Route } from "./+types/root";
 
 export const links: Route.LinksFunction = () => [

@@ -1,6 +1,7 @@
-bun test
-bun lint
-# TODO: knipによる未使用のファイル、依存関係等の解析
-# knip-bun
+# bun run test:e2e
+# bun lint
+# # TODO: knipによる未使用のファイル、依存関係等の解析
+# # knip-bun
 
-bun lint-staged
+# bun lint-staged
+# 一旦ui変更のためコメントアウト

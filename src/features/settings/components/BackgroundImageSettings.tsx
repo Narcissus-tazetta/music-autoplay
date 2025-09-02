@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { HiCheck, HiFolder, HiLink, HiX } from "react-icons/hi";
-import { log } from "../../../shared/utils/clientLogger";
+import { log } from "../../../utils/clientLogger";
 
 interface BackgroundImageSettingsProps {
     mode: "dark" | "light";

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import type { Server, Socket } from 'socket.io';
 import type { Music } from '../../features/music/stores/musicStore';
-import type { C2S, S2C } from '../../shared/types/socket';
+import type { C2S, S2C } from '../../types/socket';
 import { log } from '../logger';
 import { createSocketRateLimit } from '../middleware/rateLimit';
 import {

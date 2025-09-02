@@ -1,8 +1,8 @@
 import { SendIcon } from "lucide-react";
-import { Button } from "../../../shared/components/button";
-import { Input } from "../../../shared/components/input";
-import { YOUTUBE_PATTERN } from "../../../shared/libs/utils";
-import { log } from "../../../shared/utils/clientLogger";
+import { Button } from "../../../components/button";
+import { Input } from "../../../components/input";
+import { YOUTUBE_PATTERN } from "../../../libs/utils";
+import { log } from "../../../utils/clientLogger";
 import { FormAlert } from "./FormAlert";
 import { useHomeForm } from "./useHomeForm";
 

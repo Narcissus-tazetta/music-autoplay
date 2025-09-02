@@ -1,5 +1,5 @@
 import type { Server, Socket } from 'socket.io';
-import type { C2S, S2C } from '../shared/types/socket';
+import type { C2S, S2C } from '../types/socket';
 import { registerConnectionHandlers } from './api/connectionHandlers';
 import { registerMusicHandlers } from './api/musicHandlers';
 import { registerVideoControlHandlers } from './api/videoControlHandlers';

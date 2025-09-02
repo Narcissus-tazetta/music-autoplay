@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useColorModeStore } from "../../features/settings/stores/colorModeStore";
+import { useColorModeStore } from "../features/settings/stores/colorModeStore";
 
 export function ThemeInitializer() {
     const mode = useColorModeStore((s) => s.mode);

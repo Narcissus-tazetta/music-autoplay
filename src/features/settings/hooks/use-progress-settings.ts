@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { indexedDBManager } from "../../../shared/libs/indexedDB";
-import { log } from "../../../shared/utils/clientLogger";
+import { indexedDBManager } from "../../../libs/indexedDB";
+import { log } from "../../../utils/clientLogger";
 
 export function useProgressSettings() {
     const [backgroundImage, setBackgroundImageState] = useState<string>("");

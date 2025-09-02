@@ -8,12 +8,12 @@ import { useMusicStore } from "../../features/music/stores/musicStore";
 import { SettingsButton } from "../../features/settings/components/SettingsButton";
 import { SettingsPanel } from "../../features/settings/components/SettingsPanel";
 import { useColorModeStore } from "../../features/settings/stores/colorModeStore";
-import { Button } from "../../shared/components/button";
-import { Footer } from "../../shared/components/Footer";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "../../shared/components/hover-card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../shared/components/table";
-import { useGamingToggle } from "../../shared/hooks/use-gaming-toggle";
-import { useAdminStore } from "../../shared/stores/adminStore";
+import { Button } from "../../components/button";
+import { Footer } from "../../components/Footer";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "../../components/hover-card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/table";
+import { useGamingToggle } from "../../hooks/use-gaming-toggle";
+import { useAdminStore } from "../../stores/adminStore";
 
 export const meta = () => [
     { title: "音楽リクエストフォーム" },

@@ -1,35 +1,29 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import type {
-    DayFormat,
-    MonthFormat,
-    ProgressColor,
-    WeekdayFormat,
-    YearFormat,
-} from '../../../shared/types/progressSettings';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import type { DayFormat, MonthFormat, ProgressColor, WeekdayFormat, YearFormat } from "../../../types/progressSettings";
 
 export const DEFAULT_PROGRESS_SETTINGS: Omit<
     ProgressSettingsState,
-    | 'setShowProgress'
-    | 'setProgressColor'
-    | 'setShowRemainingText'
-    | 'setShowCurrentSchedule'
-    | 'setShowDate'
-    | 'setShowYear'
-    | 'setShowMonth'
-    | 'setShowDay'
-    | 'setShowWeekday'
-    | 'setYearFormat'
-    | 'setMonthFormat'
-    | 'setDayFormat'
-    | 'setWeekdayFormat'
-    | 'setShowBackgroundImage'
-    | 'setBackgroundImageFileName'
-    | 'setBackgroundFeatureEnabled'
-    | 'updateSettings'
+    | "setShowProgress"
+    | "setProgressColor"
+    | "setShowRemainingText"
+    | "setShowCurrentSchedule"
+    | "setShowDate"
+    | "setShowYear"
+    | "setShowMonth"
+    | "setShowDay"
+    | "setShowWeekday"
+    | "setYearFormat"
+    | "setMonthFormat"
+    | "setDayFormat"
+    | "setWeekdayFormat"
+    | "setShowBackgroundImage"
+    | "setBackgroundImageFileName"
+    | "setBackgroundFeatureEnabled"
+    | "updateSettings"
 > = {
     showProgress: true,
-    progressColor: 'green',
+    progressColor: "green",
     showRemainingText: true,
     showCurrentSchedule: false,
     showDate: false,
@@ -37,12 +31,12 @@ export const DEFAULT_PROGRESS_SETTINGS: Omit<
     showMonth: true,
     showDay: true,
     showWeekday: true,
-    yearFormat: 'western',
-    monthFormat: 'japanese',
-    dayFormat: 'japanese',
-    weekdayFormat: 'short',
+    yearFormat: "western",
+    monthFormat: "japanese",
+    dayFormat: "japanese",
+    weekdayFormat: "short",
     showBackgroundImage: false,
-    backgroundImageFileName: '',
+    backgroundImageFileName: "",
     backgroundFeatureEnabled: false,
 };
 
@@ -79,12 +73,12 @@ interface ProgressSettingsState {
     setBackgroundImageFileName: (value: string) => void;
     backgroundFeatureEnabled: boolean;
     setBackgroundFeatureEnabled: (value: boolean) => void;
-    updateSettings: (values: Partial<Omit<ProgressSettingsState, 'updateSettings'>>) => void;
+    updateSettings: (values: Partial<Omit<ProgressSettingsState, "updateSettings">>) => void;
 }
 
 export const useProgressSettingsStore = create<ProgressSettingsState>()(
     persist(
-        set => ({
+        (set) => ({
             ...DEFAULT_PROGRESS_SETTINGS,
 
             setShowProgress(value: boolean) {
@@ -138,14 +132,14 @@ export const useProgressSettingsStore = create<ProgressSettingsState>()(
                 set({ backgroundFeatureEnabled: value });
             },
 
-            updateSettings: values => {
+            updateSettings: (values) => {
                 set(values);
             },
         }),
         {
-            name: 'progress-settings',
+            name: "progress-settings",
             version: 1,
-            migrate: persistedState => persistedState,
-        },
-    ),
+            migrate: (persistedState) => persistedState,
+        }
+    )
 );

@@ -1,5 +1,5 @@
-import type { ProgressColor } from '../../../shared/utils/time/progress-utils';
-import { ProgressBar } from './ProgressBar';
+import type { ProgressColor } from "../../../utils/time/progress-utils";
+import { ProgressBar } from "./ProgressBar";
 
 interface TimeDisplayProps {
     isClient: boolean;
@@ -34,14 +34,12 @@ export function TimeDisplay({
         return (
             <>
                 {showCurrentSchedule && current && (
-                    <div className='text-lg font-bold text-base-content opacity-70 mb-2'>
-                        現在は{current.label}
-                    </div>
+                    <div className="text-lg font-bold text-base-content opacity-70 mb-2">現在は{current.label}</div>
                 )}
                 {showRemainingText && (
-                    <div className='text-xl font-bold text-base-content opacity-80'>{next.label}まで残り</div>
+                    <div className="text-xl font-bold text-base-content opacity-80">{next.label}まで残り</div>
                 )}
-                <div className='text-4xl font-mono font-bold text-primary'>{timeRemaining}</div>
+                <div className="text-4xl font-mono font-bold text-primary">{timeRemaining}</div>
                 <ProgressBar
                     show={showProgress}
                     color={progressColor}
@@ -58,16 +56,14 @@ export function TimeDisplay({
         return (
             <>
                 {showCurrentSchedule && current && (
-                    <div className='text-lg font-bold text-base-content opacity-70 mb-2'>
-                        現在は{current.label}
-                    </div>
+                    <div className="text-lg font-bold text-base-content opacity-70 mb-2">現在は{current.label}</div>
                 )}
                 {showRemainingText && (
-                    <div className='text-xl font-bold text-base-content opacity-80'>
-                        現在: {current?.label || '不明'}
+                    <div className="text-xl font-bold text-base-content opacity-80">
+                        現在: {current?.label || "不明"}
                     </div>
                 )}
-                <div className='text-4xl font-mono font-bold text-primary'>{timeRemaining}</div>
+                <div className="text-4xl font-mono font-bold text-primary">{timeRemaining}</div>
                 <ProgressBar
                     show={showProgress}
                     color={progressColor}
@@ -80,7 +76,7 @@ export function TimeDisplay({
     }
 
     // 終了時（クライアント側のみ）
-    if (isClient && !timeRemaining) return <div className='text-3xl font-bold text-base-content'>終了</div>;
+    if (isClient && !timeRemaining) return <div className="text-3xl font-bold text-base-content">終了</div>;
 
     return null;
 }

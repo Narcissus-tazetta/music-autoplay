@@ -1,6 +1,6 @@
-import { io, type Socket } from 'socket.io-client';
-import { create } from 'zustand';
-import type { C2S, S2C } from '../../../shared/types/socket';
+import { io, type Socket } from "socket.io-client";
+import { create } from "zustand";
+import type { C2S, S2C } from "../../../types/socket";
 
 export interface Music {
     url: string;
@@ -30,7 +30,7 @@ export const useMusicStore = create<MusicStore>((set, get) => {
         isConnected: false,
 
         initializeSocket() {
-            if (typeof window === 'undefined') return;
+            if (typeof window === "undefined") return;
 
             const store = get();
             if (store.socket) return;
@@ -38,26 +38,26 @@ export const useMusicStore = create<MusicStore>((set, get) => {
             const socket: Socket<S2C, C2S> = io({ autoConnect: false });
 
             socket
-                .on('addMusic', music => {
-                    set(state => ({
+                .on("addMusic", (music) => {
+                    set((state) => ({
                         musics: [...state.musics, music],
                     }));
                 })
-                .on('url_list', musics => {
+                .on("url_list", (musics) => {
                     set({ musics });
                 })
-                .on('deleteMusic', url => {
-                    set(state => ({
-                        musics: state.musics.filter(m => m.url !== url),
+                .on("deleteMusic", (url) => {
+                    set((state) => ({
+                        musics: state.musics.filter((m) => m.url !== url),
                     }));
                 })
-                .on('initMusics', musics => {
+                .on("initMusics", (musics) => {
                     set({ musics });
                 })
-                .on('connect', () => {
+                .on("connect", () => {
                     set({ isConnected: true });
                 })
-                .on('disconnect', () => {
+                .on("disconnect", () => {
                     set({ isConnected: false });
                 });
 
@@ -77,22 +77,22 @@ export const useMusicStore = create<MusicStore>((set, get) => {
         addMusic(music: Music) {
             const { socket } = get();
             if (!socket) {
-                set({ error: 'Socket not connected' });
+                set({ error: "Socket not connected" });
                 return;
             }
 
-            socket.emit('addMusic', music, (error?: string) => {
+            socket.emit("addMusic", music, (error?: string) => {
                 set({ error });
             });
         },
 
         deleteMusic(url: string) {
             const { socket } = get();
-            set(state => ({
-                musics: state.musics.filter(m => m.url !== url),
+            set((state) => ({
+                musics: state.musics.filter((m) => m.url !== url),
             }));
 
-            if (socket) socket.emit('deleteMusic', url);
+            if (socket) socket.emit("deleteMusic", url);
         },
 
         resetError() {

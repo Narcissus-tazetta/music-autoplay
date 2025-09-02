@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { log } from "../../../shared/utils/clientLogger";
+import { log } from "../../../utils/clientLogger";
 
 type ColorMode = "dark" | "light";
 

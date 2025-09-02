@@ -4,7 +4,7 @@ import { BackgroundImageSettings } from "./BackgroundImageSettings";
 import { ContactInfo } from "./ContactInfo";
 import { DarkModeToggle } from "./DarkModeToggle";
 import { ProgressBarSettings } from "./ProgressBarSettings";
-import { log } from "../../../shared/utils/clientLogger";
+import { log } from "../../../utils/clientLogger";
 
 type ProgressColor = "blue" | "yellow" | "green" | "pink" | "purple" | "sky";
 type YearFormat = "western" | "reiwa" | "2025" | "none";

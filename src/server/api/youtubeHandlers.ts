@@ -1,5 +1,5 @@
 import type { Server, Socket } from "socket.io";
-import type { C2S, S2C } from "../../shared/types/socket";
+import type { C2S, S2C } from "../../types/socket";
 import { log } from "../logger";
 import { removeMusicRequest } from "../musicPersistence";
 import { extractYouTubeId } from "../utils";

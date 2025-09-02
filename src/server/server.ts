@@ -6,7 +6,7 @@ import type { RequestHandler } from 'express';
 import { Server } from 'socket.io';
 import type { ViteDevServer } from 'vite';
 
-import type { C2S, S2C } from '../shared/types/socket';
+import type { C2S, S2C } from '../types/socket';
 import { displayApiUsageStats } from './apiUsageDisplay';
 import { httpLogger } from './httpLogger';
 import { log } from './logger';

@@ -1,10 +1,10 @@
 import convert from "convert-iso8601-duration";
 import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { parseYoutubeUrl } from "../../../shared/libs/utils";
-import { useAdminStore } from "../../../shared/stores/adminStore";
-import { socket } from "../../../shared/types/socket";
-import { log } from "../../../shared/utils/clientLogger";
+import { parseYoutubeUrl } from "../../../libs/utils";
+import { useAdminStore } from "../../../stores/adminStore";
+import { socket } from "../../../types/socket";
+import { log } from "../../../utils/clientLogger";
 import { useMusicStore, type Music } from "../stores/musicStore";
 
 interface Inputs {

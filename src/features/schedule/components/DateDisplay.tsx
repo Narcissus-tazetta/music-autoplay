@@ -1,4 +1,4 @@
-import { type DateFormatSettings, formatCurrentDate } from '../../../shared/utils/time/date-formatter';
+import { type DateFormatSettings, formatCurrentDate } from "../../../utils/time/date-formatter";
 
 interface DateDisplayProps extends DateFormatSettings {
     show: boolean;
@@ -12,5 +12,5 @@ export function DateDisplay({ show, ...formatSettings }: DateDisplayProps) {
 
     const currentDate = formatCurrentDate(formatSettings);
 
-    return <div className='text-lg font-medium text-base-content opacity-70'>{currentDate}</div>;
+    return <div className="text-lg font-medium text-base-content opacity-70">{currentDate}</div>;
 }

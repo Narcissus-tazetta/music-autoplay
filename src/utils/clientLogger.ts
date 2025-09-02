@@ -48,8 +48,8 @@ class FrontendLogger {
 export const clientLog = new FrontendLogger();
 
 export const log = {
-    info: (message: string, data?: unknown, context?: string) => clientLog.info(message, data, context),
-    warn: (message: string, data?: unknown, context?: string) => clientLog.warn(message, data, context),
-    error: (message: string, error?: Error | unknown, context?: string) => clientLog.error(message, error, context),
-    debug: (message: string, data?: unknown, context?: string) => clientLog.debug(message, data, context),
+    info: (message: string, data?: unknown, context?: string) => { clientLog.info(message, data, context); },
+    warn: (message: string, data?: unknown, context?: string) => { clientLog.warn(message, data, context); },
+    error: (message: string, error?: Error | unknown, context?: string) => { clientLog.error(message, error, context); },
+    debug: (message: string, data?: unknown, context?: string) => { clientLog.debug(message, data, context); },
 };

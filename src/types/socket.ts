@@ -1,5 +1,5 @@
-import { io, type Socket } from 'socket.io-client';
-import type { Music } from '../../features/music/stores/musicStore';
+import { io, type Socket } from "socket.io-client";
+import type { Music } from "../features/music/stores/musicStore";
 
 /**
  * Socket.IOクライアントインスタンス
@@ -15,12 +15,7 @@ export interface S2C {
     new_url(music: Music | null): void;
     delete_url(url: string): void;
 
-    current_youtube_status(data: {
-        state: string;
-        url: string;
-        match: boolean;
-        music: Music | null;
-    }): void;
+    current_youtube_status(data: { state: string; url: string; match: boolean; music: Music | null }): void;
 }
 
 export interface C2S {
@@ -37,8 +32,5 @@ export interface C2S {
     move_next_video(data: { url: string }): void;
 
     adminAuth(code: string, callback: (result: { success: boolean; error?: string }) => void): void;
-    adminAuthByQuery(
-        queryParam: string,
-        callback: (result: { success: boolean; error?: string }) => void,
-    ): void;
+    adminAuthByQuery(queryParam: string, callback: (result: { success: boolean; error?: string }) => void): void;
 }
