@@ -2,7 +2,7 @@ import { SendIcon } from "lucide-react";
 import { Button } from "../../../components/button";
 import { Input } from "../../../components/input";
 import { YOUTUBE_PATTERN } from "../../../libs/utils";
-import { log } from "../../../utils/clientLogger";
+// ...existing code... (removed unused import)
 import { FormAlert } from "./FormAlert";
 import { useHomeForm } from "./useHomeForm";
 
@@ -20,7 +20,13 @@ export const HomeForm: React.FC = () => {
   } = useHomeForm();
 
   return (
-    <form className="flex flex-col items-center gap-4" onSubmit={handleSubmit}>
+    <form
+      className="flex flex-col items-center gap-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void handleSubmit(e);
+      }}
+    >
       <div className="w-full flex flex-col items-center">
         <Input
           className="w-[500px]"

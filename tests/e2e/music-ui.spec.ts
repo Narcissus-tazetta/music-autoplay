@@ -100,8 +100,8 @@ test.describe("ネットワーク障害時の挙動", () => {
   });
 
   test("API接続失敗時はエラー表示", async ({ page }) => {
-    await page.route("**/api/assets", (route) => {
-      route.fulfill({
+    await page.route("**/api/assets", async (route) => {
+      await route.fulfill({
         status: 500,
         contentType: "application/json",
         body: JSON.stringify({ error: "Internal Server Error" }),
@@ -115,8 +115,8 @@ test.describe("ネットワーク障害時の挙動", () => {
   });
 
   test("Socket.IO接続失敗時でもUIが壊れない", async ({ page }) => {
-    await page.route("**/socket.io/**", (route) => {
-      route.abort("connectionfailed");
+    await page.route("**/socket.io/**", async (route) => {
+      await route.abort("connectionfailed");
     });
     await page.reload();
     await expect(
@@ -130,8 +130,9 @@ test.describe("ネットワーク障害時の挙動", () => {
 
   test("APIタイムアウト時はUIが応答可能", async ({ page }) => {
     await page.route("**/api/assets", (route) => {
+      // Delay response to simulate timeout; route.fulfill is called from the timer.
       setTimeout(() => {
-        route.fulfill({
+        void route.fulfill({
           status: 200,
           contentType: "application/json",
           body: JSON.stringify({

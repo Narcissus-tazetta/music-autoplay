@@ -5,53 +5,57 @@ import { log } from "../../../utils/clientLogger";
 type ColorMode = "dark" | "light";
 
 interface ColorModeState {
-    mode: ColorMode;
-    setMode: (mode: ColorMode) => void;
+  mode: ColorMode;
+  setMode: (mode: ColorMode) => void;
 }
 
 function applyDarkModeStyles(mode: ColorMode) {
-    if (typeof window === "undefined") return;
+  if (typeof window === "undefined") return;
 
-    const html = document.documentElement;
+  const html = document.documentElement;
 
-    if (mode === "dark") html.classList.add("dark");
-    else html.classList.remove("dark");
+  if (mode === "dark") html.classList.add("dark");
+  else html.classList.remove("dark");
 }
 
 export const useColorModeStore = create<ColorModeState>()(
-    persist(
-        (set, get) => ({
-            mode: "light",
+  persist(
+    (set, get) => ({
+      mode: "light",
 
-            setMode: (mode: ColorMode) => {
-                const currentState = get();
+      setMode: (mode: ColorMode) => {
+        const currentState = get();
 
-                if (currentState.mode === mode) return;
+        if (currentState.mode === mode) return;
 
-                requestAnimationFrame(() => {
-                    applyDarkModeStyles(mode);
-                });
+        requestAnimationFrame(() => {
+          applyDarkModeStyles(mode);
+        });
 
-                set({ mode });
-            },
-        }),
-        {
-            name: "color-mode-storage",
-            version: 1,
-            onRehydrateStorage: () => {
-                return (state, error) => {
-                    if (error) {
-                        log.error("Failed to rehydrate color mode store", error, "colorModeStore");
-                        return;
-                    }
+        set({ mode });
+      },
+    }),
+    {
+      name: "color-mode-storage",
+      version: 1,
+      onRehydrateStorage: () => {
+        return (state, error) => {
+          if (error) {
+            log.error(
+              "Failed to rehydrate color mode store",
+              error,
+              "colorModeStore",
+            );
+            return;
+          }
 
-                    if (state?.mode) {
-                        requestAnimationFrame(() => {
-                            applyDarkModeStyles(state.mode);
-                        });
-                    }
-                };
-            },
-        }
-    )
+          if (state?.mode) {
+            requestAnimationFrame(() => {
+              applyDarkModeStyles(state.mode);
+            });
+          }
+        };
+      },
+    },
+  ),
 );

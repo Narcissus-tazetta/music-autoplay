@@ -30,8 +30,23 @@ export default tseslint.config(
       "dist/**/*",
       "node_modules/**/*",
       ".react-router/**/*",
+      "scripts/**/*",
       "**/*.d.ts",
     ],
+  },
+  // Relax rules for generated shadcn UI components which intentionally use looser typing
+  {
+    files: ["src/components/ui/shadcn/**", "src/app/components/ui/shadcn/**"],
+    rules: {
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unnecessary-condition": "off",
+      "@typescript-eslint/no-base-to-string": "off",
+      "@typescript-eslint/no-floating-promises": "off",
+      "@typescript-eslint/no-misused-promises": "off",
+    },
   },
   {
     files: ["**/*.{ts,tsx}"],

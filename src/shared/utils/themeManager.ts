@@ -1,38 +1,42 @@
 export type Theme = "light" | "dark";
 
-export class ThemeManager {
-    private static readonly STORAGE_KEY = "theme";
-    private static readonly DEFAULT_THEME: Theme = "dark";
+const STORAGE_KEY = "theme";
+const DEFAULT_THEME: Theme = "dark";
 
-    static getTheme(): Theme {
-        if (typeof window === "undefined") return this.DEFAULT_THEME;
+export const ThemeManager = {
+  getTheme(): Theme {
+    if (typeof window === "undefined") return DEFAULT_THEME;
 
-        const stored = localStorage.getItem(this.STORAGE_KEY) as Theme;
-        if (stored === "light" || stored === "dark") return stored;
+    const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
+    if (stored === "light" || stored === "dark") return stored;
 
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        return prefersDark ? "dark" : "light";
-    }
+    // Fallback to system preference when no stored value exists.
+    const prefersDark =
+      typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-color-scheme: dark)").matches
+        : false;
 
-    static setTheme(theme: Theme): void {
-        if (typeof window === "undefined") return;
-        if (theme === "dark") document.documentElement.classList.add("dark");
-        else document.documentElement.classList.remove("dark");
-        localStorage.setItem(this.STORAGE_KEY, theme);
-        window.dispatchEvent(new CustomEvent("theme-changed", { detail: theme }));
-    }
+    return prefersDark ? "dark" : "light";
+  },
 
-    static toggleTheme(): Theme {
-        const current = this.getTheme();
-        const newTheme = current === "dark" ? "light" : "dark";
-        this.setTheme(newTheme);
-        return newTheme;
-    }
+  setTheme(theme: Theme): void {
+    if (typeof window === "undefined") return;
+    if (theme === "dark") document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
+    localStorage.setItem(STORAGE_KEY, theme);
+    window.dispatchEvent(new CustomEvent("theme-changed", { detail: theme }));
+  },
 
-    static initialize(): void {
-        if (typeof window === "undefined") return;
+  toggleTheme(): Theme {
+    const current = this.getTheme();
+    const newTheme = current === "dark" ? "light" : "dark";
+    this.setTheme(newTheme);
+    return newTheme;
+  },
 
-        const theme = this.getTheme();
-        this.setTheme(theme);
-    }
-}
+  initialize(): void {
+    if (typeof window === "undefined") return;
+    const theme = this.getTheme();
+    this.setTheme(theme);
+  },
+};

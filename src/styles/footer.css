@@ -1,13 +1,3 @@
-.footer {
-  transition:
-    background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
+/* footer converted to Tailwind utilities in JSX */
 
-.footer-link-normal {
-  color: inherit !important;
-}
-
-.dark .footer-link-normal {
-  color: inherit !important;
-}
+/* footer-link-normal converted to Tailwind classes in JSX */

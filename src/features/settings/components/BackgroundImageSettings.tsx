@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Toggle } from "../../../components/ui/shadcn/toggle";
 import { HiCheck, HiFolder, HiLink, HiX } from "react-icons/hi";
 import { log } from "../../../utils/clientLogger";
 
@@ -49,21 +50,12 @@ export const BackgroundImageSettings = ({
         return;
       }
 
-      try {
-        const reader = new window.FileReader();
-        reader.onload = async (ev) => {
-          const result = ev.target?.result as string;
-          await setBackgroundImage(result, file.name);
-        };
-        reader.readAsDataURL(file);
-      } catch (error) {
-        log.error(
-          "画像の読み込みに失敗しました",
-          error,
-          "BackgroundImageSettings",
-        );
-        window.alert("画像の読み込みに失敗しました");
-      }
+      const reader = new window.FileReader();
+      reader.onload = async (ev) => {
+        const result = ev.target?.result as string;
+        await setBackgroundImage(result, file.name);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -134,13 +126,13 @@ export const BackgroundImageSettings = ({
         }`}
       >
         <span className="block font-medium">背景画像</span>
-        <input
-          type="checkbox"
-          className="toggle toggle-primary"
-          checked={showBackgroundImage}
-          onChange={(e) => {
-            setShowBackgroundImage(e.target.checked);
+        <Toggle
+          pressed={showBackgroundImage}
+          onPressedChange={(v: boolean) => {
+            setShowBackgroundImage(Boolean(v));
           }}
+          aria-label="背景画像を有効にする"
+          size="sm"
         />
       </label>
 

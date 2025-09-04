@@ -7,11 +7,6 @@ const wsPort = process.env.VITE_WS_PORT
   ? Number(process.env.VITE_WS_PORT)
   : undefined;
 
-type ServerConfig = {
-  watch: { ignored: string[] };
-  ws?: { port: number };
-};
-
 const baseServer = {
   watch: {
     ignored: ["**/api-usage.json", "**/api-usage.json.backup"],
