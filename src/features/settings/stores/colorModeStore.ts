@@ -5,81 +5,53 @@ import { log } from "../../../utils/clientLogger";
 type ColorMode = "dark" | "light";
 
 interface ColorModeState {
-  mode: ColorMode;
-  setMode: (mode: ColorMode) => void;
-  darkClass: string;
+    mode: ColorMode;
+    setMode: (mode: ColorMode) => void;
 }
 
-const COLORS = {
-  dark: { bg: "#212225", fg: "#E8EAED" },
-  light: { bg: "#fff", fg: "#212225" },
-};
-
 function applyDarkModeStyles(mode: ColorMode) {
-  if (typeof window === "undefined") return;
+    if (typeof window === "undefined") return;
 
-  const colors = COLORS[mode];
-  const body = document.body;
-  const html = document.documentElement;
+    const html = document.documentElement;
 
-  if (mode === "dark") {
-    html.classList.add("dark");
-    body.classList.add("dark");
-  } else {
-    html.classList.remove("dark");
-    body.classList.remove("dark");
-  }
-
-  html.style.setProperty("--color-bg", colors.bg);
-  html.style.setProperty("--color-fg", colors.fg);
-  html.style.setProperty(
-    "--color-border",
-    mode === "dark" ? "#444" : "#e5e7eb",
-  );
+    if (mode === "dark") html.classList.add("dark");
+    else html.classList.remove("dark");
 }
 
 export const useColorModeStore = create<ColorModeState>()(
-  persist(
-    (set, get) => ({
-      mode: "light",
-      darkClass: "",
+    persist(
+        (set, get) => ({
+            mode: "light",
 
-      setMode: (mode: ColorMode) => {
-        const currentState = get();
+            setMode: (mode: ColorMode) => {
+                const currentState = get();
 
-        if (currentState.mode === mode) return;
+                if (currentState.mode === mode) return;
 
-        requestAnimationFrame(() => {
-          applyDarkModeStyles(mode);
-        });
+                requestAnimationFrame(() => {
+                    applyDarkModeStyles(mode);
+                });
 
-        set({
-          mode,
-          darkClass: mode === "dark" ? "dark" : "",
-        });
-      },
-    }),
-    {
-      name: "color-mode-storage",
-      version: 1,
-      onRehydrateStorage: () => {
-        return (state, error) => {
-          if (error) {
-            log.error(
-              "Failed to rehydrate color mode store",
-              error,
-              "colorModeStore",
-            );
-            return;
-          }
+                set({ mode });
+            },
+        }),
+        {
+            name: "color-mode-storage",
+            version: 1,
+            onRehydrateStorage: () => {
+                return (state, error) => {
+                    if (error) {
+                        log.error("Failed to rehydrate color mode store", error, "colorModeStore");
+                        return;
+                    }
 
-          if (state?.mode) {
-            requestAnimationFrame(() => {
-              applyDarkModeStyles(state.mode);
-            });
-          }
-        };
-      },
-    },
-  ),
+                    if (state?.mode) {
+                        requestAnimationFrame(() => {
+                            applyDarkModeStyles(state.mode);
+                        });
+                    }
+                };
+            },
+        }
+    )
 );

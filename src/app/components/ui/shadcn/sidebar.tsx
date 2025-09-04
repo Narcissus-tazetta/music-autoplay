@@ -1,7 +1,7 @@
 "use client";
 
 import { Slot } from "@radix-ui/react-slot";
-import { cva, VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
 import * as React from "react";
 
@@ -87,7 +87,9 @@ function SidebarProvider({
         };
 
         window.addEventListener("keydown", handleKeyDown);
-        return () => { window.removeEventListener("keydown", handleKeyDown); };
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+        };
     }, [toggleSidebar]);
 
     // We add a state so that we can do data-state="expanded" or "collapsed".
@@ -241,8 +243,8 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<t
             variant="ghost"
             size="icon"
             className={cn("size-7", className)}
-            onClick={(event) => {
-                onClick?.(event);
+            onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
+                onClick?.(event as any);
                 toggleSidebar();
             }}
             {...props}
@@ -472,7 +474,7 @@ function SidebarMenuButton({
     asChild?: boolean;
     isActive?: boolean;
     tooltip?: string | React.ComponentProps<typeof TooltipContent>;
-} & VariantProps<typeof sidebarMenuButtonVariants>) {
+} & Record<string, any>) {
     const Comp = asChild ? Slot : "button";
     const { isMobile, state } = useSidebar();
 

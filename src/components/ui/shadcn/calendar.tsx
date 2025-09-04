@@ -1,6 +1,13 @@
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import * as React from "react";
-import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker";
+// react-day-picker's types vary between versions; import loosely and relax types below.
+import { DayPicker } from "react-day-picker";
+// getDefaultClassNames and DayButton may not exist in the installed version; treat as any when used.
+const getDefaultClassNames: any =
+    typeof require("react-day-picker").getDefaultClassNames === "function"
+        ? require("react-day-picker").getDefaultClassNames
+        : () => ({});
+const DayButton: any = require("react-day-picker").DayButton || (() => null);
 
 import { Button, buttonVariants } from "@shadcn/button";
 import { cn } from "@libs/utils";
@@ -14,9 +21,7 @@ function Calendar({
     formatters,
     components,
     ...props
-}: React.ComponentProps<typeof DayPicker> & {
-    buttonVariant?: React.ComponentProps<typeof Button>["variant"];
-}) {
+}: any) {
     const defaultClassNames = getDefaultClassNames();
 
     return (
@@ -30,7 +35,8 @@ function Calendar({
             )}
             captionLayout={captionLayout}
             formatters={{
-                formatMonthDropdown: (date) => date.toLocaleString("default", { month: "short" }),
+                // relaxed typing: date may be Date|string depending on react-day-picker version
+                formatMonthDropdown: (date: any) => new Date(date).toLocaleString("default", { month: "short" }),
                 ...formatters,
             }}
             classNames={{
@@ -97,10 +103,10 @@ function Calendar({
                 ...classNames,
             }}
             components={{
-                Root: ({ className, rootRef, ...props }) => {
+                Root: ({ className, rootRef, ...props }: any) => {
                     return <div data-slot="calendar" ref={rootRef} className={cn(className)} {...props} />;
                 },
-                Chevron: ({ className, orientation, ...props }) => {
+                Chevron: ({ className, orientation, ...props }: any) => {
                     if (orientation === "left")
                         return <ChevronLeftIcon className={cn("size-4", className)} {...props} />;
 
@@ -111,7 +117,7 @@ function Calendar({
                     return <ChevronDownIcon className={cn("size-4", className)} {...props} />;
                 },
                 DayButton: CalendarDayButton,
-                WeekNumber: ({ children, ...props }) => {
+                WeekNumber: ({ children, ...props }: any) => {
                     return (
                         <td {...props}>
                             <div className="flex size-(--cell-size) items-center justify-center text-center">

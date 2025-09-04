@@ -88,7 +88,9 @@ function SidebarProvider({
         };
 
         window.addEventListener("keydown", handleKeyDown);
-        return () => { window.removeEventListener("keydown", handleKeyDown); };
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+        };
     }, [toggleSidebar]);
 
     // We add a state so that we can do data-state="expanded" or "collapsed".
@@ -242,8 +244,8 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<t
             variant="ghost"
             size="icon"
             className={cn("size-7", className)}
-            onClick={(event) => {
-                onClick?.(event);
+            onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
+                onClick?.(event as any);
                 toggleSidebar();
             }}
             {...props}

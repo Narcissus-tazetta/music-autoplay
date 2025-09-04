@@ -1,19 +1,27 @@
-body.dark a,
-.dark a {
-  color: #d1b3ff !important;
+:root {
+  --color-bg: #ffffff;
+  --color-fg: #212225;
+  --color-border: #e5e7eb;
+  --color-link: #2563eb; /* blue-600 */
+  --color-link-hover: #1d4ed8; /* blue-700 */
 }
-body.dark a:hover,
-.dark a:hover {
-  color: #b698ff !important;
+
+.dark {
+  --color-bg: #212225;
+  --color-fg: #e8eaed;
+  --color-border: #444444;
+  --color-link: #d1b3ff;
+  --color-link-hover: #b698ff;
 }
-.dark .footer-link-normal {
+
+a {
+  color: var(--color-link);
+}
+
+a:hover {
+  color: var(--color-link-hover);
+}
+
+.footer-link-normal {
   color: inherit !important;
-}
-body.dark {
-  background-color: #212225 !important;
-  color: #e8eaed !important;
-}
-body.light {
-  background-color: #fff !important;
-  color: #212225 !important;
 }

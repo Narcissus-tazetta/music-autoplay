@@ -16,8 +16,8 @@ export class ThemeManager {
 
     static setTheme(theme: Theme): void {
         if (typeof window === "undefined") return;
-
-        document.documentElement.setAttribute("data-theme", theme);
+        if (theme === "dark") document.documentElement.classList.add("dark");
+        else document.documentElement.classList.remove("dark");
         localStorage.setItem(this.STORAGE_KEY, theme);
         window.dispatchEvent(new CustomEvent("theme-changed", { detail: theme }));
     }
