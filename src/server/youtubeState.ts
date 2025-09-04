@@ -1,12 +1,12 @@
-import type { Music } from '../features/music/stores/musicStore';
-import { log } from './logger';
-import { loadMusicRequests } from './musicPersistence';
-import type { AppState, ClientsMap } from './types';
+import type { Music } from "../shared/types/music";
+import { log } from "./logger";
+import { loadMusicRequests } from "./musicPersistence";
+import type { AppState, ClientsMap } from "./types";
 
 export const currentState: AppState = {
-    currentYoutubeState: { state: '', url: '' },
-    lastYoutubeStatus: null,
-    currentPlayingId: null,
+  currentYoutubeState: { state: "", url: "" },
+  lastYoutubeStatus: null,
+  currentPlayingId: null,
 };
 
 // 永続化されたリクエストを読み込み

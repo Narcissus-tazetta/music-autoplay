@@ -1,0 +1,41 @@
+name: CI
+
+on:
+    push:
+        branches: ["main", "renew"]
+    pull_request:
+        branches: ["main", "renew"]
+
+jobs:
+    build-and-test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Use Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+
+            - name: Install dependencies (bun)
+              run: |
+                  curl -fsSL https://bun.sh/install | bash -s -- -y
+                  export BUN_INSTALL="$HOME/.bun"
+                  export PATH="$BUN_INSTALL/bin:$PATH"
+                  bun -v
+                  bun install
+
+            - name: Typecheck
+              run: bun run typecheck
+
+            - name: Lint
+              run: bun run lint
+
+            - name: Install Playwright browsers
+              run: |
+                  bunx playwright install --with-deps
+
+            - name: Run E2E (Playwright)
+              env:
+                  CI: "true"
+              run: bunx playwright test --config=playwright.config.ts
