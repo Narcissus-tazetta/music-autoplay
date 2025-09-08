@@ -6,125 +6,129 @@ import { ok, err } from "@/shared/utils/result";
 import logger from "./logger";
 
 export type VideoDetails = {
-    title: string;
-    channelTitle: string;
-    channelId: string;
-    duration: string;
-    isAgeRestricted: boolean;
-    raw?: unknown;
+  title: string;
+  channelTitle: string;
+  channelId: string;
+  duration: string;
+  isAgeRestricted: boolean;
+  raw?: unknown;
 };
 
-// A small Map subclass that enforces a maximum capacity on set().
-// Accepts either a fixed number or a getter function so callers can change
-// the capacity at runtime (useful for tests that mutate `maxEntries`).
 class EvictingMap<K, V> extends Map<K, V> {
-    private getMaxEntries: () => number;
+  private getMaxEntries: () => number;
 
-    constructor(maxEntriesOrGetter: number | (() => number)) {
-        super();
-        this.getMaxEntries = typeof maxEntriesOrGetter === "function" ? maxEntriesOrGetter : () => maxEntriesOrGetter;
-    }
+  constructor(maxEntriesOrGetter: number | (() => number)) {
+    super();
+    this.getMaxEntries =
+      typeof maxEntriesOrGetter === "function"
+        ? maxEntriesOrGetter
+        : () => maxEntriesOrGetter;
+  }
 
-    set(key: K, value: V): this {
-        const max = this.getMaxEntries();
-        if (this.size >= max) {
-            const oldestKey = this.keys().next().value as K | undefined;
-            if (oldestKey !== undefined) super.delete(oldestKey);
-        }
-        return super.set(key, value);
+  set(key: K, value: V): this {
+    const max = this.getMaxEntries();
+    if (this.size >= max) {
+      const oldestKey = this.keys().next().value as K | undefined;
+      if (oldestKey !== undefined) super.delete(oldestKey);
     }
+    return super.set(key, value);
+  }
 }
 
 export class YouTubeService {
-    youtube: ReturnType<typeof google.youtube>;
-    private cache: EvictingMap<string, { value: VideoDetails; expiresAt: number }> = new EvictingMap(
-        () => this.maxEntries
-    );
-    private defaultTtl = 1000 * 60 * 60 * 24 * 7; // 7 days
-    private maxEntries = 500;
+  youtube: ReturnType<typeof google.youtube>;
+  private cache: EvictingMap<
+    string,
+    { value: VideoDetails; expiresAt: number }
+  > = new EvictingMap(() => this.maxEntries);
+  private defaultTtl = 1000 * 60 * 60 * 24 * 7; // 7日
+  private maxEntries = 500;
 
-    constructor(apiKey?: string) {
-        const key = apiKey ?? SERVER_ENV.YOUTUBE_API_KEY;
-        this.youtube = google.youtube({ version: "v3", auth: key });
+  constructor(apiKey?: string) {
+    const key = apiKey ?? SERVER_ENV.YOUTUBE_API_KEY;
+    this.youtube = google.youtube({ version: "v3", auth: key });
+    setInterval(() => this.cleanupExpired(), 1000 * 60 * 60);
+  }
 
-        // periodic cleanup of expired cache entries
-        setInterval(() => this.cleanupExpired(), 1000 * 60 * 60); // every hour
+  private cleanupExpired() {
+    const now = Date.now();
+    for (const [k, v] of this.cache.entries()) {
+      if (v.expiresAt <= now) this.cache.delete(k);
+    }
+  }
+
+  async getVideoDetails(
+    id: string,
+    retries = 1,
+    timeoutMs = 5000,
+    ttlMs?: number,
+  ): Promise<Result<VideoDetails, string>> {
+    const ttl = ttlMs ?? this.defaultTtl;
+    const now = Date.now();
+    const cached = this.cache.get(id);
+    if (cached && cached.expiresAt > now) {
+      return ok(cached.value);
     }
 
-    private cleanupExpired() {
-        const now = Date.now();
-        for (const [k, v] of this.cache.entries()) {
-            if (v.expiresAt <= now) this.cache.delete(k);
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        const res = await this.youtube.videos.list(
+          { part: ["snippet", "contentDetails"], id: [id] },
+          { signal: controller.signal as any },
+        );
+        clearTimeout(timer);
+
+        const item = res.data.items?.[0];
+        if (!item) return err("動画が見つかりませんでした。");
+
+        const isAgeRestricted =
+          item.contentDetails?.contentRating?.ytRating === "ytAgeRestricted";
+
+        if (
+          !item.snippet ||
+          !item.snippet.title ||
+          !item.snippet.channelTitle ||
+          !item.snippet.channelId ||
+          !item.contentDetails?.duration
+        ) {
+          return err("動画の情報が取得できませんでした。");
         }
+
+        const duration = convertISO8601Duration(
+          item.contentDetails.duration as string,
+        );
+        const durationSecs = duration % 60;
+        const durationMins = Math.floor((duration / 60) % 60);
+        const durationHours = Math.floor(duration / 3600);
+
+        const durationStr = `${durationHours.toString().padStart(2, "0")}:${durationMins.toString().padStart(2, "0")}:${durationSecs.toString().padStart(2, "0")}`;
+
+        const details = {
+          title: item.snippet.title,
+          channelTitle: item.snippet.channelTitle,
+          channelId: item.snippet.channelId,
+          duration: durationStr,
+          isAgeRestricted,
+          raw: item,
+        };
+        if (this.cache.size >= this.maxEntries) {
+          const oldestKey = this.cache.keys().next().value;
+          if (oldestKey) this.cache.delete(oldestKey);
+        }
+        this.cache.set(id, { value: details, expiresAt: Date.now() + ttl });
+        return ok(details);
+      } catch (e: unknown) {
+        logger.warn("YouTubeService getVideoDetails attempt failed", {
+          id,
+          attempt,
+          error: e,
+        });
+        if (attempt === retries) return err(String(e));
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      }
     }
-
-    async getVideoDetails(
-        id: string,
-        retries = 1,
-        timeoutMs = 5000,
-        ttlMs?: number
-    ): Promise<Result<VideoDetails, string>> {
-        const ttl = ttlMs ?? this.defaultTtl;
-        const now = Date.now();
-        const cached = this.cache.get(id);
-        if (cached && cached.expiresAt > now) {
-            return ok(cached.value);
-        }
-
-        for (let attempt = 0; attempt <= retries; attempt++) {
-            try {
-                const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), timeoutMs);
-                const res = await this.youtube.videos.list(
-                    { part: ["snippet", "contentDetails"], id: [id] },
-                    { signal: controller.signal as any }
-                );
-                clearTimeout(timer);
-
-                const item = res.data.items?.[0];
-                if (!item) return err("動画が見つかりませんでした。");
-
-                const isAgeRestricted = item.contentDetails?.contentRating?.ytRating === "ytAgeRestricted";
-
-                if (
-                    !item.snippet ||
-                    !item.snippet.title ||
-                    !item.snippet.channelTitle ||
-                    !item.snippet.channelId ||
-                    !item.contentDetails?.duration
-                ) {
-                    return err("動画の情報が取得できませんでした。");
-                }
-
-                const duration = convertISO8601Duration(item.contentDetails.duration as string);
-                const durationSecs = duration % 60;
-                const durationMins = Math.floor((duration / 60) % 60);
-                const durationHours = Math.floor(duration / 3600);
-
-                const durationStr = `${durationHours.toString().padStart(2, "0")}:${durationMins.toString().padStart(2, "0")}:${durationSecs.toString().padStart(2, "0")}`;
-
-                const details = {
-                    title: item.snippet.title,
-                    channelTitle: item.snippet.channelTitle,
-                    channelId: item.snippet.channelId,
-                    duration: durationStr,
-                    isAgeRestricted,
-                    raw: item,
-                };
-                // enforce max entries
-                if (this.cache.size >= this.maxEntries) {
-                    // delete oldest entry
-                    const oldestKey = this.cache.keys().next().value;
-                    if (oldestKey) this.cache.delete(oldestKey);
-                }
-                this.cache.set(id, { value: details, expiresAt: Date.now() + ttl });
-                return ok(details);
-            } catch (e: unknown) {
-                logger.warn("YouTubeService getVideoDetails attempt failed", { id, attempt, error: e });
-                if (attempt === retries) return err(String(e));
-                await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
-            }
-        }
-        return err("未知のエラー");
-    }
+    return err("未知のエラー");
+  }
 }

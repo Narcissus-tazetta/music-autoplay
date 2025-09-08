@@ -1,5 +1,5 @@
-import type { SocketServerInstance } from '@/server/socket';
+import type { SocketServerInstance } from "@/server/socket";
 
 export interface ServerContext {
-    io: SocketServerInstance;
+  io: SocketServerInstance;
 }
