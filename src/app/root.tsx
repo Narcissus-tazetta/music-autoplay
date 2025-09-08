@@ -1,22 +1,23 @@
-import type { Route } from '.react-router/types/src/app/+types/root';
-import clsx from 'clsx';
-import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from 'react-router';
-import { PreventFlashOnWrongTheme, ThemeProvider, useTheme } from 'remix-themes';
-import { Header } from '~/components/ui/header';
-import { themeSessionResolver } from '~/sessions.server';
-import { loginSession } from '~/sessions.server';
-import appCss from './App.css?url';
+import type { Route } from ".react-router/types/src/app/+types/root";
+import clsx from "clsx";
+import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from "react-router";
+import { PreventFlashOnWrongTheme, ThemeProvider, useTheme } from "remix-themes";
+import React from "react";
+import { Header } from "~/components/ui/header";
+import { themeSessionResolver } from "~/sessions.server";
+import { loginSession } from "~/sessions.server";
+import appCss from "./App.css?url";
 
 export const links: Route.LinksFunction = () => [
-    { rel: 'stylesheet', href: appCss },
-    { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
-    { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
+    { rel: "stylesheet", href: appCss },
+    { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+    { rel: "icon", href: "/favicon.ico", sizes: "any" },
 ];
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
     const { getTheme } = await themeSessionResolver(request);
-    const session = await loginSession.getSession(request.headers.get('Cookie'));
-    const user = session.get('user');
+    const session = await loginSession.getSession(request.headers.get("Cookie"));
+    const user = session.get("user");
 
     return {
         theme: getTheme(),
@@ -27,9 +28,7 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 export function Layout({ children }: { children: React.ReactNode }) {
     return (
         <Providers>
-            <InnerLayout>
-                {children}
-            </InnerLayout>
+            <InnerLayout>{children}</InnerLayout>
         </Providers>
     );
 }
@@ -38,10 +37,10 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
     const [theme] = useTheme();
 
     return (
-        <html lang='ja' className={clsx(theme)}>
+        <html lang="ja" className={clsx(theme)}>
             <head>
-                <meta charSet='utf-8' />
-                <meta name='viewport' content='width=device-width, initial-scale=1' />
+                <meta charSet="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <Meta />
                 <PreventFlashOnWrongTheme ssrTheme={Boolean(data.theme)} />
                 <Links />
@@ -61,7 +60,7 @@ export default function App() {
     return (
         <>
             <Header userName={user?.name} />
-            <div className='flex flex-col items-center'>
+            <div className="flex flex-col items-center">
                 <Outlet />
             </div>
         </>
@@ -70,33 +69,42 @@ export default function App() {
 
 function Providers({ children }: { children?: React.ReactNode }) {
     const { theme } = useLoaderData<typeof loader>();
+    // connect socket on client mount
+    React.useEffect(() => {
+        // lazy import to avoid SSR
+        (async () => {
+            const { useMusicStore } = await import("./stores/musicStore");
+            const store = useMusicStore.getState();
+            store.connectSocket();
+        })();
+    }, []);
 
     return (
-        <ThemeProvider specifiedTheme={theme} themeAction='/action/set-theme'>
+        <ThemeProvider specifiedTheme={theme} themeAction="/action/set-theme">
             {children}
         </ThemeProvider>
     );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-    let message = 'Oops!';
-    let details = 'An unexpected error occurred.';
+    let message = "Oops!";
+    let details = "An unexpected error occurred.";
     let stack: string | undefined;
 
     if (isRouteErrorResponse(error)) {
-        message = error.status === 404 ? '404' : 'Error';
-        details = error.status === 404 ? 'The requested page could not be found.' : error.statusText || details;
+        message = error.status === 404 ? "404" : "Error";
+        details = error.status === 404 ? "The requested page could not be found." : error.statusText || details;
     } else if (import.meta.env.DEV && error && error instanceof Error) {
         details = error.message;
         stack = error.stack;
     }
 
     return (
-        <main className='pt-16 p-4 container mx-auto'>
+        <main className="pt-16 p-4 container mx-auto">
             <h1>{message}</h1>
             <p>{details}</p>
             {stack && (
-                <pre className='w-full p-4 overflow-x-auto'>
+                <pre className="w-full p-4 overflow-x-auto">
                     <code>{stack}</code>
                 </pre>
             )}

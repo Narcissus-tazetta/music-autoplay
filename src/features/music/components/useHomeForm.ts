@@ -1,21 +1,21 @@
-import convert from 'convert-iso8601-duration';
-import { useCallback, useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { parseYoutubeUrl } from '../../../shared/libs/utils';
-import { useAdminStore } from '../../../shared/stores/adminStore';
-import { socket } from '../../../shared/types/socket';
-import { useMusicStore } from '../stores/musicStore';
+import convert from "convert-iso8601-duration";
+import { useCallback, useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { extractYoutubeId } from "../../../shared/libs/youtube";
+import { useAdminStore } from "../../../shared/stores/adminStore";
+import { socket } from "../../../shared/types/socket";
+import { useMusicStore } from "../stores/musicStore";
 
 interface Inputs {
     url: string;
 }
 
 export const useHomeForm = () => {
-    const musics = useMusicStore(store => store.musics);
-    const error = useMusicStore(store => store.error);
-    const addMusic = useMusicStore(store => store.addMusic.bind(store));
-    const resetError = useMusicStore(store => store.resetError.bind(store));
-    const setAdminStatus = useAdminStore(store => store.setIsAdmin);
+    const musics = useMusicStore((store) => store.musics);
+    const error = useMusicStore((store) => store.error);
+    const addMusic = useMusicStore((store) => store.addMusic.bind(store));
+    const resetError = useMusicStore((store) => store.resetError.bind(store));
+    const setAdminStatus = useAdminStore((store) => store.setIsAdmin);
 
     const [showAlert, setShowAlert] = useState(false);
     const [isAnimating, setIsAnimating] = useState(false);
@@ -32,26 +32,22 @@ export const useHomeForm = () => {
     } = form;
 
     useEffect(() => {
-        if (typeof window !== 'undefined') {
+        if (typeof window !== "undefined") {
             const urlParams = new URLSearchParams(window.location.search);
-            const adminParam = urlParams.get('admin');
+            const adminParam = urlParams.get("admin");
 
             if (adminParam) {
-                socket.emit(
-                    'adminAuthByQuery',
-                    adminParam,
-                    (result: { success: boolean; error?: string }) => {
-                        if (result.success) {
-                            setAdminStatus(true);
-                            setSuccessMessage('URL経由で管理者認証に成功しました');
-                            const newUrl = new URL(window.location.href);
-                            newUrl.searchParams.delete('admin');
-                            window.history.replaceState({}, '', newUrl.toString());
-                        } else {
-                            console.warn('URL管理者認証に失敗:', result.error);
-                        }
-                    },
-                );
+                socket.emit("adminAuthByQuery", adminParam, (result: { success: boolean; error?: string }) => {
+                    if (result.success) {
+                        setAdminStatus(true);
+                        setSuccessMessage("URL経由で管理者認証に成功しました");
+                        const newUrl = new URL(window.location.href);
+                        newUrl.searchParams.delete("admin");
+                        window.history.replaceState({}, "", newUrl.toString());
+                    } else {
+                        console.warn("URL管理者認証に失敗:", result.error);
+                    }
+                });
             }
         }
     }, [setAdminStatus]);
@@ -61,7 +57,7 @@ export const useHomeForm = () => {
         setTimeout(() => {
             setShowAlert(false);
             setIsAnimating(false);
-            clearErrors('url');
+            clearErrors("url");
             resetError();
             setSuccessMessage(undefined);
         }, 200);
@@ -107,38 +103,38 @@ export const useHomeForm = () => {
         const url = data.url.trim();
 
         if (url.length >= 32 && !/^https?:\/\//.test(url)) {
-            socket.emit('adminAuth', url, (result: { success: boolean; error?: string }) => {
+            socket.emit("adminAuth", url, (result: { success: boolean; error?: string }) => {
                 if (result.success) {
                     setAdminStatus(true);
-                    setSuccessMessage('管理者認証に成功しました');
+                    setSuccessMessage("管理者認証に成功しました");
                 } else {
-                    setError('url', {
-                        type: 'manual',
-                        message: result.error || '管理者認証に失敗しました',
+                    setError("url", {
+                        type: "manual",
+                        message: result.error || "管理者認証に失敗しました",
                     });
                 }
             });
-            resetField('url');
+            resetField("url");
             return;
         }
 
         if (musics.length >= 50) {
-            setError('url', {
-                type: 'manual',
-                message: 'これ以上は送信できません。リストは50件までです。',
+            setError("url", {
+                type: "manual",
+                message: "これ以上は送信できません。リストは50件までです。",
             });
             return;
         }
-        const videoId = parseYoutubeUrl(url);
+        const videoId = extractYoutubeId(url);
         if (videoId === null) {
-            setError('url', {
-                type: 'onChange',
-                message: '有効なYouTubeのURLを入力してください（例：https://www.youtube.com/watch?v=...）',
+            setError("url", {
+                type: "onChange",
+                message: "有効なYouTubeのURLを入力してください（例：https://www.youtube.com/watch?v=...）",
             });
             return;
         }
         const formData = new FormData();
-        formData.append('videoId', videoId);
+        formData.append("videoId", videoId);
         let assets: {
             title: string;
             thumbnail: string;
@@ -146,19 +142,19 @@ export const useHomeForm = () => {
             isMusic: boolean;
         } | null = null;
         try {
-            const res = await fetch('/api/assets', {
-                method: 'POST',
+            const res = await fetch("/api/assets", {
+                method: "POST",
                 body: formData,
             });
             const text = await res.text();
             if (!res.ok) {
-                let errorMessage = text || '動画情報の取得に失敗しました';
+                let errorMessage = text || "動画情報の取得に失敗しました";
 
                 if (res.status === 429)
-                    errorMessage = 'リクエストが多すぎます。しばらくしてからもう一度お試しください。';
+                    errorMessage = "リクエストが多すぎます。しばらくしてからもう一度お試しください。";
 
-                setError('url', {
-                    type: 'manual',
+                setError("url", {
+                    type: "manual",
                     message: errorMessage,
                 });
                 return;
@@ -170,30 +166,30 @@ export const useHomeForm = () => {
                 isMusic: boolean;
             };
         } catch {
-            setError('url', {
-                type: 'manual',
-                message: 'サーバーとの通信に失敗しました',
+            setError("url", {
+                type: "manual",
+                message: "サーバーとの通信に失敗しました",
             });
             return;
         }
 
         if (convert(assets.length) > 60 * 10) {
-            setError('url', {
-                type: 'onChange',
-                message: '10分以上の動画は登録できません',
+            setError("url", {
+                type: "onChange",
+                message: "10分以上の動画は登録できません",
             });
             return;
         }
         if (!assets.isMusic) {
-            setError('url', {
-                type: 'onChange',
-                message: '音楽以外の動画は登録できません',
+            setError("url", {
+                type: "onChange",
+                message: "音楽以外の動画は登録できません",
             });
             return;
         }
         addMusic({ url, title: assets.title, thumbnail: assets.thumbnail });
         setSuccessMessage(`「${assets.title}」を追加しました！`);
-        resetField('url');
+        resetField("url");
     };
 
     return {
