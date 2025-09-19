@@ -1,5 +1,8 @@
 # Music Auto Play
 
+> [!IMPORTANT]
+> 現在リファクタリング中
+
 > 📋 **[📖 技術仕様書 (TECHNICAL.md)](./TECHNICAL.md)** - システムアーキテクチャ・API仕様・開発ガイド
 
 ## 概要
