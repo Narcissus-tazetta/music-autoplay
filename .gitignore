@@ -5,7 +5,32 @@
 /.react-router/
 /build/
 .env
+.env.local
 
 .history/
 
 .eslintcache
+
+/logs
+
+.backup
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# Test/coverage
+coverage/
+.nyc_output/
+
+# Caches and build artifacts
+.cache/
+dist/
+out/
+.vite/
+
+# Logs
+*.log
+
+# OS
+Thumbs.db

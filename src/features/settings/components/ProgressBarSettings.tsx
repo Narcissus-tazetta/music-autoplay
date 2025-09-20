@@ -257,7 +257,7 @@ export const ProgressBarSettings = ({
             >
               曜日表示
             </span>
-            <div className="flex-1"></div>
+            <div className="flex-1" />
             {showWeekday && (
               <select
                 value={weekdayFormat}

@@ -4,7 +4,8 @@ import { hash } from "crypto";
 import type { SubmissionResult } from "node_modules/@conform-to/dom/dist/submission";
 import type { ActionFunctionArgs } from "react-router";
 import { z } from "zod";
-import { loginSession } from "~/sessions.server";
+import { loginSession } from "../../sessions.server";
+import logger from "@/server/logger";
 import { YOUTUBE_PATTERN } from "@/shared/libs/youtube";
 
 const addMusicSchema = z.object({
@@ -34,13 +35,18 @@ export const action = async ({
       submission.value.url,
       user ? hash("sha256", user.id) : undefined,
     );
-    console.log(result);
+    logger.info("addMusic result", { result });
 
     return submission.reply(result);
   } catch (error) {
-    console.error("楽曲追加エラー:", error);
+    logger.error("楽曲追加エラー", { error });
     return submission.reply({
       formErrors: ["楽曲の追加に失敗しました。後ほど再度お試しください。"],
     });
   }
 };
+
+// Client-side component (optional, for API routes)
+export default function MusicAdd() {
+  return null; // This route is action-only
+}

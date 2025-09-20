@@ -1,6 +1,7 @@
 import { type LoaderFunctionArgs, redirect } from "react-router";
-import { authenticator } from "~/auth/auth.server";
-import { loginSession } from "~/sessions.server";
+import { authenticator } from "../../auth/auth.server";
+import { loginSession } from "../../sessions.server";
+import logger from "@/server/logger";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -17,7 +18,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       },
     });
   } catch (error) {
-    console.error("認証エラー:", error);
+    logger.error("認証エラー", { error });
 
     // エラーの詳細に基づいてリダイレクト
     if (error instanceof Response) {
@@ -30,3 +31,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     });
   }
 };
+
+export default function GoogleCallback() {
+  return null; //これは loader のみのルートです
+}

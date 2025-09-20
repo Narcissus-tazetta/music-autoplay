@@ -73,7 +73,7 @@ export const CountdownDisplay = ({ status }: CountdownDisplayProps) => {
                 100 - (status.remainingMs / (60 * 60 * 1000)) * 100,
               )}
               max="100"
-            ></progress>
+            />
           </div>
         )}
       </div>

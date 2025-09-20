@@ -3,8 +3,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { extractYoutubeId } from "../../../shared/libs/youtube";
 import { useAdminStore } from "../../../shared/stores/adminStore";
-import { socket } from "../../../shared/types/socket";
-import { useMusicStore } from "../stores/musicStore";
+import { getSocket } from "@/app/lib/socketClient";
+import { useMusicStore } from "@/app/stores/musicStore";
+import { extractErrorMessage } from "../../../shared/utils/formatError";
 
 interface Inputs {
   url: string;
@@ -13,9 +14,77 @@ interface Inputs {
 export const useHomeForm = () => {
   const musics = useMusicStore((store) => store.musics);
   const error = useMusicStore((store) => store.error);
-  const addMusic = useMusicStore((store) => store.addMusic.bind(store));
-  const resetError = useMusicStore((store) => store.resetError.bind(store));
-  const setAdminStatus = useAdminStore((store) => store.setIsAdmin);
+  const setAdminStatusCallback = useCallback((v: boolean) => {
+    useAdminStore.getState().setIsAdmin(v);
+  }, []);
+
+  type Asset = {
+    title: string;
+    thumbnail: string;
+    // ISO8601 duration string (e.g. PT4M13S)
+    length: string;
+    isMusic: boolean;
+    channelId: string;
+    channelName: string;
+    id: string;
+  };
+
+  const parseIsoDuration = (v: unknown): number | null => {
+    if (typeof v !== "string") return null;
+    try {
+      // convert(...) may return a number-like value; coerce and validate
+      const n = Number(convert(v));
+      if (!Number.isFinite(n)) return null;
+      // round to integer seconds
+      return Math.max(0, Math.floor(n));
+    } catch (e: unknown) {
+      void e;
+      return null;
+    }
+  };
+
+  const isAsset = (v: unknown): v is Asset => {
+    if (!v || typeof v !== "object") return false;
+    const rec = v as Record<string, unknown>;
+    const duration = parseIsoDuration(rec.length);
+    return (
+      typeof rec.title === "string" &&
+      typeof rec.thumbnail === "string" &&
+      duration !== null &&
+      typeof rec.isMusic === "boolean" &&
+      typeof rec.channelId === "string" &&
+      typeof rec.channelName === "string" &&
+      typeof rec.id === "string"
+    );
+  };
+
+  // Guard a socket result shape that may contain { success: boolean, error?: string }
+  const isSuccessError = (
+    v: unknown,
+  ): v is { success: boolean; error?: string } => {
+    if (typeof v !== "object" || v === null) return false;
+    const rec = v as Record<string, unknown>;
+    if (typeof rec.success !== "boolean") return false;
+    if (rec.error !== undefined && typeof rec.error !== "string") return false;
+    return true;
+  };
+
+  const addMusicCallback = useCallback((m: Asset) => {
+    // Map Asset -> Music (store expects `duration` as a number of seconds)
+    const duration = parseIsoDuration(m.length) ?? 0;
+    useMusicStore.getState().addMusic({
+      title: m.title,
+      channelName: m.channelName,
+      channelId: m.channelId,
+      id: m.id,
+      duration: String(duration),
+    });
+  }, []);
+
+  const resetErrorCallback = useCallback(() => {
+    const fn = useMusicStore.getState().resetError;
+    if (typeof fn === "function") fn();
+  }, []);
 
   const [showAlert, setShowAlert] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -39,24 +108,22 @@ export const useHomeForm = () => {
       const adminParam = urlParams.get("admin");
 
       if (adminParam) {
-        socket.emit(
-          "adminAuthByQuery",
-          adminParam,
-          (result: { success: boolean; error?: string }) => {
-            if (result.success) {
-              setAdminStatus(true);
-              setSuccessMessage("URL経由で管理者認証に成功しました");
-              const newUrl = new URL(window.location.href);
-              newUrl.searchParams.delete("admin");
-              window.history.replaceState({}, "", newUrl.toString());
-            } else {
-              console.warn("URL管理者認証に失敗:", result.error);
-            }
-          },
-        );
+        getSocket().emit("adminAuthByQuery", adminParam, (result: unknown) => {
+          if (isSuccessError(result) && result.success) {
+            setAdminStatusCallback(true);
+            setSuccessMessage("URL経由で管理者認証に成功しました");
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete("admin");
+            window.history.replaceState({}, "", newUrl.toString());
+          } else {
+            const err =
+              isSuccessError(result) && result.error ? result.error : undefined;
+            console.warn("URL管理者認証に失敗:", err);
+          }
+        });
       }
     }
-  }, [setAdminStatus]);
+  }, [setAdminStatusCallback]);
 
   const handleCloseAlert = useCallback(() => {
     setIsAnimating(true);
@@ -64,10 +131,10 @@ export const useHomeForm = () => {
       setShowAlert(false);
       setIsAnimating(false);
       clearErrors("url");
-      resetError();
+      resetErrorCallback();
       setSuccessMessage(undefined);
     }, 200);
-  }, [clearErrors, resetError]);
+  }, [clearErrors, resetErrorCallback]);
 
   const handleCloseSuccessAlert = useCallback(() => {
     setIsAnimating(true);
@@ -109,21 +176,21 @@ export const useHomeForm = () => {
     const url = data.url.trim();
 
     if (url.length >= 32 && !/^https?:\/\//.test(url)) {
-      socket.emit(
-        "adminAuth",
-        url,
-        (result: { success: boolean; error?: string }) => {
-          if (result.success) {
-            setAdminStatus(true);
-            setSuccessMessage("管理者認証に成功しました");
-          } else {
-            setError("url", {
-              type: "manual",
-              message: result.error || "管理者認証に失敗しました",
-            });
-          }
-        },
-      );
+      getSocket().emit("adminAuth", url, (result: unknown) => {
+        if (isSuccessError(result) && result.success) {
+          setAdminStatusCallback(true);
+          setSuccessMessage("管理者認証に成功しました");
+        } else {
+          const err =
+            isSuccessError(result) && result.error
+              ? result.error
+              : "管理者認証に失敗しました";
+          setError("url", {
+            type: "manual",
+            message: err,
+          });
+        }
+      });
       resetField("url");
       return;
     }
@@ -146,49 +213,46 @@ export const useHomeForm = () => {
     }
     const formData = new FormData();
     formData.append("videoId", videoId);
-    let assets: {
-      title: string;
-      thumbnail: string;
-      length: string;
-      isMusic: boolean;
-    } | null = null;
+    let assets: Asset | null = null;
     try {
       const res = await fetch("/api/assets", {
         method: "POST",
         body: formData,
       });
-      const text = await res.text();
-      if (!res.ok) {
-        let errorMessage = text || "動画情報の取得に失敗しました";
 
+      if (!res.ok) {
+        const text = await res.text();
+        let errorMessage = text || "動画情報の取得に失敗しました";
         if (res.status === 429)
           errorMessage =
             "リクエストが多すぎます。しばらくしてからもう一度お試しください。";
+        setError("url", { type: "manual", message: errorMessage });
+        return;
+      }
 
+      const parsed: unknown = await res.json().catch(() => null);
+      if (!isAsset(parsed)) {
         setError("url", {
           type: "manual",
-          message: errorMessage,
+          message: "サーバーから不正なデータが返却されました",
         });
         return;
       }
-      assets = JSON.parse(text) as {
-        title: string;
-        thumbnail: string;
-        length: string;
-        isMusic: boolean;
-      };
-    } catch {
+      assets = parsed;
+    } catch (e) {
+      const msg =
+        e instanceof Error ? e.message : "サーバーとの通信に失敗しました";
       setError("url", {
         type: "manual",
-        message: "サーバーとの通信に失敗しました",
+        message: msg,
       });
       return;
     }
 
-    if (convert(assets.length) > 60 * 10) {
+    if (convert(assets.length) > 60 * 20) {
       setError("url", {
         type: "onChange",
-        message: "10分以上の動画は登録できません",
+        message: "20分以上の動画は登録できません",
       });
       return;
     }
@@ -199,11 +263,24 @@ export const useHomeForm = () => {
       });
       return;
     }
-    addMusic({ url, title: assets.title, thumbnail: assets.thumbnail });
+    addMusicCallback(assets);
     setSuccessMessage(`「${assets.title}」を追加しました！`);
     resetField("url");
   };
 
+  const uiErrorMessage = (() => {
+    const fieldMsg = errors.url?.message;
+    // sometimes the field message can be just the field key ('url'); if so prefer formatted store error
+    if (
+      typeof fieldMsg === "string" &&
+      fieldMsg.length > 0 &&
+      fieldMsg !== "url"
+    )
+      return fieldMsg;
+    const extracted = extractErrorMessage(error, { joinWith: " " });
+    if (extracted) return extracted;
+    return typeof fieldMsg === "string" ? fieldMsg : undefined;
+  })();
   return {
     register,
     handleSubmit: handleSubmit(onSubmit),
@@ -211,9 +288,9 @@ export const useHomeForm = () => {
     showAlert,
     isAnimating,
     successMessage,
-    errorMessage: errors.url?.message || error || undefined,
+    errorMessage: uiErrorMessage,
     handleCloseAlert,
     handleCloseSuccessAlert,
-    resetError,
+    resetError: resetErrorCallback,
   };
 };

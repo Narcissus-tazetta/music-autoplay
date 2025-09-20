@@ -1,3 +1,2 @@
-#!/usr/bin/env bash
-# Pre-commit hook: keep it lightweight. Run only lint-staged (format/fix staged files).
 bun lint-staged
+

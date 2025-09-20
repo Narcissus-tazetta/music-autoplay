@@ -28,7 +28,7 @@ class EvictingMap<K, V> extends Map<K, V> {
   set(key: K, value: V): this {
     const max = this.getMaxEntries();
     if (this.size >= max) {
-      const oldestKey = this.keys().next().value as K | undefined;
+      const oldestKey = this.keys().next().value;
       if (oldestKey !== undefined) super.delete(oldestKey);
     }
     return super.set(key, value);
@@ -47,7 +47,12 @@ export class YouTubeService {
   constructor(apiKey?: string) {
     const key = apiKey ?? SERVER_ENV.YOUTUBE_API_KEY;
     this.youtube = google.youtube({ version: "v3", auth: key });
-    setInterval(() => this.cleanupExpired(), 1000 * 60 * 60);
+    setInterval(
+      () => {
+        this.cleanupExpired();
+      },
+      1000 * 60 * 60,
+    );
   }
 
   private cleanupExpired() {
@@ -73,42 +78,73 @@ export class YouTubeService {
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), timeoutMs);
-        const res = await this.youtube.videos.list(
+        const timer: ReturnType<typeof setTimeout> = setTimeout(() => {
+          controller.abort();
+        }, timeoutMs);
+        const resAny = await this.youtube.videos.list(
           { part: ["snippet", "contentDetails"], id: [id] },
-          { signal: controller.signal as any },
+          { signal: controller.signal as unknown },
         );
         clearTimeout(timer);
 
-        const item = res.data.items?.[0];
-        if (!item) return err("動画が見つかりませんでした。");
+        const resObj = resAny as { data?: unknown } | undefined;
+        const data = resObj?.data;
+        if (!data || typeof data !== "object")
+          return err("動画が見つかりませんでした。");
+        const items = (data as { items?: unknown }).items;
+        if (!Array.isArray(items) || items.length === 0)
+          return err("動画が見つかりませんでした。");
 
-        const isAgeRestricted =
-          item.contentDetails?.contentRating?.ytRating === "ytAgeRestricted";
+        const item = items[0] as unknown;
+        if (!item || typeof item !== "object")
+          return err("動画が見つかりませんでした。");
 
-        if (
-          !item.snippet ||
-          !item.snippet.title ||
-          !item.snippet.channelTitle ||
-          !item.snippet.channelId ||
-          !item.contentDetails?.duration
-        ) {
+        const snippet = (item as { snippet?: unknown }).snippet as
+          | Record<string, unknown>
+          | undefined;
+        const contentDetails = (item as { contentDetails?: unknown })
+          .contentDetails as Record<string, unknown> | undefined;
+
+        const title =
+          snippet && typeof snippet.title === "string"
+            ? snippet.title
+            : undefined;
+        const channelTitle =
+          snippet && typeof snippet.channelTitle === "string"
+            ? snippet.channelTitle
+            : undefined;
+        const channelId =
+          snippet && typeof snippet.channelId === "string"
+            ? snippet.channelId
+            : undefined;
+        const durationRaw =
+          contentDetails && typeof contentDetails.duration === "string"
+            ? contentDetails.duration
+            : undefined;
+
+        const contentRating = contentDetails && contentDetails.contentRating;
+        const isAgeRestricted = !!(
+          contentRating &&
+          typeof contentRating === "object" &&
+          (contentRating as Record<string, unknown>).ytRating ===
+            "ytAgeRestricted"
+        );
+
+        if (!title || !channelTitle || !channelId || !durationRaw) {
           return err("動画の情報が取得できませんでした。");
         }
 
-        const duration = convertISO8601Duration(
-          item.contentDetails.duration as string,
-        );
+        const duration = convertISO8601Duration(durationRaw);
         const durationSecs = duration % 60;
         const durationMins = Math.floor((duration / 60) % 60);
         const durationHours = Math.floor(duration / 3600);
 
         const durationStr = `${durationHours.toString().padStart(2, "0")}:${durationMins.toString().padStart(2, "0")}:${durationSecs.toString().padStart(2, "0")}`;
 
-        const details = {
-          title: item.snippet.title,
-          channelTitle: item.snippet.channelTitle,
-          channelId: item.snippet.channelId,
+        const details: VideoDetails = {
+          title,
+          channelTitle,
+          channelId,
           duration: durationStr,
           isAgeRestricted,
           raw: item,

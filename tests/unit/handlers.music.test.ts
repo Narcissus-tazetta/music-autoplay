@@ -1,5 +1,13 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { describe, it, expect, vi } from "vitest";
+import type { Music } from "../../src/app/stores/musicStore";
 import createMusicHandlers from "../../src/server/handlers/music";
+import {
+  makeDeps,
+  makeIo,
+  makeYoutubeService,
+  makeFileStore,
+} from "./testDeps";
 
 describe("music handlers", () => {
   it("addMusic success path calls youtubeService and fileStore and emits", async () => {
@@ -10,27 +18,29 @@ describe("music handlers", () => {
           title: "t",
           channelTitle: "c",
           channelId: "ch",
-          duration: "00:00:10",
+          duration: "PT0M10S",
           isAgeRestricted: false,
         },
       }),
-    } as any;
+    };
 
-    const added: any[] = [];
-    const io = {
-      emit: (ev: string, payload: any) => added.push({ ev, payload }),
-    } as any;
-
-    const fileStore = { add: vi.fn() } as any;
-
-    const musicDB = new Map<string, any>();
-
-    const handlers = createMusicHandlers({
-      musicDB,
-      io,
-      youtubeService,
-      fileStore,
+    const added: Array<{ ev: string; payload: unknown }> = [];
+    const io = makeIo((ev, payload) => {
+      added.push({ ev, payload });
     });
+
+    const fileStore = makeFileStore({ add: vi.fn() });
+
+    const musicDB = new Map<string, Music>();
+
+    const handlers = createMusicHandlers(
+      makeDeps({
+        musicDB,
+        io,
+        youtubeService: makeYoutubeService(youtubeService),
+        fileStore,
+      }),
+    );
 
     const res = await handlers.addMusic("https://youtu.be/dQw4w9WgXcQ", "reqh");
     expect(res).toEqual({});

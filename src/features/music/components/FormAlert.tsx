@@ -3,7 +3,7 @@ import {
   Alert,
   AlertDescription,
   AlertTitle,
-} from "../../../shared/components/alert";
+} from "../../../shared/components";
 
 interface FormAlertProps {
   isVisible: boolean;

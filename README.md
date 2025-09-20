@@ -24,110 +24,137 @@ YouTube音楽動画のリアルタイム管理を行うWebアプリケーショ�
 - ダークモード・ライトモード切り替え
 - レスポンシブデザイン（モバイル・タブレット・デスクトップ対応）
 - 設定パネルによる詳細カスタマイズ
-- 直感的な操作性とモダンなUI
 
-### YouTube連携
+# Music Auto Play (music-autoplay)
 
-- YouTube拡張機能との連携
-- 再生状態の監視・表示
-- 動画の自動検証・キャッシュ機能
+YouTube の URL をキューに登録して共有 / 再生状態を管理する Web アプリケーション。
+サーバー側は TypeScript + Express + socket.io、フロントエンドは React（Vite）で構成されています。
 
-## 技術スタック
+## 主要なポイント
 
-> 🔧 **詳細な技術仕様は [TECHNICAL.md](./TECHNICAL.md) をご確認ください**
-> 🧩 **[Chrome拡張機能の詳細はこちら (chromeextension.md)](./chromeextension.md)**
+- リアルタイム同期: socket.io による楽曲リストの同期
+- 永続化: ローカル JSON ファイル（開発向け）および PostgreSQL（本番 / Render 向け）をサポート
+- ロギング: winston 中央ロガー（開発は色付けプリティ、prod はローテーション）
+- 簡易管理者認証: 環境変数 `ADMIN_SECRET` による保護
 
-- **Frontend**: React Router v7, React, TypeScript, Tailwind CSS v4 + DaisyUI
-- **Backend**: Node.js, Express, Socket.IO
-- **State Management**: Zustand + React Hooks
-- **API**: YouTube Data API v3
-- **Logging**: Winston
-- **UI Components**: shadcn/ui + Radix UI
-- **Code Quality**: ESLint, Prettier
-- **Development**: Vite, Watchexec
-- **Date/Time**: date-fns
+---
 
-## 開発環境セットアップ
+## クイックスタート（ローカル開発）
 
-### 前提条件
+前提:
 
-- Node.js 18.0.0以上
-- bun（推奨）
-- YouTube Data API v3 キー
+- Node.js または Bun がインストールされていること
 
-git clone https://github.com/Narcissus-tazetta/music-autoplay.git
-
-### インストール
+1. リポジトリをクローン
 
 ```bash
-# リポジトリをクローン
 git clone https://github.com/Narcissus-tazetta/music-autoplay.git
 cd music-autoplay
+```
 
-# 依存関係をインストール
+2. 依存関係のインストール
+
+```bash
+# Bun を推奨
 bun install
 
-# 環境変数を設定（.env.exampleがあればコピー）
+# または npm
+npm install
+```
+
+3. 環境ファイルの準備
+
+```bash
 cp .env.example .env
-# .envファイルにYOUTUBE_API_KEYを記入
+# .env に必要な値（例: ADMIN_SECRET, DATABASE_URL, YOUTUBE_API_KEY）を設定
 ```
 
-### 開発サーバーの起動
+4. 開発サーバ起動
 
 ```bash
-# 開発サーバーを起動
 bun run dev
-
-# 型チェックやLintも必要に応じて
-bun run typecheck
-bun run lint
-bun run format
 ```
 
-### 主なコマンド一覧
+---
+
+## 主要コマンド
 
 ```bash
-# 開発
-bun run dev           # 開発サーバー起動
-bun run build         # 本番ビルド
-bun run start         # 本番サーバー起動
+# 開発 / ビルド
+bun run dev
+bun run build
+bun run start
 
-# コード品質
-bun run lint          # ESLintチェック
-bun run lint:fix      # ESLint自動修正
-bun run format        # Prettierフォーマット
-bun run format:check  # フォーマットチェック
-bun run typecheck     # TypeScript型チェック
+# 品質チェック / テスト
+bun run typecheck    # 型チェック
+bun run lint         # ESLint
+bun run format:check # Prettier check
+bun test             # ユニットテスト
 
-# メンテナンス
-bun run clean         # ビルドファイル削除
-bun run fresh         # 依存関係再インストール
-
-# 品質チェック一括
-bun run quality       # typecheck + lint + format check
+# 一括品質チェック
+bun run quality
 ```
 
-## 使い方
+---
 
-### 音楽管理（/home）
+## 永続化と移行
 
-1. YouTubeのURLを入力して楽曲を追加します。
-2. リストから削除ボタンを押すと楽曲を削除できます。
-3. 右上の設定ボタンからテーマや表示設定を変更できます。
+このプロジェクトはデフォルトで `data/musicRequests.json` を使用する `FileStore` を提供します。
+Render 等の複数インスタンス環境では Postgres を推奨します。サーバ起動時に `DATABASE_URL` が設定されていると Postgres ベースの `PgHybridStore` を使用します。
 
-## 開発ガイドライン
+### JSON → Postgres 移行
 
-### コード品質
+1. Postgres データベースと接続文字列（`DATABASE_URL`）を用意します。
+2. 以下コマンドで移行を実行します（バッチサイズは `MIGRATE_BATCH_SIZE` で調整可能）:
 
-- **ESLint**: エラーが0件となるように保ちましょう
-- **Prettier**: コードフォーマットを統一しましょう
-- **TypeScript**: 型安全性を重視しましょう
-- **モジュール設計**: 機能ごとに適切に分離しましょう
+```bash
+DATABASE_URL=postgres://user:pass@host:5432/dbname MIGRATE_BATCH_SIZE=500 node scripts/migrate-file-to-pg.js
+```
 
-### 設計方針
+スクリプトの特徴:
 
-- **コンポーネント分割**: 単一責任の原則を意識して設計
-- **カスタムフック**: ロジックの再利用性を高める
-- **型定義**: 厳密な型システムで安全性を担保
-- **状態管理統一**: Zustandでグローバル・ローカル両方の状態を一元管理
-- **設定管理**: Zustand persistで設定を永続化（ストレージは環境依存）
+- バッチ挿入（デフォルト 500 件）
+- 各バッチをトランザクション内で処理、失敗時は ROLLBACK
+- バッチごとに最大 3 回のリトライ（指数バックオフ）
+- 成功/失敗のサマリを表示し、失敗がある場合は非ゼロで終了
+
+---
+
+## ロギング
+
+- 開発時は色付きのプリティ出力で見やすく表示されます（YouTube URL／状態の強調あり）。
+- 本番用に `winston-daily-rotate-file` を使用してログをローテートし、ANSI エスケープシーケンスはファイルに書き込む前に除去されます。
+- ログは構造化され、重要イベントにはメトリクスタグを付与します。
+
+設定や出力先は `src/server/logger.ts` を参照してください。
+
+---
+
+## サーバのシャットダウン
+
+サーバは graceful shutdown を実装しています。SIGINT / SIGTERM を受けると:
+
+- HTTP server と socket.io をクローズ
+- ストアの flush（PgHybridStore の pending writes の待機）
+- Postgres プールの終了（PgStore を使用している場合）
+
+---
+
+## 開発者向けの注意点
+
+- Render 等で複数インスタンスを立てる場合はローカル JSON ではなく Postgres を利用してください。
+- migrate スクリプトは一度きりの移行処理として想定しています。実行前に DB バックアップを取ることを推奨します。
+- 環境変数の検証は `src/app/env.server.ts`（Zod）で行っています。必須項目がないと起動時にエラーとなります。
+
+---
+
+## 変更履歴（要旨）
+
+- ロギングを winston 中心に統一（開発の色付け + 本番のローテーション）
+- `src/server/musicPersistence.ts` に Postgres 用の `PgStore` / `PgHybridStore` を追加
+- `createPersistentStore()` により DATABASE_URL の有無で自動的にストレージを選択
+- 移行スクリプト `scripts/migrate-file-to-pg.js` をバッチ / トランザクション / リトライ対応に強化
+
+---
+
+フィードバックや追記してほしいセクション（Render デプロイ手順や .env.example の自動生成など）があれば教えてください。

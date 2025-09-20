@@ -1,4 +1,5 @@
 import { importJWK, jwtVerify } from "jose";
+import logger from "@/server/logger";
 import { OAuth2Strategy } from "remix-auth-oauth2";
 
 export interface GoogleOIDCClaims {
@@ -79,7 +80,7 @@ export class GoogleOIDCStrategy<User> extends OAuth2Strategy<User> {
 
       return payload;
     } catch (error) {
-      console.error("Failed to verify Google ID token:", error);
+      logger.error("Failed to verify Google ID token", { error });
       throw new Error("Invalid ID token");
     }
   }

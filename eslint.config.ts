@@ -9,6 +9,15 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   eslint.configs.recommended,
+  // Ensure eslint-plugin-react can auto-detect React version across the repo.
+  // Some invocations of ESLint may run against files not covered by the
+  // per-files config below; placing a top-level setting makes the intent
+  // explicit and avoids the runtime warning.
+  {
+    settings: {
+      react: { version: "detect" },
+    },
+  },
   tseslint.configs.strictTypeChecked.map((cfg) => ({
     ...cfg,
     files: ["**/*.{ts,tsx}"],
@@ -31,7 +40,25 @@ export default tseslint.config(
       "node_modules/**/*",
       ".react-router/**/*",
       "**/*.d.ts",
+      // ignore generated or third-party shadcn UI components
+      "src/app/components/ui/shadcn/**",
+      // temporarily ignore extension code while server hardening proceeds
+      "src/extension/**",
     ],
+  },
+  // Node scripts override
+  {
+    files: ["scripts/**/*.js", "scripts/**/*.ts"],
+    languageOptions: {
+      // declare common Node globals as readonly so ESLint doesn't flag them as undefined
+      globals: {
+        process: "readonly",
+        console: "readonly",
+        Buffer: "readonly",
+        setTimeout: "readonly",
+      },
+      parserOptions: { sourceType: "module" },
+    },
   },
   {
     files: ["**/*.{ts,tsx}"],

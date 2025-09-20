@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { useState } from "react";
 import { BackgroundImageSettings } from "./BackgroundImageSettings";
 import { ContactInfo } from "./ContactInfo";
@@ -178,10 +177,10 @@ export const SettingsPanel = ({
 
             {isTimePage &&
               backgroundFeatureEnabled &&
-              showBackgroundImage !== undefined &&
-              setShowBackgroundImage &&
+              typeof showBackgroundImage === "boolean" &&
+              typeof setShowBackgroundImage === "function" &&
               backgroundImage !== undefined &&
-              setBackgroundImage && (
+              typeof setBackgroundImage === "function" && (
                 <BackgroundImageSettings
                   mode={mode}
                   showBackgroundImage={showBackgroundImage}
@@ -195,44 +194,118 @@ export const SettingsPanel = ({
         )}
         {activeTab === "advanced" &&
           isTimePage &&
-          showProgress !== undefined &&
-          setShowProgress && (
-            <ProgressBarSettings
-              mode={mode}
-              showProgress={showProgress}
-              setShowProgress={setShowProgress}
-              progressColor={progressColor!}
-              setProgressColor={setProgressColor!}
-              showRemainingText={showRemainingText!}
-              setShowRemainingText={setShowRemainingText!}
-              showCurrentSchedule={showCurrentSchedule!}
-              setShowCurrentSchedule={setShowCurrentSchedule!}
-              showDate={showDate!}
-              setShowDate={setShowDate!}
-              showYear={showYear!}
-              setShowYear={setShowYear!}
-              showMonth={showMonth!}
-              setShowMonth={setShowMonth!}
-              showDay={showDay!}
-              setShowDay={setShowDay!}
-              showWeekday={showWeekday!}
-              setShowWeekday={setShowWeekday!}
-              yearFormat={yearFormat!}
-              setYearFormat={setYearFormat!}
-              monthFormat={monthFormat!}
-              setMonthFormat={setMonthFormat!}
-              dayFormat={dayFormat!}
-              setDayFormat={setDayFormat!}
-              weekdayFormat={weekdayFormat!}
-              setWeekdayFormat={setWeekdayFormat!}
-              backgroundImage={backgroundImage!}
-              setBackgroundImage={(str) => {
-                setBackgroundImage?.(str).catch((err: unknown) => {
-                  console.error(err);
-                });
-              }}
-            />
-          )}
+          typeof showProgress === "boolean" &&
+          typeof setShowProgress === "function" &&
+          (() => {
+            // Build safe defaults/wrappers for optional props used by ProgressBarSettings
+            const safeProgressColor: ProgressColor = progressColor ?? "blue";
+            const safeSetProgressColor =
+              typeof setProgressColor === "function"
+                ? setProgressColor
+                : () => {};
+
+            const safeShowRemainingText = !!showRemainingText;
+            const safeSetShowRemainingText =
+              typeof setShowRemainingText === "function"
+                ? setShowRemainingText
+                : () => {};
+
+            const safeShowCurrentSchedule = !!showCurrentSchedule;
+            const safeSetShowCurrentSchedule =
+              typeof setShowCurrentSchedule === "function"
+                ? setShowCurrentSchedule
+                : () => {};
+
+            const safeShowDate = !!showDate;
+            const safeSetShowDate =
+              typeof setShowDate === "function" ? setShowDate : () => {};
+
+            const safeShowYear = !!showYear;
+            const safeSetShowYear =
+              typeof setShowYear === "function" ? setShowYear : () => {};
+
+            const safeShowMonth = !!showMonth;
+            const safeSetShowMonth =
+              typeof setShowMonth === "function" ? setShowMonth : () => {};
+
+            const safeShowDay = !!showDay;
+            const safeSetShowDay =
+              typeof setShowDay === "function" ? setShowDay : () => {};
+
+            const safeShowWeekday = !!showWeekday;
+            const safeSetShowWeekday =
+              typeof setShowWeekday === "function" ? setShowWeekday : () => {};
+
+            const safeYearFormat: YearFormat = yearFormat ?? "western";
+            const safeSetYearFormat =
+              typeof setYearFormat === "function" ? setYearFormat : () => {};
+
+            const safeMonthFormat: MonthFormat = monthFormat ?? "japanese";
+            const safeSetMonthFormat =
+              typeof setMonthFormat === "function" ? setMonthFormat : () => {};
+
+            const safeDayFormat: DayFormat = dayFormat ?? "japanese";
+            const safeSetDayFormat =
+              typeof setDayFormat === "function" ? setDayFormat : () => {};
+
+            const safeWeekdayFormat: WeekdayFormat =
+              weekdayFormat ?? "japanese";
+            const safeSetWeekdayFormat =
+              typeof setWeekdayFormat === "function"
+                ? setWeekdayFormat
+                : () => {};
+
+            const safeBackgroundImage = backgroundImage ?? "";
+            const safeSetBackgroundImage =
+              typeof setBackgroundImage === "function"
+                ? (str: string) => {
+                    // ensure promise rejection is handled
+                    try {
+                      const maybe = setBackgroundImage(str);
+                      // Normalize to a Promise so we can safely attach a catch handler
+                      Promise.resolve(maybe).catch((err: unknown) => {
+                        console.error(err);
+                      });
+                    } catch (err: unknown) {
+                      console.error(err);
+                    }
+                  }
+                : () => {};
+
+            return (
+              <ProgressBarSettings
+                mode={mode}
+                showProgress={showProgress}
+                setShowProgress={setShowProgress}
+                progressColor={safeProgressColor}
+                setProgressColor={safeSetProgressColor}
+                showRemainingText={safeShowRemainingText}
+                setShowRemainingText={safeSetShowRemainingText}
+                showCurrentSchedule={safeShowCurrentSchedule}
+                setShowCurrentSchedule={safeSetShowCurrentSchedule}
+                showDate={safeShowDate}
+                setShowDate={safeSetShowDate}
+                showYear={safeShowYear}
+                setShowYear={safeSetShowYear}
+                showMonth={safeShowMonth}
+                setShowMonth={safeSetShowMonth}
+                showDay={safeShowDay}
+                setShowDay={safeSetShowDay}
+                showWeekday={safeShowWeekday}
+                setShowWeekday={safeSetShowWeekday}
+                yearFormat={safeYearFormat}
+                setYearFormat={safeSetYearFormat}
+                monthFormat={safeMonthFormat}
+                setMonthFormat={safeSetMonthFormat}
+                dayFormat={safeDayFormat}
+                setDayFormat={safeSetDayFormat}
+                weekdayFormat={safeWeekdayFormat}
+                setWeekdayFormat={safeSetWeekdayFormat}
+                backgroundImage={safeBackgroundImage}
+                setBackgroundImage={safeSetBackgroundImage}
+              />
+            );
+          })()}
 
         <ContactInfo />
       </div>

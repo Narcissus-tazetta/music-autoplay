@@ -1,6 +1,5 @@
 import { SendIcon } from "lucide-react";
-import { Button } from "../../../shared/components/button";
-import { Input } from "../../../shared/components/input";
+import { Button, Input } from "../../../shared/components";
 import { YOUTUBE_PATTERN } from "../../../shared/libs/youtube";
 import { FormAlert } from "./FormAlert";
 import { useHomeForm } from "./useHomeForm";
@@ -21,10 +20,9 @@ export const HomeForm: React.FC = () => {
   return (
     <form
       className="flex flex-col items-center gap-4"
-      onSubmit={() => {
-        handleSubmit().catch((error: unknown) => {
-          console.error("Form submission error:", error);
-        });
+      onSubmit={(e) => {
+        e.preventDefault();
+        void handleSubmit();
       }}
     >
       <div className="w-full flex flex-col items-center">
@@ -40,7 +38,7 @@ export const HomeForm: React.FC = () => {
                 return "有効なYouTubeのURLを入力してください";
               return true;
             },
-            onChange() {
+            onChange: () => {
               resetError();
             },
           })}

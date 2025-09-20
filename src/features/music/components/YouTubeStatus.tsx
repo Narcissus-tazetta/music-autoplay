@@ -3,7 +3,7 @@ import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from "../../../shared/components/hover-card";
+} from "../../../shared/components";
 
 interface YouTubeStatusProps {
   ytStatus: {
