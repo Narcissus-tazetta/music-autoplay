@@ -1,44 +1,53 @@
-import { io, type Socket } from 'socket.io-client';
-import type { Music } from '../../features/music/stores/musicStore';
-
-/**
- * Socket.IOクライアントインスタンス
- * 型安全な通信のためにS2C/C2Sインターフェースを適用
- */
-export const socket: Socket<S2C, C2S> = io();
+import type { Music, RemoteStatus } from "~/stores/musicStore";
 
 export interface S2C {
-    addMusic(music: Music): void;
-    initMusics(musics: Music[]): void;
-    deleteMusic(url: string): void;
-    url_list(musics: Music[]): void;
-    new_url(music: Music | null): void;
-    delete_url(url: string): void;
+  // current events
+  musicAdded(music: Music): void;
+  musicRemoved(musicId: string): void;
+  remoteStatusUpdated(state: RemoteStatus): void;
 
-    current_youtube_status(data: {
-        state: string;
-        url: string;
-        match: boolean;
-        music: Music | null;
-    }): void;
+  // legacy / compatibility events used by older clients / extensions
+  initMusics?(musics: Array<Music & { url: string }>): void;
+  url_list?(musics: Array<Music & { url: string }>): void;
+  // legacy add/delete events (some clients expect these)
+  addMusic?(music: Music & { url?: string }): void;
+  deleteMusic?(url: string): void;
 }
 
 export interface C2S {
-    addMusic(music: Music, callback: (error?: string) => void): void;
-    deleteMusic(url: string): void;
+  // current RPC-style client -> server calls
+  getAllMusics(callback: (musics: Music[]) => void): void;
+  getRemoteStatus(callback: (state: RemoteStatus) => void): void;
+  adminAuth(
+    token: string,
+    callback: (result: { success: boolean; error?: string }) => void,
+  ): void;
+  adminAuthByQuery(
+    token: string,
+    callback: (result: { success: boolean; error?: string }) => void,
+  ): void;
 
-    get_urls(): void;
-    submit_url(url: string): void;
-    delete_url(url: string | { url: string }): void;
+  // server expects these events from clients (including legacy clients)
+  // add/remove follow the handler signatures in server.handlers.music
+  // add/remove return ReplyOptions-like responses. Keep it minimal here.
+  addMusic?(
+    url: string,
+    requesterHash?: string,
+    cb?: (res: { formErrors?: string[] } | Record<string, unknown>) => void,
+  ): void;
+  removeMusic?(
+    url: string,
+    requesterHash: string,
+    cb?: (res: { formErrors?: string[] } | Record<string, unknown>) => void,
+  ): void;
 
-    youtube_video_state(data: { state: string; url: string }): void;
-    youtube_tab_closed(data: { url: string }): void;
-    move_prev_video(data: { url: string }): void;
-    move_next_video(data: { url: string }): void;
-
-    adminAuth(code: string, callback: (result: { success: boolean; error?: string }) => void): void;
-    adminAuthByQuery(
-        queryParam: string,
-        callback: (result: { success: boolean; error?: string }) => void,
-    ): void;
+  // extension -> server custom event for youtube player state
+  // extension -> server payload for youtube player state. Use discriminated union for common states.
+  youtube_video_state?(
+    payload:
+      | { state: "playing"; url: string; origin?: string }
+      | { state: "paused"; url?: string; origin?: string }
+      | { state: "ended" | "window_close"; origin?: string }
+      | { state: string; [k: string]: unknown },
+  ): void;
 }

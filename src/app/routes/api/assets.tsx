@@ -1,39 +1,61 @@
-import { google } from 'googleapis';
-import type { Route } from './+types/assets';
-import { keywords } from './keywords';
+import type { ActionFunctionArgs } from "react-router";
+import { YouTubeService } from "../../../server/youtubeService";
 
-export const action = async ({ request }: Route.ActionArgs) => {
-    const formData = await request.formData();
-    const videoId = formData.get('videoId');
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const form = await request.formData();
+  const videoId = form.get("videoId");
+  if (!videoId || typeof videoId !== "string") {
+    return new Response(null, { status: 400 });
+  }
 
-    if (videoId === null || typeof videoId !== 'string') return new Response('Invalid request', { status: 400 });
+  const yt = new YouTubeService();
+  const res = await yt.getVideoDetails(videoId);
+  if (!res.ok) {
+    return new Response(JSON.stringify({ error: res.error }), {
+      status: 404,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
-    const res = await google
-        .youtube({
-            version: 'v3',
-            auth: process.env.YOUTUBE_API_KEY,
-        })
-        .videos.list({
-            id: [videoId],
-            part: ['snippet', 'contentDetails'],
-        });
+  const meta = res.value;
+  let thumbnail = "";
+  try {
+    const raw = meta.raw;
+    if (raw && typeof raw === "object") {
+      const snippet = (raw as { snippet?: unknown }).snippet as
+        | Record<string, unknown>
+        | undefined;
+      const thumbs =
+        snippet && (snippet.thumbnails as Record<string, unknown> | undefined);
+      if (thumbs) {
+        const high = thumbs["high"] as Record<string, unknown> | undefined;
+        const def = thumbs["default"] as Record<string, unknown> | undefined;
+        if (high && typeof high["url"] === "string")
+          thumbnail = String(high["url"]);
+        else if (def && typeof def["url"] === "string")
+          thumbnail = String(def["url"]);
+      }
+    }
+  } catch {
+    thumbnail = "";
+  }
 
-    const item = res.data.items?.[0];
-    const snippet = item?.snippet;
-    const title = snippet?.title || '';
-    const description = snippet?.description || '';
-    const channelTitle = snippet?.channelTitle || '';
-    const thumbnail = snippet?.thumbnails?.high?.url;
-    const length = item?.contentDetails?.duration;
-    const ytRating = item?.contentDetails?.contentRating?.ytRating;
-    const isAgeRestricted = ytRating === 'ytAgeRestricted';
+  const body = {
+    title: meta.title,
+    thumbnail,
+    length: meta.duration,
+    isMusic: !meta.isAgeRestricted,
+    channelId: meta.channelId,
+    channelName: meta.channelTitle,
+    id: videoId,
+  };
 
-    if (!title || !thumbnail || !length) return new Response('Invalid video ID', { status: 400 });
-    if (isAgeRestricted) return new Response('年齢制限付き動画は登録できません', { status: 400 });
-    const lower = (s: string) => s.toLowerCase();
-    const text = lower(`${title} ${description} ${channelTitle}`);
-    const hasKeyword = keywords.some(kw => text.includes(lower(kw)));
-    const isMusic = snippet.categoryId === '10' || hasKeyword;
-
-    return { title, thumbnail, length, isMusic };
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
 };
+
+export default function Route() {
+  return null;
+}

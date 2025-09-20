@@ -1,0 +1,6 @@
+{
+  "typescript.preferences.autoImportFileExcludePatterns": [
+    "node_modules/@radix-ui/react-*",
+    "node_modules/react-day-picker/*"
+  ]
+}

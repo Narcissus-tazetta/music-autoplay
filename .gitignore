@@ -5,17 +5,32 @@
 /.react-router/
 /build/
 .env
+.env.local
 
 .history/
 
-# API使用量データ
-api-usage.json
-api-usage.json.backup
-
-# ログファイル
-logs/
-
-# 音楽リクエストデータ
-data/
-
 .eslintcache
+
+/logs
+
+.backup
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# Test/coverage
+coverage/
+.nyc_output/
+
+# Caches and build artifacts
+.cache/
+dist/
+out/
+.vite/
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
