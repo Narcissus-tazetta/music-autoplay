@@ -1,8 +1,9 @@
-import type { Server as HttpServer } from "http";
 import logger from "@/server/logger";
+import type { Server as HttpServer } from "http";
 import { SERVER_ENV } from "~/env.server";
-import { isObject } from "./utils";
+import { getConfig } from "../utils/configUtils";
 import type { EngineLike, RequestLike } from "./types";
+import { isObject } from "./utils";
 
 export function getOriginFromReq(req: unknown): string | undefined {
   try {
@@ -13,7 +14,8 @@ export function getOriginFromReq(req: unknown): string | undefined {
     if (isObject(req) && typeof (req as RequestLike).url === "string")
       return undefined;
     return undefined;
-  } catch {
+  } catch (err: unknown) {
+    logger.debug("getOriginFromReq failed", { error: err });
     return undefined;
   }
 }
@@ -24,30 +26,51 @@ export function attachUpgradeRewrite(
   candidatePrefixes: string[],
 ): void {
   try {
-    (server as unknown as NodeJS.EventEmitter).on("upgrade", (req: unknown) => {
-      try {
-        if (!req || typeof req !== "object") return;
-        const reqObj = req as { url?: unknown };
-        const reqUrl = typeof reqObj.url === "string" ? reqObj.url : "";
-        if (!reqUrl) return;
-        for (const p of candidatePrefixes) {
-          if (p && reqUrl.startsWith(p) && p !== socketPath) {
-            try {
-              (reqObj as { url: string }).url = reqUrl.replace(p, socketPath);
-              logger.info(
-                "upgrade: rewrote socket upgrade url for legacy path",
-                {
-                  original: reqUrl,
-                  rewritten: (reqObj as { url: string }).url,
-                },
-              );
-            } catch {}
-            break;
+    const maybeEmitter: unknown = server as unknown;
+    const onFn =
+      maybeEmitter && typeof maybeEmitter === "object"
+        ? (maybeEmitter as Record<string, unknown>)["on"]
+        : undefined;
+    if (typeof onFn === "function") {
+      (onFn as (...a: unknown[]) => void).call(
+        server,
+        "upgrade",
+        (req: unknown) => {
+          try {
+            if (!req || typeof req !== "object") return;
+            const reqObj = req as { url?: unknown };
+            const reqUrl = typeof reqObj.url === "string" ? reqObj.url : "";
+            if (!reqUrl) return;
+            for (const p of candidatePrefixes) {
+              if (p && reqUrl.startsWith(p) && p !== socketPath) {
+                try {
+                  (reqObj as { url: string }).url = reqUrl.replace(
+                    p,
+                    socketPath,
+                  );
+                  logger.info(
+                    "upgrade: rewrote socket upgrade url for legacy path",
+                    {
+                      original: reqUrl,
+                      rewritten: (reqObj as { url: string }).url,
+                    },
+                  );
+                } catch (err: unknown) {
+                  logger.debug("upgrade: failed to rewrite url", {
+                    error: err,
+                    original: reqUrl,
+                  });
+                }
+                break;
+              }
+            }
+          } catch (err: unknown) {
+            logger.debug("upgrade handler failed", { error: err });
           }
-        }
-      } catch {}
-    });
-  } catch (e) {
+        },
+      );
+    }
+  } catch (e: unknown) {
     logger.debug("failed to register upgrade rewrite handler", { error: e });
   }
 }
@@ -56,23 +79,35 @@ export function registerEngineAugmentations(
   engine: unknown,
   socketPath: string,
 ): void {
+  const config = getConfig();
+
+  const safeBool = (v: unknown, fallback = false) => {
+    if (typeof v === "boolean") return v;
+    if (typeof v === "string") return v === "true";
+    return fallback;
+  };
+
   try {
     if (!isObject(engine)) return;
 
     const engineOn = engine["on"];
     if (typeof engineOn === "function") {
-      const engineOnFn = engineOn as (...a: unknown[]) => void;
-      engineOnFn.call(
+      const engineOnCall = engineOn as (...a: unknown[]) => void;
+      engineOnCall.call(
         engine,
         "initial_headers",
         (headers: Record<string, string>, req: unknown) => {
           try {
             const incomingOrigin = getOriginFromReq(req);
+            const corsRaw = config.getString("CORS_ORIGINS") || "";
+            const clientUrl = config.getString("CLIENT_URL");
             const allowAllOrigins =
-              SERVER_ENV.NODE_ENV !== "production" &&
-              !(SERVER_ENV.CORS_ORIGINS || SERVER_ENV.CLIENT_URL);
-            const allowExtensionOrigins =
-              String(SERVER_ENV.ALLOW_EXTENSION_ORIGINS || "") === "true";
+              config.nodeEnv !== "production" && !(corsRaw || clientUrl);
+            const allowExtensionOrigins = safeBool(
+              config.getString("ALLOW_EXTENSION_ORIGINS") ||
+                SERVER_ENV.ALLOW_EXTENSION_ORIGINS,
+              false,
+            );
             let setOrigin: string | undefined;
             if (
               typeof incomingOrigin === "string" &&
@@ -85,16 +120,14 @@ export function registerEngineAugmentations(
               )
                 setOrigin = incomingOrigin;
               else {
-                const corsRaw =
-                  SERVER_ENV.CORS_ORIGINS || SERVER_ENV.CLIENT_URL;
                 const origins = (corsRaw || "")
                   .split(",")
-                  .map((s) => s.trim())
+                  .map((s: string) => s.trim())
                   .filter(Boolean);
                 if (origins.includes(incomingOrigin))
                   setOrigin = incomingOrigin;
               }
-            } else if (SERVER_ENV.NODE_ENV !== "production") {
+            } else if (config.nodeEnv !== "production") {
               setOrigin = "null";
             }
 
@@ -104,7 +137,7 @@ export function registerEngineAugmentations(
               headers["Vary"] = "Origin";
             } else if (
               typeof incomingOrigin === "undefined" &&
-              SERVER_ENV.NODE_ENV === "production"
+              config.nodeEnv === "production"
             ) {
               const reqUrlForLog =
                 isObject(req) &&
@@ -124,7 +157,7 @@ export function registerEngineAugmentations(
         },
       );
     }
-  } catch (err) {
+  } catch (err: unknown) {
     logger.debug("engine.on('initial_headers') registration failed", {
       error: err,
     });
@@ -170,7 +203,7 @@ export function registerEngineAugmentations(
               typeof incomingOrigin !== "string" ||
               incomingOrigin.trim().length === 0
             ) {
-              if (SERVER_ENV.NODE_ENV !== "production") {
+              if (config.nodeEnv !== "production") {
                 try {
                   const setHeader = (res as Record<string, unknown>)[
                     "setHeader"
@@ -192,8 +225,8 @@ export function registerEngineAugmentations(
                     );
                     setHeaderFn.call(res, "Vary", "Origin");
                   }
-                } catch {
-                  // ignore
+                } catch (_e: unknown) {
+                  void _e;
                 }
                 logger.info(
                   "engine http request: patched ACAO for no-origin request",
@@ -205,7 +238,7 @@ export function registerEngineAugmentations(
                 );
               }
             }
-            if (SERVER_ENV.NODE_ENV !== "production") {
+            if (config.nodeEnv !== "production") {
               try {
                 const rh = reqObj.headers;
                 logger.info("engine http request for socket path", {
@@ -228,9 +261,13 @@ export function registerEngineAugmentations(
                   ts: new Date().toISOString(),
                 });
               } catch (err: unknown) {
-                logger.debug("failed to log engine http request", {
-                  error: err,
-                });
+                try {
+                  logger.debug("failed to log engine http request", {
+                    error: err,
+                  });
+                } catch (_e: unknown) {
+                  void _e;
+                }
               }
             }
           } catch (err: unknown) {
@@ -242,13 +279,12 @@ export function registerEngineAugmentations(
         httpOnFn.call(httpServer, "request", reqHandler);
       }
     }
-  } catch (err) {
+  } catch (err: unknown) {
     logger.debug("failed to register httpServer request augmentation", {
       error: err,
     });
   }
 
-  // engine-level connection logging
   try {
     const engineOn2 = (engine as EngineLike)["on"];
     if (typeof engineOn2 === "function") {
@@ -290,7 +326,7 @@ export function registerEngineAugmentations(
                   const url = isObject(req2) ? req2["url"] : undefined;
                   const headers = isObject(req2) ? req2["headers"] : undefined;
                   logger.warn("engine connection error", {
-                    error: err instanceof Error ? err.message : String(err),
+                    error: err,
                     url: typeof url === "string" ? url : undefined,
                     origin:
                       isObject(headers) && typeof headers["origin"] === "string"
@@ -299,9 +335,13 @@ export function registerEngineAugmentations(
                     ts: new Date().toISOString(),
                   });
                 } catch (innerErr: unknown) {
-                  logger.debug("failed to log engine conn error", {
-                    error: innerErr,
-                  });
+                  try {
+                    logger.debug("failed to log engine conn error", {
+                      error: innerErr,
+                    });
+                  } catch (_e: unknown) {
+                    void _e;
+                  }
                 }
               });
 
@@ -324,9 +364,13 @@ export function registerEngineAugmentations(
                     ts: new Date().toISOString(),
                   });
                 } catch (innerErr: unknown) {
-                  logger.debug("failed to log engine conn close", {
-                    error: innerErr,
-                  });
+                  try {
+                    logger.debug("failed to log engine conn close", {
+                      error: innerErr,
+                    });
+                  } catch (_e: unknown) {
+                    void _e;
+                  }
                 }
               });
             }
@@ -336,7 +380,7 @@ export function registerEngineAugmentations(
         }
       });
     }
-  } catch (e) {
+  } catch (e: unknown) {
     logger.debug("failed to register engine connection logging", { error: e });
   }
 }

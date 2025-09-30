@@ -33,10 +33,8 @@ export function extractErrorMessage(
 
   const pushUserMessage = (s: string | undefined) => {
     if (!s) return;
-    const trimmed = String(s).trim();
-    if (isUserMessage(trimmed)) {
-      userMessages.push(trimmed);
-    }
+    const trimmed = s.trim();
+    if (isUserMessage(trimmed)) userMessages.push(trimmed);
   };
 
   function walk(v: unknown, depth: number) {
@@ -62,17 +60,12 @@ export function extractErrorMessage(
       const rec = v;
 
       if (Array.isArray(rec.formErrors)) {
-        for (const fe of rec.formErrors) {
+        for (const fe of rec.formErrors)
           if (typeof fe === "string") pushUserMessage(fe);
-        }
       }
 
-      if (typeof rec.message === "string") {
-        pushUserMessage(rec.message);
-      }
-      if (typeof rec.error === "string") {
-        pushUserMessage(rec.error);
-      }
+      if (typeof rec.message === "string") pushUserMessage(rec.message);
+      if (typeof rec.error === "string") pushUserMessage(rec.error);
 
       if (userMessages.length === 0 && depth < maxDepth) {
         for (const [k, val] of Object.entries(rec)) {
@@ -80,9 +73,8 @@ export function extractErrorMessage(
           if (k === "status" || k === "url" || k === "fields") continue;
 
           if (Array.isArray(val)) {
-            for (const it of val) {
+            for (const it of val)
               if (typeof it === "string") pushUserMessage(it);
-            }
             continue;
           }
           if (isPlainObject(val)) {
@@ -97,7 +89,7 @@ export function extractErrorMessage(
   try {
     walk(err, 0);
   } catch (e) {
-    void e;
+    console.debug("formatError fallback parse failed", e);
   }
 
   if (userMessages.length === 0) return undefined;

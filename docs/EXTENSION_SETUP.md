@@ -131,14 +131,10 @@ const getConfig = () => {
 };
 
 // Globalに設定を注入
-if (typeof self !== "undefined") {
-  self.EXTENSION_CONFIG = getConfig();
-}
+if (typeof self !== "undefined") self.EXTENSION_CONFIG = getConfig();
 
 // Popupでの利用
-if (typeof window !== "undefined") {
-  window.EXTENSION_CONFIG = getConfig();
-}
+if (typeof window !== "undefined") window.EXTENSION_CONFIG = getConfig();
 ```
 
 ## 🚀 Popup用 Socket URL 注入
@@ -230,11 +226,10 @@ npm run build:extension
 出力: `dist/extension/background.js` が作成されます。`manifest.json` の `background.service_worker` をポイントしているファイル（例: `src/bg/background.js`）をこのビルド出力に置き換える、または `manifest.json` を `dist/extension/background.js` を指すように更新してローカルで読み込み直します。
 
 注意: 現在のスクリプトは `src/extension/bg/background.ts` を優先しますが、存在しない場合は `youtube自動再生-clone/src/bg/background.js` をフォールバックとしてバンドルします。TypeScript で保守する場合は `src/extension/bg` に TS ファイルを配置してください。
-configEl.innerHTML = `             <div>環境: ${this.config.ENVIRONMENT}</div>
+configEl.innerHTML = `<div>環境: ${this.config.ENVIRONMENT}</div>
             <div>URL: ${this.config.SOCKET_URL}</div>
             <div>再接続: ${status.reconnectAttempts || 0}回</div>
-            <div>キュー: ${status.pendingMessages || 0}件</div>
-        `;
+            <div>キュー: ${status.pendingMessages || 0}件</div>`;
 }
 
     handleBackgroundMessage(message) {
@@ -357,7 +352,6 @@ new PopupManager();
 });
 
 ````
-
 ## 🔧 Development vs Production の自動切り替え
 
 ### 開発時の動的URL注入

@@ -2,9 +2,8 @@ import type { RemoteStatus } from "~/stores/musicStore";
 
 export function isRemoteStatusEqual(a: RemoteStatus, b: RemoteStatus): boolean {
   if (a.type !== b.type) return false;
-  if (a.type === "playing" && b.type === "playing") {
+  if (a.type === "playing" && b.type === "playing")
     return a.musicTitle === b.musicTitle;
-  }
   return true;
 }
 

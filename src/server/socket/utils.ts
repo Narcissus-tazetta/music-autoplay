@@ -1,3 +1,4 @@
+import { safeLog } from "@/server/logger";
 import type { HeaderSnapshot, RequestLike, SocketLike } from "./types";
 
 export function isObject(v: unknown): v is Record<string, unknown> {
@@ -5,12 +6,11 @@ export function isObject(v: unknown): v is Record<string, unknown> {
 }
 
 export function getStructuredClone(): ((x: unknown) => unknown) | undefined {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if ("structuredClone" in g) {
-    const sc = g["structuredClone"];
-    if (typeof sc === "function") {
-      return sc as (x: unknown) => unknown;
-    }
+  const gAny: unknown = globalThis;
+  if (gAny && typeof gAny === "object") {
+    const gRec = gAny as Record<string, unknown>;
+    const sc = gRec["structuredClone"];
+    if (typeof sc === "function") return sc as (x: unknown) => unknown;
   }
   return undefined;
 }
@@ -22,7 +22,12 @@ export function deepCloneForLog(v: unknown): unknown {
     const parsed: unknown = JSON.parse(JSON.stringify(v));
     return parsed;
   } catch {
-    return Object.prototype.toString.call(v);
+    try {
+      return Object.prototype.toString.call(v);
+    } catch {
+      safeLog("debug", "deepCloneForLog fallback failed");
+      return Object.prototype.toString.call(v);
+    }
   }
 }
 
@@ -62,7 +67,11 @@ export function snapshotHeaders(socket: SocketLike): HeaderSnapshot {
       }
     }
     return undefined;
-  } catch {
+  } catch (err: unknown) {
+    safeLog("debug", "snapshotHeaders failed", { error: err } as Record<
+      string,
+      unknown
+    >);
     return undefined;
   }
 }
@@ -113,10 +122,9 @@ export function withSafeHandler<T extends (...a: unknown[]) => unknown>(
   fn: T,
 ) {
   return (...args: Parameters<T>): ReturnType<T> | Promise<ReturnType<T>> => {
-    const res = fn(...(args as unknown[]));
+    const res = fn(...args);
     if (res && typeof (res as { then?: unknown }).then === "function") {
       return (res as Promise<ReturnType<T>>).catch((err: unknown) => {
-        // logger imported by callers where needed
         throw err;
       });
     }

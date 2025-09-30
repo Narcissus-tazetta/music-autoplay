@@ -1,13 +1,27 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SocketManager from "../../src/server/socket/manager";
 import type { ManagerConfig } from "../../src/server/socket/manager";
 import { TimerManager } from "../../src/server/utils/socketHelpers";
+import WindowCloseManager from "../../src/server/utils/windowCloseManager";
 
 type EmitCall = { ev: string; payload: unknown };
 
+const getType = (p: unknown): string | undefined => {
+  if (
+    p &&
+    typeof p === "object" &&
+    Object.prototype.hasOwnProperty.call(p, "type")
+  ) {
+    const obj = p as Record<string, unknown>;
+    const t = obj["type"];
+    return typeof t === "string" ? t : undefined;
+  }
+  return undefined;
+};
+
 describe("SocketManager timers", () => {
   let timerManager: TimerManager;
+  let windowCloseMgr: WindowCloseManager;
   let emitSpy: (ev: string, payload: unknown) => void;
   let emits: EmitCall[];
   const cfg: ManagerConfig = {
@@ -19,6 +33,7 @@ describe("SocketManager timers", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     timerManager = new TimerManager();
+    windowCloseMgr = new WindowCloseManager();
     emits = [];
     emitSpy = (ev: string, payload: unknown) => emits.push({ ev, payload });
   });
@@ -28,7 +43,15 @@ describe("SocketManager timers", () => {
   });
 
   it("schedules a grace close when status becomes closed and emits after graceMs", () => {
-    const mgr = new SocketManager(emitSpy, timerManager as any, {} as any, cfg);
+    const mgr = new SocketManager(
+      (ev, payload) => {
+        emitSpy(ev, payload);
+        return undefined;
+      },
+      timerManager,
+      windowCloseMgr,
+      cfg,
+    );
     mgr.update({ type: "playing", musicTitle: "t", musicId: "a" });
     // clear the initial emitted update so we can assert only on subsequent emissions
     emits = [];
@@ -43,11 +66,19 @@ describe("SocketManager timers", () => {
     vi.advanceTimersByTime(150);
     expect(emits).toHaveLength(1);
     expect(emits[0].ev).toBe("remoteStatusUpdated");
-    expect((emits[0].payload as any).type).toBe("closed");
+    expect(getType(emits[0].payload)).toBe("closed");
   });
 
   it("cancels pending grace if a new open status arrives", () => {
-    const mgr = new SocketManager(emitSpy, timerManager as any, {} as any, cfg);
+    const mgr = new SocketManager(
+      (ev, payload) => {
+        emitSpy(ev, payload);
+        return undefined;
+      },
+      timerManager,
+      windowCloseMgr,
+      cfg,
+    );
     mgr.update({ type: "playing", musicTitle: "t", musicId: "a" });
     emits = [];
     mgr.update({ type: "closed" });
@@ -60,27 +91,41 @@ describe("SocketManager timers", () => {
     const evNames = emits.map((e) => e.ev);
     expect(evNames).toContain("remoteStatusUpdated");
     // ensure closed emission did not happen
-    const closed = emits.find((e) => (e.payload as any).type === "closed");
+    const closed = emits.find((e) => getType(e.payload) === "closed");
     expect(closed).toBeUndefined();
   });
 
   it("fires inactivity timeout after configured inactivityMs", () => {
-    const mgr = new SocketManager(emitSpy, timerManager as any, {} as any, cfg);
+    const mgr = new SocketManager(
+      (ev, payload) => {
+        emitSpy(ev, payload);
+        return undefined;
+      },
+      timerManager,
+      windowCloseMgr,
+      cfg,
+    );
     mgr.update({ type: "playing", musicTitle: "t", musicId: "a" });
     emits = [];
     // advance to just before inactivity
     vi.advanceTimersByTime(400);
-    expect(
-      emits.filter((e) => (e.payload as any).type === "closed").length,
-    ).toBe(0);
+    expect(emits.filter((e) => getType(e.payload) === "closed").length).toBe(0);
     vi.advanceTimersByTime(200);
     // after inactivity should emit closed
-    const closed = emits.find((e) => (e.payload as any).type === "closed");
+    const closed = emits.find((e) => getType(e.payload) === "closed");
     expect(closed).toBeDefined();
   });
 
   it("debounces rapid updates according to debounceMs", () => {
-    const mgr = new SocketManager(emitSpy, timerManager as any, {} as any, cfg);
+    const mgr = new SocketManager(
+      (ev, payload) => {
+        emitSpy(ev, payload);
+        return undefined;
+      },
+      timerManager,
+      windowCloseMgr,
+      cfg,
+    );
     // initial playing
     mgr.update({ type: "playing", musicTitle: "t", musicId: "a" });
     emits = [];

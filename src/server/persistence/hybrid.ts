@@ -1,7 +1,7 @@
 import logger from "@/server/logger";
 import type { Music } from "~/stores/musicStore";
-import type { PersistFile, Store } from "./types";
 import type { PgStore } from "./pg";
+import type { PersistFile, Store } from "./types";
 
 export class PgHybridStore implements Store {
   private current: PersistFile = {
@@ -21,7 +21,7 @@ export class PgHybridStore implements Store {
     return this.current.items;
   }
 
-  add(m: Music) {
+  addSync(m: Music) {
     this.current.items = this.current.items || [];
     const idx = this.current.items.findIndex((x) => x.id === m.id);
     if (idx >= 0) this.current.items[idx] = m;
@@ -29,10 +29,7 @@ export class PgHybridStore implements Store {
     this.current.lastUpdated = new Date().toISOString();
     const p = this.pg.add(m).catch((e: unknown) =>
       logger.warn("PgHybridStore: failed to add", {
-        error:
-          e instanceof Error
-            ? { message: e.message, stack: e.stack }
-            : String(e),
+        error: e,
       }),
     );
     this.pendingWrites.push(p);
@@ -41,15 +38,16 @@ export class PgHybridStore implements Store {
     });
   }
 
-  remove(id: string) {
+  add(m: Music): void | Promise<void> {
+    this.addSync(m);
+  }
+
+  removeSync(id: string) {
     this.current.items = (this.current.items || []).filter((x) => x.id !== id);
     this.current.lastUpdated = new Date().toISOString();
     const p = this.pg.remove(id).catch((e: unknown) =>
       logger.warn("PgHybridStore: failed to remove", {
-        error:
-          e instanceof Error
-            ? { message: e.message, stack: e.stack }
-            : String(e),
+        error: e,
       }),
     );
     this.pendingWrites.push(p);
@@ -58,20 +56,25 @@ export class PgHybridStore implements Store {
     });
   }
 
-  clear() {
+  remove(id: string): void | Promise<void> {
+    this.removeSync(id);
+  }
+
+  clearSync() {
     this.current = { items: [], lastUpdated: new Date().toISOString() };
     const p = this.pg.clear().catch((e: unknown) =>
       logger.warn("PgHybridStore: failed to clear", {
-        error:
-          e instanceof Error
-            ? { message: e.message, stack: e.stack }
-            : String(e),
+        error: e,
       }),
     );
     this.pendingWrites.push(p);
     void p.finally(() => {
       this.pendingWrites = this.pendingWrites.filter((x) => x !== p);
     });
+  }
+
+  clear(): void {
+    this.clearSync();
   }
 
   async flush() {
@@ -79,10 +82,7 @@ export class PgHybridStore implements Store {
       await Promise.all(this.pendingWrites);
     } catch (e: unknown) {
       logger.warn("PgHybridStore: flush encountered errors", {
-        error:
-          e instanceof Error
-            ? { message: e.message, stack: e.stack }
-            : String(e),
+        error: e,
       });
     }
   }

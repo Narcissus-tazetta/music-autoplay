@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { FileStore } from "../../src/server/musicPersistence";
 import fs from "fs";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { FileStore } from "../../src/server/persistence";
 
 describe("FileStore retry/backoff", () => {
   const tmpPath = "/tmp/music-test-retry.json";
@@ -32,7 +32,7 @@ describe("FileStore retry/backoff", () => {
       .spyOn(fs.promises, "rename")
       .mockResolvedValue(undefined);
 
-    store.add({
+    void store.add({
       id: "retry",
       title: "R",
       channelName: "C",

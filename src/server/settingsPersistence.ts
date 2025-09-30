@@ -1,6 +1,6 @@
+import logger from "@/server/logger";
 import fs from "fs";
 import path from "path";
-import logger from "@/server/logger";
 
 const DEFAULT_FILE_PATH = path.resolve(process.cwd(), "data", "settings.json");
 
@@ -29,7 +29,7 @@ export class SettingsStore {
       const raw = fs.readFileSync(this.filePath, "utf8");
       const parsed = JSON.parse(raw) as PersistFile;
       return parsed;
-    } catch (e) {
+    } catch (e: unknown) {
       logger.warn("settingsPersistence: failed to read file", { error: e });
       return {};
     }
@@ -41,7 +41,7 @@ export class SettingsStore {
     try {
       fs.writeFileSync(tmp, payload, "utf8");
       fs.renameSync(tmp, this.filePath);
-    } catch (e) {
+    } catch (e: unknown) {
       try {
         if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
       } catch (cleanupErr: unknown) {

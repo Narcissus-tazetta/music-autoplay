@@ -34,7 +34,7 @@ export function formatCurrentDate(settings: DateFormatSettings): string {
   if (settings.showMonth && settings.monthFormat !== "none") {
     if (settings.monthFormat === "japanese") {
       if (settings.yearFormat === "2025")
-        dateString += String(now.getMonth() + 1).padStart(2, "0") + "/";
+        dateString += `${now.getMonth() + 1}`.padStart(2, "0") + "/";
       else dateString += `${now.getMonth() + 1}月`;
     } else if (settings.monthFormat === "english") {
       const monthNames = [
@@ -53,7 +53,7 @@ export function formatCurrentDate(settings: DateFormatSettings): string {
       ];
       dateString += monthNames[now.getMonth()] + " ";
     } else {
-      const monthPadded = String(now.getMonth() + 1).padStart(2, "0");
+      const monthPadded = `${now.getMonth() + 1}`.padStart(2, "0");
       dateString += monthPadded + "/";
     }
   }
@@ -62,7 +62,7 @@ export function formatCurrentDate(settings: DateFormatSettings): string {
   if (settings.showDay && settings.dayFormat !== "none") {
     if (settings.dayFormat === "japanese") {
       if (settings.yearFormat === "2025")
-        dateString += String(now.getDate()).padStart(2, "0");
+        dateString += `${now.getDate()}`.padStart(2, "0");
       else dateString += `${now.getDate()}日`;
     } else if (settings.dayFormat === "english") {
       const day = now.getDate();
@@ -70,7 +70,7 @@ export function formatCurrentDate(settings: DateFormatSettings): string {
       dateString += `${day}${suffix}`;
     } else {
       if (settings.yearFormat === "2025")
-        dateString += String(now.getDate()).padStart(2, "0");
+        dateString += `${now.getDate()}`.padStart(2, "0");
       else dateString += `${now.getDate()}`;
     }
   }

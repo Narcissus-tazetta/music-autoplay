@@ -28,30 +28,30 @@ export const holidays: string[] = [
   // 夏休み（7/26〜8/31）
   ...Array.from(
     { length: 31 - 26 + 1 },
-    (_, i) => `2025-07-${String(26 + i).padStart(2, "0")}`,
+    (_, i) => `2025-07-${`${26 + i}`.padStart(2, "0")}`,
   ),
   ...Array.from(
     { length: 31 },
-    (_, i) => `2025-08-${String(1 + i).padStart(2, "0")}`,
+    (_, i) => `2025-08-${`${1 + i}`.padStart(2, "0")}`,
   ),
 
   // 冬休み（12/20〜1/6）
   ...Array.from(
     { length: 31 - 20 + 1 },
-    (_, i) => `2025-12-${String(20 + i).padStart(2, "0")}`,
+    (_, i) => `2025-12-${`${20 + i}`.padStart(2, "0")}`,
   ),
   ...Array.from(
     { length: 6 },
-    (_, i) => `2026-01-${String(1 + i).padStart(2, "0")}`,
+    (_, i) => `2026-01-${`${1 + i}`.padStart(2, "0")}`,
   ),
 
   // 春休み（3/21〜3/31）
   ...Array.from(
     { length: 31 - 21 + 1 },
-    (_, i) => `2026-03-${String(21 + i).padStart(2, "0")}`,
+    (_, i) => `2026-03-${`${21 + i}`.padStart(2, "0")}`,
   ),
   ...Array.from(
     { length: 31 },
-    (_, i) => `2025-03-${String(21 + i).padStart(2, "0")}`,
+    (_, i) => `2025-03-${`${21 + i}`.padStart(2, "0")}`,
   ).filter((d) => d <= "2025-03-31"),
 ];

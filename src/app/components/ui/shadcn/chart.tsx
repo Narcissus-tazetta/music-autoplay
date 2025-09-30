@@ -1,4 +1,3 @@
-// Clean, typed implementation for chart utilities (ChartContainer, styles, tooltip, legend)
 import * as React from "react";
 import * as RechartsPrimitive from "recharts";
 
@@ -212,7 +211,7 @@ function ChartTooltipContent(props: ChartTooltipContentProps) {
             (typeof item.color === "string" ? item.color : undefined);
           return (
             <div
-              key={String(item.dataKey ?? index)}
+              key={`${item.dataKey ?? index}`}
               className={cn(
                 "[&>svg]:text-muted-foreground flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5",
                 indicator === "dot" && "items-center",
@@ -270,9 +269,9 @@ function ChartTooltipContent(props: ChartTooltipContentProps) {
                             : undefined)}
                       </span>
                     </div>
-                    {item.value && (
+                    {item.value !== undefined && (
                       <span className="text-foreground font-mono font-medium tabular-nums">
-                        {String(item.value).toLocaleString()}
+                        {(item.value ?? "").toLocaleString()}
                       </span>
                     )}
                   </div>
@@ -326,7 +325,7 @@ function ChartLegendContent(props: ChartLegendContentProps) {
         const itemConfig = getPayloadConfigFromPayload(config, item, key);
         return (
           <div
-            key={String(item.value ?? key)}
+            key={`${item.value ?? key}`}
             className={cn(
               "[&>svg]:text-muted-foreground flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3",
             )}
@@ -362,9 +361,8 @@ function getPayloadConfigFromPayload(
       : undefined;
   let configLabelKey: string = key;
   const v = payloadObj[key];
-  if (typeof v === "string") {
-    configLabelKey = v;
-  } else if (payloadPayload) {
+  if (typeof v === "string") configLabelKey = v;
+  else if (payloadPayload) {
     const pv = payloadPayload[key];
     if (typeof pv === "string") configLabelKey = pv;
   }

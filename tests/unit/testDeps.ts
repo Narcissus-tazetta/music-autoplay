@@ -1,6 +1,6 @@
+import type { Socket } from "socket.io";
 import type createMusicHandlers from "../../src/server/handlers/music";
 import type { TestDeps } from "../../src/server/handlers/testHelpers";
-import type { Socket } from "socket.io";
 import { makeTestDeps } from "../../src/server/handlers/testHelpers";
 
 type Deps = Parameters<typeof createMusicHandlers>[0];
@@ -74,7 +74,9 @@ export function makeIo(
 }
 
 /** Create a minimal youtubeService stub. Accepts a partial implementation used in tests. */
-export function makeYoutubeService(stub?: unknown): Deps["youtubeService"] {
+export function makeYoutubeService(
+  stub?: unknown,
+): NonNullable<Deps["youtubeService"]> {
   // Accept a loose stub (unknown). We support either an object with
   // getVideoDetails or a function. Normalize to a callable `userGet`.
   const asRecord = stub as Partial<Record<string, unknown>> | undefined;
@@ -85,7 +87,7 @@ export function makeYoutubeService(stub?: unknown): Deps["youtubeService"] {
       : undefined) ??
     (() => Promise.resolve({ ok: false, error: "not implemented" }));
 
-  type GetRT = Deps["youtubeService"]["getVideoDetails"];
+  type GetRT = NonNullable<Deps["youtubeService"]>["getVideoDetails"];
   type GetInner = GetRT extends (...args: unknown[]) => Promise<infer U>
     ? U
     : GetRT;
@@ -102,28 +104,26 @@ export function makeYoutubeService(stub?: unknown): Deps["youtubeService"] {
     void _ttlMs;
     const res = await (userGet as (...args: unknown[]) => Promise<unknown>)(id);
     // If stub already returned a Result-like object, pass through.
-    if (res && typeof res === "object" && "ok" in res) {
-      return res as GetInner;
-    }
+    if (res && typeof res === "object" && "ok" in res) return res as GetInner;
     // Otherwise treat stub result as the value and wrap as ok
     return Promise.resolve({ ok: true, value: res }) as ReturnType<
-      Deps["youtubeService"]["getVideoDetails"]
+      NonNullable<Deps["youtubeService"]>["getVideoDetails"]
     >;
   };
 
-  return { getVideoDetails } as Deps["youtubeService"];
+  return { getVideoDetails } as NonNullable<Deps["youtubeService"]>;
 }
 
 /** Create a minimal fileStore stub. */
 export function makeFileStore(
-  stub?: Partial<Deps["fileStore"]>,
-): Deps["fileStore"] {
-  const fs: Partial<Deps["fileStore"]> = {
+  stub?: Partial<NonNullable<Deps["fileStore"]>>,
+): NonNullable<Deps["fileStore"]> {
+  const fs: Partial<NonNullable<Deps["fileStore"]>> = {
     add: () => undefined,
     remove: () => undefined,
     ...stub,
   };
-  return fs as Deps["fileStore"];
+  return fs as NonNullable<Deps["fileStore"]>;
 }
 
 /** Safely extract formErrors from a reply value in tests. */

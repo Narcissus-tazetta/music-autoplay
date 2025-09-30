@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PgHybridStore } from "../../src/server/persistence/hybrid";
 import type { PgStore } from "../../src/server/persistence/pg";
 
@@ -26,14 +26,14 @@ describe("PgHybridStore", () => {
     } as unknown as PgStore;
 
     const store = new PgHybridStore(pgMock, []);
-    store.add({
+    void store.add({
       id: "a",
       title: "A",
       channelName: "C",
       channelId: "cid",
       duration: "PT1M",
     });
-    store.remove("a");
+    void store.remove("a");
     await store.flush();
     expect(addMock).toHaveBeenCalled();
     expect(removeMock).toHaveBeenCalled();

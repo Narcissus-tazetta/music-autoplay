@@ -5,20 +5,20 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
   plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
+  optimizeDeps: {
+    include: ["socket.io-client", "framer-motion", "zustand"],
+    force: false,
+  },
   server: {
     proxy: {
-      // Socket.IO のパスをバックエンドサーバーにプロキシ
       "/socket.io": {
-        target: "http://localhost:3000",
-        changeOrigin: true,
-        ws: true, // WebSocket サポート
-      },
-      // APIパスもプロキシ（必要に応じて）
-      "/api": {
         target: "http://localhost:3000",
         changeOrigin: true,
         ws: true,
       },
     },
+  },
+  build: {
+    rollupOptions: {},
   },
 });

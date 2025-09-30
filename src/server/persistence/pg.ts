@@ -1,6 +1,8 @@
-import { Pool } from "pg";
+import { SERVER_ENV } from "@/app/env.server";
 import logger from "@/server/logger";
+import { Pool } from "pg";
 import type { Music } from "~/stores/musicStore";
+import { container } from "../di/container";
 
 type DbMusicRow = {
   id: string;
@@ -15,8 +17,28 @@ type DbMusicRow = {
 export class PgStore {
   private pool: Pool;
   constructor(connectionString?: string) {
+    const cfg = container.getOptional("configService") as
+      | { getString?(key: string): string }
+      | undefined;
+    const cfgVal = cfg?.getString?.("DATABASE_URL");
+    const envVal =
+      typeof SERVER_ENV.DATABASE_URL === "string" &&
+      SERVER_ENV.DATABASE_URL.length > 0
+        ? SERVER_ENV.DATABASE_URL
+        : undefined;
+
+    const conn: string | undefined =
+      connectionString ??
+      (typeof cfgVal === "string" && cfgVal.length > 0 ? cfgVal : envVal);
+
+    if (!conn) {
+      logger.warn(
+        "PgStore: no DATABASE_URL provided via args or ConfigService; falling back to SERVER_ENV or Pool defaults",
+      );
+    }
+
     this.pool = new Pool({
-      connectionString: connectionString ?? process.env.DATABASE_URL,
+      connectionString: conn,
     });
   }
 
@@ -43,7 +65,7 @@ export class PgStore {
       title: r.title,
       channelName: r.channel_name ?? "",
       channelId: r.channel_id ?? "",
-      duration: r.duration != null ? String(r.duration) : "",
+      duration: r.duration != null ? `${r.duration}` : "",
       requesterHash: r.requester_hash ?? undefined,
     }));
   }
@@ -78,7 +100,7 @@ export class PgStore {
     logger.debug("PgStore: pool closed");
   }
   // FileStore インターフェースとの互換性のための意図的な no-op の flush です。
-  // 一部の実装ではバックグラウンド書き込みを行いますが、PgStore は即時に永続化します。
+  // 一部の実装ではバックグラウンド書き込みを行っていますが、PgStore は即時に永続化します。
   async flush(): Promise<void> {
     await Promise.resolve();
     return;

@@ -1,9 +1,8 @@
-import React from "react";
-import {
-  useAdminStore,
-  type AdminStore,
-} from "../../../shared/stores/adminStore";
 import { MdAdminPanelSettings } from "react-icons/md";
+import {
+  type AdminStore,
+  useAdminStore,
+} from "../../../shared/stores/adminStore";
 
 export const AdminStatus: React.FC = () => {
   const isAdmin = useAdminStore((s: AdminStore) => s.isAdmin);

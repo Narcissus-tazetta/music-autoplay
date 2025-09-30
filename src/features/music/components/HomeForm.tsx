@@ -13,7 +13,6 @@ export const HomeForm: React.FC = () => {
     successMessage,
     errorMessage,
     handleCloseAlert,
-    handleCloseSuccessAlert,
     resetError,
   } = useHomeForm();
 
@@ -52,7 +51,7 @@ export const HomeForm: React.FC = () => {
           isAnimating={isAnimating}
           errorMessage={errorMessage}
           successMessage={successMessage}
-          onClose={errorMessage ? handleCloseAlert : handleCloseSuccessAlert}
+          onClose={handleCloseAlert}
         />
       </div>
 

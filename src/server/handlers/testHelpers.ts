@@ -1,10 +1,9 @@
-import type createMusicHandlers from "./music";
-import type { Music } from "~/stores/musicStore";
 import type { Server as IOServer } from "socket.io";
+import type { Music } from "~/stores/musicStore";
+import type FileStore from "../persistence";
 import type { YouTubeService } from "../youtubeService";
-import type FileStore from "../musicPersistence";
+import type createMusicHandlers from "./music";
 
-// Minimal types mirroring production Deps but allowing tests to pass
 export type TestDeps = Partial<{
   musicDB: Map<string, Music>;
   io: IOServer;
@@ -16,9 +15,7 @@ export type TestDeps = Partial<{
 }>;
 
 export function makeTestDeps(stubs: TestDeps) {
-  // Provide sensible defaults for the full Deps shape used by createMusicHandlers
   const musicDB = stubs.musicDB ?? new Map<string, Music>();
-  // Create a minimal io stub that satisfies the shape used in handlers (emit(...))
   const io = stubs.io ?? { emit: () => false };
   const youtubeService = (stubs.youtubeService ?? {
     getVideoDetails: () =>

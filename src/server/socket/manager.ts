@@ -1,10 +1,12 @@
 import type { RemoteStatus } from "~/stores/musicStore";
-import type WindowCloseManager from "../utils/windowCloseManager";
-import type { TimerManager } from "../utils/socketHelpers";
+import { container } from "../di/container";
 import logger from "../logger";
+import RemoteStatusManager from "../services/remoteStatusManager";
+import type { TimerManager } from "../utils/socketHelpers";
+import type WindowCloseManager from "../utils/windowCloseManager";
 import { isRemoteStatusEqual, shouldDebounce } from "./remoteStatus";
 
-export type EmitFn = (ev: string, payload: unknown) => void;
+export type EmitFn = (ev: string, payload: unknown) => boolean | undefined;
 
 export type ManagerConfig = {
   debounceMs: number;
@@ -15,9 +17,7 @@ export type ManagerConfig = {
 export default class SocketManager {
   private remoteStatus: RemoteStatus = { type: "closed" };
   private remoteStatusUpdatedAt = 0;
-  /**
-   * Return the current RemoteStatus snapshot. Pure accessor for handlers.
-   */
+  private remoteStatusManager?: RemoteStatusManager;
   getCurrent(): RemoteStatus {
     return this.remoteStatus;
   }
@@ -28,11 +28,40 @@ export default class SocketManager {
     private config: ManagerConfig,
   ) {}
 
+  initWithDI() {
+    try {
+      if (container.has("remoteStatusManager"))
+        this.remoteStatusManager = container.get(
+          "remoteStatusManager",
+        ) as RemoteStatusManager;
+      else {
+        this.remoteStatusManager = new RemoteStatusManager(
+          (ev, payload) => this.emit(ev, payload),
+          this.timerManager,
+        );
+      }
+      const cur = this.remoteStatusManager.getCurrent();
+      this.remoteStatus = cur;
+      this.remoteStatusUpdatedAt = this.remoteStatusManager.getUpdatedAt();
+    } catch (e: unknown) {
+      logger.debug("SocketManager.initWithDI failed", { error: e });
+    }
+  }
+
   shutdown() {
     try {
       this.timerManager.clear("pendingClose");
       this.timerManager.clear("inactivity");
-    } catch (e) {
+      try {
+        if (
+          typeof (this.timerManager as { clearAll?: unknown }).clearAll ===
+          "function"
+        )
+          this.timerManager.clearAll();
+      } catch (e: unknown) {
+        logger.warn("SocketManager failed to clearAll timers", { error: e });
+      }
+    } catch (e: unknown) {
       logger.warn("SocketManager shutdown error", { error: e });
     }
   }
@@ -47,18 +76,12 @@ export default class SocketManager {
           try {
             this.remoteStatus = status;
             this.remoteStatusUpdatedAt = Date.now();
-            try {
-              this.emit("remoteStatusUpdated", this.remoteStatus);
-            } catch (e) {
-              logger.warn("failed to emit remoteStatusUpdated (grace)", {
-                error: e,
-              });
-            }
+            this.emit("remoteStatusUpdated", this.remoteStatus);
             logger.info("remoteStatus updated (grace close)", {
               status: this.remoteStatus,
               source,
             });
-          } catch (e) {
+          } catch (e: unknown) {
             logger.warn("failed to apply grace close", { error: e });
           }
         });
@@ -76,7 +99,7 @@ export default class SocketManager {
       });
       try {
         this.scheduleInactivityTimer(source);
-      } catch (e) {
+      } catch (e: unknown) {
         logger.warn("failed to schedule inactivity timer", { error: e });
       }
 
@@ -87,13 +110,7 @@ export default class SocketManager {
       ) {
         this.remoteStatus = status;
         this.remoteStatusUpdatedAt = now;
-        try {
-          this.emit("remoteStatusUpdated", this.remoteStatus);
-        } catch (e) {
-          logger.warn("failed to emit remoteStatusUpdated (debounced)", {
-            error: e,
-          });
-        }
+        this.emit("remoteStatusUpdated", this.remoteStatus);
         logger.info("remoteStatus updated (debounced)", {
           status: this.remoteStatus,
           source,
@@ -103,16 +120,12 @@ export default class SocketManager {
 
       this.remoteStatus = status;
       this.remoteStatusUpdatedAt = now;
-      try {
-        this.emit("remoteStatusUpdated", this.remoteStatus);
-      } catch (e) {
-        logger.warn("failed to emit remoteStatusUpdated", { error: e });
-      }
+      this.emit("remoteStatusUpdated", this.remoteStatus);
       logger.info("remoteStatus updated", {
         status: this.remoteStatus,
         source,
       });
-    } catch (e) {
+    } catch (e: unknown) {
       logger.warn("SocketManager update failed", { error: e });
     }
   }
@@ -124,18 +137,12 @@ export default class SocketManager {
       try {
         this.remoteStatus = { type: "closed" };
         this.remoteStatusUpdatedAt = Date.now();
-        try {
-          this.emit("remoteStatusUpdated", this.remoteStatus);
-        } catch (e) {
-          logger.warn("failed to emit remoteStatusUpdated (inactivity)", {
-            error: e,
-          });
-        }
+        this.emit("remoteStatusUpdated", this.remoteStatus);
         logger.info("remoteStatus updated (inactivity)", {
           status: this.remoteStatus,
           source,
         });
-      } catch (e) {
+      } catch (e: unknown) {
         logger.warn("failed to apply inactivity close", { error: e });
       }
     });

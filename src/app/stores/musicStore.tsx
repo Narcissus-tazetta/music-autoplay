@@ -1,7 +1,7 @@
 import type { C2S, S2C } from "@/shared/types/socket";
+import type { Socket } from "socket.io-client";
 import { create } from "zustand";
 import { getSocket } from "../lib/socketClient";
-import type { Socket } from "socket.io-client";
 
 export type RemoteStatus =
   | {
@@ -28,10 +28,11 @@ export interface Music {
 interface MusicStore {
   musics: Music[];
   socket?: Socket<S2C, C2S> | null;
-  remoteStatus: RemoteStatus;
+  remoteStatus: RemoteStatus | null;
   error?: string;
   resetError?: () => void;
   setMusics?: (musics: Music[]) => void;
+  hydrateFromLocalStorage?: () => void;
 
   addMusic(music: Music): void;
   connectSocket(): void;
@@ -40,38 +41,15 @@ interface MusicStore {
 export const useMusicStore = create<MusicStore>((set) => {
   let socket: Socket<S2C, C2S> | null = null;
   const STORAGE_KEY = "music-auto-play:musics:v1";
-  try {
-    if (typeof window !== "undefined" && window.localStorage) {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as unknown;
-        if (Array.isArray(parsed)) {
-        }
-      }
-    }
-  } catch (err) {
-    // ignore
-  }
 
   return {
-    musics: ((): Music[] => {
-      try {
-        if (typeof window !== "undefined" && window.localStorage) {
-          const raw = window.localStorage.getItem(STORAGE_KEY);
-          if (raw) {
-            const parsed = JSON.parse(raw) as unknown;
-            if (Array.isArray(parsed)) return parsed as Music[];
-          }
-        }
-      } catch (err) {}
-      return [];
-    })(),
+    musics: [],
     error: undefined,
     resetError: () => {
       set({ error: undefined });
     },
     socket: null,
-    remoteStatus: { type: "closed" },
+    remoteStatus: null,
     addMusic(music) {
       set((state) => ({
         musics: [...state.musics, music],
@@ -79,13 +57,31 @@ export const useMusicStore = create<MusicStore>((set) => {
     },
     setMusics(musics: Music[]) {
       try {
-        if (typeof window !== "undefined" && window.localStorage) {
+        if (typeof window !== "undefined")
           window.localStorage.setItem(STORAGE_KEY, JSON.stringify(musics));
-        }
-      } catch (err) {
-        // ignore storage errors
+      } catch (err: unknown) {
+        console.debug("musicStore setMusics localStorage failed", err);
       }
       set({ musics });
+    },
+    hydrateFromLocalStorage() {
+      try {
+        const storage: Storage | undefined =
+          typeof window !== "undefined"
+            ? window.localStorage
+            : (globalThis as { localStorage?: Storage }).localStorage;
+        if (!storage) return;
+        const raw = storage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw) as unknown;
+        if (!Array.isArray(parsed)) return;
+        set((state) => {
+          if (state.musics.length > 0) return {} as Partial<MusicStore>;
+          return { musics: parsed as Music[] } as Partial<MusicStore>;
+        });
+      } catch (err: unknown) {
+        console.debug("musicStore hydrateFromLocalStorage failed", err);
+      }
     },
     connectSocket() {
       if (socket) return;
@@ -109,12 +105,10 @@ export const useMusicStore = create<MusicStore>((set) => {
               if (called) return;
               called = true;
               clearTimeout(timeout);
-              if (Array.isArray(musics) && musics.length > 0) {
-                set({ musics });
-              }
+              if (Array.isArray(musics) && musics.length > 0) set({ musics });
             });
-          } catch (e) {
-            if (!called && attempt < maxAttempts) {
+          } catch {
+            if (attempt < maxAttempts) {
               const backoff = 500 * Math.pow(2, attempt - 1);
               setTimeout(tryOnce, backoff);
             }
@@ -129,8 +123,8 @@ export const useMusicStore = create<MusicStore>((set) => {
           console.info("Socket connected");
           try {
             attemptGetAllMusics(socket as Socket<S2C, C2S>);
-          } catch (e) {
-            void e;
+          } catch (err: unknown) {
+            console.debug("attemptGetAllMusics failed", err);
           }
         })
         .on("musicAdded", (music: Music) => {
@@ -148,11 +142,12 @@ export const useMusicStore = create<MusicStore>((set) => {
             remoteStatus: state,
           });
         })
-        .on("reconnect_attempt" as unknown as any, () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .on("reconnect_attempt" as any, () => {
           try {
             attemptGetAllMusics(socket as Socket<S2C, C2S>);
-          } catch (e) {
-            void e;
+          } catch {
+            console.debug("reconnect_attempt attemptGetAllMusics failed");
           }
         })
         .connect();

@@ -17,16 +17,14 @@ export class WindowCloseManager {
   }
 
   private keyFor(e: Event) {
-    return (e.origin || e.socketId || "unknown").toString();
+    return e.origin || e.socketId || "unknown";
   }
 
   processEvent(e: Event, onScheduleClose: (key: string) => void) {
     const key = this.keyFor(e);
     const now = e.ts ?? Date.now();
     const last = this.lastEventAt.get(key) ?? 0;
-    if (now - last < 50) {
-      return { processed: false, reason: "rapid_duplicate" };
-    }
+    if (now - last < 50) return { processed: false, reason: "rapid_duplicate" };
 
     this.lastEventAt.set(key, now);
     this.timers.clear(key);

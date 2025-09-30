@@ -1,26 +1,8 @@
 adminのurlクエリ以外の方法を検討して実装
 本番環境で困るコードを削除
 ダークモードライトモードの状態変化の際の変更のラグ
-
-# TODO (優先度順)
-
-## 今すぐ対応（短期）
-
-- 依存関係のセキュリティ更新（`bun update` を検討）
-- テストを安定化させる（`vitest` を CI で実行）
-
-## 次のステップ（中期）
-
-- ESLint 設定と knip の修正（knip 実行可能にして未使用依存の検出を有効化）
-- ビルドの警告解消（sourcemap エラー、未使用 import の整理）
-- legacy クライアント互換コードの見直しと不要コードの削除
-
-## 将来的に（長期）
-
-- 型安全性の強化（unknown/any の削減、重要箇所に型テスト）
-- E2E テスト整備（Playwright のテスト追加・整備）
-- パフォーマンス改善（動的インポート戦略とチャンク分割の最適化）
-
----
-
-簡潔に重要項目だけを上げました。深掘りやチケット分割が必要なら続けて作業します。
+React.useEffectなどのReactの部分を消す ✅
+eslin-diableの削除検討
+musicService: 責務分離（Auth/Resolver/Repository/Emitter）して addMusic/removeMusic の戻り値を常に Promise<Result> に統一
+rate limitedの実装を考える
+GitHub CI/CD基本構成追加 ✅

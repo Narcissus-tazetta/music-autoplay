@@ -4,8 +4,8 @@ import { SlidersHorizontalIcon } from "lucide-react";
 import { Form, Link } from "react-router";
 import { Settings } from "~/components/ui/settings";
 import { DropdownMenu } from "~/components/ui/shadcn/dropdown-menu";
-import AdminStatus from "./adminStatus";
 import { useAdminStore } from "../../../shared/stores/adminStore";
+import AdminStatus from "./adminStatus";
 
 const developers = [
   {
@@ -50,7 +50,6 @@ export const Header = ({ userName }: HeaderProps) => {
                       try {
                         if (isAdmin) useAdminStore.getState().logout();
                       } catch (err) {
-                        // preserve backwards-compat: swallow logout errors but log in dev
                         if (process.env.NODE_ENV !== "production")
                           console.error(err);
                       }

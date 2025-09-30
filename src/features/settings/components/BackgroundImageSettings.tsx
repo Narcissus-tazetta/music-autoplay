@@ -93,8 +93,9 @@ export const BackgroundImageSettings = ({
         !supportedFormats.some((format) =>
           contentType.includes(format.split("/")[1]),
         )
-      )
+      ) {
         throw new Error("サポートされている形式: JPEG, PNG, GIF, WebP");
+      }
       const blob = await response.blob();
       if (blob.size > 100 * 1024 * 1024)
         throw new Error("ファイルサイズは100MB以下にしてください");

@@ -1,25 +1,27 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import express from "express";
 import request from "supertest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // API エンドポイントのテスト
 describe("API Endpoints", () => {
   let app: express.Application;
-  let mockSocketServer: any;
-  let mockFileStore: any;
-  let metrics: any;
+  let mockSocketServer: {
+    musicDB: Map<string, { id: string; title: string; channelName: string }>;
+    io: { emit: (...args: unknown[]) => void } | null;
+    init: () => Promise<void>;
+    close: () => Promise<void>;
+  };
+  // mockFileStore intentionally omitted (not used in these route tests)
+  let metrics: {
+    apiMusics: { calls: number; errors: number; totalMs: number };
+    rpcGetAllMusics: { calls: number; errors: number; totalMs: number };
+  };
 
   beforeEach(() => {
     app = express();
 
-    // Mock FileStore
-    mockFileStore = {
-      load: vi.fn().mockReturnValue([]),
-      add: vi.fn(),
-      remove: vi.fn(),
-      flush: vi.fn().mockResolvedValue(undefined),
-      closeSync: vi.fn(),
-    } as any;
+    // no-op: file store not required for these endpoint tests
 
     // Mock SocketServerInstance
     mockSocketServer = {
@@ -33,9 +35,9 @@ describe("API Endpoints", () => {
           { id: "test2", title: "Test Song 2", channelName: "Test Channel 2" },
         ],
       ]),
-      io: { emit: vi.fn() },
-      init: vi.fn().mockResolvedValue(undefined),
-      close: vi.fn().mockResolvedValue(undefined),
+      io: { emit: vi.fn() as unknown as (...args: unknown[]) => void },
+      init: async () => {},
+      close: async () => {},
     };
 
     // Mock metrics
@@ -49,7 +51,7 @@ describe("API Endpoints", () => {
       const start = Date.now();
       metrics.apiMusics.calls++;
       try {
-        if (mockSocketServer && mockSocketServer.musicDB instanceof Map) {
+        if (mockSocketServer.musicDB instanceof Map) {
           const list = Array.from(mockSocketServer.musicDB.values());
           const sample = Array.from(mockSocketServer.musicDB.keys()).slice(
             0,
@@ -69,7 +71,7 @@ describe("API Endpoints", () => {
           metrics.apiMusics.totalMs += Date.now() - start;
           return;
         }
-      } catch (e) {
+      } catch {
         // fallback
       }
       res.json({
@@ -125,7 +127,10 @@ describe("API Endpoints", () => {
       const response = await request(app).get("/api/musics");
 
       expect(response.status).toBe(200);
-      expect(response.body).toMatchObject({
+      // parse as unknown then narrow where needed
+      const body = JSON.parse(response.text) as unknown;
+
+      expect(body).toMatchObject({
         ok: true,
         musics: expect.any(Array),
         meta: {
@@ -136,9 +141,14 @@ describe("API Endpoints", () => {
         },
       });
 
-      expect(response.body.musics).toHaveLength(2);
-      expect(response.body.meta.count).toBe(2);
-      expect(response.body.meta.sample).toEqual(["test1", "test2"]);
+      const typed = body as {
+        ok: boolean;
+        musics: unknown[];
+        meta: { count: number; sample: string[] };
+      };
+      expect(typed.musics).toHaveLength(2);
+      expect(typed.meta.count).toBe(2);
+      expect(typed.meta.sample).toEqual(["test1", "test2"]);
     });
 
     it("should return empty musics when socket server has no data", async () => {
@@ -147,7 +157,9 @@ describe("API Endpoints", () => {
       const response = await request(app).get("/api/musics");
 
       expect(response.status).toBe(200);
-      expect(response.body).toMatchObject({
+      const bodyEmpty = JSON.parse(response.text) as unknown;
+
+      expect(bodyEmpty).toMatchObject({
         ok: true,
         musics: [],
         meta: {
@@ -176,7 +188,9 @@ describe("API Endpoints", () => {
       const response = await request(app).get("/api/metrics");
 
       expect(response.status).toBe(200);
-      expect(response.body).toMatchObject({
+      const metricsBody = JSON.parse(response.text) as unknown;
+
+      expect(metricsBody).toMatchObject({
         ok: true,
         metrics: {
           apiMusics: {
@@ -199,7 +213,9 @@ describe("API Endpoints", () => {
       const response = await request(app).get("/api/socket-info");
 
       expect(response.status).toBe(200);
-      expect(response.body).toMatchObject({
+      const socketInfoBody = JSON.parse(response.text) as unknown;
+
+      expect(socketInfoBody).toMatchObject({
         ok: true,
         socket: {
           initialized: true,

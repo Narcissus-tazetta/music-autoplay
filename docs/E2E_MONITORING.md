@@ -293,9 +293,7 @@ test.describe("Extension Smoke Tests", () => {
     // 拡張機能の基本読み込みテスト
     const errors = [];
     context.on("console", (msg) => {
-      if (msg.type() === "error") {
-        errors.push(msg.text());
-      }
+      if (msg.type() === "error") errors.push(msg.text());
     });
 
     const page = await context.newPage();
@@ -413,9 +411,7 @@ class ExtensionMonitor {
 
   recordResponseTime(ms: number) {
     this.responseTimes.push(ms);
-    if (this.responseTimes.length > this.maxSamples) {
-      this.responseTimes.shift();
-    }
+    if (this.responseTimes.length > this.maxSamples) this.responseTimes.shift();
 
     this.metrics.performance.avgResponseTime =
       this.responseTimes.reduce((a, b) => a + b, 0) / this.responseTimes.length;
@@ -561,9 +557,7 @@ class AlertManager {
     const lastAlert = this.lastAlerts.get(type);
 
     // クールダウン中はスキップ
-    if (lastAlert && now - lastAlert < this.alertCooldown) {
-      return;
-    }
+    if (lastAlert && now - lastAlert < this.alertCooldown) return;
 
     this.lastAlerts.set(type, now);
 

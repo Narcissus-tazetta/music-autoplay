@@ -1,9 +1,7 @@
+import { safeLog } from "@/server/logger";
 import type { Socket } from "socket.io";
 import type { EventMap, EventName } from "../types/socketEvents";
 
-/**
- * registerHandler: ハンドラがソケットごと・イベントごとに一度だけ登録されることを保証するヘルパー。
- */
 export function registerHandler<K extends EventName>(
   socket: Socket,
   eventName: K,
@@ -22,69 +20,79 @@ export function registerHandler(
   handler: (...args: unknown[]) => unknown,
 ) {
   const metaKey = "__registeredHandlers" as const;
-  type SockRecord = Record<string, unknown> & Partial<Pick<Socket, "on">>;
-  const sockRec = socket as unknown as SockRecord;
+
+  function getSocketRecord(s: Socket): Record<string, unknown> {
+    return s as unknown as Record<string, unknown>;
+  }
+  const sockRec = getSocketRecord(socket);
 
   let meta = sockRec[metaKey] as Set<string> | undefined;
   if (meta && meta.has(eventName)) return false;
   if (!meta) {
     meta = new Set<string>();
-
-    (sockRec as unknown as Record<string, unknown>)[metaKey] = meta;
+    sockRec[metaKey] = meta;
   }
 
-  const onFn = sockRec.on as
-    | ((ev: string, cb: (...args: unknown[]) => void) => void)
-    | undefined;
+  const rawRec = sockRec;
+  const rawOnCandidate = rawRec.on ?? rawRec.on;
+  const rawOn =
+    typeof rawOnCandidate === "function"
+      ? (rawOnCandidate as (...a: unknown[]) => void)
+      : undefined;
+  const onFn = rawOn ? rawOn.bind(socket) : undefined;
+
+  const isThenable = (v: unknown): v is Promise<unknown> => {
+    return (
+      typeof v === "object" &&
+      v !== null &&
+      typeof (v as Record<string, unknown>).then === "function"
+    );
+  };
 
   if (typeof onFn === "function") {
     onFn.call(socket, eventName, (...args: unknown[]) => {
       try {
         const r = handler(...args);
-        if (r && typeof (r as Promise<unknown>).then === "function") {
-          (r as Promise<unknown>).catch((err: unknown) => {
-            void import("./../logger")
-              .then((m) => {
-                try {
-                  const lg = m.default as {
-                    warn: (msg: string, meta?: unknown) => void;
-                  };
-                  lg.warn("socket handler rejected", { eventName, error: err });
-                } catch (e) {
-                  void e;
-                }
-              })
-              .catch((e: unknown) => void e);
+        if (isThenable(r)) {
+          r.catch((err: unknown) => {
+            safeLog("warn", "socket handler rejected", {
+              eventName,
+              error: err,
+            } as Record<string, unknown>);
           });
         }
       } catch (err: unknown) {
-        void import("./../logger")
-          .then((m) => {
-            try {
-              (
-                m.default as { warn: (msg: string, meta?: unknown) => void }
-              ).warn("socket handler threw", {
-                eventName,
-                error: err,
-              });
-            } catch (e) {
-              void e;
-            }
-          })
-          .catch((e: unknown) => void e);
+        safeLog("warn", "socket handler threw", {
+          eventName,
+          error: err,
+        } as Record<string, unknown>);
       }
     });
   } else {
-    sockRec[`__on_${String(eventName)}`] = (...args: unknown[]) => {
+    sockRec[`__on_${eventName}`] = (...args: unknown[]) => {
       try {
         handler(...args);
-      } catch (e) {
-        void e;
+      } catch (e: unknown) {
+        safeLog("warn", "socketHelpers safe call failed", {
+          error: e,
+        } as Record<string, unknown>);
       }
     };
   }
-  meta.add(String(eventName));
+  meta.add(eventName);
   return true;
+}
+
+export function registerTypedHandler<K extends EventName>(
+  socket: Socket,
+  eventName: K,
+  handler: (...args: EventMap[K]) => unknown,
+): boolean {
+  return registerHandler(
+    socket,
+    eventName as string,
+    handler as (...args: unknown[]) => unknown,
+  );
 }
 
 export class TimerManager {
@@ -101,18 +109,10 @@ export class TimerManager {
       try {
         cb();
       } catch (e: unknown) {
-        void import("./../logger")
-          .then((m) => {
-            try {
-              const lg = m.default as {
-                warn: (msg: string, meta?: unknown) => void;
-              };
-              lg.warn("timer callback threw", { key, error: e });
-            } catch (err) {
-              void err;
-            }
-          })
-          .catch((err: unknown) => void err);
+        safeLog("warn", "timer callback threw", { key, error: e } as Record<
+          string,
+          unknown
+        >);
       }
     }, ms);
     this.timers.set(key, id);
@@ -128,9 +128,7 @@ export class TimerManager {
   }
 
   clearAll() {
-    for (const id of this.timers.values()) {
-      clearTimeout(id);
-    }
+    for (const id of this.timers.values()) clearTimeout(id);
     this.timers.clear();
   }
 }

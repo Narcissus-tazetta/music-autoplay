@@ -1,47 +1,40 @@
+import logger from "@/server/logger";
 import type { Socket } from "socket.io";
 import type { Music } from "~/stores/musicStore";
-import { registerHandler } from "../utils/socketHelpers";
-import logger from "@/server/logger";
+import { withErrorHandler } from "../utils/errorHandler";
+import { wrapAsync } from "../utils/errorHandlers";
+import type MetricsManager from "../utils/metricsManager";
+import ServiceResolver from "../utils/serviceResolver";
+import { registerTypedHandler } from "../utils/socketHelpers";
 
 export default function registerGetAllMusics(
   socket: Socket,
   musicDB: Map<string, Music>,
 ) {
-  registerHandler(
+  const serviceResolver = ServiceResolver.getInstance();
+  const metricsManager =
+    serviceResolver.resolve<MetricsManager>("metricsManager");
+
+  registerTypedHandler(
     socket,
     "getAllMusics",
-    (callback: (musics: Music[]) => void) => {
+    wrapAsync((callback: (musics: Music[]) => void) => {
       const start = Date.now();
-      try {
+      const hasError = false;
+      const result = withErrorHandler(() => {
         const list = Array.from(musicDB.values());
         logger.info("getAllMusics handler invoked", {
           socketId: socket.id,
           count: list.length,
         });
-        // update metrics if available on global
-        try {
-          const m = (globalThis as any).__simpleMetrics;
-          if (m && m.rpcGetAllMusics) {
-            m.rpcGetAllMusics.calls++;
-            m.rpcGetAllMusics.totalMs += Date.now() - start;
-          }
-        } catch (e) {
-          void e;
-        }
-        callback(list);
-      } catch (e: unknown) {
-        logger.warn("getAllMusics handler failed", { error: e });
-        try {
-          const m = (globalThis as any).__simpleMetrics;
-          if (m && m.rpcGetAllMusics) {
-            m.rpcGetAllMusics.errors++;
-            m.rpcGetAllMusics.totalMs += Date.now() - start;
-          }
-        } catch (err) {
-          void err;
-        }
-        callback([]);
-      }
-    },
+        return list;
+      }, "getAllMusics data retrieval");
+
+      if (metricsManager)
+        metricsManager.updateRpcGetAllMusics(Date.now() - start, hasError);
+
+      const musicList = typeof result === "function" ? result() : result;
+      callback(musicList ?? []);
+    }, "getAllMusics handler"),
   );
 }

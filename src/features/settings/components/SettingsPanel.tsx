@@ -204,35 +204,35 @@ export const SettingsPanel = ({
                 ? setProgressColor
                 : () => {};
 
-            const safeShowRemainingText = !!showRemainingText;
+            const safeShowRemainingText = Boolean(showRemainingText);
             const safeSetShowRemainingText =
               typeof setShowRemainingText === "function"
                 ? setShowRemainingText
                 : () => {};
 
-            const safeShowCurrentSchedule = !!showCurrentSchedule;
+            const safeShowCurrentSchedule = Boolean(showCurrentSchedule);
             const safeSetShowCurrentSchedule =
               typeof setShowCurrentSchedule === "function"
                 ? setShowCurrentSchedule
                 : () => {};
 
-            const safeShowDate = !!showDate;
+            const safeShowDate = Boolean(showDate);
             const safeSetShowDate =
               typeof setShowDate === "function" ? setShowDate : () => {};
 
-            const safeShowYear = !!showYear;
+            const safeShowYear = Boolean(showYear);
             const safeSetShowYear =
               typeof setShowYear === "function" ? setShowYear : () => {};
 
-            const safeShowMonth = !!showMonth;
+            const safeShowMonth = Boolean(showMonth);
             const safeSetShowMonth =
               typeof setShowMonth === "function" ? setShowMonth : () => {};
 
-            const safeShowDay = !!showDay;
+            const safeShowDay = Boolean(showDay);
             const safeSetShowDay =
               typeof setShowDay === "function" ? setShowDay : () => {};
 
-            const safeShowWeekday = !!showWeekday;
+            const safeShowWeekday = Boolean(showWeekday);
             const safeSetShowWeekday =
               typeof setShowWeekday === "function" ? setShowWeekday : () => {};
 

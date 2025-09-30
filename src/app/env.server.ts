@@ -73,6 +73,15 @@ const serverEnvSchema = z
       (v) => toNumber(v),
       z.number().int().nonnegative().default(500),
     ),
+    ADMIN_MAX_ATTEMPTS: z.preprocess(
+      (v) => toNumber(v),
+      z.number().int().nonnegative().default(5),
+    ),
+    ADMIN_WINDOW_MS: z.preprocess(
+      (v) => toNumber(v),
+      z.number().int().nonnegative().default(60000),
+    ),
+    DATABASE_URL: z.string().optional(),
     SOCKET_PATH: z.string().default("/api/socket.io"),
     MORGAN_FORMAT: z.string().default("tiny"),
     MORGAN_LOG_SOCKETIO: z.preprocess((v) => {
@@ -106,6 +115,9 @@ export const SERVER_ENV = (() => {
     REMOTE_STATUS_GRACE_MS: process.env.REMOTE_STATUS_GRACE_MS,
     REMOTE_STATUS_INACTIVITY_MS: process.env.REMOTE_STATUS_INACTIVITY_MS,
     WINDOW_CLOSE_DEBOUNCE_MS: process.env.WINDOW_CLOSE_DEBOUNCE_MS,
+    ADMIN_MAX_ATTEMPTS: process.env.ADMIN_MAX_ATTEMPTS,
+    ADMIN_WINDOW_MS: process.env.ADMIN_WINDOW_MS,
+    DATABASE_URL: process.env.DATABASE_URL,
     SOCKET_PATH: process.env.SOCKET_PATH,
     MORGAN_FORMAT: process.env.MORGAN_FORMAT,
     MORGAN_LOG_SOCKETIO: process.env.MORGAN_LOG_SOCKETIO,

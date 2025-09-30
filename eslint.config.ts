@@ -5,8 +5,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
-// TODO: eslint-plugin-jsdocは入っているが、どこまで適用するかが未定のため、未使用
-
+// eslint-disable-next-line @typescript-eslint/no-deprecated
 export default tseslint.config(
   eslint.configs.recommended,
   // Ensure eslint-plugin-react can auto-detect React version across the repo.
@@ -81,6 +80,37 @@ export default tseslint.config(
       //     allowExportNames: ['meta', 'links', 'headers', 'loader', 'action'],
       // }],
       "react/self-closing-comp": "error",
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "react",
+              importNames: ["default"],
+              message:
+                "Use named imports from 'react' instead of default import. For example: import { useEffect, useState } from 'react'",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["tests/**/*.ts", "tests/**/*.tsx"],
+    languageOptions: {
+      globals: {
+        describe: "readonly",
+        it: "readonly",
+        test: "readonly",
+        expect: "readonly",
+        beforeEach: "readonly",
+        afterEach: "readonly",
+        vi: "readonly",
+      },
+      parserOptions: { project: true, tsconfigRootDir: import.meta.dirname },
+    },
+    rules: {
+      "@typescript-eslint/no-unused-vars": "off",
     },
   },
 );

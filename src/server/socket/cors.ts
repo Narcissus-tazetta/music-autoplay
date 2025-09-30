@@ -1,5 +1,9 @@
-import logger from "../logger";
+import type { Request } from "express";
 import { SERVER_ENV } from "~/env.server";
+import logger from "../logger";
+import { getConfig } from "../utils/configUtils";
+import { withErrorHandler } from "../utils/errorHandler";
+import { logCorsViolation } from "../utils/securityLogger";
 
 export type CorsConfig = {
   origins: string[];
@@ -8,21 +12,45 @@ export type CorsConfig = {
 };
 
 export function buildCorsConfig(): CorsConfig {
-  const corsRaw = SERVER_ENV.CORS_ORIGINS || SERVER_ENV.CLIENT_URL;
-  const origins = (corsRaw || "")
+  const config = getConfig();
+  const corsRaw = config.getString("CORS_ORIGINS") || SERVER_ENV.CLIENT_URL;
+  const safeCorsRaw = corsRaw || "";
+  const origins = (safeCorsRaw || "")
     .split(",")
-    .map((s) => s.trim())
+    .map((s: string) => s.trim())
     .filter(Boolean);
 
-  const isDev = SERVER_ENV.NODE_ENV !== "production";
-  const allowAllOrigins = isDev && origins.length === 0;
-  const allowExtensionOrigins =
-    String(SERVER_ENV.ALLOW_EXTENSION_ORIGINS || "") === "true";
+  const isDev = config.nodeEnv !== "production";
+  const port = config.getNumber("PORT") || SERVER_ENV.PORT;
 
-  if (SERVER_ENV.NODE_ENV !== "production") {
+  if (isDev) {
+    const currentOrigin = `http://localhost:${port}`;
+    if (!origins.includes(currentOrigin)) origins.push(currentOrigin);
+  }
+  const allowAllOrigins =
+    isDev && origins.length === 0 && config.nodeEnv !== "production";
+
+  const safeBool = (v: unknown, fallback = false) => {
+    if (typeof v === "boolean") return v;
+    if (typeof v === "string") return v === "true";
+    return fallback;
+  };
+  const allowExtensionOrigins =
+    config.nodeEnv === "production"
+      ? false
+      : safeBool(
+          config.getString("ALLOW_EXTENSION_ORIGINS") ||
+            SERVER_ENV.ALLOW_EXTENSION_ORIGINS ||
+            false,
+          false,
+        );
+
+  if (config.nodeEnv !== "production") {
     logger.info("SocketServerInstance CORS config", {
       origins,
       allowAllOrigins,
+      allowExtensionOrigins,
+      environment: config.nodeEnv,
     });
   }
 
@@ -30,16 +58,13 @@ export function buildCorsConfig(): CorsConfig {
 }
 
 export function makeOriginChecker(cfg: CorsConfig) {
-  return (
-    origin: unknown,
-    callback: (err: Error | null, allow?: boolean) => void,
-  ) => {
-    try {
-      const decision = { allowed: false, reason: "unknown" } as {
-        allowed: boolean;
-        reason: string;
-      };
-      if (!origin) {
+  const originChecker = withErrorHandler(
+    (
+      origin: unknown,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      const decision = { allowed: false, reason: "unknown" };
+      if (origin == null) {
         decision.allowed = true;
         decision.reason = "no-origin (server/API)";
         logger.info("socket connection: no origin (server/API)", {
@@ -48,50 +73,60 @@ export function makeOriginChecker(cfg: CorsConfig) {
         callback(null, true);
         return;
       }
-      if (
-        cfg.allowExtensionOrigins &&
-        typeof origin === "string" &&
-        origin.startsWith("chrome-extension://")
-      ) {
-        decision.allowed = true;
-        decision.reason = "allowExtensionOrigins";
-        logger.info("allowing chrome-extension origin via config", {
-          origin,
-          timestamp: new Date().toISOString(),
-          allowExtensionOrigins: cfg.allowExtensionOrigins,
-        });
-        callback(null, true);
-        return;
-      }
-      if (typeof origin === "string" && cfg.origins.includes(origin)) {
-        decision.allowed = true;
-        decision.reason = "configured origin";
-        logger.info("allowing configured origin", {
+
+      if (typeof origin !== "string") {
+        decision.allowed = false;
+        decision.reason = "non-string origin";
+        logger.warn("socket connection: non-string origin", {
           origin,
           timestamp: new Date().toISOString(),
         });
-        callback(null, true);
+        callback(new Error("Invalid origin type"));
         return;
       }
-      decision.allowed = false;
-      decision.reason = "not in allowed list";
-      logger.warn("CORS origin rejected", {
+
+      decision.allowed = true;
+      decision.reason = "allowed by config";
+
+      logger.info("socket connection: origin allowed", {
         origin,
-        allowedOrigins: cfg.origins,
-        allowExtensionOrigins: cfg.allowExtensionOrigins,
-        timestamp: new Date().toISOString(),
         decision,
-      });
-      callback(new Error("CORS origin not allowed"));
-    } catch (err) {
-      logger.error("CORS origin check failed", {
-        origin,
-        error: err,
         timestamp: new Date().toISOString(),
       });
-      callback(new Error("CORS origin check failed"));
-    }
-  };
+
+      if (cfg.allowAllOrigins) {
+        callback(null, true);
+        return;
+      }
+
+      if (Array.isArray(cfg.origins)) {
+        const isAllowed = cfg.origins.includes(origin);
+        if (isAllowed) {
+          callback(null, true);
+          return;
+        }
+
+        decision.allowed = false;
+        decision.reason = "not in allowed list";
+
+        logCorsViolation(
+          {} as Request,
+          typeof origin === "string" ? origin : "",
+          decision.reason,
+        );
+
+        logger.warn("CORS origin rejected", {
+          origin,
+          allowedOrigins: cfg.origins,
+          decision,
+        });
+        callback(new Error("CORS origin not allowed"));
+      }
+    },
+    "makeOriginChecker",
+  );
+
+  return originChecker;
 }
 
 export default { buildCorsConfig, makeOriginChecker };

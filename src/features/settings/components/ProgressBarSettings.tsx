@@ -201,7 +201,7 @@ export const ProgressBarSettings = ({
                 <option value="japanese">{currentMonth}月</option>
                 <option value="english">{monthNames[now.getMonth()]}</option>
                 <option value="number">
-                  {String(currentMonth).padStart(2, "0")}
+                  {`${currentMonth}`.padStart(2, "0")}
                 </option>
                 <option value="none">非表示</option>
               </select>

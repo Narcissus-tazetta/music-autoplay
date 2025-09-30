@@ -1,7 +1,9 @@
+import logger from "@/server/logger";
+import { respondWithResult } from "@/shared/utils/httpResponse";
+import { err as makeErr } from "@/shared/utils/result";
 import { type LoaderFunctionArgs, redirect } from "react-router";
 import { authenticator } from "../../auth/auth.server";
 import { loginSession } from "../../sessions.server";
-import logger from "@/server/logger";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -17,21 +19,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         "Set-Cookie": await loginSession.commitSession(session),
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("認証エラー", { error });
 
-    // エラーの詳細に基づいてリダイレクト
-    if (error instanceof Response) {
-      // OAuth プロバイダーからのリダイレクト（正常な場合もある）
-      return error;
-    }
+    if (error instanceof Response) return error;
 
-    return new Response("認証に失敗しました。もう一度お試しください。", {
-      status: 401,
-    });
+    const message =
+      error instanceof Error
+        ? error.message
+        : typeof error === "string"
+          ? error
+          : "authentication error";
+    return respondWithResult(makeErr({ message, code: "unauthorized" }));
   }
 };
 
 export default function GoogleCallback() {
-  return null; //これは loader のみのルートです
+  return null; // これは loader のみのルートです
 }

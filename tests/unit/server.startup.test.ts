@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+/* eslint-disable @typescript-eslint/no-misused-promises, @typescript-eslint/no-unused-expressions, no-empty, @typescript-eslint/no-unnecessary-condition */
 import express from "express";
-import { Server, createServer } from "http";
+import { createServer, Server } from "http";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 // HTTPサーバーの起動・停止とエラーハンドリングのテスト
 describe("HTTP Server startup and error handling", () => {
@@ -11,16 +12,29 @@ describe("HTTP Server startup and error handling", () => {
     // Close secondary server first if present
     if (server2) {
       try {
-        await new Promise<void>((resolve) => server2!.close(() => resolve()));
-      } catch {
-        /* ignore */
+        await new Promise<void>((resolve) => {
+          if (server2) {
+            server2.close(() => {
+              resolve();
+            });
+          } else {
+            resolve();
+          }
+        });
+      } catch (err) {
+        void err;
       }
       server2 = null;
     }
 
     if (server) {
       try {
-        await new Promise<void>((resolve) => server!.close(() => resolve()));
+        const s = server;
+        await new Promise<void>((resolve) =>
+          s.close(() => {
+            resolve();
+          }),
+        );
       } catch {
         /* ignore */
       }
@@ -34,10 +48,13 @@ describe("HTTP Server startup and error handling", () => {
     await new Promise<void>((resolve, reject) => {
       server = app.listen(0, () => {
         // port 0 = any available port
-        const address = server!.address();
+        const address = server ? server.address() : null;
         expect(address).toBeTruthy();
-        if (typeof address === "object" && address !== null) {
-          expect((address as any).port).toBeGreaterThan(0);
+        if (address && typeof address === "object") {
+          // address is AddressInfo-like
+          const addrObj = address as { port?: number };
+          expect(typeof addrObj.port).toBe("number");
+          expect(addrObj.port && addrObj.port > 0).toBe(true);
         } else {
           // on some platforms address may be a string (pipe); ensure it's not falsy
           expect(typeof address).toBe("string");
@@ -56,26 +73,40 @@ describe("HTTP Server startup and error handling", () => {
     // Start first server on a specific port
     await new Promise<void>((resolve, reject) => {
       server = app1.listen(0, () => {
-        const port = (server!.address() as any).port;
+        const addr = server ? server.address() : null;
+        const port =
+          typeof addr === "object" && addr && "port" in addr
+            ? (addr as { port?: number }).port
+            : undefined;
         // Create the underlying server instance so we can attach handlers before listen
         server2 = createServer(app2);
 
         const errPromise = new Promise<unknown>((res) => {
-          server2!.once("error", (err) => res(err));
+          if (server2) {
+            server2.once("error", (err) => {
+              res(err);
+            });
+          }
         });
 
         // Now attempt to listen on the same port; the error (if any) will be captured
-        server2!.listen(port);
+        if (typeof port === "number") server2.listen(port);
+        else {
+          // fallback: listen on 0 to force binding
+          server2.listen(0);
+        }
 
-        void errPromise.then((err) => {
-          const e = err as NodeJS.ErrnoException;
-          expect(e && e.code).toBe("EADDRINUSE");
-          // ensure server2 is cleaned up if possible
-          try {
-            server2 && server2.close();
-          } catch {}
-          resolve();
-        });
+        errPromise
+          .then((err) => {
+            const e = err as NodeJS.ErrnoException;
+            expect(e && e.code).toBe("EADDRINUSE");
+            // ensure server2 is cleaned up if possible
+            try {
+              server2 && server2.close();
+            } catch {}
+            resolve();
+          })
+          .catch(reject);
       });
 
       server.on("error", reject);
@@ -86,12 +117,20 @@ describe("HTTP Server startup and error handling", () => {
     const app = express();
 
     server = await new Promise<Server>((resolve, reject) => {
-      const s = app.listen(0, () => resolve(s));
+      const s = app.listen(0, () => {
+        resolve(s);
+      });
       s.on("error", reject);
     });
 
     const closePromise = new Promise<void>((resolve) => {
-      server!.close(() => resolve());
+      if (server) {
+        server.close(() => {
+          resolve();
+        });
+      } else {
+        resolve();
+      }
     });
 
     await expect(closePromise).resolves.toBeUndefined();

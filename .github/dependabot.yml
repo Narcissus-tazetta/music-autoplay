@@ -1,0 +1,18 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      devdependencies:
+        dependency-type: development
+      production-dependencies:
+        dependency-type: production
+    ignore:
+      # React 19は安定してからアップデート
+      - dependency-name: "react"
+        versions: ["20.x"]
+      - dependency-name: "react-dom"
+        versions: ["20.x"]

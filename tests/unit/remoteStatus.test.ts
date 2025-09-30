@@ -1,9 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
+import type { RemoteStatus } from "../../src/app/stores/musicStore";
 import {
   isRemoteStatusEqual,
   shouldDebounce,
 } from "../../src/server/socket/remoteStatus";
-import type { RemoteStatus } from "../../src/app/stores/musicStore";
 
 describe("remoteStatus helpers", () => {
   it("isRemoteStatusEqual returns true for same closed types", () => {

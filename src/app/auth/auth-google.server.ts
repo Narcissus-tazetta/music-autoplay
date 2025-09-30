@@ -1,5 +1,5 @@
-import { importJWK, jwtVerify } from "jose";
 import logger from "@/server/logger";
+import { importJWK, jwtVerify } from "jose";
 import { OAuth2Strategy } from "remix-auth-oauth2";
 
 export interface GoogleOIDCClaims {

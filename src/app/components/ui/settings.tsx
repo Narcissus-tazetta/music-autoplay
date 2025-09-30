@@ -1,18 +1,19 @@
-import React from "react";
+import { useSettingsStore } from "@/shared/stores/settingsStore";
 import { Label } from "@shadcn/label";
 import { ToggleGroup } from "@shadcn/toggle-group";
-import { MoonIcon, SparklesIcon, SunIcon, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, MoonIcon, SparklesIcon, SunIcon } from "lucide-react";
+import { useEffect } from "react";
 import { Theme, useTheme } from "remix-themes";
-import { useSettingsStore } from "@/shared/stores/settingsStore";
 
 export const Settings = () => {
   const [theme, setTheme, meta] = useTheme();
-  const ytStatusVisible = useSettingsStore((s) => s.ytStatusVisible);
-  const setYtStatusVisible = useSettingsStore((s) => s.setYtStatusVisible);
-  const loadFromServer = useSettingsStore((s) => s.loadFromServer);
-  const syncToServer = useSettingsStore((s) => s.syncToServer);
+  const settings = useSettingsStore();
+  const ytStatusVisible = settings.ytStatusVisible;
+  const setYtStatusVisible = settings.setYtStatusVisible;
+  const loadFromServer = settings.loadFromServer;
+  const syncToServer = settings.syncToServer;
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (typeof loadFromServer === "function") {
       // call and ignore returned promise explicitly
       loadFromServer().catch((e: unknown) => {
@@ -24,7 +25,7 @@ export const Settings = () => {
     }
   }, [loadFromServer]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (typeof syncToServer === "function") {
       // call and ignore returned promise explicitly
       syncToServer().catch((e: unknown) => {
@@ -70,9 +71,7 @@ export const Settings = () => {
         unselectable="off"
         value={ytStatusVisible ? "on" : "off"}
         onValueChange={(v) => {
-          if (v) {
-            setYtStatusVisible(v === "on");
-          }
+          if (v) setYtStatusVisible(v === "on");
         }}
         className="w-full"
       >

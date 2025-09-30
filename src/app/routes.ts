@@ -10,6 +10,7 @@ export default [
 
   route("api/music/add", "routes/api/music.add.tsx"),
   route("api/music/remove", "routes/api/music.remove.tsx"),
+  route("api/assets", "routes/api/assets.tsx"),
   route("api/settings", "routes/api/settings.tsx"),
 
   route("*", "routes/not-found.tsx"),

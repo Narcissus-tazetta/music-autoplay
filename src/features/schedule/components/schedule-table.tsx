@@ -13,9 +13,7 @@ export const ScheduleTable = ({
 
   const formatTime = (item: ScheduleItem) => {
     const { hours, minutes, seconds } = item.startTime;
-    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds
-      .toString()
-      .padStart(2, "0")}`;
+    return `${`${hours}`.padStart(2, "0")}:${`${minutes}`.padStart(2, "0")}:${`${seconds}`.padStart(2, "0")}`;
   };
 
   const isCurrentItem = (item: ScheduleItem, index: number) => {

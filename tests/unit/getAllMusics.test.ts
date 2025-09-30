@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { Music } from "../../src/app/stores/musicStore";
 import registerGetAllMusics from "../../src/server/handlers/getAllMusics";
 import { makeSocket } from "./testDeps";

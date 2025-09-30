@@ -1,6 +1,8 @@
+import logger from "@/server/logger";
 import type { Socket } from "socket.io";
 import type { RemoteStatus } from "~/stores/musicStore";
-import { registerHandler } from "../utils/socketHelpers";
+import { wrapAsync } from "../utils/errorHandlers";
+import { registerTypedHandler } from "../utils/socketHelpers";
 
 type RemoteStatusSupplier = RemoteStatus | (() => RemoteStatus);
 
@@ -8,10 +10,10 @@ export default function registerGetRemoteStatus(
   socket: Socket,
   remoteStatusOrSupplier: RemoteStatusSupplier,
 ) {
-  registerHandler(
+  registerTypedHandler(
     socket,
     "getRemoteStatus",
-    (callback: (state: RemoteStatus) => void) => {
+    wrapAsync((callback: (state: RemoteStatus) => void) => {
       try {
         if (typeof remoteStatusOrSupplier === "function") {
           const fn = remoteStatusOrSupplier as () => RemoteStatus;
@@ -20,14 +22,19 @@ export default function registerGetRemoteStatus(
         } else {
           callback(remoteStatusOrSupplier);
         }
-      } catch {
+      } catch (e: unknown) {
         try {
-          // swallow provider errors and return closed state as safe fallback
           callback({ type: "closed" });
-        } catch {
-          // ignore
+        } catch (err: unknown) {
+          logger.warn(
+            "getRemoteStatus: failed to deliver fallback closed state to callback",
+            {
+              error: err,
+            },
+          );
         }
+        logger.warn("getRemoteStatus handler failed", { error: e });
       }
-    },
+    }, "getRemoteStatus handler"),
   );
 }

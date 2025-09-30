@@ -1,10 +1,80 @@
-import util from "node:util";
-import winston from "winston";
+// Loggerは実行時に任意のメタオブジェクトを受け取るため、防御的なチェックは意図的です。
+import { extractErrorInfo } from "@/server/utils/errorHandling";
 import chalk from "chalk";
-import DailyRotateFile from "winston-daily-rotate-file";
+import util from "node:util";
 import stripAnsi from "strip-ansi";
+import winston from "winston";
+import DailyRotateFile from "winston-daily-rotate-file";
+import { extractMetaFields, normalizeMetaForPrint } from "./loggerMeta";
+import ConfigManager from "./utils/configManager";
+export type SerializedError = {
+  message: string;
+  code?: string;
+  details?: unknown;
+  stack?: string | undefined;
+};
 
-const isProd = process.env.NODE_ENV === "production";
+export function serializeError(err: unknown): SerializedError {
+  try {
+    const info = extractErrorInfo(err);
+
+    let details: unknown = undefined;
+    if (err && typeof err === "object" && !Array.isArray(err)) {
+      try {
+        const obj = err as Record<string, unknown>;
+        if (Object.prototype.hasOwnProperty.call(obj, "details"))
+          details = obj.details;
+        else {
+          const keys = Object.keys(obj).filter(
+            (k) => !["message", "stack", "code"].includes(k),
+          );
+          if (keys.length) {
+            const out: Record<string, unknown> = {};
+            for (const k of keys) out[k] = obj[k];
+            details = out;
+          }
+        }
+      } catch (_e) {
+        void _e;
+      }
+    }
+
+    return {
+      message: info.message,
+      code: info.code,
+      stack: info.stack,
+      details,
+    };
+  } catch (_e: unknown) {
+    void _e;
+    try {
+      return { message: String(err), details: undefined };
+    } catch {
+      return {
+        message: Object.prototype.toString.call(err),
+        details: undefined,
+      };
+    }
+  }
+}
+export type AppLogMeta = Record<string, unknown>;
+export type AppLogFn = (msg: string, meta?: AppLogMeta) => void;
+export type AppLogger = {
+  info: AppLogFn;
+  warn: AppLogFn;
+  error: AppLogFn;
+  debug: AppLogFn;
+};
+
+const configManager = ConfigManager.getInstance();
+const logConfig = configManager.getLoggingConfig();
+const isDev = logConfig.isDev;
+const isProd = !isDev;
+const configuredLogLevel = logConfig.level;
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
 
 function safeSerialize(obj: unknown): unknown {
   const seen = new WeakSet();
@@ -24,15 +94,19 @@ function safeSerialize(obj: unknown): unknown {
 
   try {
     return JSON.parse(JSON.stringify(obj, replacer)) as unknown;
-  } catch {
+  } catch (err: unknown) {
     try {
       return util.inspect(obj, { depth: 4, colors: false });
-    } catch {
+    } catch (_err2: unknown) {
+      try {
+        console.debug("safeSerialize failed", String(_err2), String(err));
+      } catch (_e: unknown) {
+        void _e;
+      }
       return "[unserializable]";
     }
   }
 }
-
 const baseFormat = isProd
   ? winston.format.combine(winston.format.timestamp(), winston.format.json())
   : winston.format.combine(
@@ -40,13 +114,15 @@ const baseFormat = isProd
       winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
       winston.format.splat(),
       winston.format.printf((info) => {
-        const rec = info as Record<string, unknown>;
+        const recRecord: Record<string, unknown> = isRecord(info)
+          ? (info as unknown as Record<string, unknown>)
+          : { message: String(info) };
 
         const timestamp =
-          typeof rec.timestamp === "string"
-            ? rec.timestamp
+          typeof recRecord.timestamp === "string"
+            ? recRecord.timestamp
             : new Date().toISOString();
-        const rawLevel = rec.level;
+        const rawLevel = recRecord.level;
         const level =
           typeof rawLevel === "string"
             ? rawLevel
@@ -54,93 +130,23 @@ const baseFormat = isProd
               ? String(rawLevel)
               : util.inspect(rawLevel, { depth: 1, colors: false });
         const message =
-          typeof rec.message === "string"
-            ? rec.message
-            : util.inspect(rec.message, { depth: 2, colors: false });
+          typeof recRecord.message === "string"
+            ? recRecord.message
+            : util.inspect(recRecord.message, { depth: 2, colors: false });
         const standard = new Set(["level", "message", "timestamp"]);
-        const metaKeys = Object.keys(rec).filter((k) => !standard.has(k));
+        const metaKeys = Object.keys(recRecord).filter((k) => !standard.has(k));
 
         let metaStr = "";
         if (metaKeys.length !== 0) {
           const metaObjRaw: Record<string, unknown> = Object.fromEntries(
-            metaKeys.map((k) => [k, rec[k]]),
+            metaKeys.map((k) => [k, recRecord[k]]),
           );
           const metaObj = safeSerialize(metaObjRaw);
 
           try {
-            const metaForPrint =
-              metaObj && typeof metaObj === "object"
-                ? (metaObj as Record<string, unknown>)
-                : {};
-
-            // Try multiple shapes where state/url may appear: { youtube: {state,url} }, { status: {type,musicId,musicTitle} }, or args: [{state,url}, ...]
-            let extractedState: string | undefined;
-            let extractedUrl: string | undefined;
-            let consumedKey: string | undefined;
-
-            // 1) explicit youtube key
-            if (
-              Object.prototype.hasOwnProperty.call(metaObjRaw, "youtube") &&
-              metaForPrint.youtube &&
-              typeof metaForPrint.youtube === "object"
-            ) {
-              const y = metaForPrint.youtube as
-                | Record<string, unknown>
-                | undefined;
-              extractedUrl = y && typeof y.url === "string" ? y.url : undefined;
-              extractedState =
-                y && typeof y.state === "string" ? y.state : undefined;
-              consumedKey = "youtube";
-            }
-
-            // 2) status object (remoteStatus) with type/musicId/musicTitle
-            if (
-              !extractedState &&
-              Object.prototype.hasOwnProperty.call(metaObjRaw, "status") &&
-              metaForPrint.status &&
-              typeof metaForPrint.status === "object"
-            ) {
-              const s = metaForPrint.status as Record<string, unknown>;
-              extractedState =
-                typeof s.type === "string"
-                  ? s.type
-                  : typeof s.state === "string"
-                    ? s.state
-                    : undefined;
-              if (!extractedUrl)
-                extractedUrl =
-                  typeof s.musicId === "string"
-                    ? s.musicId
-                    : typeof s.musicTitle === "string"
-                      ? s.musicTitle
-                      : undefined;
-              consumedKey = consumedKey || "status";
-            }
-
-            // 3) args array (socket event) where first element carries state/url
-            if (
-              !extractedState &&
-              Object.prototype.hasOwnProperty.call(metaObjRaw, "args")
-            ) {
-              const args = metaForPrint.args;
-              if (
-                Array.isArray(args) &&
-                args.length > 0 &&
-                typeof args[0] === "object"
-              ) {
-                const a0 = args[0] as Record<string, unknown>;
-                extractedState =
-                  typeof a0.state === "string"
-                    ? a0.state
-                    : typeof a0.type === "string"
-                      ? a0.type
-                      : undefined;
-                extractedUrl =
-                  extractedUrl ||
-                  (typeof a0.url === "string" ? a0.url : undefined);
-                consumedKey = consumedKey || "args";
-              }
-            }
+            const metaForPrint = normalizeMetaForPrint(metaObj);
+            const { consumedKey, extractedState, extractedUrl, rest } =
+              extractMetaFields(metaObjRaw, metaForPrint);
 
             const stateColor = (s?: string) => {
               switch (s) {
@@ -161,46 +167,44 @@ const baseFormat = isProd
               }
             };
 
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime check for dev-only pretty formatting
-            if (!isProd) {
-              if (extractedState !== undefined || extractedUrl !== undefined) {
-                const urlStr = extractedUrl
-                  ? chalk.hex("#8A2BE2")(extractedUrl)
-                  : "";
-                const stateStr = extractedState
-                  ? stateColor(extractedState)
-                  : "";
+            if (extractedState !== undefined || extractedUrl !== undefined) {
+              const urlStr = extractedUrl
+                ? chalk.hex("#8A2BE2")(extractedUrl)
+                : "";
+              const stateStr = extractedState ? stateColor(extractedState) : "";
 
-                const rest: Record<string, unknown> = {};
-                for (const key of Object.keys(metaForPrint))
-                  if (key !== consumedKey) rest[key] = metaForPrint[key];
-                const restStr = Object.keys(rest).length
-                  ? JSON.stringify(rest)
-                  : "";
+              const restStr = Object.keys(rest).length
+                ? JSON.stringify(rest)
+                : "";
 
-                const label =
-                  consumedKey === "status"
-                    ? "status"
-                    : consumedKey === "youtube"
-                      ? "youtube"
-                      : consumedKey === "args"
-                        ? "args0"
-                        : "meta";
-                metaStr = `${restStr ? restStr + " " : ""}${label}=${urlStr}${stateStr ? ` state=${stateStr}` : ""}`;
-              } else {
-                metaStr =
-                  typeof metaObj === "string"
-                    ? metaObj
-                    : JSON.stringify(metaObj);
-              }
+              const label =
+                consumedKey === "status"
+                  ? "status"
+                  : consumedKey === "youtube"
+                    ? "youtube"
+                    : consumedKey === "args"
+                      ? "args0"
+                      : "meta";
+              metaStr = `${restStr ? restStr + " " : ""}${label}=${urlStr}${
+                stateStr ? ` state=${stateStr}` : ""
+              }`;
             } else {
               metaStr =
                 typeof metaObj === "string" ? metaObj : JSON.stringify(metaObj);
             }
-          } catch (e) {
-            metaStr =
-              typeof metaObj === "string" ? metaObj : JSON.stringify(metaObj);
-            void e;
+          } catch (e: unknown) {
+            try {
+              metaStr =
+                typeof metaObj === "string" ? metaObj : JSON.stringify(metaObj);
+            } catch (_e: unknown) {
+              void _e;
+              metaStr = String(metaObj);
+            }
+            try {
+              console.debug("logger meta stringify fallback", e);
+            } catch (_e: unknown) {
+              void _e;
+            }
           }
         }
 
@@ -215,22 +219,19 @@ if (isProd) {
     filename: "logs/app-%DATE%.log",
     datePattern: "YYYY-MM-DD",
     zippedArchive: true,
-    maxSize: "50m",
     maxFiles: "30d",
-    level: process.env.LOG_LEVEL || "info",
+    level: configuredLogLevel,
     utc: true,
     format: winston.format.combine(
       winston.format((info) => {
-        if (typeof info.message === "string")
-          info.message = stripAnsi(info.message);
-        for (const k of Object.keys(info)) {
-          if (typeof (info as Record<string, unknown>)[k] === "string") {
-            (info as Record<string, unknown>)[k] = stripAnsi(
-              (info as Record<string, unknown>)[k] as string,
-            );
-          }
-        }
-        return info;
+        const rec: Record<string, unknown> = isRecord(info)
+          ? (info as Record<string, unknown>)
+          : { message: String(info) };
+        if (typeof rec.message === "string")
+          rec.message = stripAnsi(rec.message);
+        for (const k of Object.keys(rec))
+          if (typeof rec[k] === "string") rec[k] = stripAnsi(rec[k]);
+        return rec as unknown as winston.Logform.TransformableInfo;
       })(),
       winston.format.timestamp(),
       winston.format.json(),
@@ -240,23 +241,23 @@ if (isProd) {
   transports.push(fileRotateTransport as unknown as winston.transport);
 }
 
-const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || (isProd ? "info" : "debug"),
+const logger: winston.Logger = winston.createLogger({
+  level: configuredLogLevel,
   format: baseFormat,
   transports,
   exitOnError: false,
 });
 
-function withContext(ctx: Record<string, unknown>) {
+function withContext(ctx: AppLogMeta): AppLogger {
   return {
-    info: (msg: string, meta?: Record<string, unknown>) =>
-      logger.info(msg, { ...ctx, ...meta }),
-    warn: (msg: string, meta?: Record<string, unknown>) =>
-      logger.warn(msg, { ...ctx, ...meta }),
-    error: (msg: string, meta?: Record<string, unknown>) =>
-      logger.error(msg, { ...ctx, ...meta }),
-    debug: (msg: string, meta?: Record<string, unknown>) =>
-      logger.debug(msg, { ...ctx, ...meta }),
+    info: (msg: string, meta: AppLogMeta = {}) =>
+      logger.info(msg, normalizeMeta({ ...ctx, ...meta })),
+    warn: (msg: string, meta: AppLogMeta = {}) =>
+      logger.warn(msg, normalizeMeta({ ...ctx, ...meta })),
+    error: (msg: string, meta: AppLogMeta = {}) =>
+      logger.error(msg, normalizeMeta({ ...ctx, ...meta })),
+    debug: (msg: string, meta: AppLogMeta = {}) =>
+      logger.debug(msg, normalizeMeta({ ...ctx, ...meta })),
   };
 }
 
@@ -269,11 +270,12 @@ function replaceConsoleWithLogger(): () => void {
 
   const toMessage = (args: unknown[]) => {
     if (args.length === 0) return "";
-    if (typeof args[0] === "string" && args[0].includes("%")) {
+    const first = args[0];
+    if (typeof first === "string" && first.includes("%")) {
       try {
-        return util.format(...(args as [string, ...unknown[]]));
-      } catch (e) {
-        void e;
+        return util.format(first, ...args.slice(1));
+      } catch (e: unknown) {
+        safeLog("debug", "logger toMessage format error", { error: e });
       }
     }
     return args
@@ -315,66 +317,86 @@ function installProcessHandlers(opts?: { exitOnUncaught?: boolean }) {
 
   process.on("uncaughtException", (err: unknown) => {
     logger.error("uncaughtException", {
-      error:
-        err instanceof Error
-          ? { message: err.message, stack: err.stack }
-          : String(err),
+      error: err,
     });
-    if (exitOnUncaught) {
-      setTimeout(() => process.exit(1), 200);
-    }
+    if (exitOnUncaught) setTimeout(() => process.exit(1), 200);
   });
 
   process.on("unhandledRejection", (reason: unknown) => {
     logger.error("unhandledRejection", {
-      reason:
-        reason instanceof Error
-          ? { message: reason.message, stack: reason.stack }
-          : String(reason),
+      reason,
     });
-    if (exitOnUncaught) {
-      setTimeout(() => process.exit(1), 200);
-    }
+    if (exitOnUncaught) setTimeout(() => process.exit(1), 200);
   });
 }
 
 export default logger;
-export { withContext, replaceConsoleWithLogger, installProcessHandlers };
+export { installProcessHandlers, replaceConsoleWithLogger, withContext };
 
 export function logInfo(
   message: string,
-  ctx: Record<string, unknown> = {},
-  meta: Record<string, unknown> = {},
+  ctx: AppLogMeta = {},
+  meta: AppLogMeta = {},
 ) {
-  logger.info(message, { ...ctx, ...meta });
+  logger.info(message, normalizeMeta({ ...ctx, ...meta }));
+}
+
+function normalizeMeta(meta: AppLogMeta): AppLogMeta {
+  const out: AppLogMeta = {};
+  for (const k of Object.keys(meta)) {
+    const v = meta[k];
+    if (k === "error" || k === "reason") out[k] = serializeError(v);
+    else out[k] = v;
+  }
+  return out;
 }
 
 export function logWarn(
   message: string,
-  ctx: Record<string, unknown> = {},
-  meta: Record<string, unknown> = {},
+  ctx: AppLogMeta = {},
+  meta: AppLogMeta = {},
 ) {
-  logger.warn(message, { ...ctx, ...meta });
+  logger.warn(message, normalizeMeta({ ...ctx, ...meta }));
 }
 
 export function logError(
   message: string,
-  ctx: Record<string, unknown> = {},
-  meta: Record<string, unknown> = {},
+  ctx: AppLogMeta = {},
+  meta: AppLogMeta = {},
 ) {
-  logger.error(message, { ...ctx, ...meta });
+  logger.error(message, normalizeMeta({ ...ctx, ...meta }));
 }
 
 export function logMetric(
   name: string,
-  ctx: Record<string, unknown> = {},
-  fields: Record<string, unknown> = {},
+  ctx: AppLogMeta = {},
+  fields: AppLogMeta = {},
 ) {
-  logger.info(`metric:${name}`, {
-    ...ctx,
-    ...fields,
-    _metric: true,
-    metricName: name,
-    timestamp: new Date().toISOString(),
-  });
+  logger.info(
+    `metric:${name}`,
+    normalizeMeta({
+      ...ctx,
+      ...fields,
+      _metric: true,
+      metricName: name,
+      timestamp: new Date().toISOString(),
+    }),
+  );
+}
+
+export function safeLog(
+  level: "warn" | "debug",
+  msg: string,
+  meta?: AppLogMeta,
+) {
+  try {
+    if (level === "warn") logger.warn(msg, normalizeMeta(meta ?? {}));
+    else logger.debug(msg, normalizeMeta(meta ?? {}));
+  } catch (e: unknown) {
+    try {
+      console.debug(msg, meta, e);
+    } catch (_e: unknown) {
+      void _e;
+    }
+  }
 }

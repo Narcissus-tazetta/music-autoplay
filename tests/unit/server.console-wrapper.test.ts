@@ -1,20 +1,34 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Console wrapper のテスト
 describe("Console Error/Warn Wrapper", () => {
   let originalConsoleError: typeof console.error;
   let originalConsoleWarn: typeof console.warn;
-  let mockLogger: any;
+  let mockLogger: {
+    error: (...args: unknown[]) => void;
+    warn: (...args: unknown[]) => void;
+  };
+  let errorSpy: ReturnType<typeof vi.fn>;
+  let warnSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     // Preserve original console methods
     originalConsoleError = console.error;
     originalConsoleWarn = console.warn;
 
-    // Mock logger
+    // Mock logger spies
+
+    errorSpy = vi.fn();
+
+    warnSpy = vi.fn();
     mockLogger = {
-      error: vi.fn(),
-      warn: vi.fn(),
+      error: (...args: unknown[]) => {
+        errorSpy(...args);
+      },
+      warn: (...args: unknown[]) => {
+        warnSpy(...args);
+      },
     };
   });
 
@@ -24,7 +38,10 @@ describe("Console Error/Warn Wrapper", () => {
     console.warn = originalConsoleWarn;
   });
 
-  const setupConsoleWrapper = (logger: any) => {
+  const setupConsoleWrapper = (logger: {
+    error: (...args: unknown[]) => void;
+    warn: (...args: unknown[]) => void;
+  }) => {
     const _origConsoleError = console.error.bind(console);
     const _origConsoleWarn = console.warn.bind(console);
 
@@ -34,11 +51,15 @@ describe("Console Error/Warn Wrapper", () => {
       } catch (e) {
         try {
           _origConsoleError("failed to log console.error via logger", e);
-        } catch {}
+        } catch (_err) {
+          void _err;
+        }
       }
       try {
         _origConsoleError(...(args as [unknown, ...unknown[]]));
-      } catch {}
+      } catch (_err) {
+        void _err;
+      }
     };
 
     console.warn = (...args: unknown[]) => {
@@ -47,11 +68,15 @@ describe("Console Error/Warn Wrapper", () => {
       } catch (e) {
         try {
           _origConsoleWarn("failed to log console.warn via logger", e);
-        } catch {}
+        } catch (_err) {
+          void _err;
+        }
       }
       try {
         _origConsoleWarn(...(args as [unknown, ...unknown[]]));
-      } catch {}
+      } catch (_err) {
+        void _err;
+      }
     };
   };
 
@@ -60,7 +85,7 @@ describe("Console Error/Warn Wrapper", () => {
 
     console.error("test error message", { detail: "error details" });
 
-    expect(mockLogger.error).toHaveBeenCalledWith(
+    expect(errorSpy).toHaveBeenCalledWith(
       "console.error",
       expect.objectContaining({
         args: ["test error message", { detail: "error details" }],
@@ -74,7 +99,7 @@ describe("Console Error/Warn Wrapper", () => {
 
     console.warn("test warning message", 123);
 
-    expect(mockLogger.warn).toHaveBeenCalledWith(
+    expect(warnSpy).toHaveBeenCalledWith(
       "console.warn",
       expect.objectContaining({
         args: ["test warning message", 123],
@@ -84,8 +109,9 @@ describe("Console Error/Warn Wrapper", () => {
   });
 
   it("should handle logger errors gracefully and still call original console", () => {
-    // Make logger throw error
-    mockLogger.error = vi.fn().mockImplementation(() => {
+    // Make logger throw error (spy that throws so we can assert it was called)
+
+    mockLogger.error = vi.fn(() => {
       throw new Error("Logger failed");
     });
 
@@ -96,7 +122,9 @@ describe("Console Error/Warn Wrapper", () => {
       console.error("test message");
     }).not.toThrow();
 
-    expect(mockLogger.error).toHaveBeenCalled();
+    // assert the throwing spy was invoked
+
+    expect(mockLogger.error as ReturnType<typeof vi.fn>).toHaveBeenCalled();
   });
 
   it("should capture stack trace in logged error", () => {
@@ -108,7 +136,7 @@ describe("Console Error/Warn Wrapper", () => {
 
     testFunction();
 
-    expect(mockLogger.error).toHaveBeenCalledWith(
+    expect(errorSpy).toHaveBeenCalledWith(
       "console.error",
       expect.objectContaining({
         args: ["error from function"],
@@ -135,7 +163,7 @@ describe("Console Error/Warn Wrapper", () => {
       undefined,
     );
 
-    expect(mockLogger.error).toHaveBeenCalledWith(
+    expect(errorSpy).toHaveBeenCalledWith(
       "console.error",
       expect.objectContaining({
         args: [

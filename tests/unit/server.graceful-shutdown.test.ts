@@ -1,39 +1,69 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { Server } from "http";
+/* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/no-floating-promises */
 import express from "express";
+import { Server } from "http";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Graceful shutdown のテスト
 describe("Graceful Shutdown", () => {
-  let mockServer: any;
-  let mockSocketServer: any;
-  let mockFileStore: any;
+  type MockServer = {
+    close: (cb?: (err?: Error) => void) => void;
+    address: () => { port: number };
+    on: (...args: unknown[]) => void;
+  };
+
+  type MockSocketServer = {
+    close: () => Promise<void>;
+    init: () => Promise<void>;
+  };
+
+  type MockFileStore = {
+    flush: () => Promise<void>;
+    closeSync: () => void;
+  };
+
+  let mockServer: MockServer;
+  let mockSocketServer: MockSocketServer;
+  let mockFileStore: MockFileStore;
   let originalProcessExit: typeof process.exit;
 
   beforeEach(() => {
     // Mock HTTP server
     mockServer = {
-      close: vi.fn((callback) => {
-        if (callback) setTimeout(callback, 10);
-      }),
-      address: vi.fn().mockReturnValue({ port: 3000 }),
-      on: vi.fn(),
+      close: vi.fn((callback?: (err?: Error) => void) => {
+        if (callback) {
+          setTimeout(() => {
+            callback();
+          }, 10);
+        }
+      }) as unknown as (cb?: (err?: Error) => void) => void,
+      address: () => ({ port: 3000 }),
+      on: () => {},
     };
 
     // Mock SocketServerInstance
     mockSocketServer = {
-      close: vi.fn().mockResolvedValue(undefined),
-      init: vi.fn().mockResolvedValue(undefined),
+      close: vi
+        .fn()
+        .mockResolvedValue(undefined) as unknown as () => Promise<void>,
+      init: vi
+        .fn()
+        .mockResolvedValue(undefined) as unknown as () => Promise<void>,
     };
 
     // Mock FileStore
     mockFileStore = {
-      flush: vi.fn().mockResolvedValue(undefined),
-      closeSync: vi.fn(),
+      flush: vi
+        .fn()
+        .mockResolvedValue(undefined) as unknown as () => Promise<void>,
+      closeSync: vi.fn() as unknown as () => void,
     };
 
     // Mock process.exit to prevent actual exit during tests
     originalProcessExit = process.exit;
-    process.exit = vi.fn() as any;
+    const fakeExit = vi.fn(
+      (code?: number) => {},
+    ) as unknown as typeof process.exit;
+    process.exit = fakeExit;
   });
 
   afterEach(() => {
@@ -43,9 +73,9 @@ describe("Graceful Shutdown", () => {
 
   // Simplified graceful shutdown function for testing
   const createGracefulShutdown = (
-    server: any,
-    socketServer: any,
-    fileStore: any,
+    server: MockServer,
+    socketServer: MockSocketServer,
+    fileStore: MockFileStore,
     shutdownTimeout = 5000,
   ) => {
     return async () => {
@@ -54,7 +84,9 @@ describe("Graceful Shutdown", () => {
         process.exit(1);
       };
 
-      const timer = setTimeout(forceExit, shutdownTimeout);
+      const timer = setTimeout(() => {
+        forceExit();
+      }, shutdownTimeout);
 
       try {
         console.log("graceful shutdown initiated");

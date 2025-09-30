@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { FileStore } from "../../src/server/musicPersistence";
 import fs from "fs";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { FileStore } from "../../src/server/persistence";
 
 describe("FileStore", () => {
   const tmpPath = "/tmp/music-test.json";
@@ -17,7 +17,7 @@ describe("FileStore", () => {
   it("loads and flushes without error", async () => {
     const store = new FileStore(tmpPath);
     expect(store.load()).toEqual([]);
-    store.add({
+    void store.add({
       id: "x",
       title: "T",
       channelName: "C",
