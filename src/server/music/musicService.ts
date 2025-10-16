@@ -1,180 +1,190 @@
-import { watchUrl } from "@/shared/libs/youtube";
-import { createHash, timingSafeEqual } from "crypto";
+import { getMessage } from "@/shared/constants/messages";
+import type { HandlerError } from "@/shared/utils/errors";
+import type { Result } from "@/shared/utils/result";
+import { err, ok } from "@/shared/utils/result";
 import type { Music } from "~/stores/musicStore";
-import logger, { logMetric } from "../logger";
-import { safeString } from "../utils/errorHandling";
-import ServiceResolver from "../utils/serviceResolver";
-import type { ServiceDependencies } from "../utils/serviceResolver";
-import type { EmitOptions } from "../utils/socketEmitter";
-import type MusicRepository from "./musicRepository";
-import type YouTubeResolver from "./youtubeResolver";
+import logger from "../logger";
+import type { AuthChecker } from "./auth/authChecker";
+import type { MusicEventEmitter } from "./emitter/musicEventEmitter";
+import type { MusicRepository } from "./repository/musicRepository";
+import type { YouTubeResolver } from "./resolver/youtubeResolver";
 
-type ReplyOptions = { formErrors?: string[] } | Record<string, unknown>;
+export interface AddMusicRequest {
+  url: string;
+  requesterHash?: string;
+  requesterName?: string;
+}
 
-export type EmitFn = (
-  ev: string,
-  payload: unknown,
-  options?: EmitOptions,
-) => boolean | undefined;
+export interface RemoveMusicRequest {
+  url: string;
+  requesterHash?: string;
+}
 
-export default class MusicService {
+export class MusicService {
   constructor(
-    private repo: MusicRepository,
+    private auth: AuthChecker,
     private resolver: YouTubeResolver,
-    private emitFn: EmitFn,
+    public readonly repository: MusicRepository,
+    public readonly emitter: MusicEventEmitter,
   ) {}
 
-  buildCompatList(): (Music & { url: string })[] {
-    return this.repo.buildCompatList();
-  }
+  async addMusic(
+    request: AddMusicRequest,
+  ): Promise<Result<Music, HandlerError>> {
+    const { url, requesterHash, requesterName } = request;
 
-  async addMusic(url: string, requesterHash?: string): Promise<ReplyOptions> {
-    const res = (await this.resolver.resolve(url)) as {
-      ok: boolean;
-      error?: unknown;
-      value?: unknown;
-    };
-    if (!res.ok) {
-      const err: unknown = res.error;
-      return {
-        formErrors: [
-          typeof err === "string" ? err : safeString(err) || "video not found",
-        ],
-      };
+    const resolveResult = await this.resolver.resolve(url);
+    if (!resolveResult.ok) return err(resolveResult.error);
+
+    const meta = resolveResult.value;
+
+    const validationResult = this.resolver.validateMetadata(meta);
+    if (!validationResult.ok) return err(validationResult.error);
+
+    if (this.repository.has(meta.id)) {
+      const position = this.repository.getPosition(meta.id);
+      return err({
+        message: getMessage("ERROR_ALREADY_EXISTS", position + 1),
+        code: "ALREADY_EXISTS",
+        meta: { position },
+      });
     }
-    const meta: unknown = res.value;
-    const id =
-      meta &&
-      typeof meta === "object" &&
-      typeof (meta as Record<string, unknown>).id === "string"
-        ? String((meta as Record<string, unknown>).id)
-        : "";
-    if (!id) return { formErrors: ["video not found"] };
-    if (this.repo.has(id)) return { formErrors: ["already added"] };
-
-    const typedMeta =
-      meta && typeof meta === "object" ? (meta as Record<string, unknown>) : {};
-    const title = typeof typedMeta.title === "string" ? typedMeta.title : id;
-    const channelTitle =
-      typeof typedMeta.channelTitle === "string" ? typedMeta.channelTitle : "";
-    const channelId =
-      typeof typedMeta.channelId === "string" ? typedMeta.channelId : "";
-    const duration =
-      typeof typedMeta.duration === "string" ? typedMeta.duration : "PT0S";
 
     const music: Music = {
-      title,
-      channelName: channelTitle,
-      id,
-      channelId,
-      duration,
+      id: meta.id,
+      title: meta.title,
+      channelName: meta.channelTitle,
+      channelId: meta.channelId,
+      duration: meta.duration ?? "PT0S",
       requesterHash,
+      requesterName,
+      requestedAt: new Date().toISOString(),
     };
 
-    this.repo.add(music);
-    logger.info("music added", { id, title: music.title, requesterHash });
+    const addResult = this.repository.add(music);
+    if (!addResult.ok) return err(addResult.error);
 
-    this.emitFn("musicAdded", music, {
-      context: { operation: "addMusic", identifiers: { musicId: id } },
-    });
-    this.emitFn(
-      "addMusic",
-      { ...music, url: watchUrl(music.id) },
-      {
-        context: { operation: "addMusic-legacy", identifiers: { musicId: id } },
-      },
-    );
-    this.emitFn("url_list", this.buildCompatList(), {
-      context: { operation: "addMusic-urlList", identifiers: { musicId: id } },
+    logger.info("music added", {
+      id: music.id,
+      title: music.title,
+      requesterHash,
     });
 
-    await this.repo.persistAdd(music);
-    try {
-      logMetric(
-        "musicAdded",
-        { source: "service" },
-        { id, title: music.title },
-      );
-    } catch (e: unknown) {
-      logger.debug("logMetric failed", { error: e, id });
+    const emitResult = this.emitter.emitMusicAdded(music);
+    if (!emitResult.ok) {
+      logger.warn("failed to emit musicAdded event", {
+        error: emitResult.error,
+        musicId: music.id,
+      });
     }
 
-    return {};
+    const urlListEmitResult = this.emitter.emitUrlList(
+      this.repository.buildCompatList(),
+    );
+    if (!urlListEmitResult.ok) {
+      logger.warn("failed to emit url_list event", {
+        error: urlListEmitResult.error,
+      });
+    }
+
+    this.emitter.logMusicAddedMetric(music);
+
+    const persistResult = await this.repository.persistAdd(music);
+    if (!persistResult.ok) {
+      logger.warn("failed to persist music", {
+        error: persistResult.error,
+        musicId: music.id,
+      });
+    }
+
+    return ok(music);
   }
 
-  removeMusic(url: string, requesterHash?: string): ReplyOptions {
-    const id = url.split("v=").pop() || url;
-    if (!this.repo.has(id)) return { formErrors: ["not found"] };
-    const existing = this.repo.get(id);
-    if (!existing) return { formErrors: ["not found"] };
-    const serviceResolver = ServiceResolver.getInstance();
-    const dependencies = serviceResolver.resolveDependencies(
-      {},
-    ) as ServiceDependencies;
-    let adminSecret = "";
-    if (
-      dependencies.configService &&
-      typeof dependencies.configService.getString === "function"
-    )
-      adminSecret = dependencies.configService.getString("ADMIN_SECRET") ?? "";
-    let adminSecretHash: Buffer | undefined;
-    try {
-      if (typeof adminSecret === "string" && adminSecret.trim().length > 0)
-        adminSecretHash = createHash("sha256").update(adminSecret).digest();
-    } catch {
-      adminSecretHash = undefined;
-    }
-    let isAdminBySecret = false;
-    try {
-      if (typeof requesterHash === "string") {
-        let reqHashBuf: Buffer;
-        try {
-          reqHashBuf = Buffer.from(requesterHash, "hex");
-        } catch {
-          reqHashBuf = Buffer.from(requesterHash);
-        }
-        if (adminSecretHash?.length === reqHashBuf.length)
-          isAdminBySecret = timingSafeEqual(reqHashBuf, adminSecretHash);
-      }
-    } catch {
-      isAdminBySecret = false;
-    }
-    if (!existing.requesterHash && !isAdminBySecret)
-      return { formErrors: ["forbidden"] };
-    const isOriginalRequester = existing.requesterHash === requesterHash;
-    if (!isOriginalRequester && !isAdminBySecret)
-      return { formErrors: ["forbidden"] };
+  async removeMusic(
+    request: RemoveMusicRequest,
+  ): Promise<Result<void, HandlerError>> {
+    const { url, requesterHash } = request;
 
-    this.repo.remove(id);
+    const resolveResult = await this.resolver.resolve(url);
+    if (!resolveResult.ok) return err(resolveResult.error);
+
+    const id = resolveResult.value.id;
+
+    if (!this.repository.has(id)) {
+      return err({
+        message: getMessage("ERROR_NOT_FOUND"),
+        code: "NOT_FOUND",
+      });
+    }
+
+    const existing = this.repository.get(id);
+    if (!existing) {
+      return err({
+        message: getMessage("ERROR_NOT_FOUND"),
+        code: "NOT_FOUND",
+      });
+    }
+
+    const canRemove = this.auth.canRemoveMusic(
+      requesterHash,
+      existing.requesterHash,
+    );
+    if (!canRemove.ok) return err(canRemove.error);
+
+    if (!canRemove.value) {
+      return err({
+        message: getMessage("ERROR_FORBIDDEN"),
+        code: "FORBIDDEN",
+      });
+    }
+
+    const removeResult = this.repository.remove(id);
+    if (!removeResult.ok) return err(removeResult.error);
+
     logger.info("music removed", {
       id,
       requesterHash,
-      isAdmin: isAdminBySecret,
     });
 
-    this.emitFn("musicRemoved", id, {
-      context: { operation: "removeMusic", identifiers: { musicId: id } },
-    });
-    this.emitFn("deleteMusic", watchUrl(id), {
-      context: {
-        operation: "removeMusic-legacy",
-        identifiers: { musicId: id },
-      },
-    });
-    this.emitFn("url_list", this.buildCompatList(), {
-      context: {
-        operation: "removeMusic-urlList",
-        identifiers: { musicId: id },
-      },
-    });
-
-    this.repo.persistRemove(id);
-    try {
-      logMetric("musicRemoved", { source: "service" }, { id });
-    } catch (err: unknown) {
-      logger.debug("logMetric(musicRemoved) failed", { error: err, id });
+    const emitResult = this.emitter.emitMusicRemoved(id);
+    if (!emitResult.ok) {
+      logger.warn("failed to emit musicRemoved event", {
+        error: emitResult.error,
+        musicId: id,
+      });
     }
 
-    return {};
+    const urlListEmitResult = this.emitter.emitUrlList(
+      this.repository.buildCompatList(),
+    );
+    if (!urlListEmitResult.ok) {
+      logger.warn("failed to emit url_list event", {
+        error: urlListEmitResult.error,
+      });
+    }
+
+    this.emitter.logMusicRemovedMetric(id);
+
+    const persistResult = this.repository.persistRemove(id);
+    if (!persistResult.ok) {
+      logger.warn("failed to persist music removal", {
+        error: persistResult.error,
+        musicId: id,
+      });
+    }
+
+    return ok(undefined);
+  }
+
+  listMusics(): Music[] {
+    return this.repository.list();
+  }
+
+  getMusic(id: string): Music | undefined {
+    return this.repository.get(id);
+  }
+
+  buildCompatList(): (Music & { url: string })[] {
+    return this.repository.buildCompatList();
   }
 }

@@ -1,5 +1,5 @@
 import logger from "@/server/logger";
-import type { HandlerError } from "./handle";
+import type { HandlerError } from "./errors";
 import type { Result } from "./result";
 
 type JsonResponse = {
@@ -75,5 +75,3 @@ export function respondJsonOk(data: unknown) {
     headers: { "Content-Type": "application/json" },
   });
 }
-
-export default {};

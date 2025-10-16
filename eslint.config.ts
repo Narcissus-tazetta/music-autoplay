@@ -1,23 +1,17 @@
-import dprint from "@ben_12/eslint-plugin-dprint";
 import eslint from "@eslint/js";
 import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
-// eslint-disable-next-line @typescript-eslint/no-deprecated
 export default tseslint.config(
   eslint.configs.recommended,
-  // Ensure eslint-plugin-react can auto-detect React version across the repo.
-  // Some invocations of ESLint may run against files not covered by the
-  // per-files config below; placing a top-level setting makes the intent
-  // explicit and avoids the runtime warning.
   {
     settings: {
       react: { version: "detect" },
     },
   },
-  tseslint.configs.strictTypeChecked.map((cfg) => ({
+  ...tseslint.configs.strictTypeChecked.map((cfg) => ({
     ...cfg,
     files: ["**/*.{ts,tsx}"],
   })),
@@ -25,31 +19,25 @@ export default tseslint.config(
   react.configs.flat["jsx-runtime"],
   reactHooks.configs["recommended-latest"],
   reactRefresh.configs.vite,
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-  {
-    // @ts-expect-error eslint-dprint-pluginの型情報の不足によるエラーを回避
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    ...dprint.configs["disable-typescript-conflict-rules"],
-    plugins: { dprint },
-  },
   {
     ignores: [
       "build/**/*",
       "dist/**/*",
       "node_modules/**/*",
       ".react-router/**/*",
+      ".history/**/*",
+      ".vscode/**/*",
+      ".husky/**/*",
       "**/*.d.ts",
-      // ignore generated or third-party shadcn UI components
       "src/app/components/ui/shadcn/**",
-      // temporarily ignore extension code while server hardening proceeds
       "src/extension/**",
+      "coverage/**/*",
+      "tmp_test_data/**/*",
     ],
   },
-  // Node scripts override
   {
     files: ["scripts/**/*.js", "scripts/**/*.ts"],
     languageOptions: {
-      // declare common Node globals as readonly so ESLint doesn't flag them as undefined
       globals: {
         process: "readonly",
         console: "readonly",
@@ -65,21 +53,46 @@ export default tseslint.config(
       parserOptions: { project: true, tsconfigRootDir: import.meta.dirname },
     },
     settings: {
-      react: {
-        version: "detect",
-      },
+      react: { version: "detect" },
     },
     rules: {
       "@typescript-eslint/restrict-template-expressions": [
         "error",
         { allowNumber: true },
       ],
-      // TODO: shadcn系統だけオフにしたいが、ぐちゃぐちゃすぎてshadcnがどれだか分からないので一旦全体オフ
-      "react-refresh/only-export-components": "off",
-      // 'react-refresh/only-export-components': ['error', {
-      //     allowExportNames: ['meta', 'links', 'headers', 'loader', 'action'],
-      // }],
+      "@typescript-eslint/no-unnecessary-condition": "warn",
+      "@typescript-eslint/no-confusing-void-expression": [
+        "error",
+        { ignoreArrowShorthand: true },
+      ],
+      "@typescript-eslint/consistent-type-imports": [
+        "error",
+        { prefer: "type-imports", fixStyle: "inline-type-imports" },
+      ],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+      "@typescript-eslint/no-non-null-assertion": "warn",
+      "@typescript-eslint/only-throw-error": "warn",
+      "@typescript-eslint/require-await": "warn",
+      "@typescript-eslint/unbound-method": "warn",
+      "@typescript-eslint/no-unsafe-enum-comparison": "warn",
+      "@typescript-eslint/no-redundant-type-constituents": "warn",
+      "@typescript-eslint/no-unnecessary-type-parameters": "warn",
+      "@typescript-eslint/no-deprecated": "off",
+      "react-refresh/only-export-components": [
+        "warn",
+        { allowExportNames: ["meta", "links", "headers", "loader", "action"] },
+      ],
       "react/self-closing-comp": "error",
+      "react/jsx-curly-brace-presence": [
+        "error",
+        { props: "never", children: "never" },
+      ],
+      "react/jsx-boolean-value": ["error", "never"],
+      "no-console": ["warn", { allow: ["warn", "error", "info", "debug"] }],
+      "no-empty": "warn",
       "no-restricted-imports": [
         "error",
         {
@@ -96,7 +109,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["tests/**/*.ts", "tests/**/*.tsx"],
+    files: ["tests/**/*.ts", "tests/**/*.tsx", "**/*.test.ts", "**/*.test.tsx"],
     languageOptions: {
       globals: {
         describe: "readonly",
@@ -105,12 +118,32 @@ export default tseslint.config(
         expect: "readonly",
         beforeEach: "readonly",
         afterEach: "readonly",
+        beforeAll: "readonly",
+        afterAll: "readonly",
         vi: "readonly",
       },
       parserOptions: { project: true, tsconfigRootDir: import.meta.dirname },
     },
     rules: {
       "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-floating-promises": "off",
+      "@typescript-eslint/no-unnecessary-condition": "off",
+      "@typescript-eslint/require-await": "off",
+      "@typescript-eslint/no-redundant-type-constituents": "off",
+      "no-console": "off",
+      "no-empty": "off",
+    },
+  },
+  {
+    files: ["src/server/**/*.ts"],
+    rules: {
+      "no-console": "off",
     },
   },
 );

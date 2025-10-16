@@ -1,5 +1,18 @@
 import logger from "@/server/logger";
 import type { Request } from "express";
+import type { IncomingMessage } from "http";
+
+function getHeader(
+  req: Request | IncomingMessage,
+  name: string,
+): string | undefined {
+  if ("get" in req && typeof req.get === "function") return req.get(name);
+  if ("headers" in req && req.headers) {
+    const value = req.headers[name.toLowerCase()];
+    return Array.isArray(value) ? value[0] : value;
+  }
+  return undefined;
+}
 
 export interface SecurityEvent {
   type:
@@ -17,7 +30,10 @@ export interface SecurityEvent {
   ip?: string;
 }
 
-export function logSecurityEvent(event: SecurityEvent, req?: Request): void {
+export function logSecurityEvent(
+  event: SecurityEvent,
+  req?: Request | IncomingMessage,
+): void {
   let requestIdFromReq: string | undefined;
   if (req) {
     const maybe = req as unknown as Record<string, unknown>;
@@ -27,13 +43,14 @@ export function logSecurityEvent(event: SecurityEvent, req?: Request): void {
     ...event,
     timestamp: new Date().toISOString(),
     requestId: event.requestId ?? requestIdFromReq,
-    userAgent: event.userAgent ?? (req ? req.get("User-Agent") : undefined),
+    userAgent:
+      event.userAgent ?? (req ? getHeader(req, "User-Agent") : undefined),
     ip:
       event.ip ??
-      req?.ip ??
+      (req && "ip" in req ? req.ip : undefined) ??
       (req?.socket ? req.socket.remoteAddress : undefined),
-    referer: req ? req.get("Referer") : undefined,
-    origin: req ? req.get("Origin") : undefined,
+    referer: req ? getHeader(req, "Referer") : undefined,
+    origin: req ? getHeader(req, "Origin") : undefined,
   };
 
   switch (event.severity) {
@@ -52,9 +69,9 @@ export function logSecurityEvent(event: SecurityEvent, req?: Request): void {
 }
 
 export function logAuthFailure(
-  req: Request,
+  req: Request | IncomingMessage,
   reason: string,
-  metadata?: Record<string, unknown>,
+  userId?: string,
 ): void {
   logSecurityEvent(
     {
@@ -62,13 +79,17 @@ export function logAuthFailure(
       severity: "high",
       source: "authentication",
       message: `Authentication failed: ${reason}`,
-      metadata,
+      metadata: userId ? { userId } : undefined,
     },
     req,
   );
 }
 
-export function logInvalidUrl(req: Request, url: string, reason: string): void {
+export function logInvalidUrl(
+  req: Request | IncomingMessage,
+  url: string,
+  reason: string,
+): void {
   logSecurityEvent(
     {
       type: "invalid_url",
@@ -81,7 +102,11 @@ export function logInvalidUrl(req: Request, url: string, reason: string): void {
   );
 }
 
-export function logRateLimit(req: Request, endpoint: string): void {
+export function logRateLimit(
+  req: Request | IncomingMessage,
+  endpoint: string,
+  _limit: number,
+): void {
   logSecurityEvent(
     {
       type: "rate_limit",
@@ -95,7 +120,7 @@ export function logRateLimit(req: Request, endpoint: string): void {
 }
 
 export function logCorsViolation(
-  req: Request,
+  req: Request | IncomingMessage,
   origin: string,
   reason: string,
 ): void {
@@ -112,7 +137,7 @@ export function logCorsViolation(
 }
 
 export function logSuspiciousRequest(
-  req: Request,
+  req: Request | IncomingMessage,
   reason: string,
   metadata?: Record<string, unknown>,
 ): void {

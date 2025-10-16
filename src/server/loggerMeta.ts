@@ -1,9 +1,22 @@
+import { hasOwnProperty, isRecord } from "@/shared/utils/typeGuards";
+
 type ExtractResult = {
   consumedKey?: string;
   extractedState?: string | undefined;
   extractedUrl?: string | undefined;
   rest: Record<string, unknown>;
 };
+
+function extractStringField(
+  obj: Record<string, unknown>,
+  ...keys: string[]
+): string | undefined {
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === "string") return value;
+  }
+  return undefined;
+}
 
 export function extractMetaFields(
   metaObjRaw: Record<string, unknown>,
@@ -13,54 +26,31 @@ export function extractMetaFields(
   let extractedUrl: string | undefined;
   let consumedKey: string | undefined;
 
-  if (
-    Object.prototype.hasOwnProperty.call(metaObjRaw, "youtube") &&
-    isRecord(metaForPrint.youtube)
-  ) {
+  if (hasOwnProperty(metaObjRaw, "youtube") && isRecord(metaForPrint.youtube)) {
     const y = metaForPrint.youtube;
-    extractedUrl = typeof y.url === "string" ? y.url : undefined;
-    extractedState = typeof y.state === "string" ? y.state : undefined;
+    extractedUrl = extractStringField(y, "url");
+    extractedState = extractStringField(y, "state");
     consumedKey = "youtube";
   }
 
   if (
     !extractedState &&
-    Object.prototype.hasOwnProperty.call(metaObjRaw, "status") &&
+    hasOwnProperty(metaObjRaw, "status") &&
     isRecord(metaForPrint.status)
   ) {
     const s = metaForPrint.status;
-    extractedState =
-      typeof s.type === "string"
-        ? s.type
-        : typeof s.state === "string"
-          ? s.state
-          : undefined;
-    if (!extractedUrl) {
-      extractedUrl =
-        typeof s.musicId === "string"
-          ? s.musicId
-          : typeof s.musicTitle === "string"
-            ? s.musicTitle
-            : undefined;
-    }
+    extractedState = extractStringField(s, "type", "state");
+    if (!extractedUrl)
+      extractedUrl = extractStringField(s, "musicId", "musicTitle");
     consumedKey = consumedKey || "status";
   }
 
-  if (
-    !extractedState &&
-    Object.prototype.hasOwnProperty.call(metaObjRaw, "args")
-  ) {
+  if (!extractedState && hasOwnProperty(metaObjRaw, "args")) {
     const args = metaForPrint.args;
     if (Array.isArray(args) && args.length > 0 && isRecord(args[0])) {
       const a0 = args[0];
-      extractedState =
-        typeof a0.state === "string"
-          ? a0.state
-          : typeof a0.type === "string"
-            ? a0.type
-            : undefined;
-      extractedUrl =
-        extractedUrl || (typeof a0.url === "string" ? a0.url : undefined);
+      extractedState = extractStringField(a0, "state", "type");
+      extractedUrl = extractedUrl || extractStringField(a0, "url");
       consumedKey = consumedKey || "args";
     }
   }
@@ -70,10 +60,6 @@ export function extractMetaFields(
     if (key !== consumedKey) rest[key] = metaForPrint[key];
 
   return { consumedKey, extractedState, extractedUrl, rest };
-}
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
 export function normalizeMetaForPrint(

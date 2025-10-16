@@ -97,9 +97,13 @@ async function gracefulShutdown() {
       if (
         errorMsg.includes("not running") ||
         errorMsg.includes("already closed")
-      )
+      ) {
         logger.info("socket.io already closed during shutdown");
-      else logger.warn("socket.io close failed", { error: e });
+      } else {
+        logger.warn("socket.io close failed", {
+          error: e,
+        });
+      }
     }
 
     for (const h of appShutdownHandlers) {

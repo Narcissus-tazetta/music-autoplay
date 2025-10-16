@@ -1,11 +1,12 @@
+import { createAdminHash, withErrorHandler } from "@/shared/utils/errorUtils";
 import type { Music, RemoteStatus } from "~/stores/musicStore";
+import { getConfigService } from "../config/configService";
+import type ConfigService from "../config/configService";
 import type { Store } from "../persistence";
-import ConfigManager from "../utils/configManager";
-import { createAdminHash, withErrorHandler } from "../utils/errorHandler";
+import { RateLimiter } from "../services/rateLimiter";
+import { WindowCloseManager } from "../services/windowCloseManager";
+import type { YouTubeService } from "../services/youtubeService";
 import ServiceResolver from "../utils/serviceResolver";
-import { WindowCloseManager } from "../utils/windowCloseManager";
-import type { YouTubeService } from "../youtubeService";
-import { RateLimiter } from "./utils";
 
 export interface SocketServerConfig {
   youtubeService?: YouTubeService;
@@ -16,7 +17,7 @@ export interface SocketServerConfig {
 
 export class SocketServerBuilder {
   private config: SocketServerConfig = {};
-  private configManager = ConfigManager.getInstance();
+  private configService = getConfigService();
   private serviceResolver = ServiceResolver.getInstance();
 
   withYouTubeService(service?: YouTubeService): this {
@@ -41,17 +42,15 @@ export class SocketServerBuilder {
 
   build(): SocketServerComponents {
     const result = withErrorHandler(() => {
-      const dependencies =
-        this.config.youtubeService && this.config.fileStore
-          ? {
-              youtubeService: this.config.youtubeService,
-              fileStore: this.config.fileStore,
-            }
-          : ServiceResolver.getInstance().resolveDependencies({});
+      const resolver = this.serviceResolver;
+      const youtubeService =
+        this.config.youtubeService ??
+        resolver.resolveRequired<YouTubeService>("youtubeService");
+      const fileStore =
+        this.config.fileStore ?? resolver.resolveRequired<Store>("fileStore");
 
-      const socketConfig = this.configManager.getSocketConfig();
-
-      const adminConfig = this.configManager.getAdminConfig();
+      const socketConfig = this.configService.getSocketConfig();
+      const adminConfig = this.configService.getAdminConfig();
 
       const adminHash = createAdminHash(adminConfig.secret);
       const windowCloseManager = new WindowCloseManager(
@@ -63,8 +62,8 @@ export class SocketServerBuilder {
       );
 
       return {
-        youtubeService: dependencies.youtubeService,
-        fileStore: dependencies.fileStore,
+        youtubeService,
+        fileStore,
         musicDB: this.config.musicDB ?? new Map(),
         remoteStatus: this.config.remoteStatus ?? { type: "closed" },
         adminHash,
@@ -76,7 +75,7 @@ export class SocketServerBuilder {
 
     if (!result) throw new Error("SocketServerBuilder.build failed");
 
-    return result as SocketServerComponents;
+    return result;
   }
 }
 
@@ -88,7 +87,7 @@ export interface SocketServerComponents {
   adminHash: string;
   windowCloseManager: WindowCloseManager;
   adminRateLimiter: RateLimiter;
-  socketConfig: ReturnType<ConfigManager["getSocketConfig"]>;
+  socketConfig: ReturnType<ConfigService["getSocketConfig"]>;
 }
 
 export function createSocketServerBuilder(): SocketServerBuilder {

@@ -3,7 +3,7 @@ import { Label } from "@shadcn/label";
 import { ToggleGroup } from "@shadcn/toggle-group";
 import { Eye, EyeOff, MoonIcon, SparklesIcon, SunIcon } from "lucide-react";
 import { useEffect } from "react";
-import { Theme, useTheme } from "remix-themes";
+import { type Theme, useTheme } from "remix-themes";
 
 export const Settings = () => {
   const [theme, setTheme, meta] = useTheme();

@@ -1,18 +1,21 @@
-export function safeLog(level: "warn" | "debug", msg: string, meta?: unknown) {
-  void import("../logger")
-    .then((m) => {
-      try {
-        const maybe = (m.default as unknown as Record<string, unknown>)[level];
-        if (typeof maybe === "function") {
-          const fn = maybe as (...args: unknown[]) => unknown;
-          try {
-            fn(msg, meta);
-            return;
-          } catch (_e: unknown) {
-            void _e;
-          }
-        }
+import { importLogger } from "@/shared/schemas/logger";
+
+export function safeLog(
+  level: "warn" | "debug",
+  msg: string,
+  meta?: unknown,
+): void {
+  void importLogger()
+    .then((logger) => {
+      if (!logger) {
         console.debug(msg, meta);
+        return;
+      }
+
+      try {
+        const logFn = logger[level];
+        if (typeof logFn === "function") logFn(msg, meta);
+        else console.debug(msg, meta);
       } catch (_e: unknown) {
         console.debug(msg, meta, { err: _e });
       }
@@ -25,5 +28,3 @@ export function safeLog(level: "warn" | "debug", msg: string, meta?: unknown) {
       }
     });
 }
-
-export default { safeLog };

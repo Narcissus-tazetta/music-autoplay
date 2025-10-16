@@ -1,15 +1,13 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call */
-
 import type { Server as IOServer } from "socket.io";
-import { describe, expect, it, vi } from "vitest";
 import type { Music } from "../../src/app/stores/musicStore";
-import MusicService from "../../src/server/music/musicService";
+import { MusicService } from "../../src/server/music/musicService";
 import type { Store } from "../../src/server/persistence";
-import SocketManager from "../../src/server/socket/manager";
-import SocketRuntime from "../../src/server/socket/runtime";
-import type { TimerManager } from "../../src/server/utils/socketHelpers";
-import WindowCloseManager from "../../src/server/utils/windowCloseManager";
-import type { YouTubeService } from "../../src/server/youtubeService";
+import { type WindowCloseManager } from "../../src/server/services/windowCloseManager";
+import type { YouTubeService } from "../../src/server/services/youtubeService";
+import { SocketManager } from "../../src/server/socket/managers/manager";
+import { SocketRuntime } from "../../src/server/socket/managers/runtime";
+import type { TimerManager } from "../../src/server/utils/timerManager";
+import { describe, expect, it, vi } from "../bunTestCompat";
 
 describe("SocketRuntime", () => {
   it("creates and returns a manager instance and retains it", () => {
@@ -137,7 +135,6 @@ describe("SocketRuntime", () => {
       { debounceMs: 250, graceMs: 5000, inactivityMs: 10000 },
     );
     const mgr = runtime.createManager();
-    // call update to change remote status; manager should call emit
     (mgr as any).update({ type: "open" }, "test");
     expect(emitSpy).toHaveBeenCalled();
   });

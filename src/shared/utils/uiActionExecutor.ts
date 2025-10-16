@@ -1,18 +1,16 @@
+import { getWindowExtensions } from "@/shared/schemas/global";
 import type { ParsedApiErrorWithAction, UiAction } from "@/shared/utils/apiUi";
 import { applyFieldErrorsToConform } from "@/shared/utils/formAdapters/conformAdapter";
 
 const tryShowToast = (level: string, message: string) => {
   try {
-    const g = (
-      window as unknown as {
-        __app__?: {
-          showToast?: (opts: { level: string; message: string }) => void;
-        };
+    const winResult = getWindowExtensions();
+    if (winResult?.success) {
+      const app = winResult.data.__app__;
+      if (app?.showToast) {
+        app.showToast({ level, message });
+        return;
       }
-    ).__app__;
-    if (g && typeof g.showToast === "function") {
-      g.showToast({ level, message });
-      return;
     }
   } catch (e) {
     void e;
@@ -23,11 +21,10 @@ const tryShowToast = (level: string, message: string) => {
 
 const tryRedirect = (to: string) => {
   try {
-    const g = (
-      window as unknown as { __app__?: { navigate?: (to: string) => void } }
-    ).__app__;
-    if (g && typeof g.navigate === "function") {
-      g.navigate(to);
+    const winResult = getWindowExtensions();
+    const app = winResult?.success ? winResult.data.__app__ : undefined;
+    if (app?.navigate) {
+      app.navigate(to);
       return;
     }
   } catch (e) {
@@ -88,5 +85,3 @@ export function executeParsedApiError(
 ) {
   executeUiAction(parsed.action, opts);
 }
-
-export default { executeUiAction, executeParsedApiError };

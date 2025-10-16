@@ -1,3 +1,4 @@
+import { safeString } from "@/shared/utils/errorUtils";
 import type { Server as IOServer, Socket } from "socket.io";
 import logger from "../logger";
 import type { EventMap, EventName } from "../types/socketEvents";
@@ -82,8 +83,57 @@ export function safeEmitSync<K extends EventName>(
       : [payload: P, ...rest: Rest, options?: SafeEmitOptions]
     : [options?: SafeEmitOptions]
 ): boolean {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-  return safeEmit(emitter, event, ...(args as unknown as any));
+  const lastArg = args[args.length - 1];
+  const isOptions =
+    lastArg &&
+    typeof lastArg === "object" &&
+    ("context" in lastArg ||
+      "errorPrefix" in lastArg ||
+      "logLevel" in lastArg ||
+      "silent" in lastArg);
+
+  const options: SafeEmitOptions = isOptions
+    ? (lastArg as SafeEmitOptions)
+    : {};
+  const emitArgs = isOptions ? args.slice(0, -1) : args;
+
+  const {
+    context = {},
+    errorPrefix = "failed to emit",
+    logLevel = "warn",
+    silent = false,
+  } = options;
+
+  try {
+    if ("emit" in emitter && typeof emitter.emit === "function") {
+      // cast emitter.emit to accept unknown args to avoid unsafe-argument errors
+      (emitter.emit as (...a: unknown[]) => void)(
+        event,
+        ...(emitArgs as unknown as unknown[]),
+      );
+      return true;
+    } else {
+      if (!silent) {
+        logger[logLevel](`${errorPrefix}: invalid emitter`, {
+          event,
+          context,
+          emitterType: typeof emitter,
+        });
+      }
+      return false;
+    }
+  } catch (error: unknown) {
+    if (!silent) {
+      logger[logLevel](`${errorPrefix} ${event}`, {
+        error,
+        event,
+        context,
+        payload: emitArgs.length > 0 ? emitArgs[0] : undefined,
+        ...context.identifiers,
+      });
+    }
+    return false;
+  }
 }
 
 export function createSafeEmitter(
@@ -123,12 +173,39 @@ export function createSafeEmitter(
         },
       },
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-    return safeEmit(
-      emitter,
-      event,
-      ...([...emitArgs, mergedOptions] as unknown as any),
-    );
+
+    try {
+      if ("emit" in emitter && typeof emitter.emit === "function") {
+        (emitter.emit as (...a: unknown[]) => void)(
+          event,
+          ...(emitArgs as unknown as unknown[]),
+          mergedOptions,
+        );
+        return true;
+      }
+      if (!mergedOptions.silent) {
+        logger[mergedOptions.logLevel ?? "warn"](
+          "failed to emit: invalid emitter",
+          {
+            event,
+            context: mergedOptions.context,
+            emitterType: typeof emitter,
+          },
+        );
+      }
+      return false;
+    } catch (error: unknown) {
+      if (!mergedOptions.silent) {
+        logger[mergedOptions.logLevel ?? "warn"](`failed to emit ${event}`, {
+          error,
+          event,
+          context: mergedOptions.context,
+          payload: emitArgs.length > 0 ? emitArgs[0] : undefined,
+          ...mergedOptions.context?.identifiers,
+        });
+      }
+      return false;
+    }
   };
 }
 
@@ -170,12 +247,38 @@ export function createSafeEmitterSync(
       },
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-    return safeEmitSync(
-      emitter,
-      event,
-      ...([...emitArgs, mergedOptions] as unknown as any),
-    );
+    try {
+      if ("emit" in emitter && typeof emitter.emit === "function") {
+        (emitter.emit as (...a: unknown[]) => void)(
+          event,
+          ...(emitArgs as unknown as unknown[]),
+          mergedOptions,
+        );
+        return true;
+      }
+      if (!mergedOptions.silent) {
+        logger[mergedOptions.logLevel ?? "warn"](
+          "failed to emit: invalid emitter",
+          {
+            event,
+            context: mergedOptions.context,
+            emitterType: typeof emitter,
+          },
+        );
+      }
+      return false;
+    } catch (error: unknown) {
+      if (!mergedOptions.silent) {
+        logger[mergedOptions.logLevel ?? "warn"](`failed to emit ${event}`, {
+          error,
+          event,
+          context: mergedOptions.context,
+          payload: emitArgs.length > 0 ? emitArgs[0] : undefined,
+          ...mergedOptions.context?.identifiers,
+        });
+      }
+      return false;
+    }
   };
 }
 
@@ -216,7 +319,7 @@ export function wrapEmitWithSafety(
         logger[logLevel](`${errorPrefix} ${event}`, {
           error,
           event,
-          payload,
+          payload: safeString(payload),
           context,
           ...context.identifiers,
         });
@@ -224,4 +327,85 @@ export function wrapEmitWithSafety(
       return false;
     }
   };
+}
+
+export type EmitOptions = {
+  context?: {
+    source?: string;
+    operation?: string;
+    identifiers?: Record<string, unknown>;
+  };
+  errorPrefix?: string;
+  logLevel?: "debug" | "info" | "warn" | "error";
+  silent?: boolean;
+};
+
+export type LegacyEmitFn = ((
+  ev: string,
+  payload: unknown,
+) => boolean | undefined) & { __isSocketEmitter?: true };
+
+export class SocketEmitter {
+  private ioGetter: () => IOServer;
+  private defaultContext: EmitOptions["context"] | undefined;
+
+  constructor(
+    ioGetter: () => IOServer,
+    defaultContext?: EmitOptions["context"],
+  ) {
+    this.ioGetter = ioGetter;
+    this.defaultContext = defaultContext;
+  }
+
+  emit(event: string, payload: unknown, opts: EmitOptions = {}): boolean {
+    const {
+      context = {},
+      errorPrefix = "failed to emit",
+      logLevel = "warn",
+      silent = false,
+    } = opts;
+    const mergedContext = { ...(this.defaultContext || {}), ...context };
+
+    try {
+      const io = this.ioGetter();
+      if (typeof io.emit !== "function") {
+        if (!silent) {
+          logger[logLevel](`${errorPrefix}: invalid emitter`, {
+            event,
+            context: mergedContext,
+          });
+        }
+        return false;
+      }
+      io.emit(event, payload);
+      return true;
+    } catch (err: unknown) {
+      if (!silent) {
+        logger[logLevel](`${errorPrefix} ${event}`, {
+          error: err,
+          event,
+          payload: safeString(payload),
+          context: mergedContext,
+          ...(mergedContext?.identifiers || {}),
+        });
+      }
+      return false;
+    }
+  }
+
+  asFn(): LegacyEmitFn {
+    const fn = ((ev: string, payload: unknown) => {
+      this.emit(ev, payload);
+      return undefined;
+    }) as LegacyEmitFn;
+    fn.__isSocketEmitter = true;
+    return fn;
+  }
+}
+
+export function createSocketEmitter(
+  ioGetter: () => IOServer,
+  defaultContext?: EmitOptions["context"],
+) {
+  return new SocketEmitter(ioGetter, defaultContext);
 }

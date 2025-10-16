@@ -1,4 +1,5 @@
 import { safeLog } from "@/server/logger";
+import { isThenable } from "@/shared/utils/typeGuards";
 import type { Socket } from "socket.io";
 import type { EventMap, EventName } from "../types/socketEvents";
 
@@ -20,11 +21,7 @@ export function registerHandler(
   handler: (...args: unknown[]) => unknown,
 ) {
   const metaKey = "__registeredHandlers" as const;
-
-  function getSocketRecord(s: Socket): Record<string, unknown> {
-    return s as unknown as Record<string, unknown>;
-  }
-  const sockRec = getSocketRecord(socket);
+  const sockRec = socket as unknown as Record<string, unknown>;
 
   let meta = sockRec[metaKey] as Set<string> | undefined;
   if (meta && meta.has(eventName)) return false;
@@ -33,21 +30,10 @@ export function registerHandler(
     sockRec[metaKey] = meta;
   }
 
-  const rawRec = sockRec;
-  const rawOnCandidate = rawRec.on ?? rawRec.on;
-  const rawOn =
-    typeof rawOnCandidate === "function"
-      ? (rawOnCandidate as (...a: unknown[]) => void)
+  const onFn =
+    typeof sockRec.on === "function"
+      ? (sockRec.on as (...a: unknown[]) => void).bind(socket)
       : undefined;
-  const onFn = rawOn ? rawOn.bind(socket) : undefined;
-
-  const isThenable = (v: unknown): v is Promise<unknown> => {
-    return (
-      typeof v === "object" &&
-      v !== null &&
-      typeof (v as Record<string, unknown>).then === "function"
-    );
-  };
 
   if (typeof onFn === "function") {
     onFn.call(socket, eventName, (...args: unknown[]) => {
@@ -93,42 +79,4 @@ export function registerTypedHandler<K extends EventName>(
     eventName as string,
     handler as (...args: unknown[]) => unknown,
   );
-}
-
-export class TimerManager {
-  private timers = new Map<string, ReturnType<typeof setTimeout>>();
-
-  start(
-    key: string,
-    ms: number,
-    cb: () => void,
-  ): ReturnType<typeof setTimeout> {
-    this.clear(key);
-    const id = setTimeout(() => {
-      this.timers.delete(key);
-      try {
-        cb();
-      } catch (e: unknown) {
-        safeLog("warn", "timer callback threw", { key, error: e } as Record<
-          string,
-          unknown
-        >);
-      }
-    }, ms);
-    this.timers.set(key, id);
-    return id;
-  }
-
-  clear(key: string) {
-    const id = this.timers.get(key);
-    if (id !== undefined) {
-      clearTimeout(id);
-      this.timers.delete(key);
-    }
-  }
-
-  clearAll() {
-    for (const id of this.timers.values()) clearTimeout(id);
-    this.timers.clear();
-  }
 }

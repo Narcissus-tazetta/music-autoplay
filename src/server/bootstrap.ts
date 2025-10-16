@@ -6,16 +6,16 @@ declare global {
       }
     | undefined;
 }
+import { getConfigService } from "./config/configService";
 import { container } from "./di/container";
 import logger from "./logger";
 import FileStore from "./persistence";
 import CacheService from "./services/cacheService";
-import ConfigService from "./services/configService";
 import ErrorService from "./services/errorService";
+import MetricsManager from "./services/metricsManager";
 import retry from "./services/retryService";
+import { YouTubeService } from "./services/youtubeService";
 import { SocketServerInstance } from "./socket";
-import MetricsManager from "./utils/metricsManager";
-import { YouTubeService } from "./youtubeService";
 export type Metrics = {
   apiMusics: { calls: number; errors: number; totalMs: number };
   rpcGetAllMusics: { calls: number; errors: number; totalMs: number };
@@ -29,7 +29,7 @@ export type BootstrapResult = {
 };
 
 export async function bootstrap(): Promise<BootstrapResult> {
-  const configService = new ConfigService();
+  const configService = getConfigService();
   const errorService = new ErrorService();
   const cacheService = new CacheService();
 

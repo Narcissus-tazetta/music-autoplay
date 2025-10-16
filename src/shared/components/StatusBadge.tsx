@@ -60,9 +60,13 @@ function StatusBadgeInner({ status, music }: StatusBadgeProps) {
   if (!badgeVisible) return null;
 
   return (
-    <div
+    <motion.div
       aria-live="polite"
       className={`${badgeBg} text-sm px-3 py-1 rounded-md flex items-center gap-3`}
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.3 }}
     >
       {status.type === "closed" ? (
         <AnimatePresence>
@@ -141,7 +145,7 @@ function StatusBadgeInner({ status, music }: StatusBadgeProps) {
           )}
         </AnimatePresence>
       )}
-    </div>
+    </motion.div>
   );
 }
 

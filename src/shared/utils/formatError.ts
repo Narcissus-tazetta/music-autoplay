@@ -23,8 +23,9 @@ export function extractErrorMessage(
       trimmed.startsWith("status:") ||
       trimmed.startsWith("fields:") ||
       trimmed.startsWith("url:")
-    )
+    ) {
       return false;
+    }
     if (trimmed === "url" || trimmed === "error" || trimmed === "status")
       return false;
     if (trimmed.startsWith("http")) return false;

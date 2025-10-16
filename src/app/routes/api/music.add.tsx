@@ -1,12 +1,12 @@
 import logger from "@/server/logger";
+import { getMessage } from "@/shared/constants/messages";
 import { AddMusicSchema } from "@/shared/schemas/music";
 import type { ServerContext } from "@/shared/types/server";
-import { safeExecuteAsync } from "@/shared/utils/handle";
+import { safeExecuteAsync } from "@/shared/utils/errorUtils";
 import { parseWithZod } from "@conform-to/zod";
 import { hash } from "crypto";
 import type { SubmissionResult } from "node_modules/@conform-to/dom/dist/submission";
 import type { ActionFunctionArgs } from "react-router";
-import { redirect } from "react-router";
 import { loginSession } from "../../sessions.server";
 
 export const action = async ({
@@ -21,10 +21,14 @@ export const action = async ({
 
   const session = await loginSession.getSession(request.headers.get("Cookie"));
   const user = session.get("user");
+  const requesterHash = user ? hash("sha256", user.id) : undefined;
+  const requesterName = user?.name ?? (user ? "unknown" : "guest");
+
   const result = await safeExecuteAsync(async () => {
     const maybe = context.io.addMusic(
       submission.value.url,
-      user ? hash("sha256", user.id) : undefined,
+      requesterHash,
+      requesterName,
     );
     const isThenable = (v: unknown): v is Promise<unknown> =>
       !!v &&
@@ -35,13 +39,28 @@ export const action = async ({
   });
 
   if (result.ok) {
-    logger.info("addMusic result", { result: result.value });
-    return redirect("/");
+    const resultValue = result.value;
+    if (
+      resultValue &&
+      typeof resultValue === "object" &&
+      "formErrors" in resultValue
+    ) {
+      const errors = (resultValue as { formErrors: unknown }).formErrors;
+      if (Array.isArray(errors) && errors.length > 0) {
+        logger.info("addMusic result", { result: resultValue });
+        return submission.reply({
+          formErrors: errors,
+        });
+      }
+    }
+    return submission.reply({
+      resetForm: true,
+    });
   }
 
   logger.error("楽曲追加エラー", { error: result.error });
   return submission.reply({
-    formErrors: ["楽曲の追加に失敗しました。後ほど再度お試しください。"],
+    formErrors: [getMessage("ERROR_ADD_FAILED")],
   });
 };
 

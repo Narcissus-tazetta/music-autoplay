@@ -46,8 +46,9 @@ export function parseApiErrorForUI(err: ApiError): ParsedApiErrorWithAction {
       const fieldErrors: UiFieldErrors = {};
       for (const [k, v] of Object.entries(
         err.details as Record<string, unknown>,
-      ))
+      )) {
         if (typeof v === "string") fieldErrors[k] = v;
+      }
       return Object.keys(fieldErrors).length ? fieldErrors : undefined;
     }
     return undefined;
@@ -69,12 +70,13 @@ export function parseApiErrorForUI(err: ApiError): ParsedApiErrorWithAction {
     };
   }
 
-  if (code === "forbidden" || code === "403")
+  if (code === "forbidden" || code === "403") {
     return {
       kind: "forbidden",
       message,
       action: { type: "showToast", level: "error", message },
     };
+  }
 
   if (code === "validation" || code === "unprocessable" || code === "422") {
     const fieldErrors = extractFieldErrors();
@@ -88,12 +90,13 @@ export function parseApiErrorForUI(err: ApiError): ParsedApiErrorWithAction {
     };
   }
 
-  if (code === "not_found" || code === "404")
+  if (code === "not_found" || code === "404") {
     return {
       kind: "not_found",
       message,
       action: { type: "showToast", level: "info", message },
     };
+  }
   return {
     kind: "internal",
     message,

@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
+import { useTheme } from "remix-themes";
+import { useMusicStore } from "../../../app/stores/musicStore";
+import { useAppSettings } from "../../../shared/stores/appSettings";
 import { createBackgroundStyle } from "../../../shared/utils/time/background-utils";
+import { YouTubeStatus } from "../../music/components/YouTubeStatus";
 import { SettingsButton } from "../../settings/components/SettingsButton";
 import { SettingsPanel } from "../../settings/components/SettingsPanel";
 import { useProgressSettings } from "../../settings/hooks/use-progress-settings";
-import { useColorModeStore } from "../../settings/stores/colorModeStore";
 import { useProgressSettingsStore } from "../../settings/stores/progressSettingsStore";
 import { useClientOnly } from "../hooks/use-client-only";
 import { DateDisplay } from "./DateDisplay";
@@ -25,12 +28,57 @@ interface TimePageLayoutProps {
 const TimePageLayout = ({ status }: TimePageLayoutProps) => {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // ColorModeStoreから必要最小限の状態のみを取得
-  const mode = useColorModeStore((s) => s.mode);
-  const setMode = useColorModeStore((s) => s.setMode);
-  const darkClass = useColorModeStore((s) => s.darkClass);
+  const [theme, setTheme] = useTheme();
+  const mode = theme === "dark" ? "dark" : "light";
+  const darkClass = theme === "dark" ? "dark" : "";
 
   const isClient = useClientOnly();
+
+  const ytStatusVisible = useAppSettings((s) => s.ui.ytStatusVisible);
+  const remoteStatus = useMusicStore((s) => s.remoteStatus);
+  const connectSocket = useMusicStore((s) => s.connectSocket);
+  const socket = useMusicStore((s) => s.socket);
+
+  useEffect(() => {
+    console.log("[TimePageLayout] remoteStatus changed:", remoteStatus);
+  }, [remoteStatus]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    connectSocket();
+  }, [connectSocket]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !socket?.connected) return;
+
+    let timeoutId: NodeJS.Timeout | null = null;
+    let isMounted = true;
+
+    const fetchRemoteStatus = () => {
+      if (!isMounted || !socket?.connected) return;
+
+      try {
+        socket.emit("getRemoteStatus", (status) => {
+          if (
+            isMounted &&
+            status &&
+            typeof status === "object" &&
+            "type" in status
+          )
+            useMusicStore.setState({ remoteStatus: status });
+        });
+      } catch (err: unknown) {
+        console.debug("Failed to fetch remote status", err);
+      }
+    };
+
+    timeoutId = setTimeout(fetchRemoteStatus, 500);
+
+    return () => {
+      isMounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [socket?.connected]);
 
   const { backgroundImage, setBackgroundImage } = useProgressSettings();
 
@@ -138,7 +186,10 @@ const TimePageLayout = ({ status }: TimePageLayoutProps) => {
             setSettingsOpen(false);
           }}
           mode={mode}
-          setMode={setMode}
+          setMode={(newMode) => {
+            const newTheme = newMode === "dark" ? "dark" : "light";
+            setTheme(newTheme as never);
+          }}
           pageType="time"
           showProgress={showProgress}
           setShowProgress={setShowProgress}
@@ -150,6 +201,10 @@ const TimePageLayout = ({ status }: TimePageLayoutProps) => {
           setShowCurrentSchedule={setShowCurrentSchedule}
           showDate={showDate}
           setShowDate={setShowDate}
+          ytStatusVisible={ytStatusVisible}
+          setYtStatusVisible={(v) => {
+            useAppSettings.getState().updateUI({ ytStatusVisible: v });
+          }}
           showYear={showYear}
           setShowYear={setShowYear}
           showMonth={showMonth}
@@ -199,6 +254,24 @@ const TimePageLayout = ({ status }: TimePageLayoutProps) => {
             showProgress={showProgress}
             progressColor={progressColor}
           />
+
+          {ytStatusVisible &&
+            remoteStatus &&
+            remoteStatus.type !== "closed" &&
+            ((remoteStatus.type === "playing" && remoteStatus.musicTitle) ||
+              (remoteStatus.type === "paused" && remoteStatus.musicTitle)) && (
+              <YouTubeStatus
+                ytStatus={{
+                  state: remoteStatus.type === "playing" ? "playing" : "paused",
+                  match: true,
+                  music: {
+                    url: "",
+                    title: remoteStatus.musicTitle || "",
+                    thumbnail: "",
+                  },
+                }}
+              />
+            )}
         </div>
       </div>
     </>

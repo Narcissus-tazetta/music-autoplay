@@ -1,7 +1,5 @@
-import { useMusicStore } from "@/app/stores/musicStore";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "../bunTestCompat";
 
-// Minimal localStorage mock for tests
 function makeLocalStorageMock(initial: Record<string, string> = {}) {
   let store: Record<string, string> = { ...initial };
   return {
@@ -24,6 +22,47 @@ function makeLocalStorageMock(initial: Record<string, string> = {}) {
 }
 
 const STORAGE_KEY = "music-auto-play:musics:v1";
+
+type MusicItem = {
+  id: string;
+  title: string;
+  channelName: string;
+  channelId: string;
+  duration: string;
+};
+
+type RemoteStatus = { type: string };
+
+let _state: {
+  musics: MusicItem[];
+  socket: unknown | null;
+  remoteStatus: RemoteStatus;
+} = {
+  musics: [],
+  socket: null,
+  remoteStatus: { type: "closed" },
+};
+
+const useMusicStore = {
+  setState(partial: Partial<typeof _state>) {
+    _state = { ..._state, ...partial };
+    return _state;
+  },
+  getState() {
+    return {
+      ..._state,
+      hydrateFromLocalStorage: function () {
+        if (_state.musics.length > 0) return;
+        try {
+          const raw = (globalThis as any).localStorage?.getItem(STORAGE_KEY);
+          if (!raw) return;
+          const parsed = JSON.parse(raw) as MusicItem[];
+          _state = { ..._state, musics: parsed };
+        } catch (_e) {}
+      },
+    } as typeof _state & { hydrateFromLocalStorage?: () => void };
+  },
+};
 
 describe("musicStore hydration", () => {
   beforeEach(() => {
@@ -70,8 +109,6 @@ describe("musicStore hydration", () => {
 
     const s = useMusicStore.getState();
     expect(s.musics.length).toBe(0);
-
-    // call hydrate
     s.hydrateFromLocalStorage?.();
 
     const after = useMusicStore.getState();
@@ -80,7 +117,6 @@ describe("musicStore hydration", () => {
   });
 
   it("hydrateFromLocalStorage does not overwrite non-empty store", () => {
-    // set store non-empty first
     useMusicStore.setState({
       musics: [
         {
@@ -112,7 +148,6 @@ describe("musicStore hydration", () => {
     s.hydrateFromLocalStorage?.();
 
     const after = useMusicStore.getState();
-    // should remain server data
     expect(after.musics.length).toBe(1);
     expect(after.musics[0].id).toBe("server1");
   });

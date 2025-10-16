@@ -1,3 +1,5 @@
+import { hasOwnProperty } from "./typeGuards";
+
 export type ApiSuccess<T = unknown> = { success: true; data: T };
 export type ApiError = {
   success: false;
@@ -11,7 +13,7 @@ function isNormalizedResponse(
   return (
     typeof v === "object" &&
     v !== null &&
-    Object.prototype.hasOwnProperty.call(v, "success")
+    hasOwnProperty(v as Record<string, unknown>, "success")
   );
 }
 
@@ -85,11 +87,7 @@ export async function normalizeApiResponse<T = unknown>(
     typeof parsed === "string" ? parsed : resp.statusText || "request failed";
   return {
     success: false,
-    error: {
-      code: String(resp.status) || "error",
-      message: typeof message === "string" ? message : JSON.stringify(parsed),
-      details: parsed,
-    },
+    error: { code: String(resp.status), message, details: parsed },
   };
 }
 

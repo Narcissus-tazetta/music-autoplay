@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 export type ConformFields = Record<
   string,
   {
@@ -31,5 +30,3 @@ export function applyFieldErrorsToConform(
       console.debug("applyFieldErrorsToConform failed", err);
   }
 }
-
-export default { applyFieldErrorsToConform };

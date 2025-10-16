@@ -84,8 +84,9 @@ export function normalizeYoutubeMeta(
         if (
           cr["ytRating"] === "ytAgeRestricted" ||
           cr["yt_rating"] === "ytAgeRestricted"
-        )
+        ) {
           isAgeRestricted = true;
+        }
         if (cr["ageRestricted"] === true) isAgeRestricted = true;
       } else if (typeof cr === "boolean") {
         isAgeRestricted = cr;

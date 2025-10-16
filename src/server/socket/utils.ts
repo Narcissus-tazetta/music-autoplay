@@ -1,42 +1,27 @@
 import { safeLog } from "@/server/logger";
+import { getStructuredClone, isObject } from "@/shared/utils/typeGuards";
 import type { HeaderSnapshot, RequestLike, SocketLike } from "./types";
-
-export function isObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
-}
-
-export function getStructuredClone(): ((x: unknown) => unknown) | undefined {
-  const gAny: unknown = globalThis;
-  if (gAny && typeof gAny === "object") {
-    const gRec = gAny as Record<string, unknown>;
-    const sc = gRec["structuredClone"];
-    if (typeof sc === "function") return sc as (x: unknown) => unknown;
-  }
-  return undefined;
-}
 
 export function deepCloneForLog(v: unknown): unknown {
   try {
     const sc = getStructuredClone();
     if (typeof sc === "function") return sc(v);
-    const parsed: unknown = JSON.parse(JSON.stringify(v));
-    return parsed;
+    return JSON.parse(JSON.stringify(v));
   } catch {
-    try {
-      return Object.prototype.toString.call(v);
-    } catch {
-      safeLog("debug", "deepCloneForLog fallback failed");
-      return Object.prototype.toString.call(v);
-    }
+    return Object.prototype.toString.call(v);
   }
 }
 
 export function snapshotHeaders(socket: SocketLike): HeaderSnapshot {
   try {
     if (!isObject(socket)) return undefined;
-    const hs = (socket as { handshake?: unknown }).handshake;
+
+    const socketObj = socket as { handshake?: unknown; conn?: unknown };
+    const hs = socketObj.handshake;
+
     if (isObject(hs)) {
-      const headers = (hs as { headers?: unknown }).headers;
+      const handshake = hs as { headers?: unknown };
+      const headers = handshake.headers;
       if (isObject(headers)) {
         const h = headers;
         const out: Record<string, string | undefined> = {};
@@ -49,9 +34,10 @@ export function snapshotHeaders(socket: SocketLike): HeaderSnapshot {
       }
     }
 
-    const conn = (socket as { conn?: unknown }).conn;
+    const conn = socketObj.conn;
     if (isObject(conn)) {
-      const maybeReq = (conn as { request?: unknown }).request;
+      const connObj = conn as { request?: unknown };
+      const maybeReq = connObj.request;
       if (isObject(maybeReq)) {
         const r = maybeReq as RequestLike;
         if (isObject(r.headers)) {
@@ -68,10 +54,7 @@ export function snapshotHeaders(socket: SocketLike): HeaderSnapshot {
     }
     return undefined;
   } catch (err: unknown) {
-    safeLog("debug", "snapshotHeaders failed", { error: err } as Record<
-      string,
-      unknown
-    >);
+    safeLog("debug", "snapshotHeaders failed", { error: err });
     return undefined;
   }
 }
@@ -95,41 +78,3 @@ export function sanitizeArgs(args: unknown[]): unknown[] {
     return Object.prototype.toString.call(a);
   });
 }
-
-export class RateLimiter {
-  private attempts: Map<string, number[]> = new Map();
-  constructor(
-    private maxAttempts: number,
-    private windowMs: number,
-  ) {}
-
-  tryConsume(key: string): boolean {
-    const now = Date.now();
-    const arr = this.attempts.get(key) ?? [];
-    const recent = arr.filter((t) => now - t < this.windowMs);
-    recent.push(now);
-    this.attempts.set(key, recent);
-    return recent.length <= this.maxAttempts;
-  }
-
-  clear(key: string) {
-    this.attempts.delete(key);
-  }
-}
-
-export function withSafeHandler<T extends (...a: unknown[]) => unknown>(
-  name: string,
-  fn: T,
-) {
-  return (...args: Parameters<T>): ReturnType<T> | Promise<ReturnType<T>> => {
-    const res = fn(...args);
-    if (res && typeof (res as { then?: unknown }).then === "function") {
-      return (res as Promise<ReturnType<T>>).catch((err: unknown) => {
-        throw err;
-      });
-    }
-    return res as ReturnType<T>;
-  };
-}
-
-export default {};

@@ -1,5 +1,5 @@
 import logger from "@/server/logger";
-import { extractErrorInfo } from "@/server/utils/errorHandling";
+import { extractErrorInfo } from "@/shared/utils/errorUtils";
 
 export class ErrorService {
   logWarn(ctx: string, error: unknown, extra?: Record<string, unknown>) {

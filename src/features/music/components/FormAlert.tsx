@@ -1,4 +1,5 @@
 import { AlertCircle, CheckCircle2, X } from "lucide-react";
+import { getMessage } from "../../../shared/constants/messages";
 import {
   Alert,
   AlertDescription,
@@ -64,7 +65,7 @@ export const FormAlert = ({
           >
             <X size={14} />
           </button>
-          <AlertTitle>楽曲を追加しました</AlertTitle>
+          <AlertTitle>{getMessage("SUCCESS_ADDED")}</AlertTitle>
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       )}

@@ -1,34 +1,6 @@
 {
   "items": [
     {
-      "title": "【Ado】風と私の物語",
-      "channelName": "Ado",
-      "id": "oAuKa5NOzWE",
-      "channelId": "UCln9P4Qm3-EAY4aiEPmRwEA",
-      "duration": "00:05:53"
-    },
-    {
-      "title": "米津玄師, 宇多田ヒカル Kenshi Yonezu, Hikaru Utada -  JANE DOE",
-      "channelName": "Kenshi Yonezu  米津玄師",
-      "id": "sPLqsLsooJY",
-      "channelId": "UCUCeZaZeJbEYAAzvMgrKOPQ",
-      "duration": "00:04:07"
-    },
-    {
-      "title": "米津玄師  Kenshi Yonezu - IRIS OUT",
-      "channelName": "Kenshi Yonezu  米津玄師",
-      "id": "LmZD-TU96q4",
-      "channelId": "UCUCeZaZeJbEYAAzvMgrKOPQ",
-      "duration": "00:02:34"
-    },
-    {
-      "title": "Mrs. GREEN APPLE「夏の影」Official Music Video",
-      "channelName": "Mrs. GREEN APPLE",
-      "id": "-p3O35mfSB4",
-      "channelId": "UCpFgmZm65yOU5X-hmWkWjuw",
-      "duration": "00:04:20"
-    },
-    {
       "title": "ずっと真夜中でいいのに。『形』MV (ZUTOMAYO - Pain Give Form)",
       "channelName": "ずっと真夜中でいいのに。 ZUTOMAYO",
       "id": "6eFajRiOrpY",
@@ -41,7 +13,153 @@
       "id": "VDdLF1YubI0",
       "channelId": "UCC0zLuvujaZRFqR3aNql3Sg",
       "duration": "00:02:59"
+    },
+    {
+      "id": "P_sBALzyd9k",
+      "title": "ネタが無いよ～ / 重音テト",
+      "channelName": "GYARI",
+      "channelId": "UCOl0Rfe3Erum2cP74y7Eayw",
+      "duration": "00:02:52"
+    },
+    {
+      "id": "sPLqsLsooJY",
+      "title": "米津玄師, 宇多田ヒカル Kenshi Yonezu, Hikaru Utada -  JANE DOE",
+      "channelName": "Kenshi Yonezu  米津玄師",
+      "channelId": "UCUCeZaZeJbEYAAzvMgrKOPQ",
+      "duration": "00:04:07"
+    },
+    {
+      "id": "s7FgdaGOw9s",
+      "title": "ano「ハッピーラッキーチャッピー 」× アニメ『タコピーの原罪』Collaboration Music Video",
+      "channelName": "ano official channel",
+      "channelId": "UC2tN8yIRVdZ8-Ig2REhPPWg",
+      "duration": "00:03:07"
+    },
+    {
+      "id": "C-CYwNz3z8w",
+      "title": "DECO*27 - モニタリング (Best Friend Remix) feat. 初音ミク",
+      "channelName": "DECO*27",
+      "channelId": "UCGmO0S4S-AunjRdmxA6TQYg",
+      "duration": "00:03:03"
+    },
+    {
+      "id": "Ou-dGbXLZa8",
+      "title": "なとり - 非常口 逃げてみた",
+      "channelName": "なとり / natori",
+      "channelId": "UCC0zLuvujaZRFqR3aNql3Sg",
+      "duration": "00:03:04",
+      "requesterName": "guest",
+      "requestedAt": "2025-10-09T04:36:32.113Z"
+    },
+    {
+      "id": "fFU7rj7IoLo",
+      "title": "Ukinami Yuzuha EP - \"Wonderland Trickery\" | Zenless Zone Zero",
+      "channelName": "Zenless Zone Zero",
+      "channelId": "UC2SpC8rL9LaeQriE4YNdyzA",
+      "duration": "00:03:27",
+      "requesterHash": "5a0d6fc0ec2bb4bd487a473827a6d2254411bc750e5a412a7a915c9c2e2326f6",
+      "requesterName": "さかな",
+      "requestedAt": "2025-10-09T04:52:54.909Z"
+    },
+    {
+      "id": "PysVvOp0jiU",
+      "title": "ゴーストアベニュー(Ghost Avenue) - Eve Music Video",
+      "channelName": "Eve",
+      "channelId": "UCUXfRsEIJ9xO1DT7TbEWksw",
+      "duration": "00:03:17",
+      "requesterHash": "72e0c161b736c4df7da9da567da73c700242e98e560e47fcd579e69fe8c05d70",
+      "requesterName": "カクレクマノミ",
+      "requestedAt": "2025-10-09T05:27:30.820Z"
+    },
+    {
+      "id": "NLIGDjKBLY0",
+      "title": "アイナ・ジ・エンド / 革命道中 - On The Way [Official Music Video]（TVアニメ『ダンダダン』第2期オープニングテーマ）",
+      "channelName": "アイナ・ジ・エンド Official",
+      "channelId": "UCFPb0Vc0Cjd3MpDOlHPQoPQ",
+      "duration": "00:03:38",
+      "requesterHash": "72e0c161b736c4df7da9da567da73c700242e98e560e47fcd579e69fe8c05d70",
+      "requesterName": "カクレクマノミ",
+      "requestedAt": "2025-10-09T05:30:44.292Z"
+    },
+    {
+      "id": "8E8aWeY-pAc",
+      "title": "お返事まだカナ💦❓おじさん構文😁❗️ / 雨衣",
+      "channelName": "吉本おじさん",
+      "channelId": "UC2e1YUWUEPqxRO2ZMu_3RAQ",
+      "duration": "00:03:08",
+      "requesterHash": "72e0c161b736c4df7da9da567da73c700242e98e560e47fcd579e69fe8c05d70",
+      "requesterName": "カクレクマノミ",
+      "requestedAt": "2025-10-09T05:31:32.607Z"
+    },
+    {
+      "id": "JQ2913bVo30",
+      "title": "ずっと真夜中でいいのに。『クリームで会いにいけますか』MV (ZUTOMAYO - CREAM)",
+      "channelName": "ずっと真夜中でいいのに。 ZUTOMAYO",
+      "channelId": "UCv6P5nsS9rP4tDtFlqLU_QQ",
+      "duration": "00:04:01",
+      "requesterHash": "5a0d6fc0ec2bb4bd487a473827a6d2254411bc750e5a412a7a915c9c2e2326f6",
+      "requesterName": "さかな",
+      "requestedAt": "2025-10-09T05:35:16.143Z"
+    },
+    {
+      "id": "ZIzEnTdR368",
+      "title": "DECO*27 - マシュマロ feat. 初音ミク",
+      "channelName": "DECO*27",
+      "channelId": "UCGmO0S4S-AunjRdmxA6TQYg",
+      "duration": "00:02:58",
+      "requesterHash": "5a0d6fc0ec2bb4bd487a473827a6d2254411bc750e5a412a7a915c9c2e2326f6",
+      "requesterName": "さかな",
+      "requestedAt": "2025-10-09T06:36:28.799Z"
+    },
+    {
+      "id": "oAuKa5NOzWE",
+      "title": "【Ado】風と私の物語",
+      "channelName": "Ado",
+      "channelId": "UCln9P4Qm3-EAY4aiEPmRwEA",
+      "duration": "00:05:53",
+      "requesterHash": "5a0d6fc0ec2bb4bd487a473827a6d2254411bc750e5a412a7a915c9c2e2326f6",
+      "requesterName": "さかな",
+      "requestedAt": "2025-10-09T06:41:02.705Z"
+    },
+    {
+      "id": "eCjfSDz4eRo",
+      "title": "重音テトはこんなパーティ二人で抜け出せるのか／重音テトSV＆初音ミク",
+      "channelName": "かてらざわ",
+      "channelId": "UCv0xLMeNJhh7J1jEDz3hOAQ",
+      "duration": "00:01:42",
+      "requesterHash": "5a0d6fc0ec2bb4bd487a473827a6d2254411bc750e5a412a7a915c9c2e2326f6",
+      "requesterName": "さかな",
+      "requestedAt": "2025-10-09T06:44:30.535Z"
+    },
+    {
+      "id": "5l8VZEyNRH8",
+      "title": "[MV] TAK - ‘LEMON MELON COOKIE’ feat. 初音ミク",
+      "channelName": "TAK / DORIDORI",
+      "channelId": "UCktjMRvuBnE_XLVWIMa2H1w",
+      "duration": "00:02:33",
+      "requesterHash": "5a0d6fc0ec2bb4bd487a473827a6d2254411bc750e5a412a7a915c9c2e2326f6",
+      "requesterName": "さかな",
+      "requestedAt": "2025-10-09T06:53:33.823Z"
+    },
+    {
+      "id": "bI3542HJRzY",
+      "title": "キャンディークッキーチョコレート　🍭🍪🍫初音ミク・重音テトSV",
+      "channelName": "はろける・HALLO CEL",
+      "channelId": "UCzSSgepHcIeSH3SgVwUHBNw",
+      "duration": "00:02:49",
+      "requesterHash": "5a0d6fc0ec2bb4bd487a473827a6d2254411bc750e5a412a7a915c9c2e2326f6",
+      "requesterName": "さかな",
+      "requestedAt": "2025-10-09T07:00:20.670Z"
+    },
+    {
+      "id": "dQw4w9WgXcQ",
+      "title": "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)",
+      "channelName": "Rick Astley",
+      "channelId": "UCuAXFkgsw1L7xaCfnd5JJOw",
+      "duration": "00:03:34",
+      "requesterName": "guest",
+      "requestedAt": "2025-10-09T07:13:31.378Z"
     }
   ],
-  "lastUpdated": "2025-09-30T06:57:08.740Z"
+  "lastUpdated": "2025-10-09T07:13:31.383Z"
 }

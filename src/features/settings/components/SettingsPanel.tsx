@@ -29,6 +29,9 @@ interface SettingsPanelProps {
   showDate?: boolean;
   setShowDate?: (v: boolean) => void;
 
+  ytStatusVisible?: boolean;
+  setYtStatusVisible?: (v: boolean) => void;
+
   showYear?: boolean;
   setShowYear?: (v: boolean) => void;
   showMonth?: boolean;
@@ -71,6 +74,8 @@ export const SettingsPanel = ({
   setShowCurrentSchedule,
   showDate,
   setShowDate,
+  ytStatusVisible,
+  setYtStatusVisible,
   showYear,
   setShowYear,
   showMonth,
@@ -174,6 +179,25 @@ export const SettingsPanel = ({
         {activeTab === "settings" && (
           <div className="flex flex-col gap-4">
             <DarkModeToggle mode={mode} setMode={setMode} />
+
+            {isTimePage &&
+              typeof ytStatusVisible === "boolean" &&
+              typeof setYtStatusVisible === "function" && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={ytStatusVisible}
+                    onChange={(e) => {
+                      setYtStatusVisible(e.target.checked);
+                    }}
+                    id="ytStatusVisible"
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="ytStatusVisible" className="cursor-pointer">
+                    YouTube再生状況を表示
+                  </label>
+                </div>
+              )}
 
             {isTimePage &&
               backgroundFeatureEnabled &&

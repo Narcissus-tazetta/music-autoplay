@@ -12,7 +12,7 @@ interface MusicTitleWithHoverProps {
 }
 
 const CHANNEL_LINK_CLASS =
-  "text-blue-500 dark:text-purple-400 hover:underline block truncate max-w-[200px] sm:max-w-[300px] md:max-w-[400px] lg:max-w-[500px]";
+  "text-blue-500 dark:text-purple-400 hover:underline block truncate w-full";
 
 function MusicTitleWithHoverInner({
   music,

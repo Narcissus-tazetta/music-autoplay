@@ -1,7 +1,7 @@
 # Music Auto Play
 
 > [!IMPORTANT]
-> 現在リファクタリング中
+> 残念ながらこの案は却下されてしまいました...
 
 > 📋 **[📖 技術仕様書 (TECHNICAL.md)](./TECHNICAL.md)** - システムアーキテクチャ・API仕様・開発ガイド
 
@@ -92,10 +92,12 @@ bun run start
 bun run typecheck    # 型チェック
 bun run lint         # ESLint
 bun run format:check # Prettier check
-bun test             # ユニットテスト
+bun run test:unit    # ユニットテスト（全36テスト、サマリ付き）
+bun run test:e2e     # E2Eテスト（Playwright）
 
 # 一括品質チェック
-bun run quality
+bun run quality      # typecheck + lint + format:check
+bun run ci           # quality + test:unit + build
 ```
 
 ---
@@ -143,11 +145,36 @@ DATABASE_URL=postgres://user:pass@host:5432/dbname MIGRATE_BATCH_SIZE=500 node s
 
 ---
 
+## テスト
+
+### ユニットテスト
+
+```bash
+bun run test:unit
+```
+
+すべてのユニットテストを順次実行し、見やすいサマリを表示します。
+
+- **14ファイル、36テスト、84アサーション**が実行されます
+- 各ファイルの結果（PASS/FAIL）とテスト数を表示
+- 最後に全体のサマリ（実行時間含む）を出力
+
+> **注意**: Bun v1.2.17 のテストランナーは複数ファイルを一括実行すると一部のテストが検出されない既知の問題があります。このため、`scripts/run-unit-tests.sh` を使用して各ファイルを順次実行しています。
+
+### E2Eテスト
+
+```bash
+bun run test:e2e
+```
+
+---
+
 ## 開発者向けの注意点
 
 - Render 等で複数インスタンスを立てる場合はローカル JSON ではなく Postgres を利用してください。
 - migrate スクリプトは一度きりの移行処理として想定しています。実行前に DB バックアップを取ることを推奨します。
 - 環境変数の検証は `src/app/env.server.ts`（Zod）で行っています。必須項目がないと起動時にエラーとなります。
+- テストは Bun のテストランナーを使用しています。CI では `bun run test:unit` を実行してください。
 
 ---
 

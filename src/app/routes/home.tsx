@@ -1,8 +1,9 @@
 import useFormErrors from "@/app/hooks/useFormErrors";
 import usePlayingMusic from "@/app/hooks/usePlayingMusic";
 import { StatusBadge } from "@/shared/components";
+import { getMessage } from "@/shared/constants/messages";
 import { watchUrl } from "@/shared/libs/youtube";
-import { safeExecuteAsync } from "@/shared/utils/handle";
+import { safeExecuteAsync } from "@/shared/utils/errorUtils";
 import { respondWithResult } from "@/shared/utils/httpResponse";
 import { err as makeErr } from "@/shared/utils/result";
 import { useForm } from "@conform-to/react";
@@ -10,7 +11,7 @@ import { parseWithZod } from "@conform-to/zod";
 import { Alert } from "@shadcn/alert";
 import { createHash } from "crypto";
 import { AnimatePresence } from "framer-motion";
-import { AlertCircleIcon, Loader, Send } from "lucide-react";
+import { AlertCircleIcon, Link as LinkIcon, Loader, Send } from "lucide-react";
 import { useEffect } from "react";
 import { useFetcher, useLoaderData } from "react-router";
 import type { ActionFunctionArgs } from "react-router";
@@ -97,7 +98,9 @@ export default function Home() {
   const isAdmin = useAdminStore((s) => s.isAdmin);
   const fetcher = useFetcher<typeof actionMusicAdd>();
   const [form, fields] = useForm({
+    lastResult: fetcher.data,
     shouldValidate: "onInput",
+    shouldRevalidate: "onInput",
     onValidate(context) {
       return parseWithZod(context.formData, {
         schema: addMusicSchema,
@@ -106,6 +109,31 @@ export default function Home() {
   });
 
   const { formErrorsString, parsedAction } = useFormErrors(fetcher.data);
+
+  useEffect(() => {
+    if (
+      fetcher.state === "idle" &&
+      fetcher.data &&
+      fetcher.data.status === "success"
+    ) {
+      void (async () => {
+        try {
+          const mod = await import("@/shared/utils/uiActionExecutor");
+          mod.executeUiAction(
+            {
+              type: "showToast",
+              level: "success",
+              message: getMessage("SUCCESS_ADDED"),
+            },
+            { conformFields: fields as unknown as Record<string, unknown> },
+          );
+        } catch (err) {
+          if (import.meta.env.DEV) console.debug("showToast failed", err);
+        }
+      })();
+    }
+  }, [fetcher.state, fetcher.data, fields]);
+
   useEffect(() => {
     if (!parsedAction) return;
     void (async () => {
@@ -127,29 +155,31 @@ export default function Home() {
   }, [parsedAction, fields]);
 
   return (
-    <div className="flex flex-col w-full max-w-4xl mt-8 gap-4 px-4">
+    <div className="flex flex-col w-full max-w-4xl gap-5 px-4 mt-12">
       {formErrorsString && (
         <Alert variant="destructive">
           <AlertCircleIcon />
           <Alert.Title>{formErrorsString}</Alert.Title>
         </Alert>
       )}
-      <Card className="p-2">
-        <Card.Content className="p-2">
+      <Card className="p-6 shadow-sm border border-border/30 hover:border-border/60 transition-colors">
+        <Card.Content className="p-0">
           <fetcher.Form
+            key={musics.length}
             method="post"
             action="/api/music/add"
-            className="flex flex-col items-center gap-3"
+            className="flex flex-col items-center gap-4"
             id={form.id}
             onSubmit={form.onSubmit}
           >
             <Input
+              leftIcon={<LinkIcon size={18} />}
               name={fields.url.name}
               placeholder="https://www.youtube.com/watch?v=..."
               autoComplete="off"
             />
             {Array.isArray(fields.url.errors) && fields.url.errors[0] && (
-              <p className="text-red-500 text-sm">{fields.url.errors[0]}</p>
+              <p className="text-destructive text-sm">{fields.url.errors[0]}</p>
             )}
 
             <Button
@@ -164,25 +194,28 @@ export default function Home() {
               ) : (
                 <>
                   <Send />
-                  <p>楽曲をリクエスト</p>
+                  <p>再生リストに追加</p>
                 </>
               )}
             </Button>
           </fetcher.Form>
         </Card.Content>
       </Card>
-      <div className="w-full mt-2 flex justify-center">
-        {remoteStatus && (
-          <StatusBadge status={remoteStatus} music={playingMusic} />
-        )}
+      <div className="w-full mt-4 flex justify-center">
+        <AnimatePresence mode="wait">
+          {remoteStatus && (
+            <StatusBadge status={remoteStatus} music={playingMusic} />
+          )}
+        </AnimatePresence>
       </div>
-      <Table className="overflow-hidden my-4 table-fixed">
+      <Table className="overflow-hidden my-6 table-fixed">
         <Table.Header>
           <Table.Row>
             <Table.Head className="w-12 text-center">No.</Table.Head>
-            <Table.Head style={{ width: "70%" }}>楽曲名</Table.Head>
-            <Table.Head style={{ width: "20%" }}>チャンネル</Table.Head>
-            <Table.Head style={{ width: "10%" }} aria-hidden />
+            <Table.Head>楽曲名</Table.Head>
+            <Table.Head className="w-24 text-right">
+              <span className="sr-only">操作</span>
+            </Table.Head>
           </Table.Row>
         </Table.Header>
         <Table.Body>
@@ -209,8 +242,8 @@ export default function Home() {
               ))
             ) : (
               <Table.Row>
-                <Table.Cell colSpan={5}>
-                  <p className="text-center text-sm text-gray-500">
+                <Table.Cell colSpan={3}>
+                  <p className="text-center text-sm text-muted-foreground">
                     リクエストされた楽曲はありません
                   </p>
                 </Table.Cell>

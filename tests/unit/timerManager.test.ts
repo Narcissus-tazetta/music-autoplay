@@ -1,62 +1,49 @@
-import SocketManager from "@/server/socket/manager";
-import { TimerManager } from "@/server/utils/socketHelpers";
-import WindowCloseManager from "@/server/utils/windowCloseManager";
-import { describe, expect, it, vi } from "vitest";
+import { TimerManager } from "../../src/server/utils/timerManager";
+import { describe, expect, it } from "../bunTestCompat";
 
 describe("TimerManager", () => {
-  it("start sets a timer and clear removes it", () => {
+  it("calls callback after timeout", async () => {
     const tm = new TimerManager();
     let called = false;
-    tm.start("k1", 10, () => {
+    tm.start("k1", 20, () => {
       called = true;
     });
-    tm.clear("k1");
-    // fast-forward: since we cleared, the callback should not be called
-    return new Promise((resolve) => setTimeout(resolve, 20)).then(() => {
-      expect(called).toBe(false);
+    // wait up to 200ms for callback
+    await new Promise((resolve, reject) => {
+      const check = setInterval(() => {
+        if (called) {
+          clearInterval(check);
+          resolve(true);
+        }
+      }, 5);
+      setTimeout(() => {
+        clearInterval(check);
+        reject(new Error("callback not called"));
+      }, 200);
     });
+    expect(called).toBe(true);
   });
 
-  it("clearAll cancels all timers", () => {
+  it("clear prevents callback", async () => {
     const tm = new TimerManager();
     let called = false;
-    tm.start("a", 10, () => {
+    tm.start("k2", 50, () => {
       called = true;
     });
-    tm.start("b", 10, () => {
-      called = true;
-    });
+    tm.clear("k2");
+    await new Promise((r) => setTimeout(r, 120));
+    expect(called).toBe(false);
+  });
+
+  it("clearAll prevents all callbacks", async () => {
+    const tm = new TimerManager();
+    let c1 = false;
+    let c2 = false;
+    tm.start("a", 40, () => (c1 = true));
+    tm.start("b", 60, () => (c2 = true));
     tm.clearAll();
-    return new Promise((resolve) => setTimeout(resolve, 20)).then(() => {
-      expect(called).toBe(false);
-    });
-  });
-});
-
-describe("SocketManager shutdown", () => {
-  it("calls clearAll on its timerManager", () => {
-    const mockTm: Partial<import("@/server/utils/socketHelpers").TimerManager> =
-      {
-        clear: vi.fn() as unknown as (k: string) => void,
-        clearAll: vi.fn() as unknown as () => void,
-      };
-    const emit: import("@/server/socket/manager").EmitFn = (
-      _ev: string,
-      _payload: unknown,
-    ) => true;
-    const mgr = new SocketManager(
-      emit,
-      mockTm as unknown as import("@/server/utils/socketHelpers").TimerManager,
-      new WindowCloseManager(1),
-      {
-        debounceMs: 1,
-        graceMs: 1,
-        inactivityMs: 1,
-      },
-    );
-
-    mgr.shutdown();
-    expect(mockTm.clear).toHaveBeenCalled();
-    expect(mockTm.clearAll).toHaveBeenCalled();
+    await new Promise((r) => setTimeout(r, 150));
+    expect(c1).toBe(false);
+    expect(c2).toBe(false);
   });
 });

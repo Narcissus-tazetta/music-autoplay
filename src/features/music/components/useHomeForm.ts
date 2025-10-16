@@ -4,9 +4,16 @@ import { useFormAlerts } from "../hooks/useFormAlerts";
 import { useFormSubmission } from "../hooks/useFormSubmission";
 
 export const useHomeForm = () => {
-  const { register, handleSubmit, errors, clearErrors } = useFormSubmission();
-  const { showAlert, isAnimating, successMessage, errorMessage, closeAlert } =
-    useFormAlerts();
+  const {
+    showAlert,
+    isAnimating,
+    successMessage,
+    errorMessage,
+    closeAlert,
+    showError,
+  } = useFormAlerts();
+  const { register, handleSubmit, errors, clearErrors } =
+    useFormSubmission(showError);
   const error = useMusicStore((store) => store.error);
   const resetError = useMusicStore((store) => store.resetError);
 

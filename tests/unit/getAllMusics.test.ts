@@ -1,57 +1,39 @@
-import { describe, expect, it } from "vitest";
-import type { Music } from "../../src/app/stores/musicStore";
-import registerGetAllMusics from "../../src/server/handlers/getAllMusics";
-import { makeSocket } from "./testDeps";
+import { createGetAllMusicsHandler } from "../../src/server/socket/handlers/standardHandlers";
+import { describe, expect, it } from "../bunTestCompat";
 
-describe("getAllMusics handler", () => {
-  it("returns empty array when DB empty", () => {
-    const musicDB = new Map<string, Music>();
-    const cb = (res: Music[]) => {
-      expect(Array.isArray(res)).toBe(true);
-      expect(res).toHaveLength(0);
-    };
-    const socketStub = makeSocket({
-      on: (_ev: string, handler: (...args: unknown[]) => void) => {
-        // Simulate invocation of the registered handler
-        handler(cb);
+describe("getAllMusics", () => {
+  it("returns all musics from musicDB via callback", async () => {
+    const musicDB = new Map<string, any>();
+    musicDB.set("a1", { id: "a1", title: "One" });
+    musicDB.set("b2", { id: "b2", title: "Two" });
+
+    const handlers: Record<string, (...args: unknown[]) => void> = {};
+    const socketStub = {
+      id: "stub-socket",
+      on: (ev: string, cb: (...args: unknown[]) => void) => {
+        handlers[ev] = cb;
+        return socketStub;
       },
+    } as any;
+
+    const registerHandler = createGetAllMusicsHandler(musicDB);
+    registerHandler(socketStub, {
+      socketId: "stub-socket",
+      connectionId: "test-conn",
     });
 
-    registerGetAllMusics(socketStub, musicDB);
-  });
+    const resultPromise = new Promise<unknown>((resolve) => {
+      const callback = (response: unknown) => {
+        resolve(response);
+      };
 
-  it("returns values when present", () => {
-    const musicDB = new Map<string, Music>();
-    musicDB.set("a", {
-      id: "a",
-      title: "A",
-      channelId: "c",
-      channelName: "C",
-      duration: "PT1M",
-      requesterHash: undefined,
-    });
-    musicDB.set("b", {
-      id: "b",
-      title: "B",
-      channelId: "c2",
-      channelName: "C2",
-      duration: "PT2M",
-      requesterHash: undefined,
+      handlers["getAllMusics"]?.({}, callback);
     });
 
-    const cb = (res: Music[]) => {
-      expect(Array.isArray(res)).toBe(true);
-      expect(res).toHaveLength(2);
-      const ids = res.map((m) => m.id).sort();
-      expect(ids).toEqual(["a", "b"]);
-    };
+    const result = await resultPromise;
 
-    const socketStub = makeSocket({
-      on: (_ev: string, handler: (...args: unknown[]) => void) => {
-        handler(cb);
-      },
-    });
-
-    registerGetAllMusics(socketStub, musicDB);
+    expect(Array.isArray(result)).toBe(true);
+    const ids = (result as any[]).map((m: any) => m.id).sort();
+    expect(ids).toEqual(["a1", "b2"]);
   });
 });

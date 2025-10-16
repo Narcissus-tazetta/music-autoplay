@@ -1,9 +1,8 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import { container } from "@/server/di/container";
 import logger from "@/server/logger";
 import { RemoveMusicSchema } from "@/shared/schemas/music";
 import type { ServerContext } from "@/shared/types/server";
-import { safeExecuteAsync } from "@/shared/utils/handle";
+import { safeExecuteAsync } from "@/shared/utils/errorUtils";
 import { respondWithResult } from "@/shared/utils/httpResponse";
 import { err as makeErr } from "@/shared/utils/result";
 import { parseWithZod } from "@conform-to/zod";
@@ -65,13 +64,14 @@ export const action = async ({
       requesterHash = createHash("sha256").update(adminSecret).digest("hex");
       logger.info("Using admin hash for deletion");
     } else {
-      if (!user?.id)
+      if (!user?.id) {
         return respondWithResult(
           makeErr({
             message: "ユーザーIDが見つかりません",
             code: "unauthorized",
           }),
         );
+      }
       requesterHash = createHash("sha256").update(user.id).digest("hex");
       logger.info("Using user hash for deletion");
     }

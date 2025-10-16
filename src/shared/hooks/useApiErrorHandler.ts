@@ -19,8 +19,9 @@ export const useApiErrorHandler = () => {
         if (
           "code" in error &&
           (typeof error.code === "string" || typeof error.code === "number")
-        )
+        ) {
           code = String(error.code);
+        }
         if ("details" in error) details = error.details;
       } else if (typeof error === "string") message = error;
       else {

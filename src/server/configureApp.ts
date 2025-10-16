@@ -324,9 +324,10 @@ export async function configureApp(
         loader("virtual:react-router/server-build") as Promise<ServerBuild>;
       logger.debug("Configured Vite SSR loader");
     } else {
-      // @ts-expect-error ../../build/server/index.jsの型不足エラーを回避
+      // production build is a plain JS file without type declarations; silence TS here
+      // @ts-expect-error - build/server/index.js has no declaration file
       const built = (await import(
-        "../../build/server/index.js"
+        "/Users/sakana/Desktop/music-auto-play/build/server/index.js"
       )) as ServerBuild;
       buildValue = built;
       logger.debug("Loaded production build");

@@ -1,28 +1,27 @@
 // socket runtimeは型のない外部の engine/request オブジェクトを扱うため、防御的なチェックが必要です。
 import type { C2S, S2C } from "@/shared/types/socket";
-import { Server as HttpServer } from "http";
-import { Server } from "socket.io";
+import { withErrorHandler } from "@/shared/utils/errorUtils";
+import { isObject } from "@/shared/utils/typeGuards";
+import { type Server as HttpServer } from "http";
+import { type Server } from "socket.io";
 import type { Server as IOServer } from "socket.io";
 import type { Music, RemoteStatus } from "~/stores/musicStore";
 import { container } from "./di/container";
 import logger from "./logger";
-import MusicRepository from "./music/musicRepository";
-import MusicService from "./music/musicService";
-import YouTubeResolver from "./music/youtubeResolver";
+import type { MusicService } from "./music/musicService";
+import { createMusicService } from "./music/musicServiceFactory";
 import { defaultFileStore } from "./persistence";
 import type { Store } from "./persistence";
+import { type RateLimiter } from "./services/rateLimiter";
+import { type WindowCloseManager } from "./services/windowCloseManager";
+import { type YouTubeService } from "./services/youtubeService";
 import { createSocketServerBuilder } from "./socket/builder";
-import SocketManager from "./socket/manager";
-import SocketRuntime from "./socket/runtime";
+import { type SocketManager } from "./socket/managers/manager";
+import { type SocketRuntime } from "./socket/managers/runtime";
 import type { ReplyOptions } from "./socket/types";
 import type { EngineLike, RequestLike } from "./socket/types";
-import { RateLimiter } from "./socket/utils";
-import { isObject } from "./socket/utils";
-import { withErrorHandler } from "./utils/errorHandler";
-import { createSocketEmitter } from "./utils/socketEmitter";
-import { TimerManager } from "./utils/socketHelpers";
-import WindowCloseManager from "./utils/windowCloseManager";
-import { YouTubeService } from "./youtubeService";
+import { createSocketEmitter } from "./utils/safeEmit";
+import { TimerManager } from "./utils/timerManager";
 
 export class SocketServerInstance {
   musicDB: Map<string, Music> = new Map();
@@ -111,7 +110,7 @@ export class SocketServerInstance {
 
   private async initializeSocket(server: HttpServer): Promise<void> {
     logger.info("initializeSocket starting");
-    const { initSocketServer } = await import("./socket/factory");
+    const { initSocketServer } = await import("./socket/core/factory");
     logger.info("initSocketServer imported");
     const res = await initSocketServer(server, {
       musicDB: this.musicDB,
@@ -166,21 +165,35 @@ export class SocketServerInstance {
   private getMusicService(): MusicService {
     if (!this.musicService) {
       const emitter = createSocketEmitter(() => this.getIo());
-      const repo = new MusicRepository(this.musicDB, this.fileStore);
-      const resolver = new YouTubeResolver(this.youtubeService);
-      this.musicService = new MusicService(
-        repo,
-        resolver,
-        (ev, payload, opts?) => emitter.emit(ev, payload, opts),
-      );
+      this.musicService = createMusicService({
+        youtubeService: this.youtubeService,
+        musicDB: this.musicDB,
+        fileStore: this.fileStore,
+        emitFn: (ev, payload, opts?) => emitter.emit(ev, payload, opts),
+      });
     }
     return this.musicService;
   }
-  async addMusic(url: string, requesterHash?: string): Promise<ReplyOptions> {
-    return this.getMusicService().addMusic(url, requesterHash);
+  async addMusic(
+    url: string,
+    requesterHash?: string,
+    requesterName?: string,
+  ): Promise<ReplyOptions> {
+    const result = await this.getMusicService().addMusic({
+      url,
+      requesterHash,
+      requesterName,
+    });
+    if (result.ok) return {};
+    return { formErrors: [result.error.message] };
   }
 
-  removeMusic(url: string, requesterHash: string): ReplyOptions {
-    return this.getMusicService().removeMusic(url, requesterHash);
+  async removeMusic(url: string, requesterHash: string): Promise<ReplyOptions> {
+    const result = await this.getMusicService().removeMusic({
+      url,
+      requesterHash,
+    });
+    if (result.ok) return {};
+    return { formErrors: [result.error.message] };
   }
 }

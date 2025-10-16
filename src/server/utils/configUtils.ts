@@ -1,5 +1,5 @@
 import { SERVER_ENV } from "@/app/env.server";
-import type ConfigService from "../services/configService";
+import type ConfigService from "../config/configService";
 import ServiceResolver from "./serviceResolver";
 
 export function getConfig(): {

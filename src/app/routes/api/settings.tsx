@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import { defaultSettingsStore } from "@/server/settingsPersistence";
-import { safeExecuteAsync } from "@/shared/utils/handle";
+import { safeExecuteAsync } from "@/shared/utils/errorUtils";
 import { respondWithResult } from "@/shared/utils/httpResponse";
 import { err as makeErr } from "@/shared/utils/result";
 import { type LoaderFunctionArgs } from "react-router";
@@ -42,22 +41,17 @@ export const action = async ({ request }: LoaderFunctionArgs) => {
     const sess = await loginSession.getSession(cookie);
     const user = sess.get("user");
 
-    if (!user || typeof user.id !== "string") {
-      const e = new Error("unauthorized");
-      (e as Error & { code?: string }).code = "unauthorized";
-      throw e;
-    }
+    if (!user || typeof user.id !== "string")
+      return { __status: 401 } as { __status: number };
 
     const data = (await request.json()) as unknown;
-    if (data == null || typeof data !== "object") {
-      const e = new Error("bad request");
-      (e as Error & { code?: string }).code = "bad_request";
-      throw e;
-    }
+    if (data == null || typeof data !== "object")
+      return { __status: 400 } as { __status: number };
 
     defaultSettingsStore.save(user.id, data as Record<string, unknown>);
     return { ok: true };
   });
+
   if (!res.ok) {
     const errVal = res.error;
     let msg = "Unknown error";
@@ -78,6 +72,17 @@ export const action = async ({ request }: LoaderFunctionArgs) => {
     }
     return respondWithResult(makeErr({ message: msg }));
   }
+
+  const maybeStatus = res.value as unknown;
+  if (
+    maybeStatus &&
+    typeof maybeStatus === "object" &&
+    typeof (maybeStatus as { __status?: unknown }).__status === "number"
+  ) {
+    const status = (maybeStatus as { __status: number }).__status;
+    return new Response(null, { status });
+  }
+
   return new Response(JSON.stringify(res.value), {
     status: 200,
     headers: { "Content-Type": "application/json" },

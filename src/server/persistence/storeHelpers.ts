@@ -37,5 +37,3 @@ export async function persistRemove(
     }
   }
 }
-
-export default {};

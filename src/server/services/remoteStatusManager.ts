@@ -1,8 +1,8 @@
 import type { RemoteStatus } from "~/stores/musicStore";
 import logger from "../logger";
-import type { TimerManager } from "../utils/socketHelpers";
+import type { TimerManager } from "../utils/timerManager";
 
-export default class RemoteStatusManager {
+export class RemoteStatusManager {
   private remoteStatus: RemoteStatus = { type: "closed" };
   private updatedAt = 0;
 

@@ -9,25 +9,13 @@ interface Inputs {
   url: string;
 }
 
-export const useFormSubmission = () => {
+export const useFormSubmission = (showError?: (message: string) => void) => {
   const { authenticateByKey } = useAdminAuth();
-  const { validateYouTubeUrl, fetchAsset, validateAsset } =
-    useAssetValidation();
+  const { validateYouTubeUrl } = useAssetValidation();
   const { showSuccess } = useFormAlerts();
 
   const musics = useMusicStore((store) => store.musics);
-  const addMusic = useCallback(
-    (asset: {
-      title: string;
-      channelName: string;
-      channelId: string;
-      id: string;
-      duration: string;
-    }) => {
-      useMusicStore.getState().addMusic(asset);
-    },
-    [],
-  );
+  const socket = useMusicStore((store) => store.socket);
 
   const form = useForm<Inputs>();
   const {
@@ -60,30 +48,46 @@ export const useFormSubmission = () => {
       }
 
       if (musics.length >= 50) {
+        const msg = "これ以上は送信できません。リストは50件までです。";
         setError("url", {
           type: "manual",
-          message: "これ以上は送信できません。リストは50件までです。",
+          message: msg,
         });
+        if (showError) showError(msg);
+        return;
+      }
+
+      if (!socket || !socket.connected) {
+        const msg = "サーバーに接続されていません";
+        setError("url", {
+          type: "manual",
+          message: msg,
+        });
+        if (showError) showError(msg);
         return;
       }
 
       try {
-        const videoId = validateYouTubeUrl(url);
-        const asset = await fetchAsset(videoId);
-        validateAsset(asset);
+        validateYouTubeUrl(url);
 
-        const duration = asset.length
-          ? String(Math.floor(Number(asset.length)))
-          : "0";
-        addMusic({
-          title: asset.title,
-          channelName: asset.channelName,
-          channelId: asset.channelId,
-          id: asset.id,
-          duration,
+        await new Promise<void>((resolve, reject) => {
+          socket.emit("addMusic", url, undefined, (response) => {
+            if (
+              response &&
+              typeof response === "object" &&
+              "formErrors" in response &&
+              Array.isArray(response.formErrors)
+            ) {
+              const errorMsg =
+                response.formErrors.join(", ") || "曲の追加に失敗しました";
+              reject(new Error(errorMsg));
+            } else {
+              resolve();
+            }
+          });
         });
 
-        showSuccess(`「${asset.title}」を追加しました！`);
+        showSuccess(`曲を追加しました！`);
         resetField("url");
       } catch (error) {
         const message =
@@ -91,15 +95,14 @@ export const useFormSubmission = () => {
             ? error.message
             : "サーバーとの通信に失敗しました";
         setError("url", { type: "manual", message });
+        if (showError) showError(message);
       }
     },
     [
       musics.length,
+      socket,
       authenticateByKey,
       validateYouTubeUrl,
-      fetchAsset,
-      validateAsset,
-      addMusic,
       showSuccess,
       setError,
       resetField,

@@ -1,4 +1,4 @@
-import { SendIcon } from "lucide-react";
+import { Link as LinkIcon, SendIcon } from "lucide-react";
 import { Button, Input } from "../../../shared/components";
 import { YOUTUBE_PATTERN } from "../../../shared/libs/youtube";
 import { FormAlert } from "./FormAlert";
@@ -18,7 +18,7 @@ export const HomeForm: React.FC = () => {
 
   return (
     <form
-      className="flex flex-col items-center gap-4"
+      className="flex flex-col items-center gap-4 mt-12"
       onSubmit={(e) => {
         e.preventDefault();
         void handleSubmit();
@@ -26,6 +26,7 @@ export const HomeForm: React.FC = () => {
     >
       <div className="w-full flex flex-col items-center">
         <Input
+          leftIcon={<LinkIcon size={18} />}
           className="w-[500px]"
           {...register("url", {
             validate: (value) => {

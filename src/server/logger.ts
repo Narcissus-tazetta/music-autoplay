@@ -1,12 +1,12 @@
-// Loggerは実行時に任意のメタオブジェクトを受け取るため、防御的なチェックは意図的です。
-import { extractErrorInfo } from "@/server/utils/errorHandling";
+import { extractErrorInfo } from "@/shared/utils/errorUtils";
+import { hasOwnProperty, isRecord } from "@/shared/utils/typeGuards";
 import chalk from "chalk";
 import util from "node:util";
 import stripAnsi from "strip-ansi";
 import winston from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
+import { getConfigService } from "./config/configService";
 import { extractMetaFields, normalizeMetaForPrint } from "./loggerMeta";
-import ConfigManager from "./utils/configManager";
 export type SerializedError = {
   message: string;
   code?: string;
@@ -22,8 +22,7 @@ export function serializeError(err: unknown): SerializedError {
     if (err && typeof err === "object" && !Array.isArray(err)) {
       try {
         const obj = err as Record<string, unknown>;
-        if (Object.prototype.hasOwnProperty.call(obj, "details"))
-          details = obj.details;
+        if (hasOwnProperty(obj, "details")) details = obj.details;
         else {
           const keys = Object.keys(obj).filter(
             (k) => !["message", "stack", "code"].includes(k),
@@ -66,15 +65,11 @@ export type AppLogger = {
   debug: AppLogFn;
 };
 
-const configManager = ConfigManager.getInstance();
-const logConfig = configManager.getLoggingConfig();
+const configService = getConfigService();
+const logConfig = configService.getLoggingConfig();
 const isDev = logConfig.isDev;
 const isProd = !isDev;
 const configuredLogLevel = logConfig.level;
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
-}
 
 function safeSerialize(obj: unknown): unknown {
   const seen = new WeakSet();

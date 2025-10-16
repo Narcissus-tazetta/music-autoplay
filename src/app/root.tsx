@@ -1,7 +1,7 @@
 import type { Route } from ".react-router/types/src/app/+types/root";
 import normalizeApiResponse from "@/shared/utils/api";
 import { parseApiErrorForUI } from "@/shared/utils/apiUi";
-import { safeExecuteAsync } from "@/shared/utils/handle";
+import { safeExecuteAsync } from "@/shared/utils/errorUtils";
 import { respondWithResult } from "@/shared/utils/httpResponse";
 import { err as makeErr } from "@/shared/utils/result";
 import clsx from "clsx";
@@ -24,6 +24,7 @@ import { Header } from "~/components/ui/header";
 import { themeSessionResolver, type UserSessionData } from "~/sessions.server";
 import { loginSession } from "~/sessions.server";
 import appCss from "./App.css?url";
+import type { Music } from "./stores/musicStore";
 
 export const links: Route.LinksFunction = () => [
   { rel: "stylesheet", href: appCss },
@@ -74,6 +75,13 @@ type LoaderResult =
   | { theme: string | null; user?: UserSessionData | undefined }
   | undefined;
 
+function isLoaderData(data: unknown): data is LoaderResult {
+  if (!data) return true;
+  if (typeof data !== "object") return false;
+  const d = data as Record<string, unknown>;
+  return !("theme" in d) || typeof d.theme === "string" || d.theme === null;
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <Providers>
@@ -83,13 +91,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 function InnerLayout({ children }: { children: React.ReactNode }) {
   const dataRaw = useLoaderData<typeof loader>() as unknown;
-  // eslint-disable-next-line @typescript-eslint/only-throw-error
   if (dataRaw instanceof Response) throw dataRaw;
 
-  const data = (dataRaw as LoaderResult | undefined) ?? undefined;
+  const data = isLoaderData(dataRaw) ? dataRaw : undefined;
   const [theme] = useTheme();
-
-  const ssrTheme = Boolean((data as { theme?: unknown } | undefined)?.theme);
 
   return (
     <html lang="ja" className={clsx(theme)}>
@@ -97,7 +102,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
-        <PreventFlashOnWrongTheme ssrTheme={ssrTheme} />
+        <PreventFlashOnWrongTheme ssrTheme={Boolean(data?.theme)} />
         <Links />
       </head>
       <body>
@@ -110,13 +115,15 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const _ld = useLoaderData<typeof loader>() as unknown;
-  const ld =
-    _ld instanceof Response ? undefined : (_ld as LoaderResult | undefined);
-  const userName =
-    ld && ld.user && typeof (ld.user as { name?: unknown }).name === "string"
-      ? (ld.user as { name?: string }).name
-      : undefined;
+  const dataRaw = useLoaderData<typeof loader>() as unknown;
+  const data =
+    dataRaw instanceof Response
+      ? undefined
+      : isLoaderData(dataRaw)
+        ? dataRaw
+        : undefined;
+
+  const userName = data?.user?.name;
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -146,15 +153,32 @@ export default function App() {
 
 function Providers({ children }: { children?: React.ReactNode }) {
   const dataRaw = useLoaderData<typeof loader>() as unknown;
-  // eslint-disable-next-line @typescript-eslint/only-throw-error
   if (dataRaw instanceof Response) throw dataRaw;
-  const data = dataRaw as LoaderResult | undefined;
-  const theme = (data as { theme?: unknown } | undefined)?.theme ?? null;
+
+  const data = isLoaderData(dataRaw) ? dataRaw : undefined;
+  const theme = data?.theme ?? null;
 
   useEffect(() => {
     const run = async () => {
       const { useMusicStore } = await import("./stores/musicStore");
       const store = useMusicStore.getState();
+
+      try {
+        const resp = await fetch("/api/settings");
+        if (resp.ok && resp.status === 200) {
+          const settings = (await resp.json()) as { ytStatusVisible?: boolean };
+          if (typeof settings.ytStatusVisible === "boolean") {
+            const { useAppSettings } = await import(
+              "@/shared/stores/appSettings"
+            );
+            useAppSettings
+              .getState()
+              .updateUI({ ytStatusVisible: settings.ytStatusVisible });
+          }
+        }
+      } catch (err: unknown) {
+        if (import.meta.env.DEV) console.debug("loadFromServer failed", err);
+      }
 
       try {
         store.connectSocket();
@@ -224,9 +248,7 @@ function Providers({ children }: { children?: React.ReactNode }) {
           const musicsRaw = (norm.data as { musics?: unknown } | null)?.musics;
           if (!Array.isArray(musicsRaw)) throw new Error("no-musics");
           const maybeMusics = musicsRaw;
-          const isMusic = (
-            v: unknown,
-          ): v is import("./stores/musicStore").Music => {
+          const isMusic = (v: unknown): v is Music => {
             if (!v || typeof v !== "object") return false;
             const r = v as Record<string, unknown>;
             return (
@@ -296,15 +318,15 @@ function Providers({ children }: { children?: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const g =
-        (
-          window as unknown as {
-            __app__?: {
-              showToast?: (opts: { level: string; message: string }) => void;
-              navigate?: (to: string) => void;
-            };
-          }
-        ).__app__ || {};
+      const win = window as unknown as {
+        __app__?: {
+          showToast?: (opts: { level: string; message: string }) => void;
+          navigate?: (to: string) => void;
+        };
+      };
+
+      const g = win.__app__ || {};
+
       if (!g.showToast) {
         g.showToast = ({
           level,
@@ -326,7 +348,7 @@ function Providers({ children }: { children?: React.ReactNode }) {
           }
         };
       }
-      (window as unknown as { __app__?: unknown }).__app__ = g;
+      win.__app__ = g;
     } catch (err: unknown) {
       if (import.meta.env.DEV) console.error("window.__app__ init failed", err);
     }

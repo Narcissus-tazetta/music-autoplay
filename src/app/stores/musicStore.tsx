@@ -11,6 +11,8 @@ export type RemoteStatus =
     }
   | {
       type: "paused";
+      musicTitle?: string;
+      musicId?: string;
     }
   | {
       type: "closed";
@@ -23,6 +25,8 @@ export interface Music {
   id: string;
   duration: string;
   requesterHash?: string;
+  requesterName?: string;
+  requestedAt?: string;
 }
 
 interface MusicStore {
@@ -86,6 +90,7 @@ export const useMusicStore = create<MusicStore>((set) => {
     connectSocket() {
       if (socket) return;
       socket = getSocket();
+
       const attemptGetAllMusics = (s: Socket<S2C, C2S>, maxAttempts = 3) => {
         let attempt = 0;
         const tryOnce = () => {
@@ -118,13 +123,48 @@ export const useMusicStore = create<MusicStore>((set) => {
         tryOnce();
       };
 
+      const attemptGetRemoteStatus = (s: Socket<S2C, C2S>, maxAttempts = 3) => {
+        let attempt = 0;
+        const tryOnce = () => {
+          attempt++;
+          let called = false;
+          const timeout = setTimeout(() => {
+            if (called) return;
+            called = true;
+            if (attempt < maxAttempts) {
+              const backoff = 500 * Math.pow(2, attempt - 1);
+              setTimeout(tryOnce, backoff);
+            }
+          }, 2000);
+
+          try {
+            s.emit("getRemoteStatus", (status: RemoteStatus | undefined) => {
+              if (called) return;
+              called = true;
+              clearTimeout(timeout);
+              console.log("[musicStore] getRemoteStatus response:", status);
+              if (status && typeof status === "object" && "type" in status)
+                set({ remoteStatus: status });
+            });
+          } catch {
+            if (attempt < maxAttempts) {
+              const backoff = 500 * Math.pow(2, attempt - 1);
+              setTimeout(tryOnce, backoff);
+            }
+          }
+        };
+
+        tryOnce();
+      };
+
       socket
         .on("connect", () => {
           console.info("Socket connected");
           try {
             attemptGetAllMusics(socket as Socket<S2C, C2S>);
+            attemptGetRemoteStatus(socket as Socket<S2C, C2S>);
           } catch (err: unknown) {
-            console.debug("attemptGetAllMusics failed", err);
+            console.debug("Initial data fetch failed", err);
           }
         })
         .on("musicAdded", (music: Music) => {
@@ -138,30 +178,43 @@ export const useMusicStore = create<MusicStore>((set) => {
           }));
         })
         .on("remoteStatusUpdated", (state: RemoteStatus) => {
+          console.log("[musicStore] remoteStatusUpdated event:", state);
           set({
             remoteStatus: state,
           });
-        })
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .on("reconnect_attempt" as any, () => {
+        });
+
+      const socketAny = socket as unknown;
+      if (
+        typeof socketAny === "object" &&
+        socketAny !== null &&
+        "on" in socketAny
+      ) {
+        const s = socketAny as {
+          on: (
+            event: string,
+            listener: (...args: unknown[]) => void,
+          ) => unknown;
+        };
+        s.on("reconnect_attempt", () => {
           try {
             attemptGetAllMusics(socket as Socket<S2C, C2S>);
+            attemptGetRemoteStatus(socket as Socket<S2C, C2S>);
           } catch {
-            console.debug("reconnect_attempt attemptGetAllMusics failed");
+            console.debug("reconnect_attempt data fetch failed");
           }
-        })
-        .connect();
+        });
+        s.on("reconnect", () => {
+          try {
+            attemptGetAllMusics(socket as Socket<S2C, C2S>);
+            attemptGetRemoteStatus(socket as Socket<S2C, C2S>);
+          } catch {
+            console.debug("reconnect data fetch failed");
+          }
+        });
+      }
 
-      socket.emit("getAllMusics", (musics: Music[]) => {
-        set({
-          musics,
-        });
-      });
-      socket.emit("getRemoteStatus", (state: RemoteStatus) => {
-        set({
-          remoteStatus: state,
-        });
-      });
+      socket.connect();
 
       set({ socket });
     },

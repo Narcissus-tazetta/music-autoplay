@@ -170,12 +170,13 @@ function ChartTooltipContent(props: ChartTooltipContentProps) {
     } else {
       value = itemConfig?.label;
     }
-    if (labelFormatter)
+    if (labelFormatter) {
       return (
         <div className={cn("font-medium", labelClassName)}>
           {labelFormatter(value, payload)}
         </div>
       );
+    }
     if (!value) return null;
     return <div className={cn("font-medium", labelClassName)}>{value}</div>;
   }, [

@@ -45,10 +45,11 @@ export const useAssetValidation = () => {
 
   const validateYouTubeUrl = useCallback((url: string) => {
     const videoId = extractYoutubeId(url);
-    if (videoId === null)
+    if (videoId === null) {
       throw new Error(
         "有効なYouTubeのURLを入力してください（例：https://www.youtube.com/watch?v=...）",
       );
+    }
     return videoId;
   }, []);
 
