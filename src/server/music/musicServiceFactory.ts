@@ -1,4 +1,4 @@
-import type { Music } from "~/stores/musicStore";
+import type { Music } from "@/shared/stores/musicStore";
 import type { Store } from "../persistence";
 import { type YouTubeService } from "../services/youtubeService";
 import { AuthChecker } from "./auth/authChecker";
@@ -34,10 +34,11 @@ export function createMusicService(
 }
 
 export function getMusicService(): MusicService {
-  if (!instance)
+  if (!instance) {
     throw new Error(
       "MusicService not initialized. Call createMusicService first.",
     );
+  }
   return instance;
 }
 

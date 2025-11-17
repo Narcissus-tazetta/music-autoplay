@@ -1,7 +1,7 @@
 import logger from "@/server/logger";
+import type { Music } from "@/shared/stores/musicStore";
 import fs from "fs";
 import path from "path";
-import type { Music } from "~/stores/musicStore";
 import type { PersistFile, Store } from "./types";
 
 const DEFAULT_FILE_PATH = path.resolve(

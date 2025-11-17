@@ -1,9 +1,9 @@
-import { watchUrl } from "@/shared/libs/youtube";
+import type { Music } from "@/shared/stores/musicStore";
 import type { HandlerError } from "@/shared/utils/errors";
 import { toHandlerError } from "@/shared/utils/errors";
-import type { Result } from "@/shared/utils/result";
-import { err, ok } from "@/shared/utils/result";
-import type { Music } from "~/stores/musicStore";
+import type { Result } from "@/shared/utils/errors/result-handlers";
+import { err, ok } from "@/shared/utils/errors/result-handlers";
+import { watchUrl } from "@/shared/utils/youtube";
 import logger from "../../logger";
 import type { Store } from "../../persistence";
 import { persistAdd, persistRemove } from "../../persistence/storeHelpers";

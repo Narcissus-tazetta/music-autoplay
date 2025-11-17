@@ -2,7 +2,7 @@ import logger from "@/server/logger";
 import { getMessage } from "@/shared/constants/messages";
 import { AddMusicSchema } from "@/shared/schemas/music";
 import type { ServerContext } from "@/shared/types/server";
-import { safeExecuteAsync } from "@/shared/utils/errorUtils";
+import { safeExecuteAsync } from "@/shared/utils/errors";
 import { parseWithZod } from "@conform-to/zod";
 import { hash } from "crypto";
 import type { SubmissionResult } from "node_modules/@conform-to/dom/dist/submission";
@@ -41,6 +41,7 @@ export const action = async ({
   if (result.ok) {
     const resultValue = result.value;
     if (
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       resultValue &&
       typeof resultValue === "object" &&
       "formErrors" in resultValue

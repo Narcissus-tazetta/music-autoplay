@@ -1,87 +1,84 @@
 import { parseApiErrorForUI } from "@/shared/utils/apiUi";
-import { extractErrorMessage } from "@/shared/utils/formatError";
-import { useMemo } from "react";
-
 import type { UiAction } from "@/shared/utils/apiUi";
+import { extractErrorMessage } from "@/shared/utils/errors/client";
 
-export function useFormErrors(fetcherData: unknown) {
+export function useFormErrors(fetcherData: unknown): {
+  readonly rawFetchData: unknown;
+  readonly candidate: unknown;
+  readonly formErrorsString: string | undefined;
+  readonly parsedAction: UiAction | undefined;
+} {
   const rawFetchData = fetcherData;
 
-  const candidate = useMemo(() => {
+  const candidate =
+    rawFetchData &&
+    typeof rawFetchData === "object" &&
+    "result" in (rawFetchData as Record<string, unknown>)
+      ? (rawFetchData as Record<string, unknown>).result
+      : rawFetchData;
+
+  let parsedAction: UiAction | undefined = undefined;
+  try {
     if (
-      rawFetchData &&
-      typeof rawFetchData === "object" &&
-      "result" in (rawFetchData as Record<string, unknown>)
-    )
-      return (rawFetchData as Record<string, unknown>).result;
-    return rawFetchData;
-  }, [rawFetchData]);
+      candidate &&
+      typeof candidate === "object" &&
+      "success" in (candidate as Record<string, unknown>)
+    ) {
+      const c = candidate as Record<string, unknown>;
+      if (c.success === false && c.error && typeof c.error === "object") {
+        const errObj = c.error as Record<string, unknown>;
+        const parsed = parseApiErrorForUI({
+          code: errObj.code as string | null | undefined,
+          message:
+            typeof errObj.message === "string" ? errObj.message : "エラー",
+          details: errObj.details,
+        });
+        parsedAction = parsed.action as UiAction | undefined;
+      }
+    }
+  } catch {
+    // Ignore parse errors
+  }
 
-  const parsedAction = useMemo(() => {
-    try {
-      if (
-        candidate &&
-        typeof candidate === "object" &&
-        "success" in (candidate as Record<string, unknown>)
-      ) {
-        const c = candidate as Record<string, unknown>;
-        if (c.success === false && c.error && typeof c.error === "object") {
-          const errObj = c.error as Record<string, unknown>;
-          const parsed = parseApiErrorForUI({
-            code: errObj.code as string | null | undefined,
-            message:
-              typeof errObj.message === "string" ? errObj.message : "エラー",
-            details: errObj.details,
-          });
-          return parsed.action as UiAction | undefined;
+  let formErrorsString: string | undefined = undefined;
+  try {
+    if (
+      candidate &&
+      typeof candidate === "object" &&
+      "success" in (candidate as Record<string, unknown>)
+    ) {
+      const c = candidate as Record<string, unknown>;
+      if (c.success === false && c.error && typeof c.error === "object") {
+        const errObj = c.error as Record<string, unknown>;
+        const parsed = parseApiErrorForUI({
+          code: errObj.code as string | null | undefined,
+          message:
+            typeof errObj.message === "string" ? errObj.message : "エラー",
+          details: errObj.details,
+        });
+        if (
+          parsed.kind === "validation" &&
+          (parsed as Record<string, unknown>).fieldErrors
+        ) {
+          const fe = (parsed as Record<string, unknown>).fieldErrors as
+            | Record<string, string>
+            | undefined;
+          if (fe) formErrorsString = Object.values(fe).join(" ");
+        } else {
+          formErrorsString = parsed.message;
         }
       }
-    } catch (e) {
-      /* ignore parse errors from unexpected shapes */
-      void e;
     }
-    return undefined;
-  }, [candidate]);
+  } catch {
+    // Ignore parse errors
+  }
 
-  const formErrorsString = useMemo(() => {
-    try {
-      if (
-        candidate &&
-        typeof candidate === "object" &&
-        "success" in (candidate as Record<string, unknown>)
-      ) {
-        const c = candidate as Record<string, unknown>;
-        if (c.success === false && c.error && typeof c.error === "object") {
-          const errObj = c.error as Record<string, unknown>;
-          const parsed = parseApiErrorForUI({
-            code: errObj.code as string | null | undefined,
-            message:
-              typeof errObj.message === "string" ? errObj.message : "エラー",
-            details: errObj.details,
-          });
-          if (
-            parsed.kind === "validation" &&
-            (parsed as Record<string, unknown>).fieldErrors
-          ) {
-            const fe = (parsed as Record<string, unknown>).fieldErrors as
-              | Record<string, string>
-              | undefined;
-            if (fe) return Object.values(fe).join(" ");
-          }
-          return parsed.message;
-        }
-      }
-    } catch (e) {
-      /* ignore parse errors from unexpected shapes */
-      void e;
-    }
-
-    return (
+  if (!formErrorsString) {
+    formErrorsString =
       extractErrorMessage(candidate, { joinWith: " " }) ??
       extractErrorMessage(fetcherData, { joinWith: " " }) ??
-      undefined
-    );
-  }, [candidate, fetcherData]);
+      undefined;
+  }
 
   return { rawFetchData, candidate, formErrorsString, parsedAction } as const;
 }

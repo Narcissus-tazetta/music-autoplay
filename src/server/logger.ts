@@ -1,4 +1,4 @@
-import { extractErrorInfo } from "@/shared/utils/errorUtils";
+import { extractErrorInfo } from "@/shared/utils/errors";
 import { hasOwnProperty, isRecord } from "@/shared/utils/typeGuards";
 import chalk from "chalk";
 import util from "node:util";

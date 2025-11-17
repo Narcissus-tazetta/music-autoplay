@@ -1,5 +1,5 @@
+import type { Music } from "@/shared/stores/musicStore";
 import type { Server as IOServer } from "socket.io";
-import type { Music } from "~/stores/musicStore";
 import type { MusicService } from "../../music/musicService";
 import { createMusicService } from "../../music/musicServiceFactory";
 import type { Store } from "../../persistence";

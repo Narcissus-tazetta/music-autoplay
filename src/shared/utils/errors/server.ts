@@ -136,8 +136,9 @@ export function mapErrorToCode(error: unknown): string {
     msg.includes("不正") ||
     msg.includes("validation") ||
     msg.includes("検証")
-  )
+  ) {
     return "VALIDATION_ERROR";
+  }
 
   if (msg.includes("not found") || msg.includes("見つかりません"))
     return "NOT_FOUND";
@@ -146,15 +147,17 @@ export function mapErrorToCode(error: unknown): string {
     msg.includes("duplicate") ||
     msg.includes("すでに") ||
     msg.includes("既に")
-  )
+  ) {
     return "DUPLICATE";
+  }
 
   if (
     msg.includes("network") ||
     msg.includes("connection") ||
     msg.includes("timeout")
-  )
+  ) {
     return "NETWORK_ERROR";
+  }
 
   return "INTERNAL_ERROR";
 }

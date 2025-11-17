@@ -1,4 +1,4 @@
-import type { RemoteStatus } from "~/stores/musicStore";
+import type { RemoteStatus } from "@/shared/stores/musicStore";
 import logger from "../logger";
 import type { TimerManager } from "../utils/timerManager";
 

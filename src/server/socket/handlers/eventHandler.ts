@@ -49,7 +49,7 @@ export interface EventHandlerConfig<TPayload, TResponse> {
 }
 
 interface CallbackFunction {
-  (response: ReplyOptions | unknown): void;
+  (response: ReplyOptions): void;
 }
 
 function formatZodErrors(error: ZodError): Record<string, string[]> {
@@ -59,11 +59,10 @@ function formatZodErrors(error: ZodError): Record<string, string[]> {
     const path = issue.path.join(".");
     const field = path || "root";
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!fieldErrors[field]) fieldErrors[field] = [];
-
     fieldErrors[field].push(issue.message);
   }
-
   return fieldErrors;
 }
 
@@ -245,7 +244,7 @@ export function registerBatchHandlers(
   socket: Socket,
   config: BatchEventHandlerConfig,
   context?: EventContext,
-) {
+): void {
   for (const { event, handler } of config.handlers) {
     try {
       handler(socket, context);

@@ -2,9 +2,9 @@ import { container } from "@/server/di/container";
 import logger from "@/server/logger";
 import { RemoveMusicSchema } from "@/shared/schemas/music";
 import type { ServerContext } from "@/shared/types/server";
-import { safeExecuteAsync } from "@/shared/utils/errorUtils";
+import { safeExecuteAsync } from "@/shared/utils/errors";
+import { err as makeErr } from "@/shared/utils/errors/result-handlers";
 import { respondWithResult } from "@/shared/utils/httpResponse";
-import { err as makeErr } from "@/shared/utils/result";
 import { parseWithZod } from "@conform-to/zod";
 import { createHash } from "crypto";
 import type { ActionFunctionArgs } from "react-router";
@@ -88,6 +88,7 @@ export const action = async ({
       let msg = "Unknown error";
       if (typeof errVal === "string") msg = errVal;
       else if (
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         errVal &&
         typeof errVal === "object" &&
         "message" in (errVal as Record<string, unknown>)
@@ -105,6 +106,7 @@ export const action = async ({
     }
 
     const value = result.value;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (typeof value === "object" && value != null) {
       const rec = value as Record<string, unknown>;
       const fe = rec.formErrors;

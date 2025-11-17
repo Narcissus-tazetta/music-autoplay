@@ -1,4 +1,4 @@
-import type { Music, RemoteStatus } from "~/stores/musicStore";
+import type { Music, RemoteStatus } from "@/shared/stores/musicStore";
 
 export interface S2C {
   musicAdded(music: Music): void;

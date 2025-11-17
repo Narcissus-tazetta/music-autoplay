@@ -16,6 +16,7 @@ export function applyFieldErrorsToConform(
   try {
     for (const [k, v] of Object.entries(errors)) {
       const target = fields[k];
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (target) {
         try {
           target.errors = [v];

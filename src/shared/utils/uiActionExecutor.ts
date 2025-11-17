@@ -2,7 +2,7 @@ import { getWindowExtensions } from "@/shared/schemas/global";
 import type { ParsedApiErrorWithAction, UiAction } from "@/shared/utils/apiUi";
 import { applyFieldErrorsToConform } from "@/shared/utils/formAdapters/conformAdapter";
 
-const tryShowToast = (level: string, message: string) => {
+const tryShowToast = (level: string, message: string): void => {
   try {
     const winResult = getWindowExtensions();
     if (winResult?.success) {
@@ -12,14 +12,14 @@ const tryShowToast = (level: string, message: string) => {
         return;
       }
     }
-  } catch (e) {
-    void e;
+  } catch {
+    // Window extensions not available, fallback to console
   }
 
   console.warn(`TOAST[${level}]: ${message}`);
 };
 
-const tryRedirect = (to: string) => {
+const tryRedirect = (to: string): void => {
   try {
     const winResult = getWindowExtensions();
     const app = winResult?.success ? winResult.data.__app__ : undefined;
@@ -27,8 +27,8 @@ const tryRedirect = (to: string) => {
       app.navigate(to);
       return;
     }
-  } catch (e) {
-    void e;
+  } catch {
+    // Window extensions not available, fallback to location.href
   }
   window.location.href = to;
 };
@@ -40,7 +40,7 @@ export type UiActionExecutorOptions = {
 export function executeUiAction(
   action: UiAction,
   opts?: UiActionExecutorOptions,
-) {
+): void {
   switch (action.type) {
     case "noop":
       return;
@@ -82,6 +82,6 @@ export function executeUiAction(
 export function executeParsedApiError(
   parsed: ParsedApiErrorWithAction,
   opts?: UiActionExecutorOptions,
-) {
+): void {
   executeUiAction(parsed.action, opts);
 }

@@ -1,8 +1,8 @@
 import { getMessage } from "@/shared/constants/messages";
+import type { Music } from "@/shared/stores/musicStore";
 import type { HandlerError } from "@/shared/utils/errors";
-import type { Result } from "@/shared/utils/result";
-import { err, ok } from "@/shared/utils/result";
-import type { Music } from "~/stores/musicStore";
+import type { Result } from "@/shared/utils/errors/result-handlers";
+import { err, ok } from "@/shared/utils/errors/result-handlers";
 import logger from "../logger";
 import type { AuthChecker } from "./auth/authChecker";
 import type { MusicEventEmitter } from "./emitter/musicEventEmitter";

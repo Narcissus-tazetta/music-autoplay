@@ -117,9 +117,9 @@ export function registerEngineAugmentations(
               else if (
                 allowExtensionOrigins &&
                 incomingOrigin.startsWith("chrome-extension://")
-              )
+              ) {
                 setOrigin = incomingOrigin;
-              else {
+              } else {
                 const origins = (corsRaw || "")
                   .split(",")
                   .map((s: string) => s.trim())
@@ -197,8 +197,9 @@ export function registerEngineAugmentations(
             if (
               isObject(reqObj.headers) &&
               typeof reqObj.headers.origin === "string"
-            )
+            ) {
               incomingOrigin = reqObj.headers.origin;
+            }
             if (
               typeof incomingOrigin !== "string" ||
               incomingOrigin.trim().length === 0

@@ -107,23 +107,23 @@ export class ConfigService {
 
   getServerConfig(): ServerConfig {
     return {
-      port: this.getNumber("PORT", 3000)!,
+      port: this.getNumber("PORT", 3000) ?? 3000,
       sessionSecret: this.requireString("SESSION_SECRET"),
-      shutdownTimeoutMs: this.getNumber("SHUTDOWN_TIMEOUT_MS", 5000)!,
+      shutdownTimeoutMs: this.getNumber("SHUTDOWN_TIMEOUT_MS", 5000) ?? 5000,
     };
   }
 
   getSocketConfig(): SocketConfig {
     return {
-      remoteStatusDebounceMs: this.getNumber("REMOTE_STATUS_DEBOUNCE_MS", 0)!,
-      remoteStatusGraceMs: this.getNumber("REMOTE_STATUS_GRACE_MS", 0)!,
-      remoteStatusInactivityMs: this.getNumber(
-        "REMOTE_STATUS_INACTIVITY_MS",
-        0,
-      )!,
-      windowCloseDebounce: this.getNumber("WINDOW_CLOSE_DEBOUNCE_MS", 500)!,
-      adminMaxAttempts: this.getNumber("ADMIN_MAX_ATTEMPTS", 5)!,
-      adminWindowMs: this.getNumber("ADMIN_WINDOW_MS", 60000)!,
+      remoteStatusDebounceMs:
+        this.getNumber("REMOTE_STATUS_DEBOUNCE_MS", 0) ?? 0,
+      remoteStatusGraceMs: this.getNumber("REMOTE_STATUS_GRACE_MS", 0) ?? 0,
+      remoteStatusInactivityMs:
+        this.getNumber("REMOTE_STATUS_INACTIVITY_MS", 0) ?? 0,
+      windowCloseDebounce:
+        this.getNumber("WINDOW_CLOSE_DEBOUNCE_MS", 500) ?? 500,
+      adminMaxAttempts: this.getNumber("ADMIN_MAX_ATTEMPTS", 5) ?? 5,
+      adminWindowMs: this.getNumber("ADMIN_WINDOW_MS", 60000) ?? 60000,
     };
   }
 
@@ -141,9 +141,9 @@ export class ConfigService {
   }
 
   getLoggingConfig(): LoggingConfig {
-    const nodeEnv = this.getString("NODE_ENV", "development")!;
+    const nodeEnv = this.getString("NODE_ENV", "development") ?? "development";
     return {
-      level: this.getString("LOG_LEVEL", "info")!,
+      level: this.getString("LOG_LEVEL", "info") ?? "info",
       isDev: nodeEnv === "development",
     };
   }

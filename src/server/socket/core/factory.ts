@@ -1,7 +1,7 @@
 import { SERVER_ENV } from "@/app/env.server";
+import type { Music } from "@/shared/stores/musicStore";
 import type { Server as HttpServer } from "http";
 import type { Server as IOServer } from "socket.io";
-import type { Music } from "~/stores/musicStore";
 import type ConfigService from "../../config/configService";
 import logger from "../../logger";
 import type { Store } from "../../persistence";
@@ -53,15 +53,17 @@ export async function initSocketServer(
   const io = created.io;
 
   const [persistedData, timerManager, configService] = await Promise.all([
-    (async () => {
-      try {
-        const persisted = effectiveFileStore ? effectiveFileStore.load() : [];
-        return persisted;
-      } catch (err: unknown) {
-        logger.warn("failed to restore persisted musics", { error: err });
-        return [];
-      }
-    })(),
+    Promise.resolve(
+      (() => {
+        try {
+          const persisted = effectiveFileStore ? effectiveFileStore.load() : [];
+          return persisted;
+        } catch (err: unknown) {
+          logger.warn("failed to restore persisted musics", { error: err });
+          return [];
+        }
+      })(),
+    ),
     Promise.resolve(new TimerManager()),
     Promise.resolve(serviceResolver.resolve<ConfigService>("configService")),
   ]);

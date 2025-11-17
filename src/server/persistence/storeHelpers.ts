@@ -1,5 +1,5 @@
 import logger from "@/server/logger";
-import type { Music } from "~/stores/musicStore";
+import type { Music } from "@/shared/stores/musicStore";
 import type { Store } from "./types";
 
 export async function persistAdd(

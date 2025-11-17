@@ -1,8 +1,8 @@
-import { withErrorHandler } from "@/shared/utils/errorUtils";
+import type { Music } from "@/shared/stores/musicStore";
+import { withErrorHandler } from "@/shared/utils/errors";
 import { randomUUID } from "crypto";
 import type { Socket } from "socket.io";
 import type { Server as IOServer } from "socket.io";
-import type { Music } from "~/stores/musicStore";
 import logger, { logMetric, withContext } from "../../logger";
 import type { MusicService } from "../../music/musicService";
 import type { Store } from "../../persistence";
@@ -36,8 +36,10 @@ export type ConnectionHandlerFactory = (
   deps: ConnectionDeps,
 ) => (socket: Socket) => void;
 
-export function makeConnectionHandler(deps: ConnectionDeps) {
-  return (socket: Socket) => {
+export function makeConnectionHandler(
+  deps: ConnectionDeps,
+): (socket: Socket) => void {
+  return (socket: Socket): void => {
     const connectionId = randomUUID();
     let requestId: string | undefined;
     try {

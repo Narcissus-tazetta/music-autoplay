@@ -1,4 +1,4 @@
-import { withErrorHandler } from "@/shared/utils/errorUtils";
+import { withErrorHandler } from "@/shared/utils/errors";
 import type { Request } from "express";
 import { SERVER_ENV } from "~/env.server";
 import logger from "../../logger";
@@ -63,7 +63,12 @@ export function buildCorsConfig(): CorsConfig {
   return { origins, allowAllOrigins, allowExtensionOrigins };
 }
 
-export function makeOriginChecker(cfg: CorsConfig) {
+export function makeOriginChecker(
+  cfg: CorsConfig,
+): (
+  origin: unknown,
+  callback: (err: Error | null, allow?: boolean) => void,
+) => void {
   const originChecker = withErrorHandler(
     (
       origin: unknown,

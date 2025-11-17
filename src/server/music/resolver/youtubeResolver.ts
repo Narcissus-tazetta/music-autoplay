@@ -1,9 +1,9 @@
-import { extractYoutubeId } from "@/shared/libs/youtube";
 import { YouTubeMetaSchema } from "@/shared/schemas/music";
 import type { HandlerError } from "@/shared/utils/errors";
 import { toHandlerError } from "@/shared/utils/errors";
-import type { Result } from "@/shared/utils/result";
-import { err, ok } from "@/shared/utils/result";
+import type { Result } from "@/shared/utils/errors/result-handlers";
+import { err, ok } from "@/shared/utils/errors/result-handlers";
+import { extractYoutubeId } from "@/shared/utils/youtube";
 import type { z } from "zod";
 import logger from "../../logger";
 import type { YouTubeService } from "../../services/youtubeService";
@@ -54,7 +54,6 @@ export class YouTubeResolver {
           meta: { errors: parsed.error.errors },
         });
       }
-
       return ok(parsed.data);
     } catch (error: unknown) {
       logger.warn("YouTubeResolver.resolve failed", {

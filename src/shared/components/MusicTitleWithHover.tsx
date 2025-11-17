@@ -1,7 +1,7 @@
-import { cn } from "@/app/libs/utils";
-import { watchUrl } from "@/shared/libs/youtube";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
-import type { Music } from "~/stores/musicStore";
+import { cn } from "@/app/utils/cn";
+import type { Music } from "@/shared/stores/musicStore";
+import { watchUrl } from "@/shared/utils/youtube";
+import { memo, useState } from "react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "./index";
 
 type MusicWithThumbnail = Music & { thumbnail?: string };
@@ -14,44 +14,52 @@ interface MusicTitleWithHoverProps {
 const CHANNEL_LINK_CLASS =
   "text-blue-500 dark:text-purple-400 hover:underline block truncate w-full";
 
+const makeCandidates = (m: MusicWithThumbnail): string[] => {
+  const candidates: string[] = [];
+  if (m.thumbnail) candidates.push(m.thumbnail);
+  candidates.push(`https://i.ytimg.com/vi/${m.id}/maxresdefault.jpg`);
+  candidates.push(`https://i.ytimg.com/vi/${m.id}/sddefault.jpg`);
+  candidates.push(`https://i.ytimg.com/vi/${m.id}/hqdefault.jpg`);
+  candidates.push(`https://i.ytimg.com/vi/${m.id}/mqdefault.jpg`);
+  candidates.push(`https://i.ytimg.com/vi/${m.id}/default.jpg`);
+  return candidates;
+};
+
 function MusicTitleWithHoverInner({
   music,
   className,
 }: MusicTitleWithHoverProps) {
   const merged = cn(CHANNEL_LINK_CLASS, className ?? "");
-  const makeCandidates = (m: MusicWithThumbnail) => {
-    const candidates: string[] = [];
-    if (m.thumbnail) candidates.push(m.thumbnail);
-    candidates.push(`https://i.ytimg.com/vi/${m.id}/maxresdefault.jpg`);
-    candidates.push(`https://i.ytimg.com/vi/${m.id}/sddefault.jpg`);
-    candidates.push(`https://i.ytimg.com/vi/${m.id}/hqdefault.jpg`);
-    candidates.push(`https://i.ytimg.com/vi/${m.id}/mqdefault.jpg`);
-    candidates.push(`https://i.ytimg.com/vi/${m.id}/default.jpg`);
-    return candidates;
-  };
+  const candidates = makeCandidates(music);
+  const [failedIndices, setFailedIndices] = useState<{
+    id: string;
+    indices: Set<number>;
+  }>({
+    id: music.id,
+    indices: new Set(),
+  });
 
-  const candidatesRef = useRef<string[]>(makeCandidates(music));
-  const [index, setIndex] = useState(0);
-  const [src, setSrc] = useState<string>(
-    candidatesRef.current[0] ?? "/favicon.svg",
-  );
-  useEffect(() => {
-    const next = makeCandidates(music);
-    candidatesRef.current = next;
-    setIndex(0);
-    setSrc(next[0] ?? "/favicon.svg");
-  }, [music]);
+  const activeIndices =
+    failedIndices.id === music.id ? failedIndices.indices : new Set<number>();
+  const currentSrc = (() => {
+    const firstValidIndex = candidates.findIndex(
+      (_, i) => !activeIndices.has(i),
+    );
+    return firstValidIndex >= 0 ? candidates[firstValidIndex] : "/favicon.svg";
+  })();
 
-  const handleError = useCallback(() => {
-    const nextIndex = index + 1;
-    const next = candidatesRef.current[nextIndex];
-    if (next) {
-      setIndex(nextIndex);
-      setSrc(next);
-    } else {
-      setSrc("/favicon.svg");
+  const handleError = () => {
+    const currentIndex = candidates.indexOf(currentSrc);
+    if (currentIndex >= 0) {
+      setFailedIndices((prev) => ({
+        id: music.id,
+        indices:
+          prev.id === music.id
+            ? new Set([...prev.indices, currentIndex])
+            : new Set([currentIndex]),
+      }));
     }
-  }, [index]);
+  };
 
   return (
     <HoverCard>
@@ -66,8 +74,8 @@ function MusicTitleWithHoverInner({
       </HoverCardTrigger>
       <HoverCardContent>
         <img
-          key={`${music.id}-thumb-${index}`}
-          src={src}
+          key={`${music.id}-${currentSrc}`}
+          src={currentSrc}
           alt={`${music.title} のサムネイル`}
           className="w-full h-auto rounded"
           onError={handleError}

@@ -1,6 +1,6 @@
-import { safeExecuteAsync } from "@/shared/utils/errorUtils";
+import { safeExecuteAsync } from "@/shared/utils/errors";
+import { err as makeErr } from "@/shared/utils/errors/result-handlers";
 import { respondWithResult } from "@/shared/utils/httpResponse";
-import { err as makeErr } from "@/shared/utils/result";
 import type { ActionFunctionArgs } from "react-router";
 import { YouTubeService } from "../../../server/services/youtubeService";
 
@@ -55,13 +55,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             if (
               high &&
               typeof (high as Record<string, unknown>)["url"] === "string"
-            )
+            ) {
               thumbnail = (high as Record<string, unknown>)["url"] as string;
-            else if (
+            } else if (
               def &&
               typeof (def as Record<string, unknown>)["url"] === "string"
-            )
+            ) {
               thumbnail = (def as Record<string, unknown>)["url"] as string;
+            }
           }
         }
       }

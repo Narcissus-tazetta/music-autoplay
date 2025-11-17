@@ -1,5 +1,4 @@
 import type { Server as IOServer } from "socket.io";
-import type { Music } from "../../src/app/stores/musicStore";
 import { MusicService } from "../../src/server/music/musicService";
 import type { Store } from "../../src/server/persistence";
 import { type WindowCloseManager } from "../../src/server/services/windowCloseManager";
@@ -7,6 +6,7 @@ import type { YouTubeService } from "../../src/server/services/youtubeService";
 import { SocketManager } from "../../src/server/socket/managers/manager";
 import { SocketRuntime } from "../../src/server/socket/managers/runtime";
 import type { TimerManager } from "../../src/server/utils/timerManager";
+import type { Music } from "../../src/shared/stores/musicStore";
 import { describe, expect, it, vi } from "../bunTestCompat";
 
 describe("SocketRuntime", () => {

@@ -1,7 +1,7 @@
 import { SERVER_ENV } from "@/app/env.server";
 import logger from "@/server/logger";
+import type { Music } from "@/shared/stores/musicStore";
 import { Pool } from "pg";
-import type { Music } from "~/stores/musicStore";
 import { container } from "../di/container";
 
 type DbMusicRow = {

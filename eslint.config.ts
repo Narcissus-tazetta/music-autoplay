@@ -81,6 +81,11 @@ export default tseslint.config(
       "@typescript-eslint/no-redundant-type-constituents": "warn",
       "@typescript-eslint/no-unnecessary-type-parameters": "warn",
       "@typescript-eslint/no-deprecated": "off",
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-unsafe-assignment": "error",
+      "@typescript-eslint/no-unsafe-member-access": "error",
+      "@typescript-eslint/no-unsafe-call": "error",
+      "@typescript-eslint/no-unsafe-return": "error",
       "react-refresh/only-export-components": [
         "warn",
         { allowExportNames: ["meta", "links", "headers", "loader", "action"] },

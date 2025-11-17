@@ -65,7 +65,9 @@ function sanitizeErrorForLog(errorInfo: ErrorInfo): ErrorInfo {
     try {
       const metaStr = JSON.stringify(errorInfo.meta);
       if (metaStr.length < 1000) sanitized.meta = errorInfo.meta;
-    } catch {}
+    } catch {
+      // JSON.stringify failed, skip meta serialization
+    }
   }
 
   return sanitized;

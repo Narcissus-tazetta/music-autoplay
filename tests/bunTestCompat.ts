@@ -3,8 +3,8 @@ import { jest } from "bun:test";
 
 export { afterEach, beforeEach, describe, expect, it, test };
 export const vi = {
-  fn: (impl?: any) => jest.fn(impl),
-  spyOn: (obj: any, method: string) => jest.spyOn(obj, method),
+  fn: (impl?: unknown) => jest.fn(impl as any),
+  spyOn: (obj: unknown, method: string) => jest.spyOn(obj as any, method),
   useFakeTimers: () => {
     jest.useFakeTimers();
   },

@@ -1,4 +1,4 @@
-import type { Music, RemoteStatus } from "~/stores/musicStore";
+import type { Music, RemoteStatus } from "@/shared/stores/musicStore";
 import logger from "../../logger";
 import type MetricsManager from "../../services/metricsManager";
 import ServiceResolver from "../../utils/serviceResolver";
@@ -10,10 +10,7 @@ export function createGetAllMusicsHandler(musicDB: Map<string, Music>) {
 
   return createSocketEventHandler({
     event: "getAllMusics",
-    handler: async (
-      _payload: unknown,
-      context: { socketId: string },
-    ): Promise<Music[]> => {
+    handler(_payload: unknown, context: { socketId: string }): Music[] {
       const start = Date.now();
       let hasError = false;
 
@@ -55,7 +52,7 @@ export function createGetRemoteStatusHandler(
 ) {
   return createSocketEventHandler({
     event: "getRemoteStatus",
-    handler: async (): Promise<RemoteStatus> => {
+    handler(): RemoteStatus {
       try {
         if (typeof remoteStatusOrSupplier === "function") {
           const fn = remoteStatusOrSupplier as () => RemoteStatus;

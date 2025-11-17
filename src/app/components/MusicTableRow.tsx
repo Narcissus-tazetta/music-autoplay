@@ -1,13 +1,14 @@
-import { cn } from "@/app/libs/utils";
+import { useMusicRow } from "@/app/hooks/useMusicRow";
+import { cn } from "@/app/utils/cn";
 import { MusicTitleWithHover } from "@/shared/components";
-import { channelUrl } from "@/shared/libs/youtube";
+import type { Music } from "@/shared/stores/musicStore";
+import { formatDuration, formatRequestedAt } from "@/shared/utils/format";
+import { channelUrl } from "@/shared/utils/youtube";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, Loader, MoreVertical, TrashIcon } from "lucide-react";
-import { memo, useCallback, useState } from "react";
+import { memo } from "react";
 import { Button } from "~/components/ui/shadcn/button";
 import { Table } from "~/components/ui/shadcn/table";
-import type { Music } from "~/stores/musicStore";
-import { formatDuration, formatRequestedAt } from "@/shared/utils/format";
 
 export interface MusicTableRowProps {
   music: Music;
@@ -37,17 +38,13 @@ export default function MusicTableRow({
   onDelete,
   className,
 }: MusicTableRowProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const canDelete =
-    isAdmin || (music.requesterHash && userHash === music.requesterHash);
-
-  const handleDelete = useCallback(() => {
-    onDelete(music.id);
-  }, [onDelete, music.id]);
-
-  const toggleExpanded = useCallback(() => {
-    setIsExpanded((prev) => !prev);
-  }, []);
+  const { isExpanded, canDelete, handleDelete, toggleExpanded } = useMusicRow({
+    musicId: music.id,
+    requesterHash: music.requesterHash,
+    userHash,
+    isAdmin,
+    onDelete,
+  });
 
   const mergedRowClass = cn(
     className ?? "h-14",

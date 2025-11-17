@@ -11,11 +11,16 @@ export class ServiceResolver {
     return ServiceResolver.instance;
   }
 
-  resolve<T>(token: string): T | undefined {
+  // Keep generic so callers can assert a narrower type, even though the type parameter
+  // is only used for the return value. ESLint's rule flags this in some configs,
+  // so keep the comment to avoid noise.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
+  resolve<T = unknown>(token: string): T | undefined {
     return container.getOptional(token) as T | undefined;
   }
 
-  resolveRequired<T>(token: string): T {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
+  resolveRequired<T = unknown>(token: string): T {
     const service = container.getOptional(token);
     if (service === undefined || service === null)
       throw new Error(`Required service not found: ${token}`);

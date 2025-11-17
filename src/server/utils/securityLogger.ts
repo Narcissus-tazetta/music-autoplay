@@ -7,6 +7,7 @@ function getHeader(
   name: string,
 ): string | undefined {
   if ("get" in req && typeof req.get === "function") return req.get(name);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if ("headers" in req && req.headers) {
     const value = req.headers[name.toLowerCase()];
     return Array.isArray(value) ? value[0] : value;

@@ -8,10 +8,18 @@ describe("/api/socket-info endpoint", () => {
     const app = express();
     const fakeVite = {
       ssrLoadModule: async (_: string) => ({}),
-      middlewares: (req: any, res: any, next: any) => next(),
+      middlewares: (
+        req: unknown,
+        res: unknown,
+        next: (...args: unknown[]) => void,
+      ) => next(),
     };
     const getIo = () => null;
-    await configureApp(app, getIo as any, fakeVite as any);
+    await configureApp(
+      app,
+      getIo as unknown as any,
+      fakeVite as unknown as any,
+    );
     const res = await request(app).get("/diagnostics/socket");
     if (res.status !== 200)
       console.error("/api/socket-info status", res.status, "body:", res.text);

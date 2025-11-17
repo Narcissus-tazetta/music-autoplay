@@ -1,11 +1,11 @@
 // socket runtimeは型のない外部の engine/request オブジェクトを扱うため、防御的なチェックが必要です。
+import type { Music, RemoteStatus } from "@/shared/stores/musicStore";
 import type { C2S, S2C } from "@/shared/types/socket";
-import { withErrorHandler } from "@/shared/utils/errorUtils";
+import { withErrorHandler } from "@/shared/utils/errors";
 import { isObject } from "@/shared/utils/typeGuards";
 import { type Server as HttpServer } from "http";
 import { type Server } from "socket.io";
 import type { Server as IOServer } from "socket.io";
-import type { Music, RemoteStatus } from "~/stores/musicStore";
 import { container } from "./di/container";
 import logger from "./logger";
 import type { MusicService } from "./music/musicService";

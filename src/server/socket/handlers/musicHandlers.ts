@@ -1,9 +1,9 @@
 import { AddMusicSchema, RemoveMusicSchema } from "@/shared/schemas/music";
+import type { Music } from "@/shared/stores/musicStore";
 import type { ReplyOptions } from "@/shared/utils/errors";
 import { withErrorHandler } from "@/shared/utils/errors";
 import type { Socket } from "socket.io";
 import type { Server } from "socket.io";
-import type { Music } from "~/stores/musicStore";
 import { withContext } from "../../logger";
 import type { EmitFn } from "../../music/emitter/musicEventEmitter";
 import type { MusicService } from "../../music/musicService";
@@ -30,13 +30,16 @@ type Deps = {
   isAdmin?: (requesterHash?: string) => boolean;
 };
 
-export function createMusicHandlers(deps: Deps) {
+export function createMusicHandlers(deps: Deps): {
+  register: (socket: Socket, context?: EventContext) => void;
+} {
   const { musicDB, youtubeService, fileStore, io } = deps;
 
   let emitFn: EmitFn;
   if (deps.emit) {
+    const provided = deps.emit;
     emitFn = (event: string, payload: unknown, options) => {
-      return deps.emit!(event, payload, options);
+      return provided(event, payload, options);
     };
   } else if (io) {
     const emitter = createSocketEmitter(() => io);

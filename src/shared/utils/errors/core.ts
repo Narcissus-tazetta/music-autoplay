@@ -117,8 +117,9 @@ export function safeString(val: unknown): string {
     typeof val === "number" ||
     typeof val === "boolean" ||
     typeof val === "bigint"
-  )
+  ) {
     return String(val);
+  }
 
   try {
     return JSON.stringify(val);

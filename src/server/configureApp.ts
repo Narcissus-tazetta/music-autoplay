@@ -325,8 +325,8 @@ export async function configureApp(
       logger.debug("Configured Vite SSR loader");
     } else {
       // production build is a plain JS file without type declarations; silence TS here
-      // @ts-expect-error - build/server/index.js has no declaration file
       const built = (await import(
+        // @ts-expect-error - build/server/index.js has no declaration file
         "/Users/sakana/Desktop/music-auto-play/build/server/index.js"
       )) as ServerBuild;
       buildValue = built;

@@ -1,4 +1,4 @@
-import { withErrorHandler } from "@/shared/utils/errorUtils";
+import { withErrorHandler } from "@/shared/utils/errors";
 import type { Socket } from "socket.io";
 import type { AppLogger } from "../../logger";
 import { sanitizeArgs, snapshotHeaders } from "../utils";

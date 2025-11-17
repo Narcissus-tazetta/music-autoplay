@@ -1,7 +1,7 @@
-import { searchUrl } from "@/shared/libs/youtube";
-import { AnimatePresence, motion } from "framer-motion";
+import type { Music, RemoteStatus } from "@/shared/stores/musicStore";
+import { searchUrl } from "@/shared/utils/youtube";
+import { motion } from "framer-motion";
 import { memo, useEffect, useRef, useState } from "react";
-import type { Music, RemoteStatus } from "~/stores/musicStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { MusicTitleWithHover } from "./MusicTitleWithHover";
 
@@ -11,9 +11,10 @@ interface StatusBadgeProps {
   title?: string;
 }
 
+type VisibilityState = "visible" | "hiding" | "hidden";
+
 function StatusBadgeInner({ status, music }: StatusBadgeProps) {
-  const [closedVisible, setClosedVisible] = useState(true);
-  const [badgeVisible, setBadgeVisible] = useState(true);
+  const [visibility, setVisibility] = useState<VisibilityState>("visible");
   const timerRef = useRef<number | null>(null);
   const settings = useSettingsStore();
   const ytStatusVisible = settings.ytStatusVisible;
@@ -27,24 +28,27 @@ function StatusBadgeInner({ status, music }: StatusBadgeProps) {
   const badgeBg = "bg-gray-100 dark:bg-gray-900/10";
 
   useEffect(() => {
-    if (!status) return;
+    if (!status) {
+      setVisibility("hidden");
+      return;
+    }
 
     if (status.type === "closed") {
-      setClosedVisible(true);
-      setBadgeVisible(true);
+      setVisibility("visible");
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = window.setTimeout(() => {
-        setClosedVisible(false);
-        setBadgeVisible(false);
-        timerRef.current = null;
+        setVisibility("hiding");
+        timerRef.current = window.setTimeout(() => {
+          setVisibility("hidden");
+          timerRef.current = null;
+        }, 600);
       }, 30_000);
     } else {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
-      setClosedVisible(true);
-      setBadgeVisible(true);
+      setVisibility("visible");
     }
 
     return () => {
@@ -55,9 +59,7 @@ function StatusBadgeInner({ status, music }: StatusBadgeProps) {
     };
   }, [status]);
 
-  if (!status) return null;
-  if (!ytStatusVisible) return null;
-  if (!badgeVisible) return null;
+  if (!status || !ytStatusVisible || visibility === "hidden") return null;
 
   return (
     <motion.div
@@ -68,21 +70,7 @@ function StatusBadgeInner({ status, music }: StatusBadgeProps) {
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.3 }}
     >
-      {status.type === "closed" ? (
-        <AnimatePresence>
-          {closedVisible && (
-            <motion.span
-              key="dot"
-              initial={{ opacity: 1 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.6 }}
-              className={`inline-block w-3 h-3 rounded-full ${dotClass}`}
-              aria-hidden
-            />
-          )}
-        </AnimatePresence>
-      ) : (
+      {visibility === "visible" && (
         <span
           className={`inline-block w-3 h-3 rounded-full ${dotClass}`}
           aria-hidden
@@ -130,20 +118,11 @@ function StatusBadgeInner({ status, music }: StatusBadgeProps) {
       ) : status.type === "paused" ? (
         <span className="text-gray-800 dark:text-gray-100">一時停止中</span>
       ) : (
-        <AnimatePresence>
-          {closedVisible && (
-            <motion.span
-              key="closed-msg"
-              initial={{ opacity: 1 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.6 }}
-              className="text-gray-800 dark:text-gray-100"
-            >
-              タブが閉じられました
-            </motion.span>
-          )}
-        </AnimatePresence>
+        visibility === "visible" && (
+          <span className="text-gray-800 dark:text-gray-100">
+            タブが閉じられました
+          </span>
+        )
       )}
     </motion.div>
   );

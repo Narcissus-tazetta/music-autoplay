@@ -99,8 +99,6 @@ export function extractErrorMessage(
               if (typeof item === "string") addMessage(item);
           } else if (isRecord(val)) walk(val, depth + 1);
           else if (typeof val === "string") addMessage(val);
-
-          if (userMessages.length >= 10) break;
         }
       }
     }
@@ -112,7 +110,9 @@ export function extractErrorMessage(
     try {
       const info = extractErrorInfo(error);
       addMessage(info.message);
-    } catch {}
+    } catch {
+      // Failed to extract error info, skip
+    }
   }
 
   if (userMessages.length === 0) return undefined;
@@ -205,9 +205,8 @@ export function getDetailedErrorInfo(error: unknown): string {
 }
 
 export function logErrorForDev(context: string, error: unknown): void {
-  if (import.meta.env?.DEV || process.env.NODE_ENV === "development") {
-    console.group(`🔴 Error: ${context}`);
+  if (import.meta.env.DEV || process.env.NODE_ENV === "development") {
+    console.error(`🔴 Error: ${context}`);
     console.error(getDetailedErrorInfo(error));
-    console.groupEnd();
   }
 }

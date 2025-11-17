@@ -1,7 +1,7 @@
 import type { HandlerError } from "@/shared/utils/errors";
 import { toHandlerError } from "@/shared/utils/errors";
-import type { Result } from "@/shared/utils/result";
-import { err, ok } from "@/shared/utils/result";
+import type { Result } from "@/shared/utils/errors/result-handlers";
+import { err, ok } from "@/shared/utils/errors/result-handlers";
 import { createHash, timingSafeEqual } from "crypto";
 import type ConfigService from "../../config/configService";
 import ServiceResolver from "../../utils/serviceResolver";
@@ -71,9 +71,7 @@ export class AuthChecker {
     }
   }
 
-  async checkPermission(
-    context: AuthContext,
-  ): Promise<Result<AuthResult, HandlerError>> {
+  checkPermission(context: AuthContext): Result<AuthResult, HandlerError> {
     try {
       const adminCheckResult = this.checkAdmin(context.requesterHash);
 

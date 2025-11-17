@@ -1,5 +1,5 @@
-import type { Result } from "@/shared/utils/result";
-import { err, ok } from "@/shared/utils/result";
+import type { Result } from "@/shared/utils/errors/result-handlers";
+import { err, ok } from "@/shared/utils/errors/result-handlers";
 import convertISO8601Duration from "convert-iso8601-duration";
 import DOMPurify from "dompurify";
 import { google } from "googleapis";
@@ -63,10 +63,11 @@ export class YouTubeService {
       apiKey ??
       configService?.getString("YOUTUBE_API_KEY") ??
       SERVER_ENV.YOUTUBE_API_KEY;
-    if (!key || (typeof key === "string" && key.trim().length === 0))
+    if (!key || (typeof key === "string" && key.trim().length === 0)) {
       logger.warn(
         "YouTube API key is not configured; some metadata lookups may fail",
       );
+    }
     this.youtube = google.youtube({ version: "v3", auth: key });
     this.cleanupTimer = setInterval(
       () => {

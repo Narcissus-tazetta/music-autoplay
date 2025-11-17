@@ -1,5 +1,5 @@
-import { createAdminHash, withErrorHandler } from "@/shared/utils/errorUtils";
-import type { Music, RemoteStatus } from "~/stores/musicStore";
+import type { Music, RemoteStatus } from "@/shared/stores/musicStore";
+import { createAdminHash, withErrorHandler } from "@/shared/utils/errors";
 import { getConfigService } from "../config/configService";
 import type ConfigService from "../config/configService";
 import type { Store } from "../persistence";

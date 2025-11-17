@@ -5,9 +5,8 @@ export const formatDuration = (duration: string): string => {
     const minutes = parseInt(parts[1], 10);
     const seconds = parseInt(parts[2], 10);
 
-    if (hours > 0) {
+    if (hours > 0)
       return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-    }
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   }
 
@@ -17,9 +16,8 @@ export const formatDuration = (duration: string): string => {
     const minutes = isoMatch[2] ? parseInt(isoMatch[2], 10) : 0;
     const seconds = isoMatch[3] ? parseInt(isoMatch[3], 10) : 0;
 
-    if (hours > 0) {
+    if (hours > 0)
       return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-    }
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   }
 
@@ -48,6 +46,7 @@ export const formatRequestedAt = (isoString?: string): string => {
       day: "numeric",
     });
   } catch {
+    // Invalid date
     return "unknown";
   }
 };

@@ -1,6 +1,6 @@
 import logger from "@/server/logger";
+import { err as makeErr } from "@/shared/utils/errors/result-handlers";
 import { respondWithResult } from "@/shared/utils/httpResponse";
-import { err as makeErr } from "@/shared/utils/result";
 import { type LoaderFunctionArgs, redirect } from "react-router";
 import { authenticator } from "../../auth/auth.server";
 import { loginSession } from "../../sessions.server";

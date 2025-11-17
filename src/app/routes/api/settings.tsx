@@ -1,8 +1,9 @@
 import { defaultSettingsStore } from "@/server/settingsPersistence";
-import { safeExecuteAsync } from "@/shared/utils/errorUtils";
+import { safeExecuteAsync } from "@/shared/utils/errors";
+import { err as makeErr } from "@/shared/utils/errors/result-handlers";
 import { respondWithResult } from "@/shared/utils/httpResponse";
-import { err as makeErr } from "@/shared/utils/result";
 import { type LoaderFunctionArgs } from "react-router";
+import z from "zod";
 import { loginSession } from "../../sessions.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -10,6 +11,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const cookie = request.headers.get("Cookie") || "";
     const sess = await loginSession.getSession(cookie);
     const user = sess.get("user");
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (user === undefined || user === null || !user.id)
       return { __status: 204 } as { __status: number };
     const stored = defaultSettingsStore.load(user.id);
@@ -29,6 +31,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   ) {
     return new Response(null, { status: 204 });
   }
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- res.value may be undefined
   return new Response(JSON.stringify(res.value ?? {}), {
     status: 200,
     headers: { "Content-Type": "application/json" },
@@ -48,7 +51,14 @@ export const action = async ({ request }: LoaderFunctionArgs) => {
     if (data == null || typeof data !== "object")
       return { __status: 400 } as { __status: number };
 
-    defaultSettingsStore.save(user.id, data as Record<string, unknown>);
+    const SettingsSchema = z
+      .object({ ytStatusVisible: z.boolean().optional() })
+      .passthrough();
+    const parsed = SettingsSchema.safeParse(data);
+    if (!parsed.success) return { __status: 400 } as { __status: number };
+
+    // persist validated settings (passthrough allows extra keys but ensures known keys are typed)
+    defaultSettingsStore.save(user.id, parsed.data as Record<string, unknown>);
     return { ok: true };
   });
 
@@ -57,6 +67,7 @@ export const action = async ({ request }: LoaderFunctionArgs) => {
     let msg = "Unknown error";
     if (typeof errVal === "string") msg = errVal;
     else if (
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       errVal &&
       typeof errVal === "object" &&
       "message" in (errVal as Record<string, unknown>)

@@ -8,6 +8,7 @@ export function deepCloneForLog(v: unknown): unknown {
     if (typeof sc === "function") return sc(v);
     return JSON.parse(JSON.stringify(v));
   } catch {
+    // Fallback to toString for non-serializable objects
     return Object.prototype.toString.call(v);
   }
 }

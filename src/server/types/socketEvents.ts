@@ -1,4 +1,4 @@
-import type { Music, RemoteStatus } from "~/stores/musicStore";
+import type { Music, RemoteStatus } from "@/shared/stores/musicStore";
 
 // Minimal ReplyOptions shape used by socket events
 type ReplyOptions = { formErrors?: string[] } | Record<string, unknown>;

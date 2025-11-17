@@ -1,4 +1,4 @@
-import type { Music } from "~/stores/musicStore";
+import type { Music } from "@/shared/stores/musicStore";
 
 export type PersistFile = { items?: Music[]; lastUpdated?: string };
 

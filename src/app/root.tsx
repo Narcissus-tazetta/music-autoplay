@@ -1,11 +1,8 @@
 import type { Route } from ".react-router/types/src/app/+types/root";
-import normalizeApiResponse from "@/shared/utils/api";
-import { parseApiErrorForUI } from "@/shared/utils/apiUi";
-import { safeExecuteAsync } from "@/shared/utils/errorUtils";
+import { safeExecuteAsync } from "@/shared/utils/errors";
+import { err as makeErr } from "@/shared/utils/errors/result-handlers";
 import { respondWithResult } from "@/shared/utils/httpResponse";
-import { err as makeErr } from "@/shared/utils/result";
 import clsx from "clsx";
-import { useEffect } from "react";
 import {
   isRouteErrorResponse,
   Links,
@@ -20,11 +17,13 @@ import {
   ThemeProvider,
   useTheme,
 } from "remix-themes";
-import { Header } from "~/components/ui/header";
+import { Header } from "~/components/ui/Header";
 import { themeSessionResolver, type UserSessionData } from "~/sessions.server";
 import { loginSession } from "~/sessions.server";
 import appCss from "./App.css?url";
-import type { Music } from "./stores/musicStore";
+import { useAdminKeyActivation } from "./hooks/useAdminKeyActivation";
+import { useAppInitialization } from "./hooks/useAppInitialization";
+import { useWindowAppApi } from "./hooks/useWindowAppApi";
 
 export const links: Route.LinksFunction = () => [
   { rel: "stylesheet", href: appCss },
@@ -91,7 +90,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 function InnerLayout({ children }: { children: React.ReactNode }) {
   const dataRaw = useLoaderData<typeof loader>() as unknown;
-  if (dataRaw instanceof Response) throw dataRaw;
+  if (dataRaw instanceof Response)
+    throw new Error("Response received instead of data");
 
   const data = isLoaderData(dataRaw) ? dataRaw : undefined;
   const [theme] = useTheme();
@@ -124,22 +124,9 @@ export default function App() {
         : undefined;
 
   const userName = data?.user?.name;
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const adminKey = params.get("admin");
-      if (adminKey === "secret") {
-        void import("../shared/stores/adminStore")
-          .then(({ useAdminStore }) => {
-            useAdminStore.getState().setIsAdmin(true);
-          })
-          .catch((err: unknown) => {
-            if (import.meta.env.DEV)
-              console.error("adminStore import failed", err);
-          });
-      }
-    }
-  }, []);
+
+  // URLパラメータで admin キーをチェック
+  useAdminKeyActivation();
 
   return (
     <>
@@ -153,206 +140,17 @@ export default function App() {
 
 function Providers({ children }: { children?: React.ReactNode }) {
   const dataRaw = useLoaderData<typeof loader>() as unknown;
-  if (dataRaw instanceof Response) throw dataRaw;
+  if (dataRaw instanceof Response)
+    throw new Error("Response received instead of data");
 
   const data = isLoaderData(dataRaw) ? dataRaw : undefined;
   const theme = data?.theme ?? null;
 
-  useEffect(() => {
-    const run = async () => {
-      const { useMusicStore } = await import("./stores/musicStore");
-      const store = useMusicStore.getState();
+  // アプリケーションの初期化 (Store接続、設定読み込み、バックグラウンドフェッチ)
+  useAppInitialization();
 
-      try {
-        const resp = await fetch("/api/settings");
-        if (resp.ok && resp.status === 200) {
-          const settings = (await resp.json()) as { ytStatusVisible?: boolean };
-          if (typeof settings.ytStatusVisible === "boolean") {
-            const { useAppSettings } = await import(
-              "@/shared/stores/appSettings"
-            );
-            useAppSettings
-              .getState()
-              .updateUI({ ytStatusVisible: settings.ytStatusVisible });
-          }
-        }
-      } catch (err: unknown) {
-        if (import.meta.env.DEV) console.debug("loadFromServer failed", err);
-      }
-
-      try {
-        store.connectSocket();
-      } catch (err: unknown) {
-        if (import.meta.env.DEV) {
-          if (err instanceof Error) console.error("connectSocket failed", err);
-          else console.error("connectSocket failed", String(err));
-        }
-      }
-
-      const doBackgroundFetch = async () => {
-        const doFetchOnce = async (signal: AbortSignal) => {
-          const resp = await fetch("/api/musics", {
-            cache: "no-store",
-            signal,
-          });
-          const norm = await normalizeApiResponse<{ musics: unknown[] }>(resp);
-
-          if (!norm.success) {
-            try {
-              const parsed = parseApiErrorForUI({
-                code: norm.error.code,
-                message: norm.error.message,
-                details: norm.error.details,
-              });
-
-              if (import.meta.env.DEV)
-                console.debug(
-                  "/api/musics responded with parsed error:",
-                  parsed,
-                );
-
-              try {
-                const mod = await import("@/shared/utils/uiActionExecutor");
-                mod.executeParsedApiError(parsed, { conformFields: undefined });
-              } catch (err: unknown) {
-                if (import.meta.env.DEV)
-                  console.error("uiActionExecutor failed", err);
-              }
-
-              if (parsed.kind === "unauthorized") return;
-            } catch (err: unknown) {
-              if (import.meta.env.DEV)
-                console.debug("parseApiErrorForUI failed", err);
-            }
-            const maybeErr: unknown = norm.error;
-            let fallbackMsg = "Unknown error";
-            if (
-              typeof maybeErr === "object" &&
-              maybeErr !== null &&
-              "message" in maybeErr
-            ) {
-              const m = (maybeErr as Record<string, unknown>).message;
-              if (typeof m === "string") fallbackMsg = m;
-            } else if (typeof maybeErr === "string") fallbackMsg = maybeErr;
-            else {
-              try {
-                fallbackMsg = JSON.stringify(maybeErr);
-              } catch {
-                fallbackMsg = String(maybeErr);
-              }
-            }
-
-            throw new Error("fetch /api/musics failed: " + fallbackMsg);
-          }
-
-          const musicsRaw = (norm.data as { musics?: unknown } | null)?.musics;
-          if (!Array.isArray(musicsRaw)) throw new Error("no-musics");
-          const maybeMusics = musicsRaw;
-          const isMusic = (v: unknown): v is Music => {
-            if (!v || typeof v !== "object") return false;
-            const r = v as Record<string, unknown>;
-            return (
-              typeof r.id === "string" &&
-              typeof r.title === "string" &&
-              typeof r.channelName === "string" &&
-              typeof r.channelId === "string" &&
-              typeof r.duration === "string"
-            );
-          };
-
-          const musics = maybeMusics.filter(isMusic);
-          if (musics.length > 0) store.setMusics?.(musics);
-        };
-
-        const attempts = [0, 500, 1000];
-        for (let i = 0; i < attempts.length; i++) {
-          if (i > 0) await new Promise((r) => setTimeout(r, attempts[i]));
-          const controller = new AbortController();
-          const timeout = setTimeout(() => {
-            controller.abort();
-          }, 3000);
-          try {
-            await doFetchOnce(controller.signal);
-            clearTimeout(timeout);
-            break;
-          } catch (err: unknown) {
-            clearTimeout(timeout);
-            if (import.meta.env.DEV) {
-              console.debug("/api/musics fetch attempt failed", {
-                attempt: i + 1,
-                error: err instanceof Error ? err.message : String(err),
-              });
-            }
-            if (i === attempts.length - 1) {
-              if (import.meta.env.DEV)
-                console.debug(
-                  "/api/musics all attempts failed, relying on socket",
-                );
-            }
-          }
-        }
-      };
-
-      try {
-        await doBackgroundFetch();
-      } catch {
-        if (import.meta.env.DEV)
-          console.debug("background /api/musics task failed");
-      } finally {
-        try {
-          store.hydrateFromLocalStorage?.();
-        } catch (err: unknown) {
-          if (import.meta.env.DEV)
-            console.debug("hydrateFromLocalStorage failed", err);
-        }
-      }
-    };
-
-    run().catch((err: unknown) => {
-      if (import.meta.env.DEV) {
-        if (err instanceof Error) console.error(err);
-        else console.error(typeof err === "string" ? err : JSON.stringify(err));
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    try {
-      const win = window as unknown as {
-        __app__?: {
-          showToast?: (opts: { level: string; message: string }) => void;
-          navigate?: (to: string) => void;
-        };
-      };
-
-      const g = win.__app__ || {};
-
-      if (!g.showToast) {
-        g.showToast = ({
-          level,
-          message,
-        }: {
-          level: string;
-          message: string;
-        }) => {
-          console.warn(`TOAST[${level}]: ${message}`);
-        };
-      }
-      if (!g.navigate) {
-        g.navigate = (to: string) => {
-          try {
-            window.history.pushState({}, "", to);
-            window.dispatchEvent(new PopStateEvent("popstate"));
-          } catch {
-            window.location.href = to;
-          }
-        };
-      }
-      win.__app__ = g;
-    } catch (err: unknown) {
-      if (import.meta.env.DEV) console.error("window.__app__ init failed", err);
-    }
-  }, []);
+  // グローバル window.__app__ API の初期化
+  useWindowAppApi();
 
   const specifiedTheme = typeof theme === "string" ? theme : null;
   return (

@@ -1,4 +1,4 @@
-import { safeString } from "@/shared/utils/errorUtils";
+import { safeString } from "@/shared/utils/errors";
 import type { Server as IOServer, Socket } from "socket.io";
 import logger from "../logger";
 import type { EventMap, EventName } from "../types/socketEvents";
@@ -386,7 +386,7 @@ export class SocketEmitter {
           event,
           payload: safeString(payload),
           context: mergedContext,
-          ...(mergedContext?.identifiers || {}),
+          ...(mergedContext.identifiers || {}),
         });
       }
       return false;

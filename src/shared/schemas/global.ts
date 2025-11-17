@@ -6,17 +6,8 @@ export const WindowExtensionsSchema = z
     SOCKET_PATH: z.string().optional(),
     __app__: z
       .object({
-        navigate: z.function().args(z.string()).returns(z.void()).optional(),
-        showToast: z
-          .function()
-          .args(
-            z.object({
-              level: z.string(),
-              message: z.string(),
-            }),
-          )
-          .returns(z.void())
-          .optional(),
+        navigate: z.function().optional(),
+        showToast: z.function().optional(),
       })
       .optional(),
   })
@@ -35,7 +26,10 @@ export function hasStructuredClone(
   return result.success && typeof result.data.structuredClone === "function";
 }
 
-export function getWindowExtensions() {
+export function getWindowExtensions(): z.SafeParseReturnType<
+  unknown,
+  z.infer<typeof WindowExtensionsSchema>
+> | null {
   if (typeof window === "undefined") return null;
   return WindowExtensionsSchema.safeParse(window);
 }

@@ -1,4 +1,4 @@
-import type { RemoteStatus } from "~/stores/musicStore";
+import type { RemoteStatus } from "@/shared/stores/musicStore";
 import { container } from "../../di/container";
 import logger from "../../logger";
 import { RemoteStatusManager } from "../../services/remoteStatusManager";
@@ -30,11 +30,11 @@ export class SocketManager {
 
   initWithDI() {
     try {
-      if (container.has("remoteStatusManager"))
+      if (container.has("remoteStatusManager")) {
         this.remoteStatusManager = container.get(
           "remoteStatusManager",
         ) as RemoteStatusManager;
-      else {
+      } else {
         this.remoteStatusManager = new RemoteStatusManager(
           (ev, payload) => this.emit(ev, payload),
           this.timerManager,
@@ -56,8 +56,9 @@ export class SocketManager {
         if (
           typeof (this.timerManager as { clearAll?: unknown }).clearAll ===
           "function"
-        )
+        ) {
           this.timerManager.clearAll();
+        }
       } catch (e: unknown) {
         logger.warn("SocketManager failed to clearAll timers", { error: e });
       }

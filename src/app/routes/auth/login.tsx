@@ -1,12 +1,11 @@
 import logger from "@/server/logger";
+import { err as makeErr } from "@/shared/utils/errors/result-handlers";
 import { respondWithResult } from "@/shared/utils/httpResponse";
-import { err as makeErr } from "@/shared/utils/result";
 import type { ActionFunctionArgs } from "react-router";
 import { authenticator } from "../../auth/auth.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
-    // Remix Auth が内部的に CSRF 保護を提供
     return await authenticator.authenticate("google-oidc", request);
   } catch (error: unknown) {
     logger.error("Login action error", { error });

@@ -1,6 +1,6 @@
 import logger from "@/server/logger";
 import type { HandlerError } from "./errors";
-import type { Result } from "./result";
+import type { Result } from "./errors/result-handlers";
 
 type JsonResponse = {
   success: boolean;
@@ -69,7 +69,7 @@ export function respondWithResult<T>(
   });
 }
 
-export function respondJsonOk(data: unknown) {
+export function respondJsonOk(data: unknown): Response {
   return new Response(JSON.stringify({ success: true, data }), {
     status: 200,
     headers: { "Content-Type": "application/json" },

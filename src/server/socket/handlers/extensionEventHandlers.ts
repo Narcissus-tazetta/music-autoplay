@@ -1,6 +1,6 @@
+import type { Music, RemoteStatus } from "@/shared/stores/musicStore";
 import { isRecord } from "@/shared/utils/typeGuards";
 import type { Socket } from "socket.io";
-import type { Music, RemoteStatus } from "~/stores/musicStore";
 import type { AppLogger } from "../../logger";
 import type { MusicEventEmitter } from "../../music/emitter/musicEventEmitter";
 import type { MusicRepository } from "../../music/repository/musicRepository";
@@ -96,7 +96,7 @@ export function setupExtensionEventHandlers(
 
       if (stateRaw === "ended") {
         if (url) {
-          const { extractYoutubeId } = await import("@/shared/libs/youtube");
+          const { extractYoutubeId } = await import("@/shared/utils/youtube");
           const videoId = extractYoutubeId(url);
           if (videoId && repository.has(videoId)) {
             const removeResult = repository.remove(videoId);
@@ -147,7 +147,7 @@ export function setupExtensionEventHandlers(
         let match = null as null | { url: string; title?: string };
 
         if (url) {
-          const { watchUrl } = await import("@/shared/libs/youtube");
+          const { watchUrl } = await import("@/shared/utils/youtube");
           for (const m of musicDB.values()) {
             try {
               const generated = watchUrl((m as { id: string }).id);
@@ -218,7 +218,7 @@ export function setupExtensionEventHandlers(
       }
 
       try {
-        const { extractYoutubeId } = await import("@/shared/libs/youtube");
+        const { extractYoutubeId } = await import("@/shared/utils/youtube");
         const videoId = extractYoutubeId(url);
 
         if (!videoId) {

@@ -1,6 +1,6 @@
+import type { Music, RemoteStatus } from "@/shared/stores/musicStore";
 import type { Socket } from "socket.io";
 import type { Server as IOServer } from "socket.io";
-import type { Music, RemoteStatus } from "~/stores/musicStore";
 import type { Store } from "../../persistence";
 import type { YouTubeService } from "../../services/youtubeService";
 import type { EmitOptions } from "../../utils/safeEmit";
@@ -33,18 +33,19 @@ export function registerSocketHandlers(
   const getAllMusicsHandler = createGetAllMusicsHandler(deps.musicDB);
 
   let getRemoteStatusHandler;
-  if (deps.manager)
+  if (deps.manager) {
     getRemoteStatusHandler = createGetRemoteStatusHandler(
       deps.manager.getCurrent(),
     );
-  else {
+  } else {
     const maybeRemote = (deps as unknown as Record<string, unknown>)[
       "remoteStatus"
     ];
-    if (maybeRemote && typeof maybeRemote === "object")
+    if (maybeRemote && typeof maybeRemote === "object") {
       getRemoteStatusHandler = createGetRemoteStatusHandler(
         maybeRemote as unknown as RemoteStatus,
       );
+    }
   }
 
   const youtubeService =

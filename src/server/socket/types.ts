@@ -16,5 +16,5 @@ export type RequestLike = {
 export type HeaderSnapshot = Record<string, string | undefined> | undefined;
 
 export type SocketLike = Omit<Socket, "request"> & {
-  request?: RequestLike | unknown;
+  request?: RequestLike;
 };
