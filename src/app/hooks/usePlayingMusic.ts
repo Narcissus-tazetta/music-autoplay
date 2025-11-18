@@ -10,8 +10,9 @@ export function usePlayingMusic(
   if (
     typeof remoteStatus.musicId === "string" &&
     remoteStatus.musicId.length > 0
-  )
+  ) {
     return musics.find((m) => m.id === remoteStatus.musicId);
+  }
 
   return musics.find((m) => m.title === remoteStatus.musicTitle);
 }

@@ -15,7 +15,7 @@ export async function retry<T>(
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       return await fn();
-    } catch (e) {
+    } catch (e: unknown) {
       lastErr = e;
       if (attempt === retries) break;
       const wait = base * Math.pow(factor, attempt);

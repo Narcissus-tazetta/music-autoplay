@@ -77,8 +77,6 @@ export function createRateLimitReply(retryAfter?: number): ReplyOptions {
 
 export function createAdminHash(secretCandidate: unknown): string {
   const secretString = safeString(secretCandidate);
-
-  // Empty string case - return hash of empty string for consistency
   if (!secretString) return createHash("sha256").update("").digest("hex");
 
   return createHash("sha256").update(secretString).digest("hex");

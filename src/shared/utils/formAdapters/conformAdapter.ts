@@ -20,13 +20,13 @@ export function applyFieldErrorsToConform(
       if (target) {
         try {
           target.errors = [v];
-        } catch (err) {
+        } catch (err: unknown) {
           if (import.meta.env.DEV)
             console.debug("applyFieldErrorsToConform mutation failed", err);
         }
       }
     }
-  } catch (err) {
+  } catch (err: unknown) {
     if (import.meta.env.DEV)
       console.debug("applyFieldErrorsToConform failed", err);
   }

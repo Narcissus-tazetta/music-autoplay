@@ -12,7 +12,6 @@ export interface MusicFormProps {
   urlFieldErrors?: string[];
   isSubmitting: boolean;
   hasErrors: boolean;
-  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 }
 
 function MusicFormInner({
@@ -22,7 +21,6 @@ function MusicFormInner({
   urlFieldErrors,
   isSubmitting,
   hasErrors,
-  onSubmit,
 }: MusicFormProps) {
   return (
     <>
@@ -34,13 +32,7 @@ function MusicFormInner({
       )}
       <Card className="p-6 shadow-sm border border-border/30 hover:border-border/60 transition-colors">
         <Card.Content className="p-0">
-          <form
-            method="post"
-            action="/api/music/add"
-            className="flex flex-col items-center gap-4"
-            id={formId}
-            onSubmit={onSubmit}
-          >
+          <div className="flex flex-col items-center gap-4" id={formId}>
             <Input
               leftIcon={<LinkIcon size={18} />}
               name={urlFieldName}
@@ -61,7 +53,7 @@ function MusicFormInner({
                 </>
               )}
             </Button>
-          </form>
+          </div>
         </Card.Content>
       </Card>
     </>

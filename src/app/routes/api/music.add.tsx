@@ -5,19 +5,19 @@ import type { ServerContext } from "@/shared/types/server";
 import { safeExecuteAsync } from "@/shared/utils/errors";
 import { parseWithZod } from "@conform-to/zod";
 import { hash } from "crypto";
-import type { SubmissionResult } from "node_modules/@conform-to/dom/dist/submission";
 import type { ActionFunctionArgs } from "react-router";
 import { loginSession } from "../../sessions.server";
 
 export const action = async ({
   request,
   context,
-}: ActionFunctionArgs<ServerContext>): Promise<Response | SubmissionResult> => {
+}: ActionFunctionArgs<ServerContext>): Promise<Response> => {
   const submission = parseWithZod(await request.formData(), {
     schema: AddMusicSchema,
   });
 
-  if (submission.status !== "success") return submission.reply();
+  if (submission.status !== "success")
+    return Response.json(submission.reply(), { status: 400 });
 
   const session = await loginSession.getSession(request.headers.get("Cookie"));
   const user = session.get("user");
@@ -49,20 +49,23 @@ export const action = async ({
       const errors = (resultValue as { formErrors: unknown }).formErrors;
       if (Array.isArray(errors) && errors.length > 0) {
         logger.info("addMusic result", { result: resultValue });
-        return submission.reply({
+        const reply = submission.reply({
           formErrors: errors,
         });
+        return Response.json(reply, { status: 400 });
       }
     }
-    return submission.reply({
+    const successReply = submission.reply({
       resetForm: true,
     });
+    return Response.json(successReply, { status: 200 });
   }
 
   logger.error("楽曲追加エラー", { error: result.error });
-  return submission.reply({
+  const errorReply = submission.reply({
     formErrors: [getMessage("ERROR_ADD_FAILED")],
   });
+  return Response.json(errorReply, { status: 500 });
 };
 
 export default function MusicAdd() {

@@ -9,6 +9,18 @@ export interface EmitContext {
   source?: string;
 }
 
+function serializeError(error: unknown) {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    };
+  }
+  if (typeof error === "string") return { message: error };
+  return { type: typeof error, value: String(error) };
+}
+
 export interface SafeEmitOptions {
   context?: EmitContext;
   errorPrefix?: string;
@@ -63,10 +75,10 @@ export function safeEmit<K extends EventName>(
   } catch (error: unknown) {
     if (!silent) {
       logger[logLevel](`${errorPrefix} ${event}`, {
-        error,
+        error: serializeError(error),
         event,
         context,
-        payload: emitArgs.length > 0 ? emitArgs[0] : undefined,
+        payload: emitArgs.length > 0 ? safeString(emitArgs[0]) : undefined,
         ...context.identifiers,
       });
     }
@@ -125,10 +137,10 @@ export function safeEmitSync<K extends EventName>(
   } catch (error: unknown) {
     if (!silent) {
       logger[logLevel](`${errorPrefix} ${event}`, {
-        error,
+        error: serializeError(error),
         event,
         context,
-        payload: emitArgs.length > 0 ? emitArgs[0] : undefined,
+        payload: emitArgs.length > 0 ? safeString(emitArgs[0]) : undefined,
         ...context.identifiers,
       });
     }
@@ -197,10 +209,10 @@ export function createSafeEmitter(
     } catch (error: unknown) {
       if (!mergedOptions.silent) {
         logger[mergedOptions.logLevel ?? "warn"](`failed to emit ${event}`, {
-          error,
+          error: serializeError(error),
           event,
           context: mergedOptions.context,
-          payload: emitArgs.length > 0 ? emitArgs[0] : undefined,
+          payload: emitArgs.length > 0 ? safeString(emitArgs[0]) : undefined,
           ...mergedOptions.context?.identifiers,
         });
       }
@@ -270,10 +282,10 @@ export function createSafeEmitterSync(
     } catch (error: unknown) {
       if (!mergedOptions.silent) {
         logger[mergedOptions.logLevel ?? "warn"](`failed to emit ${event}`, {
-          error,
+          error: serializeError(error),
           event,
           context: mergedOptions.context,
-          payload: emitArgs.length > 0 ? emitArgs[0] : undefined,
+          payload: emitArgs.length > 0 ? safeString(emitArgs[0]) : undefined,
           ...mergedOptions.context?.identifiers,
         });
       }
@@ -317,7 +329,7 @@ export function wrapEmitWithSafety(
     } catch (error: unknown) {
       if (!silent) {
         logger[logLevel](`${errorPrefix} ${event}`, {
-          error,
+          error: serializeError(error),
           event,
           payload: safeString(payload),
           context,

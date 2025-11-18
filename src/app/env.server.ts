@@ -15,7 +15,7 @@ const clientUrlDefault =
     : "http://localhost:3000");
 
 const toNumber = (v: unknown) => {
-  if (v === undefined || v === null || v === "") return undefined;
+  if (v == null || v === "") return undefined;
   const n = Number(v);
   return Number.isFinite(n) ? n : undefined;
 };
@@ -47,7 +47,7 @@ const serverEnvSchema = z
     CLIENT_URL: z.string().url().default(clientUrlDefault),
     CORS_ORIGINS: z.string().optional(),
     ALLOW_EXTENSION_ORIGINS: z.preprocess((v) => {
-      if (v === undefined || v === null || v === "") return undefined;
+      if (v == null || v === "") return undefined;
       if (typeof v === "string")
         return v === "true" ? true : v === "false" ? false : undefined;
       return undefined;
@@ -85,7 +85,7 @@ const serverEnvSchema = z
     SOCKET_PATH: z.string().default("/api/socket.io"),
     MORGAN_FORMAT: z.string().default("tiny"),
     MORGAN_LOG_SOCKETIO: z.preprocess((v) => {
-      if (v === undefined || v === null || v === "") return undefined;
+      if (v == null || v === "") return undefined;
       if (typeof v === "string")
         return v === "true" ? true : v === "false" ? false : undefined;
       return undefined;

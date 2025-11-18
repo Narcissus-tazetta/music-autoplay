@@ -46,7 +46,6 @@ export const formatRequestedAt = (isoString?: string): string => {
       day: "numeric",
     });
   } catch {
-    // Invalid date
     return "unknown";
   }
 };

@@ -16,7 +16,7 @@ const tryShowToast = (level: string, message: string): void => {
     // Window extensions not available, fallback to console
   }
 
-  console.warn(`TOAST[${level}]: ${message}`);
+  if (import.meta.env.DEV) console.warn(`TOAST[${level}]: ${message}`);
 };
 
 const tryRedirect = (to: string): void => {
@@ -71,7 +71,8 @@ export function executeUiAction(
         }
         tryShowToast("error", Object.values(action.fields).join(" "));
       } catch {
-        console.debug("uiActionExecutor action failed");
+        if (import.meta.env.DEV)
+          console.debug("uiActionExecutor action failed");
       }
       return;
     default:

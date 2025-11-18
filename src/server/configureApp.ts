@@ -215,7 +215,6 @@ export async function configureApp(
     );
   }
 
-  // --- 拡張機能やソケットの問題をデバッグするための診断用エンドポイント ---
   app.get("/diagnostics/socket", (req, res) => {
     try {
       const origin = req.headers.origin;
@@ -276,8 +275,6 @@ export async function configureApp(
       res.status(500).json({ ok: false, error: safe });
     }
   });
-
-  // morgan -> winston
   {
     const config = getConfig();
     const morganFormat = config.getString("MORGAN_FORMAT");
@@ -324,7 +321,6 @@ export async function configureApp(
         loader("virtual:react-router/server-build") as Promise<ServerBuild>;
       logger.debug("Configured Vite SSR loader");
     } else {
-      // production build is a plain JS file without type declarations; silence TS here
       const built = (await import(
         // @ts-expect-error - build/server/index.js has no declaration file
         "/Users/sakana/Desktop/music-auto-play/build/server/index.js"

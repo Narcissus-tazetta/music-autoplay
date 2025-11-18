@@ -8,8 +8,28 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     return await authenticator.authenticate("google-oidc", request);
   } catch (error: unknown) {
-    logger.error("Login action error", { error });
-    if (error instanceof Response) return error;
+    // エラー情報を詳細にログ出力
+    if (error instanceof Response) {
+      logger.warn("Login redirected", {
+        status: error.status,
+        statusText: error.statusText,
+      });
+      return error;
+    }
+
+    const errorDetails =
+      error instanceof Error
+        ? {
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+          }
+        : typeof error === "string"
+          ? { message: error }
+          : { raw: String(error) };
+
+    logger.error("Login action error", errorDetails);
+
     const message =
       error instanceof Error
         ? error.message

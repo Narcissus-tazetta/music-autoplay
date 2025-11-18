@@ -113,7 +113,7 @@ export function useAppInitialization(): void {
           };
 
           const musics = maybeMusics.filter(isMusic);
-          if (musics.length > 0) store.setMusics?.(musics);
+          store.setMusics?.(musics);
         };
 
         const attempts = [0, 500, 1000];
@@ -134,23 +134,25 @@ export function useAppInitialization(): void {
                 attempt: i + 1,
                 error: err instanceof Error ? err.message : String(err),
               });
-            }
-            if (i === attempts.length - 1) {
-              if (import.meta.env.DEV)
+              if (i === attempts.length - 1) {
                 console.debug(
                   "/api/musics all attempts failed, relying on socket",
                 );
+              }
             }
           }
         }
       };
 
+      let fetchSucceeded = false;
       try {
         await doBackgroundFetch();
+        fetchSucceeded = true;
       } catch {
         if (import.meta.env.DEV)
           console.debug("background /api/musics task failed");
-      } finally {
+      }
+      if (!fetchSucceeded) {
         try {
           store.hydrateFromLocalStorage?.();
         } catch (err: unknown) {

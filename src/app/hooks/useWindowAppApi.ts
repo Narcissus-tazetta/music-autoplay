@@ -19,7 +19,7 @@ export function useWindowAppApi(): void {
           level: string;
           message: string;
         }) => {
-          console.warn(`TOAST[${level}]: ${message}`);
+          if (import.meta.env.DEV) console.warn(`TOAST[${level}]: ${message}`);
         };
       }
       if (!g.navigate) {

@@ -14,6 +14,7 @@ import { AnimatePresence } from "framer-motion";
 import { useCallback } from "react";
 import { useLoaderData } from "react-router";
 import type { ActionFunctionArgs } from "react-router";
+import { useShallow } from "zustand/react/shallow";
 import { MusicForm } from "~/components/MusicForm";
 import { MusicTable } from "~/components/MusicTable";
 import { loginSession } from "~/sessions.server";
@@ -69,10 +70,12 @@ export const loader = async ({ request }: ActionFunctionArgs) => {
 export default function Home() {
   const { userHash } = useLoaderData<typeof loader>();
 
-  const { musics, remoteStatus } = useMusicStore((state) => ({
-    musics: state.musics,
-    remoteStatus: state.remoteStatus,
-  }));
+  const { musics, remoteStatus } = useMusicStore(
+    useShallow((state) => ({
+      musics: state.musics,
+      remoteStatus: state.remoteStatus,
+    })),
+  );
   const playingMusic = usePlayingMusic(musics, remoteStatus);
   const isAdmin = useAdminStore((s) => s.isAdmin);
   const { fetcher, form, fields, isSubmitting, hasErrors } = useMusicForm();
@@ -112,7 +115,6 @@ export default function Home() {
           urlFieldErrors={fields.url.errors}
           isSubmitting={isSubmitting}
           hasErrors={hasErrors}
-          onSubmit={form.onSubmit}
         />
       </fetcher.Form>
 

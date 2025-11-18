@@ -126,7 +126,7 @@ export class YouTubeService {
         try {
           const result = await requestFn();
           resolve(result);
-        } catch (error) {
+        } catch (error: unknown) {
           if (error instanceof Error) reject(error);
           else reject(new Error(String(error)));
         }
@@ -145,7 +145,7 @@ export class YouTubeService {
       if (request) {
         try {
           await request();
-        } catch (error) {
+        } catch (error: unknown) {
           logger.debug("Request queue error", { error });
         }
         await new Promise((resolve) => setTimeout(resolve, 100));

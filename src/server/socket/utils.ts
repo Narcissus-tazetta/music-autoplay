@@ -8,7 +8,6 @@ export function deepCloneForLog(v: unknown): unknown {
     if (typeof sc === "function") return sc(v);
     return JSON.parse(JSON.stringify(v));
   } catch {
-    // Fallback to toString for non-serializable objects
     return Object.prototype.toString.call(v);
   }
 }
@@ -61,21 +60,22 @@ export function snapshotHeaders(socket: SocketLike): HeaderSnapshot {
 }
 
 export function sanitizeArgs(args: unknown[]): unknown[] {
-  return args.map<unknown>((a: unknown) => {
-    if (a === null || a === undefined) return a;
+  return args.map((a) => {
+    if (a == null) return a;
     if (
       typeof a === "string" ||
       typeof a === "number" ||
       typeof a === "boolean"
-    )
+    ) {
       return a;
+    }
     if (Array.isArray(a)) {
       return a.map<unknown>((v: unknown) => {
         if (typeof v === "object" && v !== null) return deepCloneForLog(v);
         return v;
       });
     }
-    if (isObject(a)) return deepCloneForLog(a);
-    return Object.prototype.toString.call(a);
+    if (typeof a === "object") return deepCloneForLog(a);
+    return a;
   });
 }

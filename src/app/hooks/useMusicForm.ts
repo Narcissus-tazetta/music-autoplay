@@ -21,7 +21,7 @@ const addMusicSchema = z.object({
 });
 
 export function useMusicForm() {
-  const fetcher = useFetcher<typeof actionMusicAdd>();
+  const fetcher = useFetcher<typeof actionMusicAdd>({ key: "add-music" });
   const [form, fields] = useForm({
     lastResult: fetcher.data,
     shouldValidate: "onInput",

@@ -11,14 +11,14 @@ const handleLogout = (): void => {
   try {
     const isAdmin = useAdminStore.getState().isAdmin;
     if (isAdmin) useAdminStore.getState().logout();
-  } catch (err) {
-    if (process.env.NODE_ENV !== "production") console.error(err);
+  } catch (err: unknown) {
+    if (import.meta.env.DEV) console.error(err);
   }
 };
 
 export function useAuth(userName?: string): UseAuthResult {
   const isAdmin = useAdminStore((s) => s.isAdmin);
-  const showLogout = Boolean(userName) || isAdmin;
+  const showLogout = !!userName || isAdmin;
 
   return {
     isAdmin,

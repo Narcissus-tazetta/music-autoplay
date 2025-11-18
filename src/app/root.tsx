@@ -61,9 +61,10 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
     if (
       isErrLike(errObj) &&
       (typeof errObj.code === "string" || typeof errObj.code === "number")
-    )
+    ) {
       code =
         typeof errObj.code === "string" ? errObj.code : String(errObj.code);
+    }
 
     return respondWithResult(makeErr({ message, code }));
   }
@@ -102,7 +103,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
-        <PreventFlashOnWrongTheme ssrTheme={Boolean(data?.theme)} />
+        <PreventFlashOnWrongTheme ssrTheme={!!data?.theme} />
         <Links />
       </head>
       <body>

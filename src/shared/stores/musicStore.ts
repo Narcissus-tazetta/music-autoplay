@@ -64,7 +64,8 @@ export const useMusicStore = create<MusicStore>((set) => {
         if (typeof window !== "undefined")
           window.localStorage.setItem(STORAGE_KEY, JSON.stringify(musics));
       } catch (err: unknown) {
-        console.debug("musicStore setMusics localStorage failed", err);
+        if (import.meta.env.DEV)
+          console.debug("musicStore setMusics localStorage failed", err);
       }
       set({ musics });
     },
@@ -84,7 +85,8 @@ export const useMusicStore = create<MusicStore>((set) => {
           return { musics: parsed as Music[] } as Partial<MusicStore>;
         });
       } catch (err: unknown) {
-        console.debug("musicStore hydrateFromLocalStorage failed", err);
+        if (import.meta.env.DEV)
+          console.debug("musicStore hydrateFromLocalStorage failed", err);
       }
     },
     connectSocket() {
@@ -110,7 +112,7 @@ export const useMusicStore = create<MusicStore>((set) => {
               if (called) return;
               called = true;
               clearTimeout(timeout);
-              if (Array.isArray(musics) && musics.length > 0) set({ musics });
+              if (Array.isArray(musics)) set({ musics });
             });
           } catch {
             if (attempt < maxAttempts) {
@@ -142,7 +144,8 @@ export const useMusicStore = create<MusicStore>((set) => {
               if (called) return;
               called = true;
               clearTimeout(timeout);
-              console.info("[musicStore] getRemoteStatus response:", status);
+              if (import.meta.env.DEV)
+                console.info("[musicStore] getRemoteStatus response:", status);
               if (status && typeof status === "object" && "type" in status)
                 set({ remoteStatus: status });
             });
@@ -159,12 +162,13 @@ export const useMusicStore = create<MusicStore>((set) => {
 
       socket
         .on("connect", () => {
-          console.info("Socket connected");
+          if (import.meta.env.DEV) console.info("Socket connected");
           try {
             attemptGetAllMusics(socket as Socket<S2C, C2S>);
             attemptGetRemoteStatus(socket as Socket<S2C, C2S>);
           } catch (err: unknown) {
-            console.debug("Initial data fetch failed", err);
+            if (import.meta.env.DEV)
+              console.debug("Initial data fetch failed", err);
           }
         })
         .on("musicAdded", (music: Music) => {
@@ -178,7 +182,8 @@ export const useMusicStore = create<MusicStore>((set) => {
           }));
         })
         .on("remoteStatusUpdated", (state: RemoteStatus) => {
-          console.info("[musicStore] remoteStatusUpdated event:", state);
+          if (import.meta.env.DEV)
+            console.info("[musicStore] remoteStatusUpdated event:", state);
           set({
             remoteStatus: state,
           });
@@ -201,7 +206,8 @@ export const useMusicStore = create<MusicStore>((set) => {
             attemptGetAllMusics(socket as Socket<S2C, C2S>);
             attemptGetRemoteStatus(socket as Socket<S2C, C2S>);
           } catch {
-            console.debug("reconnect_attempt data fetch failed");
+            if (import.meta.env.DEV)
+              console.debug("reconnect_attempt data fetch failed");
           }
         });
         s.on("reconnect", () => {
@@ -209,7 +215,8 @@ export const useMusicStore = create<MusicStore>((set) => {
             attemptGetAllMusics(socket as Socket<S2C, C2S>);
             attemptGetRemoteStatus(socket as Socket<S2C, C2S>);
           } catch {
-            console.debug("reconnect data fetch failed");
+            if (import.meta.env.DEV)
+              console.debug("reconnect data fetch failed");
           }
         });
       }

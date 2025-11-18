@@ -48,8 +48,9 @@ export function buildCorsConfig(): CorsConfig {
   if (
     allowExtensionOrigins &&
     !origins.some((o) => o === "chrome-extension://")
-  )
+  ) {
     origins.push("chrome-extension://");
+  }
 
   if (config.nodeEnv !== "production") {
     logger.info("SocketServerInstance CORS config", {

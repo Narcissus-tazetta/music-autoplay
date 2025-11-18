@@ -27,11 +27,13 @@ const loadFromServerAsync = async (): Promise<void> => {
         try {
           const mod = await import("@/shared/utils/uiActionExecutor");
           mod.executeParsedApiError(parsed, { conformFields: undefined });
-        } catch (errExec) {
-          console.warn("loadFromServer server error", parsed, errExec);
+        } catch (errExec: unknown) {
+          if (import.meta.env.DEV)
+            console.warn("loadFromServer server error", parsed, errExec);
         }
       } catch {
-        console.warn("loadFromServer server error", norm.error);
+        if (import.meta.env.DEV)
+          console.warn("loadFromServer server error", norm.error);
       }
       return;
     }
@@ -39,7 +41,7 @@ const loadFromServerAsync = async (): Promise<void> => {
     if (typeof server.ytStatusVisible === "boolean")
       useSettingsStore.getState().setYtStatusVisible(server.ytStatusVisible);
   } catch (_e: unknown) {
-    console.warn("loadFromServer error", _e);
+    if (import.meta.env.DEV) console.warn("loadFromServer error", _e);
   }
 };
 
@@ -65,15 +67,16 @@ const _syncToServerAsync = async (): Promise<void> => {
         try {
           const mod = await import("@/shared/utils/uiActionExecutor");
           mod.executeParsedApiError(parsed, { conformFields: undefined });
-        } catch (errExec) {
-          console.warn("syncToServer error", parsed, errExec);
+        } catch (errExec: unknown) {
+          if (import.meta.env.DEV)
+            console.warn("syncToServer error", parsed, errExec);
         }
       } catch {
-        console.warn("syncToServer error", norm.error);
+        if (import.meta.env.DEV) console.warn("syncToServer error", norm.error);
       }
     }
   } catch (_e: unknown) {
-    console.warn("syncToServer error", _e);
+    if (import.meta.env.DEV) console.warn("syncToServer error", _e);
   }
 };
 

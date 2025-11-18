@@ -19,7 +19,11 @@ export function useMusicRow({
   const canDelete = isAdmin || (requesterHash && userHash === requesterHash);
 
   const handleDelete = () => {
-    onDelete(musicId);
+    // Pass isAdmin so that server-side admin deletion can be used when the
+    // client is in admin mode. Previously the admin flag was never passed
+    // which resulted in server rejecting deletion even when `isAdmin` was true
+    // on the client.
+    onDelete(musicId, isAdmin);
   };
 
   const toggleExpanded = () => {

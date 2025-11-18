@@ -58,7 +58,6 @@ export class SocketServerInstance {
   static isObject: (v: unknown) => v is Record<string, unknown> = isObject;
   private getOriginFromReq(req: unknown): string | undefined {
     try {
-      // defensive runtime checks for potentially untyped request-like objects.
       if (!isObject(req)) return undefined;
       const headers = (req as RequestLike).headers;
       if (isObject(headers) && typeof headers.origin === "string")

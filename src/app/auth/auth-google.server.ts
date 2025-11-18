@@ -79,7 +79,7 @@ export class GoogleOIDCStrategy<User> extends OAuth2Strategy<User> {
         throw new Error("Invalid ID token payload");
 
       return payload;
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Failed to verify Google ID token", { error });
       throw new Error("Invalid ID token");
     }

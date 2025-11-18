@@ -110,7 +110,7 @@ export function toHandlerError(error: unknown): HandlerError {
 }
 
 export function safeString(val: unknown): string {
-  if (val === null || val === undefined) return "";
+  if (val == null) return "";
   if (typeof val === "string") return val;
   if (typeof val === "symbol") return String(val);
   if (

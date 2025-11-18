@@ -26,7 +26,6 @@ async function parseJsonSafe(resp: Response): Promise<unknown> {
     try {
       return await resp.json();
     } catch {
-      // JSON parse failed
       return null;
     }
   }
@@ -71,7 +70,6 @@ export async function normalizeApiResponse<T = unknown>(
       try {
         message = JSON.stringify(p);
       } catch {
-        // Fallback to toString
         message = Object.prototype.toString.call(p as unknown);
       }
     }

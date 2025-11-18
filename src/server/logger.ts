@@ -33,7 +33,7 @@ export function serializeError(err: unknown): SerializedError {
             details = out;
           }
         }
-      } catch (_e) {
+      } catch (_e: unknown) {
         void _e;
       }
     }
@@ -256,10 +256,6 @@ function withContext(ctx: AppLogMeta): AppLogger {
   };
 }
 
-/**
- * グローバルな console.* メソッドをロガーで置き換えてます。
- * 元の console に戻すためのリストア関数を返します。
- */
 function replaceConsoleWithLogger(): () => void {
   const originalConsole = { ...console };
 

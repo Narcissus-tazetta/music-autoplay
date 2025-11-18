@@ -102,7 +102,7 @@ export function makeConnectionHandler(
           fileStore: deps.fileStore,
           isAdmin: (h?: string) => {
             try {
-              return Boolean(h && h === deps.adminHash);
+              return !!(h && h === deps.adminHash);
             } catch (err: unknown) {
               log.warn("isAdmin check failed", { error: err });
               return false;

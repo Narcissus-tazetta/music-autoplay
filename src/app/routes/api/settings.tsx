@@ -11,17 +11,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const cookie = request.headers.get("Cookie") || "";
     const sess = await loginSession.getSession(cookie);
     const user = sess.get("user");
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (user === undefined || user === null || !user.id)
+    if (user == null || !user.id)
       return { __status: 204 } as { __status: number };
     const stored = defaultSettingsStore.load(user.id);
     return stored ? stored.value : {};
   });
 
-  if (!res.ok)
+  if (!res.ok) {
     return respondWithResult(
       makeErr({ message: Object.prototype.toString.call(res.error) }),
     );
+  }
   const maybeStatus = res.value as unknown;
   if (
     maybeStatus &&

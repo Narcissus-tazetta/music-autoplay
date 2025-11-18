@@ -52,7 +52,7 @@ export function extractErrorMessage(
   function walk(value: unknown, depth: number): void {
     if (userMessages.length >= 10) return;
 
-    if (value === null || value === undefined) return;
+    if (value == null) return;
 
     if (typeof value === "string") {
       addMessage(value);
@@ -92,7 +92,7 @@ export function extractErrorMessage(
           if (["status", "url", "fields", "code", "stack"].includes(key))
             continue;
 
-          if (val === undefined || val === null) continue;
+          if (val == null) continue;
 
           if (Array.isArray(val)) {
             for (const item of val)
@@ -111,7 +111,7 @@ export function extractErrorMessage(
       const info = extractErrorInfo(error);
       addMessage(info.message);
     } catch {
-      // Failed to extract error info, skip
+      //skip
     }
   }
 
@@ -205,7 +205,7 @@ export function getDetailedErrorInfo(error: unknown): string {
 }
 
 export function logErrorForDev(context: string, error: unknown): void {
-  if (import.meta.env.DEV || process.env.NODE_ENV === "development") {
+  if (import.meta.env.DEV) {
     console.error(`🔴 Error: ${context}`);
     console.error(getDetailedErrorInfo(error));
   }

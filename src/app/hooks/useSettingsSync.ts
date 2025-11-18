@@ -8,23 +8,19 @@ export function useSettingsSync() {
   const loadFromServer = settings.loadFromServer;
   const syncToServer = settings.syncToServer;
 
-  const initRef = useRef<{ loaded: boolean; prevValue: boolean }>({
-    loaded: false,
-    prevValue: ytStatusVisible,
-  });
+  const hasLoadedRef = useRef(false);
+  const prevValueRef = useRef(ytStatusVisible);
 
   useEffect(() => {
-    const state = initRef.current;
-
-    if (!state.loaded) {
-      state.loaded = true;
-      state.prevValue = ytStatusVisible;
+    if (!hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      prevValueRef.current = ytStatusVisible;
       if (typeof loadFromServer === "function") loadFromServer();
       return;
     }
 
-    if (state.prevValue !== ytStatusVisible) {
-      state.prevValue = ytStatusVisible;
+    if (prevValueRef.current !== ytStatusVisible) {
+      prevValueRef.current = ytStatusVisible;
       if (typeof syncToServer === "function") syncToServer();
     }
   }, [loadFromServer, syncToServer, ytStatusVisible]);
