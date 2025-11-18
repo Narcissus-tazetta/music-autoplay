@@ -61,10 +61,9 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
     if (
       isErrLike(errObj) &&
       (typeof errObj.code === "string" || typeof errObj.code === "number")
-    ) {
+    )
       code =
         typeof errObj.code === "string" ? errObj.code : String(errObj.code);
-    }
 
     return respondWithResult(makeErr({ message, code }));
   }
@@ -125,8 +124,6 @@ export default function App() {
         : undefined;
 
   const userName = data?.user?.name;
-
-  // URLパラメータで admin キーをチェック
   useAdminKeyActivation();
 
   return (
@@ -146,11 +143,7 @@ function Providers({ children }: { children?: React.ReactNode }) {
 
   const data = isLoaderData(dataRaw) ? dataRaw : undefined;
   const theme = data?.theme ?? null;
-
-  // アプリケーションの初期化 (Store接続、設定読み込み、バックグラウンドフェッチ)
   useAppInitialization();
-
-  // グローバル window.__app__ API の初期化
   useWindowAppApi();
 
   const specifiedTheme = typeof theme === "string" ? theme : null;
