@@ -39,8 +39,9 @@ export class FileStore implements Store {
         if (
           Number.isFinite(last) &&
           Date.now() - last > 7 * 24 * 60 * 60 * 1000
-        )
+        ) {
           return { items: [], lastUpdated: parsed.lastUpdated };
+        }
       }
 
       return parsed;

@@ -57,11 +57,12 @@ export function useAppInitialization(): void {
                 details: norm.error.details,
               });
 
-              if (import.meta.env.DEV)
+              if (import.meta.env.DEV) {
                 console.debug(
                   "/api/musics responded with parsed error:",
                   parsed,
                 );
+              }
 
               try {
                 const mod = await import("@/shared/utils/uiActionExecutor");

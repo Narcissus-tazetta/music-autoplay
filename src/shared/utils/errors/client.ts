@@ -111,7 +111,7 @@ export function extractErrorMessage(
       const info = extractErrorInfo(error);
       addMessage(info.message);
     } catch {
-      //skip
+      // skip
     }
   }
 
