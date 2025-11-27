@@ -100,10 +100,11 @@ export const SERVER_ENV = (() => {
       "Environment variable ADMIN_MAX_ATTEMPTS is deprecated. Please use RATE_LIMIT_MAX_ATTEMPTS instead.",
     );
   }
-  if (process.env.ADMIN_WINDOW_MS !== undefined)
+  if (process.env.ADMIN_WINDOW_MS !== undefined) {
     throw new Error(
       "Environment variable ADMIN_WINDOW_MS is deprecated. Please use RATE_LIMIT_WINDOW_MS instead.",
     );
+  }
 
   const parsed = serverEnvSchema.safeParse({
     NODE_ENV: process.env.NODE_ENV,

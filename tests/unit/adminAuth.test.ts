@@ -47,12 +47,12 @@ describe("Admin Auth Handlers", () => {
         connectionId: "conn-1",
       };
 
-      // Create a handler instance
+      // ハンドラのインスタンスを作成する
       handlers.adminAuth(mockSocket, mockContext);
 
-      // The handler registers an event listener, so we need to manually call it
-      // For testing purposes, we can extract the handler logic
-      // This is a simplified test - in real scenario, the handler would be invoked via socket.io
+      // ハンドラはイベントリスナーを登録するため、手動で呼び出す必要がある
+      // テスト目的では、ハンドラのロジックを抽出できる
+      // これは簡易化したテストです。実際のシナリオではsocket.io経由でハンドラが呼び出されます
     });
 
     test("should return error for invalid token", () => {
@@ -83,7 +83,7 @@ describe("Admin Auth Handlers", () => {
         on: () => {},
       } as unknown as Socket;
 
-      // Rate limiter should track by IP address
+      // レートリミッタはIPアドレスで追跡するため、同じIPからの複数回の試行をシミュレート
       expect(rateLimiter.tryConsume("192.168.1.1")).toBe(true);
       expect(rateLimiter.tryConsume("192.168.1.1")).toBe(true);
       expect(rateLimiter.tryConsume("192.168.1.1")).toBe(true);
@@ -100,7 +100,6 @@ describe("Admin Auth Handlers", () => {
         on: () => {},
       } as unknown as Socket;
 
-      // Rate limiter should fallback to socket.id
       expect(rateLimiter.tryConsume("socket-1")).toBe(true);
       expect(rateLimiter.tryConsume("socket-1")).toBe(true);
       expect(rateLimiter.tryConsume("socket-1")).toBe(true);
@@ -116,7 +115,7 @@ describe("Admin Auth Handlers", () => {
       expect(rateLimiter.tryConsume("192.168.1.1")).toBe(true);
       expect(rateLimiter.tryConsume("192.168.1.1")).toBe(false);
 
-      // Different IP should have separate limit
+      // 異なるIPは別々に制限される
       expect(rateLimiter.tryConsume("192.168.1.2")).toBe(true);
     });
   });

@@ -148,11 +148,12 @@ export const action = async ({
     if (typeof value === "object" && value != null) {
       const rec = value as Record<string, unknown>;
       const fe = rec.formErrors;
-      if (Array.isArray(fe) && fe.length > 0)
+      if (Array.isArray(fe) && fe.length > 0) {
         return Response.json(
           { success: false, error: (fe as string[]).join(" ") },
           { status: 403 },
         );
+      }
     }
 
     return Response.json({ success: true, data: value });

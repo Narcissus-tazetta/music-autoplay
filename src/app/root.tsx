@@ -1,8 +1,8 @@
-import type { LinksFunction, LoaderFunctionArgs } from "react-router";
 import { safeExecuteAsync } from "@/shared/utils/errors";
 import { err as makeErr } from "@/shared/utils/errors/result-handlers";
 import { respondWithResult } from "@/shared/utils/httpResponse";
 import clsx from "clsx";
+import type { LinksFunction, LoaderFunctionArgs } from "react-router";
 import {
   isRouteErrorResponse,
   Links,
@@ -62,9 +62,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     if (
       isErrLike(errObj) &&
       (typeof errObj.code === "string" || typeof errObj.code === "number")
-    )
+    ) {
       code =
         typeof errObj.code === "string" ? errObj.code : String(errObj.code);
+    }
 
     return respondWithResult(makeErr({ message, code }));
   }

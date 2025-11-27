@@ -41,18 +41,19 @@ export function registerSocketHandlers(
   const getAllMusicsHandler = createGetAllMusicsHandler(deps.musicDB);
 
   let getRemoteStatusHandler;
-  if (deps.manager)
+  if (deps.manager) {
     getRemoteStatusHandler = createGetRemoteStatusHandler(
       deps.manager.getCurrent(),
     );
-  else {
+  } else {
     const maybeRemote = (deps as unknown as Record<string, unknown>)[
       "remoteStatus"
     ];
-    if (maybeRemote && typeof maybeRemote === "object")
+    if (maybeRemote && typeof maybeRemote === "object") {
       getRemoteStatusHandler = createGetRemoteStatusHandler(
         maybeRemote as unknown as RemoteStatus,
       );
+    }
   }
 
   const youtubeService =
