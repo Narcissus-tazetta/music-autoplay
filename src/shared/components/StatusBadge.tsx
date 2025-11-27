@@ -110,7 +110,7 @@ function StatusBadgeInner({ status, music }: StatusBadgeProps) {
           ((): React.ReactElement => {
             const musicTitle = status.musicTitle;
             const textColorClass = isExternalVideo
-              ? "text-purple-600 dark:text-purple-400"
+              ? "text-white"
               : "text-gray-800 dark:text-gray-100";
 
             if (typeof musicTitle === "string" && musicTitle.length > 0) {

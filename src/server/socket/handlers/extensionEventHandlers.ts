@@ -73,12 +73,12 @@ export function setupExtensionEventHandlers(
         return;
       }
 
-      const p = payload;
-      const stateRaw = p["state"] as string | undefined;
-      const url = typeof p["url"] === "string" ? p["url"] : undefined;
+      const stateRaw = payload["state"] as string | undefined;
+      const url =
+        typeof payload["url"] === "string" ? payload["url"] : undefined;
 
       if (stateRaw === "window_close") {
-        const status = { type: "closed" } as RemoteStatus;
+        const status: RemoteStatus = { type: "closed" };
         try {
           manager.update(status, "extension");
           log.info(
@@ -97,12 +97,12 @@ export function setupExtensionEventHandlers(
       }
 
       if (stateRaw === "transitioning") {
-        const transitionStatus = {
+        const transitionStatus: RemoteStatus = {
           type: "paused",
           musicTitle: undefined,
           musicId: undefined,
           isTransitioning: true,
-        } as RemoteStatus;
+        };
         try {
           manager.update(transitionStatus, "transitioning");
           log.info("youtube_video_state: transitioning to next video", {
@@ -167,10 +167,25 @@ export function setupExtensionEventHandlers(
       }
 
       if (stateRaw === "playing" || stateRaw === "paused") {
+        const currentStatus = manager.getCurrent();
+        if (
+          currentStatus.type === "playing" &&
+          currentStatus.isAdvertisement === true
+        ) {
+          log.debug(
+            "youtube_video_state: ignoring state during advertisement",
+            {
+              state: stateRaw,
+              url,
+            },
+          );
+          return;
+        }
+
         const state = stateRaw === "playing" ? "playing" : "paused";
-        let match = null as null | { url: string; title?: string };
+        let match: { url: string; title?: string } | null = null;
         let isExternalVideo = false;
-        let externalVideoId: string | undefined = undefined;
+        let externalVideoId: string | undefined;
 
         if (url) {
           const { watchUrl, extractYoutubeId } = await import(
@@ -238,25 +253,25 @@ export function setupExtensionEventHandlers(
           }
         }
 
-        const remoteStatus = match
-          ? ({
+        const remoteStatus: RemoteStatus = match
+          ? {
               type: state,
               musicTitle: match.title ?? "",
               musicId: undefined,
               isExternalVideo,
               videoId: externalVideoId,
-            } as RemoteStatus)
+            }
           : state === "playing"
-            ? ({
+            ? {
                 type: "playing",
                 musicTitle: "",
                 musicId: undefined,
-              } as RemoteStatus)
-            : ({
+              }
+            : {
                 type: "paused",
                 musicTitle: undefined,
                 musicId: undefined,
-              } as RemoteStatus);
+              };
 
         try {
           manager.update(remoteStatus, "extension");
@@ -551,32 +566,33 @@ export function setupExtensionEventHandlers(
         });
 
         if (isAd) {
-          log.debug("ad_state_changed: ad started", { videoId, timestamp });
           const music = repository.get(videoId);
-          if (music) {
-            const adStatus = {
-              type: "playing",
-              musicTitle: music.title,
-              musicId: videoId,
-              isAdvertisement: true,
-              adTimestamp: timestamp,
-            } as RemoteStatus;
-            manager.update(adStatus, "ad_started");
-          }
+          const adStatus: RemoteStatus = music
+            ? {
+                type: "playing",
+                musicTitle: music.title,
+                musicId: videoId,
+                isAdvertisement: true,
+                adTimestamp: timestamp,
+              }
+            : {
+                type: "playing",
+                musicTitle: "",
+                musicId: undefined,
+                isAdvertisement: true,
+                adTimestamp: timestamp,
+              };
+          manager.update(adStatus, "ad_started");
         } else {
-          log.debug("ad_state_changed: ad ended, resuming content", {
-            videoId,
-          });
-
           const music = repository.get(videoId);
           if (music) {
-            const contentStatus = {
+            const contentStatus: RemoteStatus = {
               type: "playing",
               musicTitle: music.title,
               musicId: videoId,
               isAdvertisement: false,
               adTimestamp: undefined,
-            } as RemoteStatus;
+            };
             manager.update(contentStatus, "ad_ended");
           }
         }

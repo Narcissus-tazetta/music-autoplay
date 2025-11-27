@@ -141,4 +141,60 @@ describe("RateLimiter", () => {
       expect(stats.totalAttempts).toBe(0);
     });
   });
+
+  describe("check and consume", () => {
+    test("check should not consume attempts", () => {
+      expect(rateLimiter.check("key1")).toBe(true);
+      expect(rateLimiter.check("key1")).toBe(true);
+      expect(rateLimiter.check("key1")).toBe(true);
+      expect(rateLimiter.check("key1")).toBe(true);
+
+      const stats = rateLimiter.getStats();
+      expect(stats.totalAttempts).toBe(0);
+    });
+
+    test("consume should increment attempts", () => {
+      rateLimiter.consume("key1");
+      rateLimiter.consume("key1");
+
+      const stats = rateLimiter.getStats();
+      expect(stats.totalAttempts).toBe(2);
+    });
+
+    test("check after consume should respect limits", () => {
+      rateLimiter.consume("key1");
+      rateLimiter.consume("key1");
+      rateLimiter.consume("key1");
+
+      expect(rateLimiter.check("key1")).toBe(false);
+    });
+
+    test("manual check-consume pattern should work like tryConsume", () => {
+      expect(rateLimiter.check("key1")).toBe(true);
+      rateLimiter.consume("key1");
+
+      expect(rateLimiter.check("key1")).toBe(true);
+      rateLimiter.consume("key1");
+
+      expect(rateLimiter.check("key1")).toBe(true);
+      rateLimiter.consume("key1");
+
+      expect(rateLimiter.check("key1")).toBe(false);
+
+      const stats = rateLimiter.getStats();
+      expect(stats.totalAttempts).toBe(3);
+    });
+
+    test("consume without check should still increment", () => {
+      rateLimiter.consume("key1");
+      rateLimiter.consume("key1");
+      rateLimiter.consume("key1");
+      rateLimiter.consume("key1");
+
+      expect(rateLimiter.check("key1")).toBe(false);
+
+      const stats = rateLimiter.getStats();
+      expect(stats.totalAttempts).toBe(4);
+    });
+  });
 });

@@ -8,5 +8,12 @@ export function getClientIP(request: Request): string {
   const realIP = request.headers.get("x-real-ip");
   if (realIP) return realIP.trim();
 
+  try {
+    const cfConnectingIP = request.headers.get("cf-connecting-ip");
+    if (cfConnectingIP) return cfConnectingIP.trim();
+  } catch {
+    // ignore
+  }
+
   return "unknown";
 }

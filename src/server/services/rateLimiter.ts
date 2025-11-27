@@ -6,13 +6,26 @@ export class RateLimiter {
     private windowMs: number,
   ) {}
 
-  tryConsume(key: string): boolean {
+  check(key: string): boolean {
+    const now = Date.now();
+    const arr = this.attempts.get(key) ?? [];
+    const recent = arr.filter((t) => now - t < this.windowMs);
+    if (recent.length !== arr.length) this.attempts.set(key, recent);
+    return recent.length < this.maxAttempts;
+  }
+
+  consume(key: string): void {
     const now = Date.now();
     const arr = this.attempts.get(key) ?? [];
     const recent = arr.filter((t) => now - t < this.windowMs);
     recent.push(now);
     this.attempts.set(key, recent);
-    return recent.length <= this.maxAttempts;
+  }
+
+  tryConsume(key: string): boolean {
+    if (!this.check(key)) return false;
+    this.consume(key);
+    return true;
   }
 
   getOldestAttempt(key: string): number | undefined {

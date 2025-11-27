@@ -60,32 +60,40 @@ export function useMusicForm() {
 
     if (wasSubmitting && isNowIdle && data?.error) {
       const response = fetcher.data as { error: string };
-      const retryAfterHeader = (
-        fetcher.data as unknown as { headers?: Headers }
-      ).headers;
-      let seconds = 60;
+      const errorMessage =
+        typeof response.error === "string"
+          ? response.error
+          : String(response.error);
+      const isRateLimitError = errorMessage.includes("レート制限");
 
-      if (retryAfterHeader instanceof Headers) {
-        const retryValue = retryAfterHeader.get("Retry-After");
-        if (retryValue) {
-          const parsed = parseInt(retryValue, 10);
-          if (!isNaN(parsed)) seconds = parsed;
+      if (isRateLimitError) {
+        const retryAfterHeader = (
+          fetcher.data as unknown as { headers?: Headers }
+        ).headers;
+        let seconds = 60;
+
+        if (retryAfterHeader instanceof Headers) {
+          const retryValue = retryAfterHeader.get("Retry-After");
+          if (retryValue) {
+            const parsed = parseInt(retryValue, 10);
+            if (!isNaN(parsed)) seconds = parsed;
+          }
         }
-      }
 
-      if (retryAfter === 0) {
-        setRetryAfter(seconds);
+        if (retryAfter === 0) {
+          setRetryAfter(seconds);
 
-        clearInterval(intervalRef.current);
-        intervalRef.current = setInterval(() => {
-          setRetryAfter((prev) => {
-            if (prev <= 1) {
-              clearInterval(intervalRef.current);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
+          clearInterval(intervalRef.current);
+          intervalRef.current = setInterval(() => {
+            setRetryAfter((prev) => {
+              if (prev <= 1) {
+                clearInterval(intervalRef.current);
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 1000);
+        }
       }
 
       void (async () => {
@@ -95,7 +103,7 @@ export function useMusicForm() {
             {
               type: "showToast",
               level: "error",
-              message: response.error,
+              message: errorMessage,
             },
             { conformFields: fields as Record<string, unknown> },
           );

@@ -14,8 +14,8 @@ interface MusicTitleWithHoverProps {
   className?: string;
 }
 
-const CHANNEL_LINK_CLASS =
-  "text-blue-500 dark:text-purple-400 hover:underline block truncate w-full";
+const DEFAULT_LINK_CLASS = "hover:underline block truncate w-full";
+const DEFAULT_COLOR_CLASS = "text-blue-500 dark:text-purple-400";
 
 const makeCandidates = (videoId: string, thumbnail?: string): string[] => {
   const candidates: string[] = [];
@@ -49,7 +49,7 @@ function MusicTitleWithHoverInner({
 
   if (!videoId || !title) return null;
 
-  const merged = cn(CHANNEL_LINK_CLASS, className ?? "");
+  const merged = cn(DEFAULT_LINK_CLASS, className ?? DEFAULT_COLOR_CLASS);
   const candidates = makeCandidates(videoId, music?.thumbnail);
 
   const activeIndices =

@@ -118,13 +118,13 @@ export function createSocketEventHandler<TPayload, TResponse>(
         });
       }
 
+      let rateLimitKey: string | undefined;
       if (rateLimiter && config.rateLimiter) {
-        let rateLimitKey: string;
         if (config.rateLimiter.keyGenerator)
           rateLimitKey = config.rateLimiter.keyGenerator(socket);
         else rateLimitKey = socket.id;
 
-        if (!rateLimiter.tryConsume(rateLimitKey)) {
+        if (!rateLimiter.check(rateLimitKey)) {
           const oldest = rateLimiter.getOldestAttempt(rateLimitKey);
           const retryAfter = oldest
             ? Math.ceil(
@@ -190,6 +190,8 @@ export function createSocketEventHandler<TPayload, TResponse>(
         try {
           const result = await config.handler(validation.data, ctx);
 
+          if (rateLimiter && rateLimitKey) rateLimiter.consume(rateLimitKey);
+
           if (config.logResponse) {
             log.debug(`socket event response: ${config.event}`, {
               socketId: ctx.socketId,
@@ -210,6 +212,8 @@ export function createSocketEventHandler<TPayload, TResponse>(
       } else {
         try {
           const result = await config.handler(payload as TPayload, ctx);
+
+          if (rateLimiter && rateLimitKey) rateLimiter.consume(rateLimitKey);
 
           if (config.logResponse) {
             log.debug(`socket event response: ${config.event}`, {
