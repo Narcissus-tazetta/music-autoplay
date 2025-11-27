@@ -1,4 +1,4 @@
-import type { Route } from ".react-router/types/src/app/+types/root";
+import type { LinksFunction, LoaderFunctionArgs } from "react-router";
 import { safeExecuteAsync } from "@/shared/utils/errors";
 import { err as makeErr } from "@/shared/utils/errors/result-handlers";
 import { respondWithResult } from "@/shared/utils/httpResponse";
@@ -11,6 +11,7 @@ import {
   Scripts,
   ScrollRestoration,
   useLoaderData,
+  useRouteError,
 } from "react-router";
 import {
   PreventFlashOnWrongTheme,
@@ -25,13 +26,13 @@ import { useAdminKeyActivation } from "./hooks/useAdminKeyActivation";
 import { useAppInitialization } from "./hooks/useAppInitialization";
 import { useWindowAppApi } from "./hooks/useWindowAppApi";
 
-export const links: Route.LinksFunction = () => [
+export const links: LinksFunction = () => [
   { rel: "stylesheet", href: appCss },
   { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
   { rel: "icon", href: "/favicon.ico", sizes: "any" },
 ];
 
-export const loader = async ({ request }: Route.LoaderArgs) => {
+export const loader = async ({ request }: LoaderFunctionArgs) => {
   const res = await safeExecuteAsync(async () => {
     const { getTheme } = await themeSessionResolver(request);
     const session = await loginSession.getSession(
@@ -161,7 +162,8 @@ function Providers({ children }: { children?: React.ReactNode }) {
   );
 }
 
-export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+export function ErrorBoundary() {
+  const error = useRouteError();
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
