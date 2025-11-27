@@ -20,12 +20,14 @@ function MusicTableInner({
   onDelete,
 }: MusicTableProps) {
   return (
-    <Table className="overflow-hidden my-6 table-fixed">
+    <Table className="overflow-hidden my-4 sm:my-6 table-fixed">
       <Table.Header>
         <Table.Row>
-          <Table.Head className="w-12 text-center">No.</Table.Head>
-          <Table.Head>楽曲名</Table.Head>
-          <Table.Head className="w-24 text-right">
+          <Table.Head className="w-10 sm:w-12 text-center text-xs sm:text-sm">
+            No.
+          </Table.Head>
+          <Table.Head className="text-sm sm:text-base">楽曲名</Table.Head>
+          <Table.Head className="w-20 sm:w-24 text-right">
             <span className="sr-only">操作</span>
           </Table.Head>
         </Table.Row>
@@ -46,8 +48,8 @@ function MusicTableInner({
             ))
           ) : (
             <Table.Row>
-              <Table.Cell colSpan={3}>
-                <p className="text-center text-sm text-muted-foreground">
+              <Table.Cell colSpan={3} className="py-8 sm:py-12">
+                <p className="text-center text-sm sm:text-base text-muted-foreground">
                   リクエストされた楽曲はありません
                 </p>
               </Table.Cell>

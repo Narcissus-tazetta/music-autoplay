@@ -10,8 +10,8 @@ function SettingsInner() {
   const { ytStatusVisible, setYtStatusVisible } = useSettingsSync();
 
   return (
-    <div className="flex flex-col gap-4 p-4 ">
-      <Label className="flex items-center gap-2 bg-[image:repeating-linear-gradient(315deg,_var(--pattern-fg)_0,_var(--pattern-fg)_1px,_transparent_0,_transparent_50%)]">
+    <div className="flex flex-col gap-4 p-3 sm:p-4">
+      <Label className="flex items-center gap-2 text-sm sm:text-base bg-[image:repeating-linear-gradient(315deg,_var(--pattern-fg)_0,_var(--pattern-fg)_1px,_transparent_0,_transparent_50%)]">
         テーマ
       </Label>
       <ToggleGroup
@@ -24,19 +24,28 @@ function SettingsInner() {
         }}
         className="w-full"
       >
-        <ToggleGroup.Item value="light" className="w-full">
-          <SunIcon />
+        <ToggleGroup.Item
+          value="light"
+          className="w-full h-11 sm:h-10 touch-target"
+        >
+          <SunIcon className="h-5 w-5 sm:h-4 sm:w-4" />
         </ToggleGroup.Item>
-        <ToggleGroup.Item value="system" className="w-full">
-          <SparklesIcon />
+        <ToggleGroup.Item
+          value="system"
+          className="w-full h-11 sm:h-10 touch-target"
+        >
+          <SparklesIcon className="h-5 w-5 sm:h-4 sm:w-4" />
         </ToggleGroup.Item>
-        <ToggleGroup.Item value="dark" className="w-full">
-          <MoonIcon />
+        <ToggleGroup.Item
+          value="dark"
+          className="w-full h-11 sm:h-10 touch-target"
+        >
+          <MoonIcon className="h-5 w-5 sm:h-4 sm:w-4" />
         </ToggleGroup.Item>
       </ToggleGroup>
 
-      <div />
-      <Label className="flex items-center gap-2 bg-[image:repeating-linear-gradient(315deg,_var(--pattern-fg)_0,_var(--pattern-fg)_1px,_transparent_0,_transparent_50%)]">
+      <div className="h-2" />
+      <Label className="flex items-center gap-2 text-sm sm:text-base bg-[image:repeating-linear-gradient(315deg,_var(--pattern-fg)_0,_var(--pattern-fg)_1px,_transparent_0,_transparent_50%)]">
         YouTube status
       </Label>
 
@@ -52,17 +61,17 @@ function SettingsInner() {
       >
         <ToggleGroup.Item
           value="on"
-          className="w-full flex items-center justify-center gap-2"
+          className="w-full h-11 sm:h-10 flex items-center justify-center gap-2 touch-target"
         >
-          <Eye className="w-4 h-4" />
-          <span>表示</span>
+          <Eye className="w-5 h-5 sm:w-4 sm:h-4" />
+          <span className="text-sm sm:text-base">表示</span>
         </ToggleGroup.Item>
         <ToggleGroup.Item
           value="off"
-          className="w-full flex items-center justify-center gap-2"
+          className="w-full h-11 sm:h-10 flex items-center justify-center gap-2 touch-target"
         >
-          <EyeOff className="w-4 h-4" />
-          <span>非表示</span>
+          <EyeOff className="w-5 h-5 sm:w-4 sm:h-4" />
+          <span className="text-sm sm:text-base">非表示</span>
         </ToggleGroup.Item>
       </ToggleGroup>
     </div>

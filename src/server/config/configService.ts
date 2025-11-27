@@ -13,8 +13,8 @@ export interface SocketConfig {
   remoteStatusGraceMs: number;
   remoteStatusInactivityMs: number;
   windowCloseDebounce: number;
-  adminMaxAttempts: number;
-  adminWindowMs: number;
+  rateLimitMaxAttempts: number;
+  rateLimitWindowMs: number;
 }
 
 export interface CorsConfig {
@@ -122,8 +122,8 @@ export class ConfigService {
         this.getNumber("REMOTE_STATUS_INACTIVITY_MS", 0) ?? 0,
       windowCloseDebounce:
         this.getNumber("WINDOW_CLOSE_DEBOUNCE_MS", 500) ?? 500,
-      adminMaxAttempts: this.getNumber("ADMIN_MAX_ATTEMPTS", 5) ?? 5,
-      adminWindowMs: this.getNumber("ADMIN_WINDOW_MS", 60000) ?? 60000,
+      rateLimitMaxAttempts: this.getNumber("RATE_LIMIT_MAX_ATTEMPTS", 10) ?? 10,
+      rateLimitWindowMs: this.getNumber("RATE_LIMIT_WINDOW_MS", 60000) ?? 60000,
     };
   }
 

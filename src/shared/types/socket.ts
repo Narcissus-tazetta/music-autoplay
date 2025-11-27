@@ -38,4 +38,8 @@ export interface C2S {
       | { state: "ended" | "window_close"; origin?: string }
       | { state: string; [k: string]: unknown },
   ): void;
+  move_prev_video?(payload: unknown): void;
+  move_next_video?(payload: unknown): void;
+  tab_closed?(payload: unknown): void;
+  ad_state_changed?(payload: unknown): void;
 }

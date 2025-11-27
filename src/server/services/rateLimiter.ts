@@ -15,6 +15,21 @@ export class RateLimiter {
     return recent.length <= this.maxAttempts;
   }
 
+  getOldestAttempt(key: string): number | undefined {
+    const arr = this.attempts.get(key);
+    if (!arr || arr.length === 0) return undefined;
+    return Math.min(...arr);
+  }
+
+  getStats(): { totalKeys: number; totalAttempts: number } {
+    let totalAttempts = 0;
+    for (const arr of this.attempts.values()) totalAttempts += arr.length;
+    return {
+      totalKeys: this.attempts.size,
+      totalAttempts,
+    };
+  }
+
   clear(key: string): void {
     this.attempts.delete(key);
   }

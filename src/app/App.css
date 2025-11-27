@@ -124,3 +124,33 @@
     @apply bg-background text-foreground transition-colors duration-500;
   }
 }
+
+@layer utilities {
+  /* タッチターゲット最小サイズ確保 */
+  .touch-target {
+    @apply min-h-11 min-w-11;
+  }
+
+  /* モバイル優先の余白設定 */
+  .container-mobile {
+    @apply px-4 sm:px-6 md:px-8;
+  }
+
+  /* レスポンシブテキストサイズ */
+  .text-responsive-sm {
+    @apply text-sm sm:text-base;
+  }
+
+  .text-responsive-base {
+    @apply text-base sm:text-lg;
+  }
+
+  .text-responsive-lg {
+    @apply text-lg sm:text-xl md:text-2xl;
+  }
+
+  /* タップ可能な行 */
+  .row-tappable {
+    @apply min-h-14 sm:min-h-12;
+  }
+}

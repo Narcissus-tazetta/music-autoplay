@@ -8,8 +8,9 @@ export const YouTubeId = z
 
 export const AddMusicSchema = z.object({
   url: z
-    .string()
-    .url()
+    .string({ required_error: "URLを入力してください" })
+    .min(1, "URLを入力してください")
+    .url("有効なURLを入力してください")
     .refine((u) => /(?:youtube\.com\/watch\?v=|youtu\.be\/)/.test(u), {
       message: "有効なYouTubeのURLではありません",
     }),

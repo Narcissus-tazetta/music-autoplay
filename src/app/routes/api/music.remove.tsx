@@ -1,5 +1,6 @@
 import { container } from "@/server/di/container";
 import logger from "@/server/logger";
+import { getClientIP } from "@/server/utils/getClientIP";
 import { RemoveMusicSchema } from "@/shared/schemas/music";
 import type { ServerContext } from "@/shared/types/server";
 import { safeExecuteAsync } from "@/shared/utils/errors";
@@ -26,6 +27,43 @@ export const action = async ({
   const session = await loginSession.getSession(request.headers.get("Cookie"));
   const user = session.get("user") as { id?: string } | undefined;
   const isAdminRequest = formData.get("isAdmin") === "true";
+
+  let isVerifiedAdmin = false;
+  if (isAdminRequest) {
+    const cfg = container.getOptional("configService") as
+      | { getString?(key: string): string }
+      | undefined;
+    let adminSecret: string | undefined;
+    try {
+      adminSecret = cfg?.getString?.("ADMIN_SECRET") ?? SERVER_ENV.ADMIN_SECRET;
+    } catch {
+      adminSecret = SERVER_ENV.ADMIN_SECRET;
+    }
+    if (adminSecret) isVerifiedAdmin = true;
+  }
+
+  if (!isVerifiedAdmin) {
+    const clientIP = getClientIP(request);
+    const rateLimiter = context.httpRateLimiter;
+
+    if (!rateLimiter.tryConsume(clientIP)) {
+      const oldestAttempt = rateLimiter.getOldestAttempt(clientIP);
+      const retryAfter =
+        typeof oldestAttempt === "number"
+          ? Math.ceil((oldestAttempt + 60000 - Date.now()) / 1000)
+          : 60;
+      logger.warn("Rate limit exceeded", {
+        endpoint: "/api/music/remove",
+        clientIP,
+      });
+      return Response.json(
+        {
+          error: "レート制限を超えました。しばらくしてから再試行してください。",
+        },
+        { status: 429, headers: { "Retry-After": retryAfter.toString() } },
+      );
+    }
+  }
 
   logger.info("Debug remove request", {
     hasUser: !!user?.id,
@@ -110,12 +148,11 @@ export const action = async ({
     if (typeof value === "object" && value != null) {
       const rec = value as Record<string, unknown>;
       const fe = rec.formErrors;
-      if (Array.isArray(fe) && fe.length > 0) {
+      if (Array.isArray(fe) && fe.length > 0)
         return Response.json(
           { success: false, error: (fe as string[]).join(" ") },
           { status: 403 },
         );
-      }
     }
 
     return Response.json({ success: true, data: value });

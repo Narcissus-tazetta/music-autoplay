@@ -29,18 +29,23 @@ function HeaderInner({ userName }: HeaderProps) {
   const { showLogout, handleLogout } = useAuth(userName);
 
   return (
-    <div className="flex items-center justify-between w-full p-4 border-b border-gray-200 dark:border-gray-700">
-      <Link className="text-2xl font-bold font-[Dancing_Script] pl-4" to="/">
+    <div className="flex items-center justify-between w-full p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
+      <Link
+        className="text-xl sm:text-2xl font-bold font-[Dancing_Script] pl-2 sm:pl-4 truncate"
+        to="/"
+      >
         Music Autoplay
       </Link>
-      <div className="flex items-center gap-2">
-        <AdminStatus />
+      <div className="flex items-center gap-1 sm:gap-2">
+        <div className="hidden sm:block">
+          <AdminStatus />
+        </div>
         {(() => {
           if (showLogout) {
             return (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 {userName && (
-                  <span className="text-sm text-gray-600 dark:text-gray-300">
+                  <span className="hidden md:inline text-sm text-gray-600 dark:text-gray-300 max-w-32 lg:max-w-none truncate">
                     {userName} でログイン中
                   </span>
                 )}
@@ -48,9 +53,12 @@ function HeaderInner({ userName }: HeaderProps) {
                   <Button
                     type="submit"
                     variant="outline"
+                    size="sm"
+                    className="text-xs sm:text-sm"
                     onClick={handleLogout}
                   >
-                    ログアウト
+                    <span className="hidden sm:inline">ログアウト</span>
+                    <span className="sm:hidden">OUT</span>
                   </Button>
                 </Form>
               </div>
@@ -58,27 +66,40 @@ function HeaderInner({ userName }: HeaderProps) {
           }
           return (
             <Form action="/auth/login" method="post">
-              <Button type="submit" variant="outline">
-                Googleでログイン
+              <Button
+                type="submit"
+                variant="outline"
+                size="sm"
+                className="text-xs sm:text-sm"
+              >
+                <span className="hidden sm:inline">Googleでログイン</span>
+                <span className="sm:hidden">LOGIN</span>
               </Button>
             </Form>
           );
         })()}
         <Sheet>
           <Sheet.Trigger asChild>
-            <Button variant="outline" size="icon">
-              <SlidersHorizontalIcon />
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 sm:h-10 sm:w-10"
+            >
+              <SlidersHorizontalIcon className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
           </Sheet.Trigger>
-          <Sheet.Content side="right" className="w-80">
+          <Sheet.Content side="right" className="w-full sm:w-80 sm:max-w-md">
             <Sheet.Header>
-              <Sheet.Title>設定</Sheet.Title>
-              <Sheet.Description>
+              <Sheet.Title className="text-lg sm:text-xl">設定</Sheet.Title>
+              <Sheet.Description className="text-sm">
                 ここでは、アプリケーションの動作や外観をカスタマイズできます。
               </Sheet.Description>
             </Sheet.Header>
+            <div className="block sm:hidden mt-4">
+              <AdminStatus />
+            </div>
             <Settings />
-            <Sheet.Footer>
+            <Sheet.Footer className="flex-col gap-2">
               <span className="text-xs">
                 © 2025{" "}
                 {developers.map((dev, i) => (

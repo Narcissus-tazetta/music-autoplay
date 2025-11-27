@@ -47,7 +47,7 @@ export default function MusicTableRow({
   });
 
   const mergedRowClass = cn(
-    className ?? "h-14",
+    className ?? "min-h-14 sm:h-14",
     "border-b border-border/30 hover:bg-accent/50 hover:border-border transition-colors",
   );
 
@@ -62,20 +62,20 @@ export default function MusicTableRow({
         transition={{ duration: 0.2, ease: "easeInOut" }}
         layout
       >
-        <Table.Cell className="text-center">
-          <p className="font-bold">{index + 1}</p>
+        <Table.Cell className="text-center py-3 sm:py-2">
+          <p className="font-bold text-sm sm:text-base">{index + 1}</p>
         </Table.Cell>
-        <Table.Cell className="min-w-0">
+        <Table.Cell className="min-w-0 py-3 sm:py-2">
           <MusicTitleWithHover music={music} />
         </Table.Cell>
-        <Table.Cell>
-          <div className="flex items-center justify-end gap-1">
+        <Table.Cell className="py-2">
+          <div className="flex items-center justify-end gap-0.5 sm:gap-1">
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleExpanded}
               aria-label={isExpanded ? "詳細を閉じる" : "詳細を開く"}
-              className="h-8 w-8"
+              className="h-10 w-10 sm:h-8 sm:w-8 touch-target"
             >
               <ChevronDown
                 className={cn(
@@ -89,7 +89,7 @@ export default function MusicTableRow({
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-destructive hover:text-destructive/80 h-8 w-8"
+                className="text-destructive hover:text-destructive/80 h-10 w-10 sm:h-8 sm:w-8 touch-target"
                 disabled={isDeleting}
                 onClick={handleDelete}
                 aria-label={`delete ${music.title}`}
@@ -105,7 +105,7 @@ export default function MusicTableRow({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 invisible"
+                className="h-10 w-10 sm:h-8 sm:w-8 invisible"
                 disabled
                 aria-hidden
               >
@@ -125,11 +125,11 @@ export default function MusicTableRow({
             transition={{ duration: 0.2, ease: "easeInOut" }}
             className="border-b border-border/30"
           >
-            <Table.Cell colSpan={3} className="bg-muted/30 py-3">
-              <div className="flex flex-col gap-2 text-sm px-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-24 flex items-center justify-between">
-                    <span className="text-muted-foreground font-medium text-left truncate">
+            <Table.Cell colSpan={3} className="bg-muted/30 py-3 sm:py-3">
+              <div className="flex flex-col gap-2 sm:gap-2 text-xs sm:text-sm px-2 sm:px-2">
+                <div className="flex items-start sm:items-center gap-2">
+                  <div className="w-20 sm:w-24 flex-shrink-0 flex items-center justify-between">
+                    <span className="text-muted-foreground font-medium text-left truncate text-xs sm:text-sm">
                       チャンネル
                     </span>
                     <span className="text-muted-foreground font-medium text-right">
@@ -137,7 +137,9 @@ export default function MusicTableRow({
                     </span>
                   </div>
                   <a
-                    className={CHANNEL_LINK_CLASS}
+                    className={
+                      CHANNEL_LINK_CLASS + " break-all text-xs sm:text-sm"
+                    }
                     href={channelUrl(music.channelId)}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -146,37 +148,41 @@ export default function MusicTableRow({
                   </a>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-24 flex items-center justify-between">
-                    <span className="text-muted-foreground font-medium text-left truncate">
+                  <div className="w-20 sm:w-24 flex-shrink-0 flex items-center justify-between">
+                    <span className="text-muted-foreground font-medium text-left truncate text-xs sm:text-sm">
                       再生時間
                     </span>
                     <span className="text-muted-foreground font-medium text-right">
                       :
                     </span>
                   </div>
-                  <span>{formatDuration(music.duration)}</span>
+                  <span className="text-xs sm:text-sm">
+                    {formatDuration(music.duration)}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-24 flex items-center justify-between">
-                    <span className="text-muted-foreground font-medium text-left truncate">
+                  <div className="w-20 sm:w-24 flex-shrink-0 flex items-center justify-between">
+                    <span className="text-muted-foreground font-medium text-left truncate text-xs sm:text-sm">
                       リクエスト
                     </span>
                     <span className="text-muted-foreground font-medium text-right">
                       :
                     </span>
                   </div>
-                  <span>{formatRequestedAt(music.requestedAt)}</span>
+                  <span className="text-xs sm:text-sm">
+                    {formatRequestedAt(music.requestedAt)}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-24 flex items-center justify-between">
-                    <span className="text-muted-foreground font-medium text-left truncate">
+                  <div className="w-20 sm:w-24 flex-shrink-0 flex items-center justify-between">
+                    <span className="text-muted-foreground font-medium text-left truncate text-xs sm:text-sm">
                       リクエスター
                     </span>
                     <span className="text-muted-foreground font-medium text-right">
                       :
                     </span>
                   </div>
-                  <span className="font-medium">
+                  <span className="font-medium text-xs sm:text-sm">
                     {getRequesterDisplayName(music.requesterName)}
                   </span>
                 </div>

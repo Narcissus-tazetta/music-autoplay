@@ -8,11 +8,14 @@ export type RemoteStatus =
       type: "playing";
       musicTitle: string;
       musicId?: string;
+      isAdvertisement?: boolean;
+      adTimestamp?: number;
     }
   | {
       type: "paused";
       musicTitle?: string;
       musicId?: string;
+      isTransitioning?: boolean;
     }
   | {
       type: "closed";

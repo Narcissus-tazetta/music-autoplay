@@ -36,6 +36,10 @@ export type EventMap = {
     }) => void,
   ];
   window_close: [payload: unknown];
+  move_prev_video: [payload: unknown];
+  move_next_video: [payload: unknown];
+  tab_closed: [payload: unknown];
+  ad_state_changed: [payload: unknown];
 
   // server -> client (emit)
   musicAdded: [payload: unknown];

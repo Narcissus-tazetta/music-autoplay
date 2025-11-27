@@ -4,6 +4,7 @@ import { getConfigService } from "../config/configService";
 import type ConfigService from "../config/configService";
 import type { Store } from "../persistence";
 import { RateLimiter } from "../services/rateLimiter";
+import { RateLimiterManager } from "../services/rateLimiterManager";
 import { WindowCloseManager } from "../services/windowCloseManager";
 import type { YouTubeService } from "../services/youtubeService";
 import ServiceResolver from "../utils/serviceResolver";
@@ -56,10 +57,29 @@ export class SocketServerBuilder {
       const windowCloseManager = new WindowCloseManager(
         socketConfig.windowCloseDebounce,
       );
-      const adminRateLimiter = new RateLimiter(
-        socketConfig.adminMaxAttempts,
-        socketConfig.adminWindowMs,
+      const rateLimiter = new RateLimiter(
+        socketConfig.rateLimitMaxAttempts,
+        socketConfig.rateLimitWindowMs,
       );
+      const httpRateLimiter = new RateLimiter(
+        socketConfig.rateLimitMaxAttempts,
+        socketConfig.rateLimitWindowMs,
+      );
+
+      const rateLimiterManager = RateLimiterManager.getInstance();
+      rateLimiterManager.register("socket", rateLimiter);
+      rateLimiterManager.register("http", httpRateLimiter);
+      rateLimiterManager.scheduleCleanup();
+
+      // Register rateLimiter in DI container for factory access
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { container } = require("../di/container") as {
+        container: {
+          register: (token: string, factory: () => unknown) => void;
+        };
+      };
+      container.register("rateLimiter", () => rateLimiter);
+      container.register("httpRateLimiter", () => httpRateLimiter);
 
       return {
         youtubeService,
@@ -68,7 +88,9 @@ export class SocketServerBuilder {
         remoteStatus: this.config.remoteStatus ?? { type: "closed" },
         adminHash,
         windowCloseManager,
-        adminRateLimiter,
+        rateLimiter,
+        httpRateLimiter,
+        rateLimiterManager,
         socketConfig,
       };
     }, "SocketServerBuilder.build")();
@@ -86,7 +108,9 @@ export interface SocketServerComponents {
   remoteStatus: RemoteStatus;
   adminHash: string;
   windowCloseManager: WindowCloseManager;
-  adminRateLimiter: RateLimiter;
+  rateLimiter: RateLimiter;
+  httpRateLimiter: RateLimiter;
+  rateLimiterManager: RateLimiterManager;
   socketConfig: ReturnType<ConfigService["getSocketConfig"]>;
 }
 

@@ -97,9 +97,9 @@ async function gracefulShutdown() {
       if (
         errorMsg.includes("not running") ||
         errorMsg.includes("already closed")
-      ) {
+      )
         logger.info("socket.io already closed during shutdown");
-      } else {
+      else {
         logger.warn("socket.io close failed", {
           error: e,
         });
@@ -234,6 +234,7 @@ app.all(
     getLoadContext: () =>
       ({
         io: socketServer,
+        httpRateLimiter: socketServer.getHttpRateLimiter(),
       }) satisfies ServerContext,
   }),
 );

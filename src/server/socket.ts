@@ -13,6 +13,7 @@ import { createMusicService } from "./music/musicServiceFactory";
 import { defaultFileStore } from "./persistence";
 import type { Store } from "./persistence";
 import { type RateLimiter } from "./services/rateLimiter";
+import { RateLimiterManager } from "./services/rateLimiterManager";
 import { type WindowCloseManager } from "./services/windowCloseManager";
 import { type YouTubeService } from "./services/youtubeService";
 import { createSocketServerBuilder } from "./socket/builder";
@@ -42,7 +43,8 @@ export class SocketServerInstance {
   private manager?: SocketManager;
   private musicService?: MusicService;
   private runtime?: SocketRuntime;
-  private adminRateLimiter: RateLimiter;
+  private rateLimiter: RateLimiter;
+  private httpRateLimiter: RateLimiter;
   static isEngineLike(v: unknown): v is EngineLike {
     if (!isObject(v)) return false;
     const maybe = v as { on?: unknown; httpServer?: unknown };
@@ -88,7 +90,8 @@ export class SocketServerInstance {
     this.remoteStatus = components.remoteStatus;
     this.adminHash = components.adminHash;
     this.windowCloseManager = components.windowCloseManager;
-    this.adminRateLimiter = components.adminRateLimiter;
+    this.rateLimiter = components.rateLimiter;
+    this.httpRateLimiter = components.httpRateLimiter;
     this.remoteStatusDebounceMs =
       components.socketConfig.remoteStatusDebounceMs;
     this.remoteStatusGraceMs = components.socketConfig.remoteStatusGraceMs;
@@ -128,8 +131,15 @@ export class SocketServerInstance {
     return Promise.resolve();
   }
 
+  getHttpRateLimiter(): RateLimiter {
+    return this.httpRateLimiter;
+  }
+
   async close(): Promise<void> {
     if (!this.io) return;
+
+    RateLimiterManager.getInstance().stopCleanup();
+
     await new Promise<void>((resolve) => {
       const io = this.getIo();
       const closeResult = io.close(() => {

@@ -9,6 +9,7 @@ import type { EmitFn } from "../../music/emitter/musicEventEmitter";
 import type { MusicService } from "../../music/musicService";
 import { createMusicService } from "../../music/musicServiceFactory";
 import type { Store } from "../../persistence";
+import type { RateLimiter } from "../../services/rateLimiter";
 import type { YouTubeService } from "../../services/youtubeService";
 import { createSocketEmitter } from "../../utils/safeEmit";
 import {
@@ -28,6 +29,7 @@ type Deps = {
   youtubeService: YouTubeService;
   fileStore: Store;
   isAdmin?: (requesterHash?: string) => boolean;
+  rateLimiter?: RateLimiter;
 };
 
 export function createMusicHandlers(deps: Deps): {
@@ -60,6 +62,13 @@ export function createMusicHandlers(deps: Deps): {
   const addMusicHandler = createSocketEventHandler({
     event: "addMusic",
     validator: AddMusicSchema,
+    rateLimiter: deps.rateLimiter
+      ? {
+          maxAttempts: 10,
+          windowMs: 60000,
+          keyGenerator: (socket) => socket.handshake.address || socket.id,
+        }
+      : undefined,
     handler: async (payload, context): Promise<ReplyOptions> => {
       const { url, requesterHash, requesterName } = payload;
       const l = withContext(context as Record<string, unknown>);
@@ -95,6 +104,13 @@ export function createMusicHandlers(deps: Deps): {
   const removeMusicHandler = createSocketEventHandler({
     event: "removeMusic",
     validator: RemoveMusicSchema,
+    rateLimiter: deps.rateLimiter
+      ? {
+          maxAttempts: 10,
+          windowMs: 60000,
+          keyGenerator: (socket) => socket.handshake.address || socket.id,
+        }
+      : undefined,
     handler: async (payload, context): Promise<ReplyOptions> => {
       const { url, requesterHash } = payload;
       const l = withContext(context as Record<string, unknown>);

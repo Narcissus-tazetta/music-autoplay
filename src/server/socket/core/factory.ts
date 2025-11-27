@@ -98,6 +98,11 @@ export async function initSocketServer(
   const makeConnectionHandler: ConnectionHandlerFactory =
     mod.default ?? (mod.makeConnectionHandler as ConnectionHandlerFactory);
 
+  const socketConfig = configService?.getSocketConfig() ?? {
+    rateLimitMaxAttempts: 10,
+    rateLimitWindowMs: 60000,
+  };
+
   const handler = makeConnectionHandler({
     getIo: () => io,
     getMusicService: () => runtime.getMusicService(),
@@ -107,6 +112,11 @@ export async function initSocketServer(
     youtubeService: yt,
     fileStore: effectiveFileStore ?? fsToUse,
     adminHash: effectiveAdminHash ?? "",
+    rateLimiter: serviceResolver.resolve("rateLimiter"),
+    rateLimitConfig: {
+      maxAttempts: socketConfig.rateLimitMaxAttempts,
+      windowMs: socketConfig.rateLimitWindowMs,
+    },
     timerManager,
     windowCloseManager,
   });

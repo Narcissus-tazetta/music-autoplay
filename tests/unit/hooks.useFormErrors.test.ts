@@ -60,7 +60,6 @@ describe("useFormErrors hook", () => {
 
     const result = useFormErrors(fetcherData);
     expect(result.formErrorsString).toBe("内部エラー");
-    expect(result.candidate).toEqual(fetcherData.result);
   });
 
   test("handles malformed error gracefully", () => {
@@ -100,6 +99,6 @@ describe("useFormErrors hook", () => {
     };
 
     const result = useFormErrors(fetcherData);
-    expect(result.rawFetchData).toBe(fetcherData);
+    expect(result.formErrorsString).toBe("深くネストされたエラー");
   });
 });

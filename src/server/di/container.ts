@@ -41,4 +41,10 @@ export class ServiceContainer {
 
 export const container = new ServiceContainer();
 
+// Register RateLimiterManager as singleton
+import { RateLimiterManager } from "../services/rateLimiterManager";
+container.register("rateLimiterManager", () =>
+  RateLimiterManager.getInstance(),
+);
+
 export default container;

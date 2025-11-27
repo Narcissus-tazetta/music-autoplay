@@ -129,7 +129,7 @@ export default function App() {
   return (
     <>
       <Header userName={userName} />
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center min-h-screen">
         <Outlet />
       </div>
     </>

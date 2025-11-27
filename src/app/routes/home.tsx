@@ -1,7 +1,6 @@
 import useFormErrors from "@/app/hooks/useFormErrors";
 import { useMusicForm } from "@/app/hooks/useMusicForm";
 import usePlayingMusic from "@/app/hooks/usePlayingMusic";
-import { useToastNotification } from "@/app/hooks/useToastNotification";
 import { useUiActionExecutor } from "@/app/hooks/useUiActionExecutor";
 import { StatusBadge } from "@/shared/components";
 import { useMusicStore } from "@/shared/stores/musicStore";
@@ -78,14 +77,9 @@ export default function Home() {
   );
   const playingMusic = usePlayingMusic(musics, remoteStatus);
   const isAdmin = useAdminStore((s) => s.isAdmin);
-  const { fetcher, form, fields, isSubmitting, hasErrors } = useMusicForm();
-  const { formErrorsString, parsedAction } = useFormErrors(fetcher.data);
-
-  useToastNotification({
-    fetcherState: fetcher.state,
-    fetcherData: fetcher.data,
-    conformFields: fields,
-  });
+  const { fetcher, form, fields, isSubmitting, canSubmit, retryAfter } =
+    useMusicForm();
+  const { parsedAction } = useFormErrors(fetcher.data);
 
   useUiActionExecutor({
     parsedAction,
@@ -106,19 +100,19 @@ export default function Home() {
   );
 
   return (
-    <div className="flex flex-col w-full max-w-4xl gap-5 px-4 mt-12">
-      <fetcher.Form method="post" action="/api/music/add">
+    <div className="flex flex-col w-full max-w-4xl gap-4 sm:gap-5 px-3 sm:px-4 mt-8 sm:mt-12 pb-6 sm:pb-8">
+      <fetcher.Form method="post" action="/api/music/add" id={form.id}>
         <MusicForm
           formId={form.id}
-          formErrors={formErrorsString}
           urlFieldName={fields.url.name}
-          urlFieldErrors={fields.url.errors}
+          urlFieldErrors={fields.url.errors as readonly string[] | undefined}
           isSubmitting={isSubmitting}
-          hasErrors={hasErrors}
+          canSubmit={canSubmit}
+          retryAfter={retryAfter}
         />
       </fetcher.Form>
 
-      <div className="w-full mt-4 flex justify-center">
+      <div className="w-full mt-2 sm:mt-4 flex justify-center">
         <AnimatePresence mode="wait">
           {remoteStatus && (
             <StatusBadge status={remoteStatus} music={playingMusic} />

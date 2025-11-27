@@ -118,18 +118,27 @@ export function createSocketEventHandler<TPayload, TResponse>(
         });
       }
 
-      if (rateLimiter) {
-        const rateLimitKey = config.rateLimiter?.keyGenerator
-          ? config.rateLimiter.keyGenerator(socket)
-          : socket.id;
+      if (rateLimiter && config.rateLimiter) {
+        let rateLimitKey: string;
+        if (config.rateLimiter.keyGenerator)
+          rateLimitKey = config.rateLimiter.keyGenerator(socket);
+        else rateLimitKey = socket.id;
 
         if (!rateLimiter.tryConsume(rateLimitKey)) {
-          const reply = createRateLimitReply();
+          const oldest = rateLimiter.getOldestAttempt(rateLimitKey);
+          const retryAfter = oldest
+            ? Math.ceil(
+                (config.rateLimiter.windowMs - (Date.now() - oldest)) / 1000,
+              )
+            : Math.ceil(config.rateLimiter.windowMs / 1000);
+
+          const reply = createRateLimitReply(retryAfter);
           if (callback) callback(reply);
 
           log.warn(`rate limit exceeded: ${config.event}`, {
             socketId: ctx.socketId,
             key: rateLimitKey,
+            retryAfter,
           });
 
           return;

@@ -67,12 +67,12 @@ function MusicTitleWithHoverInner({
         href={watchUrl(music.id)}
         target="_blank"
         rel="noopener noreferrer"
-        className={merged}
+        className={cn(merged, "text-sm sm:text-base")}
         title={music.title}
       >
         {music.title}
       </HoverCardTrigger>
-      <HoverCardContent>
+      <HoverCardContent className="w-80 p-2">
         <img
           key={`${music.id}-${currentSrc}`}
           src={currentSrc}

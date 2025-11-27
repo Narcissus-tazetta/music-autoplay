@@ -6,6 +6,7 @@ import type { Server as IOServer } from "socket.io";
 import logger, { logMetric, withContext } from "../../logger";
 import type { MusicService } from "../../music/musicService";
 import type { Store } from "../../persistence";
+import type { RateLimiter } from "../../services/rateLimiter";
 import type { WindowCloseManager } from "../../services/windowCloseManager";
 import type { YouTubeService } from "../../services/youtubeService";
 import type { EmitOptions } from "../../utils/safeEmit";
@@ -28,6 +29,11 @@ export type ConnectionDeps = {
   youtubeService: YouTubeService;
   fileStore: Store;
   adminHash: string;
+  rateLimiter?: RateLimiter;
+  rateLimitConfig?: {
+    maxAttempts: number;
+    windowMs: number;
+  };
   timerManager: TimerManager;
   windowCloseManager: InstanceType<typeof WindowCloseManager>;
 };
@@ -108,6 +114,9 @@ export function makeConnectionHandler(
               return false;
             }
           },
+          adminHash: deps.adminHash,
+          rateLimiter: deps.rateLimiter,
+          rateLimitConfig: deps.rateLimitConfig,
         },
       );
     } catch (err: unknown) {

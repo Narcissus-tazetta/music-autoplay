@@ -94,6 +94,28 @@ export function setupExtensionEventHandlers(
         return;
       }
 
+      if (stateRaw === "transitioning") {
+        const transitionStatus = {
+          type: "paused",
+          musicTitle: undefined,
+          musicId: undefined,
+          isTransitioning: true,
+        } as RemoteStatus;
+        try {
+          manager.update(transitionStatus, "transitioning");
+          log.info("youtube_video_state: transitioning to next video", {
+            socketId: socket.id,
+            connectionId,
+            url,
+          });
+        } catch (e: unknown) {
+          log.warn("failed to update remote status (transitioning)", {
+            error: e,
+          });
+        }
+        return;
+      }
+
       if (stateRaw === "ended") {
         if (url) {
           const { extractYoutubeId } = await import("@/shared/utils/youtube");
@@ -276,6 +298,238 @@ export function setupExtensionEventHandlers(
         log.warn("delete_url: failed to process", {
           socketId: socket.id,
           url,
+          error: e,
+        });
+      }
+    },
+    log,
+    socketContext,
+  );
+
+  registerSocketEventSafely(
+    extensionSocketOn,
+    "move_prev_video",
+    async (payload) => {
+      if (!isRecord(payload)) {
+        log.debug("move_prev_video: invalid payload", { payload });
+        return;
+      }
+
+      const currentUrl =
+        typeof payload["url"] === "string" ? payload["url"] : undefined;
+
+      if (!currentUrl) {
+        log.debug("move_prev_video: no url provided", { payload });
+        return;
+      }
+
+      try {
+        const { extractYoutubeId } = await import("@/shared/utils/youtube");
+        const currentId = extractYoutubeId(currentUrl);
+
+        if (!currentId) {
+          log.debug("move_prev_video: invalid YouTube URL", { currentUrl });
+          return;
+        }
+
+        const musicList = repository.list();
+        const currentIndex = musicList.findIndex((m) => m.id === currentId);
+
+        if (currentIndex === -1) {
+          log.debug("move_prev_video: current music not found", { currentId });
+          return;
+        }
+
+        const prevIndex =
+          currentIndex === 0 ? musicList.length - 1 : currentIndex - 1;
+        const prevMusic = musicList[prevIndex];
+
+        log.info("move_prev_video: navigating to previous", {
+          socketId: socket.id,
+          connectionId,
+          from: currentId,
+          to: prevMusic.id,
+          prevIndex,
+        });
+      } catch (e: unknown) {
+        log.warn("move_prev_video: failed to process", {
+          socketId: socket.id,
+          currentUrl,
+          error: e,
+        });
+      }
+    },
+    log,
+    socketContext,
+  );
+
+  registerSocketEventSafely(
+    extensionSocketOn,
+    "move_next_video",
+    async (payload) => {
+      if (!isRecord(payload)) {
+        log.debug("move_next_video: invalid payload", { payload });
+        return;
+      }
+
+      const currentUrl =
+        typeof payload["url"] === "string" ? payload["url"] : undefined;
+
+      if (!currentUrl) {
+        log.debug("move_next_video: no url provided", { payload });
+        return;
+      }
+
+      try {
+        const { extractYoutubeId } = await import("@/shared/utils/youtube");
+        const currentId = extractYoutubeId(currentUrl);
+
+        if (!currentId) {
+          log.debug("move_next_video: invalid YouTube URL", { currentUrl });
+          return;
+        }
+
+        const musicList = repository.list();
+        const currentIndex = musicList.findIndex((m) => m.id === currentId);
+
+        if (currentIndex === -1) {
+          log.debug("move_next_video: current music not found", { currentId });
+          return;
+        }
+
+        const nextIndex = (currentIndex + 1) % musicList.length;
+        const nextMusic = musicList[nextIndex];
+
+        log.info("move_next_video: navigating to next", {
+          socketId: socket.id,
+          connectionId,
+          from: currentId,
+          to: nextMusic.id,
+          nextIndex,
+        });
+      } catch (e: unknown) {
+        log.warn("move_next_video: failed to process", {
+          socketId: socket.id,
+          currentUrl,
+          error: e,
+        });
+      }
+    },
+    log,
+    socketContext,
+  );
+
+  registerSocketEventSafely(
+    extensionSocketOn,
+    "tab_closed",
+    (payload) => {
+      if (!isRecord(payload)) {
+        log.debug("tab_closed: invalid payload", { payload });
+        return;
+      }
+
+      const tabId =
+        typeof payload["tabId"] === "number" ? payload["tabId"] : undefined;
+
+      log.info("tab_closed: tab closure detected", {
+        socketId: socket.id,
+        connectionId,
+        tabId,
+        timestamp: new Date().toISOString(),
+      });
+
+      try {
+        log.debug("tab_closed: cleanup completed", {
+          socketId: socket.id,
+          tabId,
+        });
+      } catch (e: unknown) {
+        log.warn("tab_closed: cleanup failed", {
+          socketId: socket.id,
+          tabId,
+          error: e,
+        });
+      }
+    },
+    log,
+    socketContext,
+  );
+
+  registerSocketEventSafely(
+    extensionSocketOn,
+    "ad_state_changed",
+    async (payload) => {
+      if (!isRecord(payload)) {
+        log.debug("ad_state_changed: invalid payload", { payload });
+        return;
+      }
+
+      const url =
+        typeof payload["url"] === "string" ? payload["url"] : undefined;
+      const isAd =
+        typeof payload["isAd"] === "boolean" ? payload["isAd"] : false;
+      const timestamp =
+        typeof payload["timestamp"] === "number"
+          ? payload["timestamp"]
+          : Date.now();
+
+      if (!url) {
+        log.debug("ad_state_changed: no url provided", { payload });
+        return;
+      }
+
+      try {
+        const { extractYoutubeId } = await import("@/shared/utils/youtube");
+        const videoId = extractYoutubeId(url);
+
+        if (!videoId) {
+          log.debug("ad_state_changed: invalid YouTube URL", { url });
+          return;
+        }
+
+        log.info("ad_state_changed: advertisement state changed", {
+          socketId: socket.id,
+          connectionId,
+          videoId,
+          isAd,
+          timestamp: new Date(timestamp).toISOString(),
+        });
+
+        if (isAd) {
+          log.debug("ad_state_changed: ad started", { videoId, timestamp });
+          const music = repository.get(videoId);
+          if (music) {
+            const adStatus = {
+              type: "playing",
+              musicTitle: music.title,
+              musicId: videoId,
+              isAdvertisement: true,
+              adTimestamp: timestamp,
+            } as RemoteStatus;
+            manager.update(adStatus, "ad_started");
+          }
+        } else {
+          log.debug("ad_state_changed: ad ended, resuming content", {
+            videoId,
+          });
+
+          const music = repository.get(videoId);
+          if (music) {
+            const contentStatus = {
+              type: "playing",
+              musicTitle: music.title,
+              musicId: videoId,
+              isAdvertisement: false,
+              adTimestamp: undefined,
+            } as RemoteStatus;
+            manager.update(contentStatus, "ad_ended");
+          }
+        }
+      } catch (e: unknown) {
+        log.warn("ad_state_changed: failed to process", {
+          socketId: socket.id,
+          url,
+          isAd,
           error: e,
         });
       }

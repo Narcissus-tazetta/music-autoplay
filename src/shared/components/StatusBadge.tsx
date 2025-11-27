@@ -19,12 +19,19 @@ function StatusBadgeInner({ status, music }: StatusBadgeProps) {
   const settings = useSettingsStore();
   const ytStatusVisible = settings.ytStatusVisible;
 
-  const dotClass =
-    status?.type === "playing"
-      ? "bg-emerald-600"
-      : status?.type === "paused"
-        ? "bg-orange-600"
-        : "bg-gray-500";
+  const isAdvertisement =
+    status?.type === "playing" && status.isAdvertisement === true;
+  const isTransitioning =
+    status?.type === "paused" && status.isTransitioning === true;
+  const dotClass = isAdvertisement
+    ? "bg-yellow-500"
+    : isTransitioning
+      ? "bg-blue-500"
+      : status?.type === "playing"
+        ? "bg-emerald-600"
+        : status?.type === "paused"
+          ? "bg-orange-600"
+          : "bg-gray-500";
   const badgeBg = "bg-gray-100 dark:bg-gray-900/10";
 
   useEffect(() => {
@@ -64,7 +71,7 @@ function StatusBadgeInner({ status, music }: StatusBadgeProps) {
   return (
     <motion.div
       aria-live="polite"
-      className={`${badgeBg} text-sm px-3 py-1 rounded-md flex items-center gap-3`}
+      className={`${badgeBg} text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-1 rounded-md flex items-center gap-2 sm:gap-3 max-w-full`}
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
@@ -72,19 +79,27 @@ function StatusBadgeInner({ status, music }: StatusBadgeProps) {
     >
       {visibility === "visible" && (
         <span
-          className={`inline-block w-3 h-3 rounded-full ${dotClass}`}
+          className={`inline-block w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0 ${dotClass}`}
           aria-hidden
         />
       )}
-      {status.type === "playing" ? (
+      {isAdvertisement ? (
+        <span className="text-gray-800 dark:text-gray-100 font-medium text-xs sm:text-sm">
+          広告再生中
+        </span>
+      ) : isTransitioning ? (
+        <span className="text-gray-800 dark:text-gray-100 font-medium text-xs sm:text-sm">
+          次の動画に移動中...
+        </span>
+      ) : status.type === "playing" ? (
         music ? (
-          <span className="inline-flex items-center justify-center gap-2 text-center">
-            <span className="text-gray-800 dark:text-gray-100 font-medium whitespace-nowrap">
+          <span className="inline-flex items-center justify-center gap-1.5 sm:gap-2 text-center min-w-0">
+            <span className="text-gray-800 dark:text-gray-100 font-medium whitespace-nowrap text-xs sm:text-sm">
               再生中:
             </span>
             <MusicTitleWithHover
               music={music}
-              className="text-gray-800 dark:text-gray-100 font-medium hover:underline break-words"
+              className="text-gray-800 dark:text-gray-100 font-medium hover:underline break-words min-w-0 text-xs sm:text-sm"
             />
           </span>
         ) : (
@@ -92,15 +107,15 @@ function StatusBadgeInner({ status, music }: StatusBadgeProps) {
             const musicTitle = status.musicTitle;
             if (typeof musicTitle === "string" && musicTitle.length > 0) {
               return (
-                <span className="inline-flex items-center justify-center gap-2 text-center">
-                  <span className="text-gray-800 dark:text-gray-100 font-medium whitespace-nowrap">
+                <span className="inline-flex items-center justify-center gap-1.5 sm:gap-2 text-center min-w-0">
+                  <span className="text-gray-800 dark:text-gray-100 font-medium whitespace-nowrap text-xs sm:text-sm">
                     再生中:
                   </span>
                   <a
                     href={searchUrl(musicTitle)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-gray-800 dark:text-gray-100 font-medium hover:underline break-words"
+                    className="text-gray-800 dark:text-gray-100 font-medium hover:underline break-words min-w-0 text-xs sm:text-sm"
                     title={musicTitle}
                   >
                     {musicTitle}
@@ -109,17 +124,19 @@ function StatusBadgeInner({ status, music }: StatusBadgeProps) {
               );
             }
             return (
-              <span className="text-gray-800 dark:text-gray-100 font-medium">
+              <span className="text-gray-800 dark:text-gray-100 font-medium text-xs sm:text-sm">
                 再生中
               </span>
             );
           })()
         )
       ) : status.type === "paused" ? (
-        <span className="text-gray-800 dark:text-gray-100">一時停止中</span>
+        <span className="text-gray-800 dark:text-gray-100 text-xs sm:text-sm">
+          一時停止中
+        </span>
       ) : (
         visibility === "visible" && (
-          <span className="text-gray-800 dark:text-gray-100">
+          <span className="text-gray-800 dark:text-gray-100 text-xs sm:text-sm">
             タブが閉じられました
           </span>
         )

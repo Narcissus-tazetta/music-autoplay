@@ -1,15 +1,25 @@
 {
   "items": [
     {
-      "id": "LmZD-TU96q4",
-      "title": "米津玄師  Kenshi Yonezu - IRIS OUT",
-      "channelName": "Kenshi Yonezu  米津玄師",
-      "channelId": "UCUCeZaZeJbEYAAzvMgrKOPQ",
-      "duration": "00:02:34",
+      "id": "VgLNfVougpI",
+      "title": "【Official Music Video】だれかぬいてくれ / DAREKANUITEKURE",
+      "channelName": "ぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬ",
+      "channelId": "UCoCmygyRLVNZgawE-Nkvccg",
+      "duration": "00:03:22",
       "requesterHash": "5a0d6fc0ec2bb4bd487a473827a6d2254411bc750e5a412a7a915c9c2e2326f6",
       "requesterName": "さかな",
-      "requestedAt": "2025-11-17T07:02:54.356Z"
+      "requestedAt": "2025-11-27T01:20:07.848Z"
+    },
+    {
+      "id": "BI9Ue6JwJic",
+      "title": "DECO*27 - チェリーポップ feat. 初音ミク",
+      "channelName": "DECO*27",
+      "channelId": "UCGmO0S4S-AunjRdmxA6TQYg",
+      "duration": "00:02:23",
+      "requesterHash": "5a0d6fc0ec2bb4bd487a473827a6d2254411bc750e5a412a7a915c9c2e2326f6",
+      "requesterName": "さかな",
+      "requestedAt": "2025-11-27T01:20:08.907Z"
     }
   ],
-  "lastUpdated": "2025-11-17T07:04:28.515Z"
+  "lastUpdated": "2025-11-27T01:23:51.928Z"
 }
