@@ -4,6 +4,7 @@ import type { Socket } from "socket.io";
 import type { AppLogger } from "../../logger";
 import type { MusicEventEmitter } from "../../music/emitter/musicEventEmitter";
 import type { MusicRepository } from "../../music/repository/musicRepository";
+import type { YouTubeService } from "../../services/youtubeService";
 import type { SocketManager } from "../managers/manager";
 import { registerSocketEventSafely } from "../utils/eventRegistration";
 import { extractSocketOn } from "../utils/socketHelpers";
@@ -16,6 +17,7 @@ export function setupExtensionEventHandlers(
   manager: SocketManager,
   repository: MusicRepository,
   emitter: MusicEventEmitter,
+  youtubeService: YouTubeService,
 ) {
   const extensionSocketOn = extractSocketOn(socket);
   const socketContext = { socketId: socket.id };
@@ -167,9 +169,14 @@ export function setupExtensionEventHandlers(
       if (stateRaw === "playing" || stateRaw === "paused") {
         const state = stateRaw === "playing" ? "playing" : "paused";
         let match = null as null | { url: string; title?: string };
+        let isExternalVideo = false;
+        let externalVideoId: string | undefined = undefined;
 
         if (url) {
-          const { watchUrl } = await import("@/shared/utils/youtube");
+          const { watchUrl, extractYoutubeId } = await import(
+            "@/shared/utils/youtube"
+          );
+
           for (const m of musicDB.values()) {
             try {
               const generated = watchUrl((m as { id: string }).id);
@@ -184,6 +191,51 @@ export function setupExtensionEventHandlers(
               continue;
             }
           }
+
+          if (!match && state === "playing") {
+            const videoId = extractYoutubeId(url);
+            if (videoId) {
+              isExternalVideo = true;
+              externalVideoId = videoId;
+              try {
+                log.debug("Fetching external video details", { videoId, url });
+                const result = await youtubeService.getVideoDetails(
+                  videoId,
+                  1,
+                  2000,
+                );
+
+                if (result.ok) {
+                  match = {
+                    url,
+                    title: result.value.title,
+                  };
+                  log.info("External video title fetched", {
+                    videoId,
+                    title: result.value.title,
+                  });
+                } else {
+                  log.warn("Failed to fetch external video details", {
+                    videoId,
+                    error: result.error,
+                  });
+                  match = {
+                    url,
+                    title: `動画ID: ${videoId}`,
+                  };
+                }
+              } catch (e: unknown) {
+                log.warn("Exception while fetching external video details", {
+                  videoId,
+                  error: e,
+                });
+                match = {
+                  url,
+                  title: `動画ID: ${videoId}`,
+                };
+              }
+            }
+          }
         }
 
         const remoteStatus = match
@@ -191,6 +243,8 @@ export function setupExtensionEventHandlers(
               type: state,
               musicTitle: match.title ?? "",
               musicId: undefined,
+              isExternalVideo,
+              videoId: externalVideoId,
             } as RemoteStatus)
           : state === "playing"
             ? ({
@@ -212,6 +266,7 @@ export function setupExtensionEventHandlers(
             state: stateRaw,
             url,
             matched: !!match,
+            isExternalVideo,
           });
         } catch (e: unknown) {
           log.warn("failed to update remote status (playing/paused)", {

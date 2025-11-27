@@ -7,40 +7,53 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "./index";
 type MusicWithThumbnail = Music & { thumbnail?: string };
 
 interface MusicTitleWithHoverProps {
-  music: MusicWithThumbnail;
+  music?: MusicWithThumbnail;
+  videoId?: string;
+  title?: string;
+  href?: string;
   className?: string;
 }
 
 const CHANNEL_LINK_CLASS =
   "text-blue-500 dark:text-purple-400 hover:underline block truncate w-full";
 
-const makeCandidates = (m: MusicWithThumbnail): string[] => {
+const makeCandidates = (videoId: string, thumbnail?: string): string[] => {
   const candidates: string[] = [];
-  if (m.thumbnail) candidates.push(m.thumbnail);
-  candidates.push(`https://i.ytimg.com/vi/${m.id}/maxresdefault.jpg`);
-  candidates.push(`https://i.ytimg.com/vi/${m.id}/sddefault.jpg`);
-  candidates.push(`https://i.ytimg.com/vi/${m.id}/hqdefault.jpg`);
-  candidates.push(`https://i.ytimg.com/vi/${m.id}/mqdefault.jpg`);
-  candidates.push(`https://i.ytimg.com/vi/${m.id}/default.jpg`);
+  if (thumbnail) candidates.push(thumbnail);
+  candidates.push(`https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`);
+  candidates.push(`https://i.ytimg.com/vi/${videoId}/sddefault.jpg`);
+  candidates.push(`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`);
+  candidates.push(`https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`);
+  candidates.push(`https://i.ytimg.com/vi/${videoId}/default.jpg`);
   return candidates;
 };
 
 function MusicTitleWithHoverInner({
   music,
+  videoId: externalVideoId,
+  title: externalTitle,
+  href: externalHref,
   className,
 }: MusicTitleWithHoverProps) {
-  const merged = cn(CHANNEL_LINK_CLASS, className ?? "");
-  const candidates = makeCandidates(music);
+  const videoId = music?.id ?? externalVideoId ?? "";
+  const title = music?.title ?? externalTitle ?? "";
+  const href = externalHref ?? (music ? watchUrl(music.id) : undefined);
+
   const [failedIndices, setFailedIndices] = useState<{
     id: string;
     indices: Set<number>;
   }>({
-    id: music.id,
+    id: videoId,
     indices: new Set(),
   });
 
+  if (!videoId || !title) return null;
+
+  const merged = cn(CHANNEL_LINK_CLASS, className ?? "");
+  const candidates = makeCandidates(videoId, music?.thumbnail);
+
   const activeIndices =
-    failedIndices.id === music.id ? failedIndices.indices : new Set<number>();
+    failedIndices.id === videoId ? failedIndices.indices : new Set<number>();
   const currentSrc = (() => {
     const firstValidIndex = candidates.findIndex(
       (_, i) => !activeIndices.has(i),
@@ -52,9 +65,9 @@ function MusicTitleWithHoverInner({
     const currentIndex = candidates.indexOf(currentSrc);
     if (currentIndex >= 0) {
       setFailedIndices((prev) => ({
-        id: music.id,
+        id: videoId,
         indices:
-          prev.id === music.id
+          prev.id === videoId
             ? new Set([...prev.indices, currentIndex])
             : new Set([currentIndex]),
       }));
@@ -64,19 +77,19 @@ function MusicTitleWithHoverInner({
   return (
     <HoverCard>
       <HoverCardTrigger
-        href={watchUrl(music.id)}
+        href={href}
         target="_blank"
         rel="noopener noreferrer"
         className={cn(merged, "text-sm sm:text-base")}
-        title={music.title}
+        title={title}
       >
-        {music.title}
+        {title}
       </HoverCardTrigger>
       <HoverCardContent className="w-80 p-2">
         <img
-          key={`${music.id}-${currentSrc}`}
+          key={`${videoId}-${currentSrc}`}
           src={currentSrc}
-          alt={`${music.title} のサムネイル`}
+          alt={`${title} のサムネイル`}
           className="w-full h-auto rounded"
           onError={handleError}
           loading="lazy"

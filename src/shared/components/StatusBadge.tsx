@@ -23,15 +23,19 @@ function StatusBadgeInner({ status, music }: StatusBadgeProps) {
     status?.type === "playing" && status.isAdvertisement === true;
   const isTransitioning =
     status?.type === "paused" && status.isTransitioning === true;
+  const isExternalVideo =
+    status?.type === "playing" && status.isExternalVideo === true;
   const dotClass = isAdvertisement
     ? "bg-yellow-500"
     : isTransitioning
       ? "bg-blue-500"
-      : status?.type === "playing"
-        ? "bg-emerald-600"
-        : status?.type === "paused"
-          ? "bg-orange-600"
-          : "bg-gray-500";
+      : isExternalVideo
+        ? "bg-purple-500"
+        : status?.type === "playing"
+          ? "bg-emerald-600"
+          : status?.type === "paused"
+            ? "bg-orange-600"
+            : "bg-gray-500";
   const badgeBg = "bg-gray-100 dark:bg-gray-900/10";
 
   useEffect(() => {
@@ -105,17 +109,43 @@ function StatusBadgeInner({ status, music }: StatusBadgeProps) {
         ) : (
           ((): React.ReactElement => {
             const musicTitle = status.musicTitle;
+            const textColorClass = isExternalVideo
+              ? "text-purple-600 dark:text-purple-400"
+              : "text-gray-800 dark:text-gray-100";
+
             if (typeof musicTitle === "string" && musicTitle.length > 0) {
+              const videoId = status.videoId;
+
+              if (isExternalVideo && videoId) {
+                return (
+                  <span className="inline-flex items-center justify-center gap-1.5 sm:gap-2 text-center min-w-0">
+                    <span
+                      className={`${textColorClass} font-medium whitespace-nowrap text-xs sm:text-sm`}
+                    >
+                      リスト外 再生中:
+                    </span>
+                    <MusicTitleWithHover
+                      videoId={videoId}
+                      title={musicTitle}
+                      href={searchUrl(musicTitle)}
+                      className={`${textColorClass} font-medium hover:underline break-words min-w-0 text-xs sm:text-sm`}
+                    />
+                  </span>
+                );
+              }
+
               return (
                 <span className="inline-flex items-center justify-center gap-1.5 sm:gap-2 text-center min-w-0">
-                  <span className="text-gray-800 dark:text-gray-100 font-medium whitespace-nowrap text-xs sm:text-sm">
+                  <span
+                    className={`${textColorClass} font-medium whitespace-nowrap text-xs sm:text-sm`}
+                  >
                     再生中:
                   </span>
                   <a
                     href={searchUrl(musicTitle)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-gray-800 dark:text-gray-100 font-medium hover:underline break-words min-w-0 text-xs sm:text-sm"
+                    className={`${textColorClass} font-medium hover:underline break-words min-w-0 text-xs sm:text-sm`}
                     title={musicTitle}
                   >
                     {musicTitle}
@@ -124,7 +154,9 @@ function StatusBadgeInner({ status, music }: StatusBadgeProps) {
               );
             }
             return (
-              <span className="text-gray-800 dark:text-gray-100 font-medium text-xs sm:text-sm">
+              <span
+                className={`${textColorClass} font-medium text-xs sm:text-sm`}
+              >
                 再生中
               </span>
             );

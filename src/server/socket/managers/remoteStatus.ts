@@ -6,7 +6,9 @@ export function isRemoteStatusEqual(a: RemoteStatus, b: RemoteStatus): boolean {
     return (
       a.musicTitle === b.musicTitle &&
       a.isAdvertisement === b.isAdvertisement &&
-      a.adTimestamp === b.adTimestamp
+      a.adTimestamp === b.adTimestamp &&
+      a.isExternalVideo === b.isExternalVideo &&
+      a.videoId === b.videoId
     );
   }
   if (a.type === "paused" && b.type === "paused")

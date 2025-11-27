@@ -10,6 +10,8 @@ export type RemoteStatus =
       musicId?: string;
       isAdvertisement?: boolean;
       adTimestamp?: number;
+      isExternalVideo?: boolean;
+      videoId?: string;
     }
   | {
       type: "paused";
@@ -20,7 +22,6 @@ export type RemoteStatus =
   | {
       type: "closed";
     };
-
 export interface Music {
   title: string;
   channelName: string;

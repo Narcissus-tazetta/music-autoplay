@@ -187,6 +187,7 @@ export function makeConnectionHandler(
         manager,
         musicService.repository,
         musicService.emitter,
+        deps.youtubeService,
       );
     }
   };

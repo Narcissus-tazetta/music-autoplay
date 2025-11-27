@@ -1,16 +1,6 @@
 {
   "items": [
     {
-      "id": "VgLNfVougpI",
-      "title": "【Official Music Video】だれかぬいてくれ / DAREKANUITEKURE",
-      "channelName": "ぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬぬ",
-      "channelId": "UCoCmygyRLVNZgawE-Nkvccg",
-      "duration": "00:03:22",
-      "requesterHash": "5a0d6fc0ec2bb4bd487a473827a6d2254411bc750e5a412a7a915c9c2e2326f6",
-      "requesterName": "さかな",
-      "requestedAt": "2025-11-27T01:20:07.848Z"
-    },
-    {
       "id": "BI9Ue6JwJic",
       "title": "DECO*27 - チェリーポップ feat. 初音ミク",
       "channelName": "DECO*27",
@@ -19,7 +9,57 @@
       "requesterHash": "5a0d6fc0ec2bb4bd487a473827a6d2254411bc750e5a412a7a915c9c2e2326f6",
       "requesterName": "さかな",
       "requestedAt": "2025-11-27T01:20:08.907Z"
+    },
+    {
+      "id": "g0JEUPfmu9c",
+      "title": "DECO*27 - カイコ feat. 初音ミク",
+      "channelName": "DECO*27",
+      "channelId": "UCGmO0S4S-AunjRdmxA6TQYg",
+      "duration": "00:02:39",
+      "requesterHash": "5a0d6fc0ec2bb4bd487a473827a6d2254411bc750e5a412a7a915c9c2e2326f6",
+      "requesterName": "さかな",
+      "requestedAt": "2025-11-27T02:34:49.553Z"
+    },
+    {
+      "id": "vYyL5fedc_4",
+      "title": "終わってる料理番組／重音テト&初音ミク",
+      "channelName": "かてらざわ",
+      "channelId": "UCv0xLMeNJhh7J1jEDz3hOAQ",
+      "duration": "00:02:24",
+      "requesterHash": "5a0d6fc0ec2bb4bd487a473827a6d2254411bc750e5a412a7a915c9c2e2326f6",
+      "requesterName": "さかな",
+      "requestedAt": "2025-11-27T02:34:57.534Z"
+    },
+    {
+      "id": "TC80uw4HgCw",
+      "title": "『マジック・メイド』 / feat.重音テトSV",
+      "channelName": "MIMI",
+      "channelId": "UCam3IAA-nyfxRL8_wDQ35VA",
+      "duration": "00:02:39",
+      "requesterHash": "5a0d6fc0ec2bb4bd487a473827a6d2254411bc750e5a412a7a915c9c2e2326f6",
+      "requesterName": "さかな",
+      "requestedAt": "2025-11-27T02:35:04.291Z"
+    },
+    {
+      "id": "3iUgKH8c7p4",
+      "title": "いますぐ輪廻 / 初音ミク",
+      "channelName": "なきそ",
+      "channelId": "UC7d3Y_v5O202eo006uvvPzw",
+      "duration": "00:02:03",
+      "requesterHash": "5a0d6fc0ec2bb4bd487a473827a6d2254411bc750e5a412a7a915c9c2e2326f6",
+      "requesterName": "さかな",
+      "requestedAt": "2025-11-27T02:35:09.635Z"
+    },
+    {
+      "id": "RoY_ZoWe-eI",
+      "title": "Fujii Kaze - Love Like This [Official video]",
+      "channelName": "Fujii Kaze",
+      "channelId": "UCNIy6zQyP7SuLEIaiwymfUA",
+      "duration": "00:04:29",
+      "requesterHash": "5a0d6fc0ec2bb4bd487a473827a6d2254411bc750e5a412a7a915c9c2e2326f6",
+      "requesterName": "さかな",
+      "requestedAt": "2025-11-27T02:35:20.486Z"
     }
   ],
-  "lastUpdated": "2025-11-27T01:23:51.928Z"
+  "lastUpdated": "2025-11-27T02:35:20.486Z"
 }

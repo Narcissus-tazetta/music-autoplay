@@ -10,6 +10,16 @@ jobs:
   quality:
     runs-on: ubuntu-latest
 
+    env:
+      NODE_ENV: test
+      YOUTUBE_API_KEY: test-youtube-api-key-for-ci
+      SESSION_SECRET: test-session-secret-at-least-32-chars-long-for-ci
+      ADMIN_SECRET: test-admin-secret-must-be-at-least-32-characters-long-for-ci
+      GOOGLE_CLIENT_ID: test-google-client-id-for-ci
+      GOOGLE_CLIENT_SECRET: test-google-client-secret-for-ci
+      CLIENT_URL: http://localhost:3000
+      LOG_LEVEL: error
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

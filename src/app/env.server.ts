@@ -8,6 +8,8 @@ const NODE_ENV = (process.env.NODE_ENV ?? "development") as
   | "test"
   | "production";
 
+const isTest = NODE_ENV === "test";
+
 const clientUrlDefault =
   process.env.CLIENT_URL ??
   (NODE_ENV === "production"
@@ -31,18 +33,28 @@ const serverEnvSchema = z
     ),
     LOG_LEVEL: z
       .enum(["error", "warn", "info", "http", "verbose", "debug", "silly"])
-      .default(NODE_ENV === "production" ? "info" : "debug"),
+      .default(NODE_ENV === "production" ? "info" : isTest ? "error" : "debug"),
     SHUTDOWN_TIMEOUT_MS: z.preprocess(
       (v) => toNumber(v),
       z.number().int().nonnegative().default(5000),
     ),
 
-    YOUTUBE_API_KEY: z.string().min(1, "YOUTUBE_API_KEY is required"),
-    SESSION_SECRET: z.string().min(1, "SESSION_SECRET is required"),
-    ADMIN_SECRET: z.string().min(32, "ADMIN_SECRET must be >= 32 characters"),
+    YOUTUBE_API_KEY: isTest
+      ? z.string().default("test-youtube-api-key")
+      : z.string().min(1, "YOUTUBE_API_KEY is required"),
+    SESSION_SECRET: isTest
+      ? z.string().default("test-session-secret-at-least-32-chars")
+      : z.string().min(1, "SESSION_SECRET is required"),
+    ADMIN_SECRET: isTest
+      ? z.string().default("test-admin-secret-32-characters-long")
+      : z.string().min(32, "ADMIN_SECRET must be >= 32 characters"),
 
-    GOOGLE_CLIENT_ID: z.string().min(1, "GOOGLE_CLIENT_ID is required"),
-    GOOGLE_CLIENT_SECRET: z.string().min(1, "GOOGLE_CLIENT_SECRET is required"),
+    GOOGLE_CLIENT_ID: isTest
+      ? z.string().default("test-google-client-id")
+      : z.string().min(1, "GOOGLE_CLIENT_ID is required"),
+    GOOGLE_CLIENT_SECRET: isTest
+      ? z.string().default("test-google-client-secret")
+      : z.string().min(1, "GOOGLE_CLIENT_SECRET is required"),
 
     CLIENT_URL: z.string().url().default(clientUrlDefault),
     CORS_ORIGINS: z.string().optional(),
@@ -100,11 +112,10 @@ export const SERVER_ENV = (() => {
       "Environment variable ADMIN_MAX_ATTEMPTS is deprecated. Please use RATE_LIMIT_MAX_ATTEMPTS instead.",
     );
   }
-  if (process.env.ADMIN_WINDOW_MS !== undefined) {
+  if (process.env.ADMIN_WINDOW_MS !== undefined)
     throw new Error(
       "Environment variable ADMIN_WINDOW_MS is deprecated. Please use RATE_LIMIT_WINDOW_MS instead.",
     );
-  }
 
   const parsed = serverEnvSchema.safeParse({
     NODE_ENV: process.env.NODE_ENV,
