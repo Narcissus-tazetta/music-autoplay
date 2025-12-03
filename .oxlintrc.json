@@ -7,7 +7,9 @@
     "suspicious": "error"
   },
   "rules": {
-    "sort-imports": "off"
+    "sort-imports": "off",
+    "no-ternary": "off",
+    "curly": "off"
   },
   "settings": {
     "jsx-a11y": {

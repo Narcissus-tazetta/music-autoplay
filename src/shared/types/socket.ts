@@ -4,20 +4,30 @@ export interface S2C {
     musicAdded(music: Music): void;
     musicRemoved(musicId: string): void;
     remoteStatusUpdated(state: RemoteStatus): void;
-    initMusics?(musics: Array<Music & { url: string }>): void;
-    url_list?(musics: Array<Music & { url: string }>): void;
+    initMusics?(musics: (Music & { url: string })[]): void;
+    url_list?(musics: (Music & { url: string })[]): void;
     addMusic?(music: Music & { url?: string }): void;
     deleteMusic?(url: string): void;
     navigate_to_video?(payload: { videoId: string; url: string }): void;
-    next_video_navigate?(payload: { nextUrl: string; tabId?: number; videoId?: string }): void;
+    next_video_navigate?(payload: {
+        nextUrl: string;
+        tabId?: number;
+        videoId?: string;
+    }): void;
     no_next_video?(payload: { tabId?: number }): void;
 }
 
 export interface C2S {
     getAllMusics(callback: (musics: Music[]) => void): void;
     getRemoteStatus(callback: (state: RemoteStatus) => void): void;
-    adminAuth(token: string, callback: (result: { success: boolean; error?: string }) => void): void;
-    adminAuthByQuery(token: string, callback: (result: { success: boolean; error?: string }) => void): void;
+    adminAuth(
+        token: string,
+        callback: (result: { success: boolean; error?: string }) => void,
+    ): void;
+    adminAuthByQuery(
+        token: string,
+        callback: (result: { success: boolean; error?: string }) => void,
+    ): void;
     addMusic?(
         url: string,
         requesterHash?: string,

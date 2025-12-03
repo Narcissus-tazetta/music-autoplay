@@ -1,10 +1,13 @@
 import { hasOwnProperty } from './typeGuards';
 
-export type ApiSuccess<T = unknown> = { success: true; data: T };
-export type ApiError = {
+export interface ApiSuccess<T = unknown> {
+    success: true;
+    data: T;
+}
+export interface ApiError {
     success: false;
     error: { code?: string; message: string; details?: unknown };
-};
+}
 export type NormalizedApiResponse<T> = ApiSuccess<T> | ApiError;
 
 function isNormalizedResponse(
@@ -20,13 +23,13 @@ function isNormalizedResponse(
 async function parseJsonSafe(resp: Response): Promise<unknown> {
     try {
         const t = await resp.text();
-        if (!t) return null;
+        if (!t) return;
         return JSON.parse(t);
     } catch {
         try {
             return await resp.json();
         } catch {
-            return null;
+            return;
         }
     }
 }
@@ -38,7 +41,7 @@ export async function normalizeApiResponse<T = unknown>(
 
     if (isNormalizedResponse(parsed)) {
         const p = parsed as { success: boolean; data?: unknown; error?: unknown };
-        if (p.success) return { success: true, data: p.data as T };
+        if (p.success) return { data: p.data as T, success: true };
         const maybeErr: unknown = p.error;
         let code: string | undefined;
         if (
@@ -78,15 +81,15 @@ export async function normalizeApiResponse<T = unknown>(
             ? (maybeErr as Record<string, unknown>).details
             : undefined;
 
-        return { success: false, error: { code, message, details } };
+        return { error: { code, details, message }, success: false };
     }
 
-    if (resp.ok) return { success: true, data: parsed as T };
+    if (resp.ok) return { data: parsed as T, success: true };
 
     const message = typeof parsed === 'string' ? parsed : resp.statusText || 'request failed';
     return {
+        error: { code: String(resp.status), details: parsed, message },
         success: false,
-        error: { code: String(resp.status), message, details: parsed },
     };
 }
 

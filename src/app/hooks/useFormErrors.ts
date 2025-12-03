@@ -15,7 +15,7 @@ const EMPTY_RESULT: FormErrorResult = {
 };
 
 function isRecord(value: unknown): value is UnknownRecord {
-    return value != null && typeof value === 'object';
+    return value != undefined && typeof value === 'object';
 }
 
 function extractDeepestData(data: unknown): unknown {
@@ -51,17 +51,17 @@ function extractFormErrors(data: UnknownRecord): FormErrorResult | null {
         if (errorString) return { formErrorsString: errorString, parsedAction: undefined };
     }
 
-    return null;
+    return;
 }
 
 function extractApiError(data: UnknownRecord): FormErrorResult | null {
-    if (data.success !== false || !isRecord(data.error)) return null;
+    if (data.success !== false || !isRecord(data.error)) return;
 
     const errObj = data.error;
-    const code = typeof errObj.code === 'string' ? errObj.code : null;
+    const code = typeof errObj.code === 'string' ? errObj.code : undefined;
     const message = typeof errObj.message === 'string' ? errObj.message : 'エラー';
 
-    const parsed = parseApiErrorForUI({ code, message, details: errObj.details });
+    const parsed = parseApiErrorForUI({ code, details: errObj.details, message });
 
     const formErrorsString = parsed.kind === 'validation' && 'fieldErrors' in parsed
         ? Object.values(parsed.fieldErrors as Record<string, string>).join(' ')

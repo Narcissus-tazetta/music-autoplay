@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 import { extractErrorInfo, safeString } from './core';
 
 export type ReplyOptions =

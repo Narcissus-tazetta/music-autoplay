@@ -9,8 +9,8 @@ describe('RateLimiterManager', () => {
 
     beforeEach(() => {
         manager = RateLimiterManager.getInstance();
-        limiter1 = new RateLimiter(5, 60000);
-        limiter2 = new RateLimiter(10, 60000);
+        limiter1 = new RateLimiter(5, 60_000);
+        limiter2 = new RateLimiter(10, 60_000);
     });
 
     afterEach(() => {

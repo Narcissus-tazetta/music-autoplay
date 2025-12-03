@@ -5,11 +5,11 @@ import logger from '../../logger';
 import { getConfig } from '../../utils/configUtils';
 import { logCorsViolation } from '../../utils/securityLogger';
 
-export type CorsConfig = {
+export interface CorsConfig {
     origins: string[];
     allowAllOrigins: boolean;
     allowExtensionOrigins: boolean;
-};
+}
 
 export function buildCorsConfig(): CorsConfig {
     const config = getConfig();
@@ -52,14 +52,14 @@ export function buildCorsConfig(): CorsConfig {
 
     if (config.nodeEnv !== 'production') {
         logger.info('SocketServerInstance CORS config', {
-            origins,
             allowAllOrigins,
             allowExtensionOrigins,
             environment: config.nodeEnv,
+            origins,
         });
     }
 
-    return { origins, allowAllOrigins, allowExtensionOrigins };
+    return { allowAllOrigins, allowExtensionOrigins, origins };
 }
 
 export function makeOriginChecker(
@@ -74,13 +74,13 @@ export function makeOriginChecker(
             callback: (err: Error | null, allow?: boolean) => void,
         ) => {
             const decision = { allowed: false, reason: 'unknown' };
-            if (origin == null) {
+            if (origin == undefined) {
                 decision.allowed = true;
                 decision.reason = 'no-origin (server/API)';
                 logger.info('socket connection: no origin (server/API)', {
                     timestamp: new Date().toISOString(),
                 });
-                callback(null, true);
+                callback(undefined, true);
                 return;
             }
 
@@ -99,13 +99,13 @@ export function makeOriginChecker(
             decision.reason = 'allowed by config';
 
             logger.info('socket connection: origin allowed', {
-                origin,
                 decision,
+                origin,
                 timestamp: new Date().toISOString(),
             });
 
             if (cfg.allowAllOrigins) {
-                callback(null, true);
+                callback(undefined, true);
                 return;
             }
 
@@ -120,7 +120,7 @@ export function makeOriginChecker(
                 }
 
                 if (isAllowed) {
-                    callback(null, true);
+                    callback(undefined, true);
                     return;
                 }
 
@@ -130,10 +130,10 @@ export function makeOriginChecker(
                 logCorsViolation({} as Request, origin, decision.reason);
 
                 logger.warn('CORS origin rejected', {
-                    origin,
-                    allowedOrigins: cfg.origins,
                     allowExtensionOrigins: cfg.allowExtensionOrigins,
+                    allowedOrigins: cfg.origins,
                     decision,
+                    origin,
                 });
                 callback(new Error('CORS origin not allowed'));
             }

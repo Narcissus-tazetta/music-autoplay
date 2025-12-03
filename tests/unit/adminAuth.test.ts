@@ -1,7 +1,7 @@
 import { RateLimiter } from '@/server/services/rateLimiter';
 import { createAdminAuthHandlers } from '@/server/socket/handlers/adminHandlers';
 import { describe, expect, test } from 'bun:test';
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 import type { Socket } from 'socket.io';
 
 describe('Admin Auth Handlers', () => {
@@ -11,12 +11,12 @@ describe('Admin Auth Handlers', () => {
 
     describe('createAdminAuthHandlers', () => {
         test('should create both adminAuth and adminAuthByQuery handlers', () => {
-            const rateLimiter = new RateLimiter(10, 60000);
+            const rateLimiter = new RateLimiter(10, 60_000);
             const handlers = createAdminAuthHandlers(
                 testHash,
                 rateLimiter,
                 10,
-                60000,
+                60_000,
             );
 
             expect(handlers.adminAuth).toBeDefined();
@@ -28,23 +28,23 @@ describe('Admin Auth Handlers', () => {
 
     describe('adminAuth handler', () => {
         test('should return success for valid token', async () => {
-            const rateLimiter = new RateLimiter(10, 60000);
+            const rateLimiter = new RateLimiter(10, 60_000);
             const handlers = createAdminAuthHandlers(
                 testHash,
                 rateLimiter,
                 10,
-                60000,
+                60_000,
             );
 
             const mockSocket = {
-                id: 'socket-1',
                 handshake: { address: '127.0.0.1' },
+                id: 'socket-1',
                 on: () => {},
             } as unknown as Socket;
 
             const mockContext = {
-                socketId: 'socket-1',
                 connectionId: 'conn-1',
+                socketId: 'socket-1',
             };
 
             // ハンドラのインスタンスを作成する
@@ -56,12 +56,12 @@ describe('Admin Auth Handlers', () => {
         });
 
         test('should return error for invalid token', () => {
-            const rateLimiter = new RateLimiter(10, 60000);
+            const rateLimiter = new RateLimiter(10, 60_000);
             const handlers = createAdminAuthHandlers(
                 testHash,
                 rateLimiter,
                 10,
-                60000,
+                60_000,
             );
 
             const invalidHash = createHash('sha256')
@@ -74,12 +74,17 @@ describe('Admin Auth Handlers', () => {
 
     describe('rate limiting', () => {
         test('should apply rate limit based on IP address', () => {
-            const rateLimiter = new RateLimiter(3, 60000);
-            const handlers = createAdminAuthHandlers(testHash, rateLimiter, 3, 60000);
+            const rateLimiter = new RateLimiter(3, 60_000);
+            const handlers = createAdminAuthHandlers(
+                testHash,
+                rateLimiter,
+                3,
+                60_000,
+            );
 
             const mockSocket = {
-                id: 'socket-1',
                 handshake: { address: '192.168.1.1' },
+                id: 'socket-1',
                 on: () => {},
             } as unknown as Socket;
 
@@ -91,12 +96,17 @@ describe('Admin Auth Handlers', () => {
         });
 
         test('should fallback to socket.id when IP not available', () => {
-            const rateLimiter = new RateLimiter(3, 60000);
-            const handlers = createAdminAuthHandlers(testHash, rateLimiter, 3, 60000);
+            const rateLimiter = new RateLimiter(3, 60_000);
+            const handlers = createAdminAuthHandlers(
+                testHash,
+                rateLimiter,
+                3,
+                60_000,
+            );
 
             const mockSocket = {
-                id: 'socket-1',
                 handshake: { address: undefined },
+                id: 'socket-1',
                 on: () => {},
             } as unknown as Socket;
 
@@ -107,8 +117,13 @@ describe('Admin Auth Handlers', () => {
         });
 
         test('should track different IPs independently', () => {
-            const rateLimiter = new RateLimiter(3, 60000);
-            const handlers = createAdminAuthHandlers(testHash, rateLimiter, 3, 60000);
+            const rateLimiter = new RateLimiter(3, 60_000);
+            const handlers = createAdminAuthHandlers(
+                testHash,
+                rateLimiter,
+                3,
+                60_000,
+            );
 
             expect(rateLimiter.tryConsume('192.168.1.1')).toBe(true);
             expect(rateLimiter.tryConsume('192.168.1.1')).toBe(true);
@@ -155,7 +170,7 @@ describe('Admin Auth Handlers', () => {
 
     describe('retryAfter calculation', () => {
         test('should calculate retryAfter when rate limit exceeded', () => {
-            const rateLimiter = new RateLimiter(3, 60000);
+            const rateLimiter = new RateLimiter(3, 60_000);
 
             rateLimiter.tryConsume('192.168.1.1');
             rateLimiter.tryConsume('192.168.1.1');
@@ -166,7 +181,7 @@ describe('Admin Auth Handlers', () => {
 
             if (oldest) {
                 const now = Date.now();
-                const retryAfter = Math.ceil((60000 - (now - oldest)) / 1000);
+                const retryAfter = Math.ceil((60_000 - (now - oldest)) / 1000);
                 expect(retryAfter).toBeGreaterThan(0);
                 expect(retryAfter).toBeLessThanOrEqual(60);
             }

@@ -14,7 +14,7 @@ export function hasOwnProperty(
     obj: Record<string, unknown>,
     key: string,
 ): boolean {
-    return Object.prototype.hasOwnProperty.call(obj, key);
+    return Object.hasOwn(obj, key);
 }
 
 export function getStructuredClone(): ((x: unknown) => unknown) | undefined {

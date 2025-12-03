@@ -24,12 +24,12 @@ export class PgHybridStore implements Store {
     addSync(m: Music) {
         this.current.items = this.current.items || [];
         const idx = this.current.items.findIndex(x => x.id === m.id);
-        if (idx >= 0) this.current.items[idx] = m;
+        if (idx !== -1) this.current.items[idx] = m;
         else this.current.items.push(m);
         this.current.lastUpdated = new Date().toISOString();
-        const p = this.pg.add(m).catch((e: unknown) =>
+        const p = this.pg.add(m).catch(error =>
             logger.warn('PgHybridStore: failed to add', {
-                error: e,
+                error: error,
             })
         );
         this.pendingWrites.push(p);
@@ -45,9 +45,9 @@ export class PgHybridStore implements Store {
     removeSync(id: string) {
         this.current.items = (this.current.items || []).filter(x => x.id !== id);
         this.current.lastUpdated = new Date().toISOString();
-        const p = this.pg.remove(id).catch((e: unknown) =>
+        const p = this.pg.remove(id).catch(error =>
             logger.warn('PgHybridStore: failed to remove', {
-                error: e,
+                error: error,
             })
         );
         this.pendingWrites.push(p);
@@ -62,9 +62,9 @@ export class PgHybridStore implements Store {
 
     clearSync() {
         this.current = { items: [], lastUpdated: new Date().toISOString() };
-        const p = this.pg.clear().catch((e: unknown) =>
+        const p = this.pg.clear().catch(error =>
             logger.warn('PgHybridStore: failed to clear', {
-                error: e,
+                error: error,
             })
         );
         this.pendingWrites.push(p);
@@ -80,9 +80,9 @@ export class PgHybridStore implements Store {
     async flush() {
         try {
             await Promise.all(this.pendingWrites);
-        } catch (e: unknown) {
+        } catch (error) {
             logger.warn('PgHybridStore: flush encountered errors', {
-                error: e,
+                error: error,
             });
         }
     }

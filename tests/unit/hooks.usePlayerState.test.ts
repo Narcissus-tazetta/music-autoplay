@@ -4,11 +4,11 @@ import { describe, expect, test } from 'bun:test';
 describe('usePlayerState hooks', () => {
     test('RemoteStatus type is properly defined', () => {
         const playingStatus: RemoteStatus = {
-            type: 'playing',
-            musicTitle: 'Test Song',
             currentTime: 10,
             duration: 100,
             lastProgressUpdate: Date.now(),
+            musicTitle: 'Test Song',
+            type: 'playing',
         };
         expect(playingStatus.type).toBe('playing');
         expect(playingStatus.musicTitle).toBe('Test Song');
@@ -16,9 +16,9 @@ describe('usePlayerState hooks', () => {
 
     test('paused status has correct shape', () => {
         const pausedStatus: RemoteStatus = {
-            type: 'paused',
-            musicTitle: 'Test Song',
             musicId: 'test-id',
+            musicTitle: 'Test Song',
+            type: 'paused',
         };
         expect(pausedStatus.type).toBe('paused');
         expect(pausedStatus.musicId).toBe('test-id');
@@ -32,7 +32,7 @@ describe('usePlayerState hooks', () => {
     });
 
     test('duration parsing logic for HH:MM:SS', () => {
-        const parts = '1:23:45'.split(':').map(p => parseInt(p, 10));
+        const parts = '1:23:45'.split(':').map(p => Number.parseInt(p, 10));
         if (parts.every(p => !isNaN(p)) && parts.length === 3) {
             const duration = parts[0] * 3600 + parts[1] * 60 + parts[2];
             expect(duration).toBe(5025);
@@ -40,7 +40,7 @@ describe('usePlayerState hooks', () => {
     });
 
     test('duration parsing logic for MM:SS', () => {
-        const parts = '3:45'.split(':').map(p => parseInt(p, 10));
+        const parts = '3:45'.split(':').map(p => Number.parseInt(p, 10));
         if (parts.every(p => !isNaN(p)) && parts.length === 2) {
             const duration = parts[0] * 60 + parts[1];
             expect(duration).toBe(225);

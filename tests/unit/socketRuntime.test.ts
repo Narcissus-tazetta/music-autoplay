@@ -1,7 +1,7 @@
 import type { Server as IOServer } from 'socket.io';
 import { MusicService } from '../../src/server/music/musicService';
 import type { Store } from '../../src/server/persistence';
-import { type WindowCloseManager } from '../../src/server/services/windowCloseManager';
+import type { WindowCloseManager } from '../../src/server/services/windowCloseManager';
 import type { YouTubeService } from '../../src/server/services/youtubeService';
 import { SocketManager } from '../../src/server/socket/managers/manager';
 import { SocketRuntime } from '../../src/server/socket/managers/runtime';
@@ -17,17 +17,17 @@ describe('SocketRuntime', () => {
         const youtubeService = {} as unknown as YouTubeService;
         const fileStore = {
             add: () => {},
-            remove: () => {},
-            load: () => [],
             clear: () => {},
+            load: () => [],
+            remove: () => {},
         } as unknown as Store;
         const timerManager = {
-            start: () => {},
             clear: () => {},
+            start: () => {},
         } as unknown as TimerManager;
         const windowCloseManager = {
-            processEvent: () => ({ processed: false }),
             clearForOrigin: () => {},
+            processEvent: () => ({ processed: false }),
         } as unknown as InstanceType<typeof WindowCloseManager>;
 
         const runtime = new SocketRuntime(
@@ -37,7 +37,7 @@ describe('SocketRuntime', () => {
             fileStore,
             timerManager,
             windowCloseManager,
-            { debounceMs: 250, graceMs: 5000, inactivityMs: 10000 },
+            { debounceMs: 250, graceMs: 5000, inactivityMs: 10_000 },
         );
 
         expect(runtime.getManager()).toBeUndefined();
@@ -53,17 +53,17 @@ describe('SocketRuntime', () => {
         const youtubeService = {} as unknown as YouTubeService;
         const fileStore = {
             add: () => {},
-            remove: () => {},
-            load: () => [],
             clear: () => {},
+            load: () => [],
+            remove: () => {},
         } as unknown as Store;
         const timerManager = {
-            start: () => {},
             clear: () => {},
+            start: () => {},
         } as unknown as TimerManager;
         const windowCloseManager = {
-            processEvent: () => ({ processed: false }),
             clearForOrigin: () => {},
+            processEvent: () => ({ processed: false }),
         } as unknown as InstanceType<typeof WindowCloseManager>;
 
         const runtime = new SocketRuntime(
@@ -73,7 +73,7 @@ describe('SocketRuntime', () => {
             fileStore,
             timerManager,
             windowCloseManager,
-            { debounceMs: 250, graceMs: 5000, inactivityMs: 10000 },
+            { debounceMs: 250, graceMs: 5000, inactivityMs: 10_000 },
         );
 
         const svcA = runtime.getMusicService();
@@ -89,17 +89,17 @@ describe('SocketRuntime', () => {
         const youtubeService = {} as unknown as YouTubeService;
         const fileStore = {
             add: () => {},
-            remove: () => {},
-            load: () => [],
             clear: () => {},
+            load: () => [],
+            remove: () => {},
         } as unknown as Store;
         const timerManager = {
-            start: () => {},
             clear: () => {},
+            start: () => {},
         } as unknown as TimerManager;
         const windowCloseManager = {
-            processEvent: () => ({ processed: false }),
             clearForOrigin: () => {},
+            processEvent: () => ({ processed: false }),
         } as unknown as InstanceType<typeof WindowCloseManager>;
 
         const runtime = new SocketRuntime(
@@ -109,7 +109,7 @@ describe('SocketRuntime', () => {
             fileStore,
             timerManager,
             windowCloseManager,
-            { debounceMs: 250, graceMs: 5000, inactivityMs: 10000 },
+            { debounceMs: 250, graceMs: 5000, inactivityMs: 10_000 },
         );
 
         runtime.emit('testEvent', { foo: 'bar' });
@@ -122,7 +122,7 @@ describe('SocketRuntime', () => {
         const musicDB = new Map();
         const youtubeService = {} as any;
         const fileStore = { add: () => {}, remove: () => {} } as any;
-        const timerManager = { start: () => {}, clear: () => {} } as any;
+        const timerManager = { clear: () => {}, start: () => {} } as any;
         const windowCloseManager = {} as any;
 
         const runtime = new SocketRuntime(
@@ -132,7 +132,7 @@ describe('SocketRuntime', () => {
             fileStore,
             timerManager,
             windowCloseManager,
-            { debounceMs: 250, graceMs: 5000, inactivityMs: 10000 },
+            { debounceMs: 250, graceMs: 5000, inactivityMs: 10_000 },
         );
         const mgr = runtime.createManager();
         (mgr as any).update({ type: 'open' }, 'test');

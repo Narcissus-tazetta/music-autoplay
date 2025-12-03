@@ -7,12 +7,12 @@ import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import { getConfigService } from './config/configService';
 import { extractMetaFields, normalizeMetaForPrint } from './loggerMeta';
-export type SerializedError = {
+export interface SerializedError {
     message: string;
     code?: string;
     details?: unknown;
     stack?: string | undefined;
-};
+}
 
 export function serializeError(err: unknown): SerializedError {
     try {
@@ -24,44 +24,46 @@ export function serializeError(err: unknown): SerializedError {
                 const obj = err as Record<string, unknown>;
                 if (hasOwnProperty(obj, 'details')) details = obj.details;
                 else {
-                    const keys = Object.keys(obj).filter(k => !['message', 'stack', 'code'].includes(k));
+                    const keys = Object.keys(obj).filter(
+                        k => !['message', 'stack', 'code'].includes(k),
+                    );
                     if (keys.length) {
                         const out: Record<string, unknown> = {};
                         for (const k of keys) out[k] = obj[k];
                         details = out;
                     }
                 }
-            } catch (_e: unknown) {
-                void _e;
+            } catch (error) {
+                void error;
             }
         }
 
         return {
-            message: info.message,
             code: info.code,
-            stack: info.stack,
             details,
+            message: info.message,
+            stack: info.stack,
         };
-    } catch (_e: unknown) {
-        void _e;
+    } catch (error) {
+        void error;
         try {
-            return { message: String(err), details: undefined };
+            return { details: undefined, message: String(err) };
         } catch {
             return {
-                message: Object.prototype.toString.call(err),
                 details: undefined,
+                message: Object.prototype.toString.call(err),
             };
         }
     }
 }
 export type AppLogMeta = Record<string, unknown>;
 export type AppLogFn = (msg: string, meta?: AppLogMeta) => void;
-export type AppLogger = {
+export interface AppLogger {
     info: AppLogFn;
     warn: AppLogFn;
     error: AppLogFn;
     debug: AppLogFn;
-};
+}
 
 const configService = getConfigService();
 const logConfig = configService.getLoggingConfig();
@@ -85,14 +87,14 @@ function safeSerialize(obj: unknown): unknown {
 
     try {
         return JSON.parse(JSON.stringify(obj, replacer)) as unknown;
-    } catch (err: unknown) {
+    } catch {
         try {
-            return util.inspect(obj, { depth: 4, colors: false });
-        } catch (_err2: unknown) {
+            return util.inspect(obj, { colors: false, depth: 4 });
+        } catch (error) {
             try {
-                console.debug('safeSerialize failed', String(_err2), String(err));
-            } catch (_e: unknown) {
-                void _e;
+                console.debug('safeSerialize failed', String(error), String(error));
+            } catch (error) {
+                void error;
             }
             return '[unserializable]';
         }
@@ -109,16 +111,18 @@ const baseFormat = isProd
                 ? (info as unknown as Record<string, unknown>)
                 : { message: String(info) };
 
-            const timestamp = typeof recRecord.timestamp === 'string' ? recRecord.timestamp : new Date().toISOString();
+            const timestamp = typeof recRecord.timestamp === 'string'
+                ? recRecord.timestamp
+                : new Date().toISOString();
             const rawLevel = recRecord.level;
             const level = typeof rawLevel === 'string'
                 ? rawLevel
-                : typeof rawLevel === 'number'
-                ? String(rawLevel)
-                : util.inspect(rawLevel, { depth: 1, colors: false });
+                : (typeof rawLevel === 'number'
+                    ? String(rawLevel)
+                    : util.inspect(rawLevel, { colors: false, depth: 1 }));
             const message = typeof recRecord.message === 'string'
                 ? recRecord.message
-                : util.inspect(recRecord.message, { depth: 2, colors: false });
+                : util.inspect(recRecord.message, { colors: false, depth: 2 });
             const standard = new Set(['level', 'message', 'timestamp']);
             const metaKeys = Object.keys(recRecord).filter(k => !standard.has(k));
 
@@ -138,28 +142,37 @@ const baseFormat = isProd
 
                     const stateColor = (s?: string) => {
                         switch (s) {
-                            case 'playing':
+                            case 'playing': {
                                 return chalk.blue.bold(s);
-                            case 'paused':
+                            }
+                            case 'paused': {
                                 return chalk.hex('#FFA500')(s);
+                            }
                             case 'stop':
                             case 'stopped':
                             case 'error':
                             case 'closed':
-                            case 'window_close':
+                            case 'window_close': {
                                 return chalk.red.bold(s);
-                            case 'queued':
+                            }
+                            case 'queued': {
                                 return chalk.yellow(s);
-                            default:
+                            }
+                            default: {
                                 return chalk.gray(String(s));
+                            }
                         }
                     };
 
                     if (extractedState !== undefined || extractedUrl !== undefined) {
-                        const urlStr = extractedUrl ? chalk.hex('#8A2BE2')(extractedUrl) : '';
+                        const urlStr = extractedUrl
+                            ? chalk.hex('#8A2BE2')(extractedUrl)
+                            : '';
                         const stateStr = extractedState ? stateColor(extractedState) : '';
 
-                        const restStr = Object.keys(rest).length ? JSON.stringify(rest) : '';
+                        const restStr = Object.keys(rest).length
+                            ? JSON.stringify(rest)
+                            : '';
 
                         const label = consumedKey === 'status'
                             ? 'status'
@@ -174,17 +187,17 @@ const baseFormat = isProd
                     } else {
                         metaStr = typeof metaObj === 'string' ? metaObj : JSON.stringify(metaObj);
                     }
-                } catch (e: unknown) {
+                } catch (error) {
                     try {
                         metaStr = typeof metaObj === 'string' ? metaObj : JSON.stringify(metaObj);
-                    } catch (_e: unknown) {
-                        void _e;
+                    } catch (error) {
+                        void error;
                         metaStr = String(metaObj);
                     }
                     try {
-                        console.debug('logger meta stringify fallback', e);
-                    } catch (_e: unknown) {
-                        void _e;
+                        console.debug('logger meta stringify fallback', error);
+                    } catch (error) {
+                        void error;
                     }
                 }
             }
@@ -197,12 +210,8 @@ const transports: winston.transport[] = [new winston.transports.Console()];
 
 if (isProd) {
     const fileRotateTransport = new DailyRotateFile({
-        filename: 'logs/app-%DATE%.log',
         datePattern: 'YYYY-MM-DD',
-        zippedArchive: true,
-        maxFiles: '30d',
-        level: configuredLogLevel,
-        utc: true,
+        filename: 'logs/app-%DATE%.log',
         format: winston.format.combine(
             winston.format(info => {
                 const rec: Record<string, unknown> = isRecord(info)
@@ -215,24 +224,28 @@ if (isProd) {
             winston.format.timestamp(),
             winston.format.json(),
         ),
+        level: configuredLogLevel,
+        maxFiles: '30d',
+        utc: true,
+        zippedArchive: true,
     });
 
     transports.push(fileRotateTransport as unknown as winston.transport);
 }
 
 const logger: winston.Logger = winston.createLogger({
-    level: configuredLogLevel,
-    format: baseFormat,
-    transports,
     exitOnError: false,
+    format: baseFormat,
+    level: configuredLogLevel,
+    transports,
 });
 
 function withContext(ctx: AppLogMeta): AppLogger {
     return {
+        debug: (msg: string, meta: AppLogMeta = {}) => logger.debug(msg, normalizeMeta({ ...ctx, ...meta })),
+        error: (msg: string, meta: AppLogMeta = {}) => logger.error(msg, normalizeMeta({ ...ctx, ...meta })),
         info: (msg: string, meta: AppLogMeta = {}) => logger.info(msg, normalizeMeta({ ...ctx, ...meta })),
         warn: (msg: string, meta: AppLogMeta = {}) => logger.warn(msg, normalizeMeta({ ...ctx, ...meta })),
-        error: (msg: string, meta: AppLogMeta = {}) => logger.error(msg, normalizeMeta({ ...ctx, ...meta })),
-        debug: (msg: string, meta: AppLogMeta = {}) => logger.debug(msg, normalizeMeta({ ...ctx, ...meta })),
     };
 }
 
@@ -245,11 +258,13 @@ function replaceConsoleWithLogger(): () => void {
         if (typeof first === 'string' && first.includes('%')) {
             try {
                 return util.format(first, ...args.slice(1));
-            } catch (e: unknown) {
-                safeLog('debug', 'logger toMessage format error', { error: e });
+            } catch (error) {
+                safeLog('debug', 'logger toMessage format error', { error: error });
             }
         }
-        return args.map(a => (typeof a === 'string' ? a : util.inspect(a, { depth: 4 }))).join(' ');
+        return args
+            .map(a => (typeof a === 'string' ? a : util.inspect(a, { depth: 4 })))
+            .join(' ');
     };
 
     console.log = (...args: unknown[]) => {
@@ -302,7 +317,11 @@ function installProcessHandlers(opts?: { exitOnUncaught?: boolean }) {
 export default logger;
 export { installProcessHandlers, replaceConsoleWithLogger, withContext };
 
-export function logInfo(message: string, ctx: AppLogMeta = {}, meta: AppLogMeta = {}) {
+export function logInfo(
+    message: string,
+    ctx: AppLogMeta = {},
+    meta: AppLogMeta = {},
+) {
     logger.info(message, normalizeMeta({ ...ctx, ...meta }));
 }
 
@@ -316,15 +335,27 @@ function normalizeMeta(meta: AppLogMeta): AppLogMeta {
     return out;
 }
 
-export function logWarn(message: string, ctx: AppLogMeta = {}, meta: AppLogMeta = {}) {
+export function logWarn(
+    message: string,
+    ctx: AppLogMeta = {},
+    meta: AppLogMeta = {},
+) {
     logger.warn(message, normalizeMeta({ ...ctx, ...meta }));
 }
 
-export function logError(message: string, ctx: AppLogMeta = {}, meta: AppLogMeta = {}) {
+export function logError(
+    message: string,
+    ctx: AppLogMeta = {},
+    meta: AppLogMeta = {},
+) {
     logger.error(message, normalizeMeta({ ...ctx, ...meta }));
 }
 
-export function logMetric(name: string, ctx: AppLogMeta = {}, fields: AppLogMeta = {}) {
+export function logMetric(
+    name: string,
+    ctx: AppLogMeta = {},
+    fields: AppLogMeta = {},
+) {
     logger.info(
         `metric:${name}`,
         normalizeMeta({
@@ -337,15 +368,19 @@ export function logMetric(name: string, ctx: AppLogMeta = {}, fields: AppLogMeta
     );
 }
 
-export function safeLog(level: 'warn' | 'debug', msg: string, meta?: AppLogMeta) {
+export function safeLog(
+    level: 'warn' | 'debug',
+    msg: string,
+    meta?: AppLogMeta,
+) {
     try {
         if (level === 'warn') logger.warn(msg, normalizeMeta(meta ?? {}));
         else logger.debug(msg, normalizeMeta(meta ?? {}));
-    } catch (e: unknown) {
+    } catch (error) {
         try {
-            console.debug(msg, meta, e);
-        } catch (_e: unknown) {
-            void _e;
+            console.debug(msg, meta, error);
+        } catch (error) {
+            void error;
         }
     }
 }

@@ -27,8 +27,8 @@ export class MusicEventEmitter {
         try {
             this.emitFn('musicAdded', music, {
                 context: {
-                    operation: 'addMusic',
                     identifiers: { musicId: music.id },
+                    operation: 'addMusic',
                 },
             });
 
@@ -37,8 +37,8 @@ export class MusicEventEmitter {
                 { ...music, url: watchUrl(music.id) },
                 {
                     context: {
-                        operation: 'addMusic-legacy',
                         identifiers: { musicId: music.id },
+                        operation: 'addMusic-legacy',
                     },
                 },
             );
@@ -53,15 +53,15 @@ export class MusicEventEmitter {
         try {
             this.emitFn('musicRemoved', musicId, {
                 context: {
-                    operation: 'removeMusic',
                     identifiers: { musicId },
+                    operation: 'removeMusic',
                 },
             });
 
             this.emitFn('deleteMusic', watchUrl(musicId), {
                 context: {
-                    operation: 'removeMusic-legacy',
                     identifiers: { musicId },
+                    operation: 'removeMusic-legacy',
                 },
             });
 
@@ -71,9 +71,7 @@ export class MusicEventEmitter {
         }
     }
 
-    emitUrlList(
-        musics: Array<Music & { url: string }>,
-    ): Result<void, HandlerError> {
+    emitUrlList(musics: (Music & { url: string })[]): Result<void, HandlerError> {
         try {
             this.emitFn('url_list', musics, {
                 context: {

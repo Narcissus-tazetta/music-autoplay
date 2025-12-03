@@ -27,8 +27,8 @@ export function setupExtensionEventHandlers(
         'extension_heartbeat',
         data => {
             log.debug('extension heartbeat received', {
-                socketId: socket.id,
                 data,
+                socketId: socket.id,
                 timestamp: new Date().toISOString(),
             });
         },
@@ -41,8 +41,8 @@ export function setupExtensionEventHandlers(
         'extension_connected',
         data => {
             log.info('extension connected event', {
-                socketId: socket.id,
                 extensionData: data,
+                socketId: socket.id,
                 timestamp: new Date().toISOString(),
             });
         },
@@ -80,13 +80,16 @@ export function setupExtensionEventHandlers(
                 const status: RemoteStatus = { type: 'closed' };
                 try {
                     manager.update(status, 'extension');
-                    log.info('youtube_video_state processed: window_close -> remote closed', {
-                        socketId: socket.id,
-                        connectionId,
-                    });
-                } catch (e: unknown) {
+                    log.info(
+                        'youtube_video_state processed: window_close -> remote closed',
+                        {
+                            connectionId,
+                            socketId: socket.id,
+                        },
+                    );
+                } catch (error) {
                     log.warn('failed to update remote status (window_close)', {
-                        error: e,
+                        error: error,
                     });
                 }
                 return;
@@ -94,21 +97,21 @@ export function setupExtensionEventHandlers(
 
             if (stateRaw === 'transitioning') {
                 const transitionStatus: RemoteStatus = {
-                    type: 'paused',
-                    musicTitle: undefined,
-                    musicId: undefined,
                     isTransitioning: true,
+                    musicId: undefined,
+                    musicTitle: undefined,
+                    type: 'paused',
                 };
                 try {
                     manager.update(transitionStatus, 'transitioning');
                     log.info('youtube_video_state: transitioning to next video', {
-                        socketId: socket.id,
                         connectionId,
+                        socketId: socket.id,
                         url,
                     });
-                } catch (e: unknown) {
+                } catch (error) {
                     log.warn('failed to update remote status (transitioning)', {
-                        error: e,
+                        error: error,
                     });
                 }
                 return;
@@ -129,7 +132,9 @@ export function setupExtensionEventHandlers(
                                 });
                             }
 
-                            const urlListEmitResult = emitter.emitUrlList(repository.buildCompatList());
+                            const urlListEmitResult = emitter.emitUrlList(
+                                repository.buildCompatList(),
+                            );
                             if (!urlListEmitResult.ok) {
                                 log.warn('youtube_video_state: failed to emit url_list', {
                                     error: urlListEmitResult.error,
@@ -144,10 +149,10 @@ export function setupExtensionEventHandlers(
                                 });
                             }
                             log.info('youtube_video_state: music removed on ended', {
-                                socketId: socket.id,
                                 connectionId,
-                                videoId,
+                                socketId: socket.id,
                                 url,
+                                videoId,
                             });
                         } else {
                             log.warn('youtube_video_state: failed to remove music', {
@@ -162,16 +167,22 @@ export function setupExtensionEventHandlers(
 
             if (stateRaw === 'playing' || stateRaw === 'paused') {
                 const currentStatus = manager.getCurrent();
-                if (currentStatus.type === 'playing' && currentStatus.isAdvertisement === true) {
-                    log.debug('youtube_video_state: ignoring state during advertisement', {
-                        state: stateRaw,
-                        url,
-                    });
+                if (
+                    currentStatus.type === 'playing'
+                    && currentStatus.isAdvertisement === true
+                ) {
+                    log.debug(
+                        'youtube_video_state: ignoring state during advertisement',
+                        {
+                            state: stateRaw,
+                            url,
+                        },
+                    );
                     return;
                 }
 
                 const state = stateRaw === 'playing' ? 'playing' : 'paused';
-                let match: { url: string; title?: string } | null = null;
+                let match: { url: string; title?: string } | null;
                 let isExternalVideo = false;
                 let externalVideoId: string | undefined;
 
@@ -183,8 +194,8 @@ export function setupExtensionEventHandlers(
                             const generated = watchUrl((m as { id: string }).id);
                             if (generated === url) {
                                 match = {
-                                    url: generated,
                                     title: (m as { title: string }).title,
+                                    url: generated,
                                 };
                                 break;
                             }
@@ -199,36 +210,40 @@ export function setupExtensionEventHandlers(
                             isExternalVideo = true;
                             externalVideoId = videoId;
                             try {
-                                log.debug('Fetching external video details', { videoId, url });
-                                const result = await youtubeService.getVideoDetails(videoId, 1, 2000);
+                                log.debug('Fetching external video details', { url, videoId });
+                                const result = await youtubeService.getVideoDetails(
+                                    videoId,
+                                    1,
+                                    2000,
+                                );
 
                                 if (result.ok) {
                                     match = {
-                                        url,
                                         title: result.value.title,
+                                        url,
                                     };
                                     log.info('External video title fetched', {
-                                        videoId,
                                         title: result.value.title,
+                                        videoId,
                                     });
                                 } else {
                                     log.warn('Failed to fetch external video details', {
-                                        videoId,
                                         error: result.error,
+                                        videoId,
                                     });
                                     match = {
-                                        url,
                                         title: `動画ID: ${videoId}`,
+                                        url,
                                     };
                                 }
-                            } catch (e: unknown) {
+                            } catch (error) {
                                 log.warn('Exception while fetching external video details', {
+                                    error: error,
                                     videoId,
-                                    error: e,
                                 });
                                 match = {
-                                    url,
                                     title: `動画ID: ${videoId}`,
+                                    url,
                                 };
                             }
                         }
@@ -237,45 +252,45 @@ export function setupExtensionEventHandlers(
 
                 const remoteStatus: RemoteStatus = match
                     ? {
-                        type: state,
-                        musicTitle: match.title ?? '',
-                        musicId: undefined,
                         isExternalVideo,
+                        musicId: undefined,
+                        musicTitle: match.title ?? '',
+                        type: state,
                         videoId: externalVideoId,
                     }
-                    : state === 'playing'
-                    ? {
-                        type: 'playing',
-                        musicTitle: '',
-                        musicId: undefined,
-                    }
-                    : {
-                        type: 'paused',
-                        musicTitle: undefined,
-                        musicId: undefined,
-                    };
+                    : (state === 'playing'
+                        ? {
+                            musicId: undefined,
+                            musicTitle: '',
+                            type: 'playing',
+                        }
+                        : {
+                            musicId: undefined,
+                            musicTitle: undefined,
+                            type: 'paused',
+                        });
 
                 try {
                     manager.update(remoteStatus, 'extension');
                     log.info('youtube_video_state processed', {
-                        socketId: socket.id,
                         connectionId,
+                        isExternalVideo,
+                        matched: !!match,
+                        socketId: socket.id,
                         state: stateRaw,
                         url,
-                        matched: !!match,
-                        isExternalVideo,
                     });
-                } catch (e: unknown) {
+                } catch (error) {
                     log.warn('failed to update remote status (playing/paused)', {
-                        error: e,
+                        error: error,
                     });
                 }
                 return;
             }
 
             log.debug('youtube_video_state: unknown state value', {
-                state: stateRaw,
                 payload,
+                state: stateRaw,
             });
         },
         log,
@@ -287,7 +302,7 @@ export function setupExtensionEventHandlers(
         'delete_url',
         async (url: unknown) => {
             if (typeof url !== 'string') {
-                log.debug('delete_url: invalid url type', { url, type: typeof url });
+                log.debug('delete_url: invalid url type', { type: typeof url, url });
                 return;
             }
 
@@ -311,7 +326,9 @@ export function setupExtensionEventHandlers(
                             });
                         }
 
-                        const urlListEmitResult = emitter.emitUrlList(repository.buildCompatList());
+                        const urlListEmitResult = emitter.emitUrlList(
+                            repository.buildCompatList(),
+                        );
                         if (!urlListEmitResult.ok) {
                             log.warn('delete_url: failed to emit url_list', {
                                 error: urlListEmitResult.error,
@@ -326,10 +343,10 @@ export function setupExtensionEventHandlers(
                             });
                         }
                         log.info('delete_url: music removed', {
-                            socketId: socket.id,
                             connectionId,
-                            videoId,
+                            socketId: socket.id,
                             url,
+                            videoId,
                         });
                     } else {
                         log.warn('delete_url: failed to remove music', {
@@ -340,15 +357,15 @@ export function setupExtensionEventHandlers(
                 } else {
                     log.debug('delete_url: video not in database', {
                         socketId: socket.id,
-                        videoId,
                         url,
+                        videoId,
                     });
                 }
-            } catch (e: unknown) {
+            } catch (error) {
                 log.warn('delete_url: failed to process', {
+                    error: error,
                     socketId: socket.id,
                     url,
-                    error: e,
                 });
             }
         },
@@ -403,34 +420,34 @@ export function setupExtensionEventHandlers(
 
                 socket.emit('next_video_navigate', {
                     nextUrl: nextUrl,
-                    videoId: prevMusic.id,
                     tabId: tabId,
+                    videoId: prevMusic.id,
                 });
 
                 manager.update(
                     {
-                        type: 'paused',
-                        musicTitle: prevMusic.title,
-                        musicId: prevMusic.id,
                         isTransitioning: true,
+                        musicId: prevMusic.id,
+                        musicTitle: prevMusic.title,
+                        type: 'paused',
                     },
                     'move_prev_video',
                 );
 
                 log.info('move_prev_video: navigating to previous', {
-                    socketId: socket.id,
                     connectionId,
                     from: currentId,
-                    to: prevMusic.id,
-                    prevIndex,
                     nextUrl,
-                    tabId,
-                });
-            } catch (e: unknown) {
-                log.warn('move_prev_video: failed to process', {
+                    prevIndex,
                     socketId: socket.id,
+                    tabId,
+                    to: prevMusic.id,
+                });
+            } catch (error) {
+                log.warn('move_prev_video: failed to process', {
                     currentUrl,
-                    error: e,
+                    error: error,
+                    socketId: socket.id,
                 });
             }
         },
@@ -485,34 +502,34 @@ export function setupExtensionEventHandlers(
 
                 socket.emit('next_video_navigate', {
                     nextUrl: nextUrl,
-                    videoId: nextMusic.id,
                     tabId: tabId,
+                    videoId: nextMusic.id,
                 });
 
                 manager.update(
                     {
-                        type: 'paused',
-                        musicTitle: nextMusic.title,
-                        musicId: nextMusic.id,
                         isTransitioning: true,
+                        musicId: nextMusic.id,
+                        musicTitle: nextMusic.title,
+                        type: 'paused',
                     },
                     'move_next_video',
                 );
 
                 log.info('move_next_video: navigating to next', {
-                    socketId: socket.id,
                     connectionId,
                     from: currentId,
-                    to: nextMusic.id,
                     nextIndex,
                     nextUrl,
-                    tabId,
-                });
-            } catch (e: unknown) {
-                log.warn('move_next_video: failed to process', {
                     socketId: socket.id,
+                    tabId,
+                    to: nextMusic.id,
+                });
+            } catch (error) {
+                log.warn('move_next_video: failed to process', {
                     currentUrl,
-                    error: e,
+                    error: error,
+                    socketId: socket.id,
                 });
             }
         },
@@ -532,8 +549,8 @@ export function setupExtensionEventHandlers(
             const tabId = typeof payload['tabId'] === 'number' ? payload['tabId'] : undefined;
 
             log.info('tab_closed: tab closure detected', {
-                socketId: socket.id,
                 connectionId,
+                socketId: socket.id,
                 tabId,
                 timestamp: new Date().toISOString(),
             });
@@ -543,11 +560,11 @@ export function setupExtensionEventHandlers(
                     socketId: socket.id,
                     tabId,
                 });
-            } catch (e: unknown) {
+            } catch (error) {
                 log.warn('tab_closed: cleanup failed', {
+                    error: error,
                     socketId: socket.id,
                     tabId,
-                    error: e,
                 });
             }
         },
@@ -566,7 +583,9 @@ export function setupExtensionEventHandlers(
 
             const url = typeof payload['url'] === 'string' ? payload['url'] : undefined;
             const isAd = typeof payload['isAd'] === 'boolean' ? payload['isAd'] : false;
-            const timestamp = typeof payload['timestamp'] === 'number' ? payload['timestamp'] : Date.now();
+            const timestamp = typeof payload['timestamp'] === 'number'
+                ? payload['timestamp']
+                : Date.now();
 
             if (!url) {
                 log.debug('ad_state_changed: no url provided', { payload });
@@ -583,50 +602,50 @@ export function setupExtensionEventHandlers(
                 }
 
                 log.info('ad_state_changed: advertisement state changed', {
-                    socketId: socket.id,
                     connectionId,
-                    videoId,
                     isAd,
+                    socketId: socket.id,
                     timestamp: new Date(timestamp).toISOString(),
+                    videoId,
                 });
 
                 if (isAd) {
                     const music = repository.get(videoId);
                     const adStatus: RemoteStatus = music
                         ? {
-                            type: 'playing',
-                            musicTitle: music.title,
-                            musicId: videoId,
-                            isAdvertisement: true,
                             adTimestamp: timestamp,
+                            isAdvertisement: true,
+                            musicId: videoId,
+                            musicTitle: music.title,
+                            type: 'playing',
                         }
                         : {
-                            type: 'playing',
-                            musicTitle: '',
-                            musicId: undefined,
-                            isAdvertisement: true,
                             adTimestamp: timestamp,
+                            isAdvertisement: true,
+                            musicId: undefined,
+                            musicTitle: '',
+                            type: 'playing',
                         };
                     manager.update(adStatus, 'ad_started');
                 } else {
                     const music = repository.get(videoId);
                     if (music) {
                         const contentStatus: RemoteStatus = {
-                            type: 'playing',
-                            musicTitle: music.title,
-                            musicId: videoId,
-                            isAdvertisement: false,
                             adTimestamp: undefined,
+                            isAdvertisement: false,
+                            musicId: videoId,
+                            musicTitle: music.title,
+                            type: 'playing',
                         };
                         manager.update(contentStatus, 'ad_ended');
                     }
                 }
-            } catch (e: unknown) {
+            } catch (error) {
                 log.warn('ad_state_changed: failed to process', {
+                    error: error,
+                    isAd,
                     socketId: socket.id,
                     url,
-                    isAd,
-                    error: e,
                 });
             }
         },
@@ -676,7 +695,9 @@ export function setupExtensionEventHandlers(
                             });
                         }
 
-                        const urlListEmitResult = emitter.emitUrlList(repository.buildCompatList());
+                        const urlListEmitResult = emitter.emitUrlList(
+                            repository.buildCompatList(),
+                        );
                         if (!urlListEmitResult.ok) {
                             log.warn('video_ended: failed to emit url_list', {
                                 error: urlListEmitResult.error,
@@ -705,27 +726,27 @@ export function setupExtensionEventHandlers(
 
                     socket.emit('next_video_navigate', {
                         nextUrl: nextUrl,
-                        videoId: nextMusic.id,
                         tabId: tabId,
+                        videoId: nextMusic.id,
                     });
 
                     manager.update(
                         {
-                            type: 'paused',
-                            musicTitle: nextMusic.title,
-                            musicId: nextMusic.id,
                             isTransitioning: true,
+                            musicId: nextMusic.id,
+                            musicTitle: nextMusic.title,
+                            type: 'paused',
                         },
                         'video_ended',
                     );
 
                     log.info('video_ended: navigating to next', {
-                        socketId: socket.id,
                         connectionId,
                         from: videoId,
-                        to: nextMusic.id,
                         nextUrl,
+                        socketId: socket.id,
                         tabId,
+                        to: nextMusic.id,
                     });
                 } else {
                     socket.emit('no_next_video', {
@@ -735,17 +756,17 @@ export function setupExtensionEventHandlers(
                     manager.update({ type: 'closed' }, 'video_ended_no_next');
 
                     log.info('video_ended: no next video available', {
-                        socketId: socket.id,
                         connectionId,
-                        videoId,
+                        socketId: socket.id,
                         tabId,
+                        videoId,
                     });
                 }
-            } catch (e: unknown) {
+            } catch (error) {
                 log.warn('video_ended: failed to process', {
+                    error: error,
                     socketId: socket.id,
                     url,
-                    error: e,
                 });
             }
         },
@@ -770,24 +791,32 @@ export function setupExtensionEventHandlers(
         }
 
         const url = typeof payload['url'] === 'string' ? payload['url'] : undefined;
-        const currentTime = typeof payload['currentTime'] === 'number' ? payload['currentTime'] : undefined;
+        const currentTime = typeof payload['currentTime'] === 'number'
+            ? payload['currentTime']
+            : undefined;
         const duration = typeof payload['duration'] === 'number' ? payload['duration'] : undefined;
         const playbackRate = typeof payload['playbackRate'] === 'number' ? payload['playbackRate'] : 1;
-        const isBuffering = typeof payload['isBuffering'] === 'boolean' ? payload['isBuffering'] : false;
-        const visibilityState = typeof payload['visibilityState'] === 'string' ? payload['visibilityState'] : 'visible';
-        const timestamp = typeof payload['timestamp'] === 'number' ? payload['timestamp'] : Date.now();
+        const isBuffering = typeof payload['isBuffering'] === 'boolean'
+            ? payload['isBuffering']
+            : false;
+        const visibilityState = typeof payload['visibilityState'] === 'string'
+            ? payload['visibilityState']
+            : 'visible';
+        const timestamp = typeof payload['timestamp'] === 'number'
+            ? payload['timestamp']
+            : Date.now();
 
         if (
             !url
-            || currentTime == null
-            || duration == null
+            || currentTime == undefined
+            || duration == undefined
             || !Number.isFinite(currentTime)
             || !Number.isFinite(duration)
         ) {
             log.debug(`${eventName}: invalid data`, {
-                url,
                 currentTime,
                 duration,
+                url,
             });
             return;
         }
@@ -813,10 +842,10 @@ export function setupExtensionEventHandlers(
             let state = progressState.get(videoId);
             if (!state) {
                 state = {
-                    lastTime: currentTime,
-                    lastTimestamp: timestamp,
                     consecutiveStalls: 0,
                     lastAdDecisionAt: 0,
+                    lastTime: currentTime,
+                    lastTimestamp: timestamp,
                 };
                 progressState.set(videoId, state);
             }
@@ -841,11 +870,11 @@ export function setupExtensionEventHandlers(
                         isAdvertisement = true;
                         state.lastAdDecisionAt = timestamp;
                         log.info(`${eventName}: advertisement detected`, {
-                            videoId,
-                            deltaWall,
-                            deltaPlayback,
-                            expectedDelta,
                             consecutiveStalls,
+                            deltaPlayback,
+                            deltaWall,
+                            expectedDelta,
+                            videoId,
                         });
                     }
                 } else {
@@ -859,36 +888,36 @@ export function setupExtensionEventHandlers(
             state.consecutiveStalls = consecutiveStalls;
 
             const statusUpdate: RemoteStatus = {
-                type: 'playing',
-                musicTitle: music?.title || '',
-                musicId: videoId,
+                consecutiveStalls,
                 currentTime,
                 duration,
-                progressPercent,
-                lastProgressUpdate: timestamp,
-                consecutiveStalls,
                 isAdvertisement,
+                lastProgressUpdate: timestamp,
+                musicId: videoId,
+                musicTitle: music?.title || '',
+                progressPercent,
+                type: 'playing',
             };
 
             manager.update(statusUpdate, eventName);
 
             if (Math.abs(deltaPlayback) > 0.1 || consecutiveStalls > 0) {
                 log.debug(`${eventName}: processed`, {
-                    videoId,
-                    currentTime: currentTime.toFixed(2),
-                    duration: duration.toFixed(2),
-                    progressPercent: progressPercent.toFixed(1),
-                    deltaWall,
-                    deltaPlayback: deltaPlayback.toFixed(2),
                     consecutiveStalls,
+                    currentTime: currentTime.toFixed(2),
+                    deltaPlayback: deltaPlayback.toFixed(2),
+                    deltaWall,
+                    duration: duration.toFixed(2),
                     isAdvertisement,
+                    progressPercent: progressPercent.toFixed(1),
+                    videoId,
                 });
             }
-        } catch (e: unknown) {
+        } catch (error) {
             log.warn(`${eventName}: failed to process`, {
+                error: error,
                 socketId: socket.id,
                 url,
-                error: e,
             });
         }
     };
@@ -914,9 +943,9 @@ export function setupExtensionEventHandlers(
         'no_next_video',
         payload => {
             log.info('no_next_video: end of playlist', {
-                socketId: socket.id,
                 connectionId,
                 payload,
+                socketId: socket.id,
             });
 
             manager.update({ type: 'closed' }, 'no_next_video');
@@ -953,10 +982,10 @@ export function setupExtensionEventHandlers(
 
                 if (repository.has(videoId)) {
                     log.info('external_music_add: video already in list', {
-                        socketId: socket.id,
                         connectionId,
-                        videoId,
+                        socketId: socket.id,
                         title,
+                        videoId,
                     });
                     return;
                 }
@@ -965,23 +994,23 @@ export function setupExtensionEventHandlers(
 
                 if (!result.ok) {
                     log.warn('external_music_add: failed to fetch video details', {
-                        socketId: socket.id,
                         connectionId,
-                        videoId,
                         error: result.error,
+                        socketId: socket.id,
+                        videoId,
                     });
                     return;
                 }
 
                 const videoDetails = result.value;
                 const music: Music = {
-                    id: videoId,
-                    title: videoDetails.title,
-                    channelName: videoDetails.channelTitle,
                     channelId: videoDetails.channelId,
+                    channelName: videoDetails.channelTitle,
                     duration: videoDetails.duration,
-                    requesterHash: 'external',
+                    id: videoId,
                     requestedAt: new Date().toISOString(),
+                    requesterHash: 'external',
+                    title: videoDetails.title,
                 };
 
                 const addResult = repository.add(music);
@@ -994,7 +1023,9 @@ export function setupExtensionEventHandlers(
                         });
                     }
 
-                    const urlListEmitResult = emitter.emitUrlList(repository.buildCompatList());
+                    const urlListEmitResult = emitter.emitUrlList(
+                        repository.buildCompatList(),
+                    );
                     if (!urlListEmitResult.ok) {
                         log.warn('external_music_add: failed to emit url_list', {
                             error: urlListEmitResult.error,
@@ -1010,10 +1041,10 @@ export function setupExtensionEventHandlers(
                     }
 
                     log.info('external_music_add: music added', {
-                        socketId: socket.id,
                         connectionId,
-                        videoId,
+                        socketId: socket.id,
                         title: music.title,
+                        videoId,
                     });
                 } else {
                     log.warn('external_music_add: failed to add music', {
@@ -1021,11 +1052,11 @@ export function setupExtensionEventHandlers(
                         videoId,
                     });
                 }
-            } catch (e: unknown) {
+            } catch (error) {
                 log.warn('external_music_add: failed to process', {
+                    error: error,
                     socketId: socket.id,
                     url,
-                    error: e,
                 });
             }
         },

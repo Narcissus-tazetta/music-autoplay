@@ -1,6 +1,6 @@
 import { SERVER_ENV } from '@/app/env.server';
 import type { Music } from '@/shared/stores/musicStore';
-import type { Server as HttpServer } from 'http';
+import type { Server as HttpServer } from 'node:http';
 import type { Server as IOServer } from 'socket.io';
 import type ConfigService from '../../config/configService';
 import logger from '../../logger';
@@ -14,17 +14,17 @@ import type { ConnectionHandlerFactory } from '../handlers/connectionHandler';
 import { SocketRuntime } from '../managers/runtime';
 import { createSocketIo } from './socketIo';
 
-export type RuntimeOptions = {
+export interface RuntimeOptions {
     debounceMs: number;
     graceMs: number;
     inactivityMs: number;
-};
+}
 
-export type InitSocketServerResult = {
+export interface InitSocketServerResult {
     io: IOServer;
     runtime: SocketRuntime;
     socketPath: string;
-};
+}
 /**
  * socket.io を初期化し、永続化されたデータを復元し、ランタイムを設定して接続ハンドラを登録しています。
  */
@@ -55,8 +55,8 @@ export async function initSocketServer(
                 try {
                     const persisted = effectiveFileStore ? effectiveFileStore.load() : [];
                     return persisted;
-                } catch (err: unknown) {
-                    logger.warn('failed to restore persisted musics', { error: err });
+                } catch (error) {
+                    logger.warn('failed to restore persisted musics', { error: error });
                     return [];
                 }
             })(),
@@ -97,25 +97,25 @@ export async function initSocketServer(
 
     const socketConfig = configService?.getSocketConfig() ?? {
         rateLimitMaxAttempts: 10,
-        rateLimitWindowMs: 60000,
+        rateLimitWindowMs: 60_000,
     };
 
     const handler = makeConnectionHandler({
-        getIo: () => io,
-        getMusicService: () => runtime.getMusicService(),
-        getManager: () => runtime.getManager(),
-        createManager: () => runtime.createManager(),
-        musicDB,
-        youtubeService: yt,
-        fileStore: effectiveFileStore ?? fsToUse,
         adminHash: effectiveAdminHash ?? '',
-        rateLimiter: serviceResolver.resolve('rateLimiter'),
+        createManager: () => runtime.createManager(),
+        fileStore: effectiveFileStore ?? fsToUse,
+        getIo: () => io,
+        getManager: () => runtime.getManager(),
+        getMusicService: () => runtime.getMusicService(),
+        musicDB,
         rateLimitConfig: {
             maxAttempts: socketConfig.rateLimitMaxAttempts,
             windowMs: socketConfig.rateLimitWindowMs,
         },
+        rateLimiter: serviceResolver.resolve('rateLimiter'),
         timerManager,
         windowCloseManager,
+        youtubeService: yt,
     });
 
     io.on('connection', handler);

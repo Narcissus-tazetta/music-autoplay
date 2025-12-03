@@ -8,11 +8,11 @@ export interface AdminStore {
 
 export const useAdminStore = create<AdminStore>(set => ({
     isAdmin: false,
-    setIsAdmin: (v: boolean) => {
-        set({ isAdmin: v });
-    },
     logout: () => {
         set({ isAdmin: false });
+    },
+    setIsAdmin: (v: boolean) => {
+        set({ isAdmin: v });
     },
 }));
 

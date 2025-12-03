@@ -10,7 +10,9 @@ export interface SettingsStore {
     setYtStatusVisible: (v: boolean) => void;
     ytStatusMode: YtStatusMode;
     setYtStatusMode: (v: YtStatusMode) => void;
-    loadFromServer: (data?: Partial<{ ytStatusVisible: boolean; ytStatusMode: YtStatusMode }>) => void;
+    loadFromServer: (
+        data?: Partial<{ ytStatusVisible: boolean; ytStatusMode: YtStatusMode }>,
+    ) => void;
     syncToServer: () => { ytStatusVisible: boolean; ytStatusMode: YtStatusMode };
     reset: () => void;
 }
@@ -18,22 +20,22 @@ export interface SettingsStore {
 const loadFromServerAsync = async (): Promise<void> => {
     try {
         const resp = await fetch('/api/settings');
-        const norm = await normalizeApiResponse<Partial<{ ytStatusVisible: boolean; ytStatusMode: YtStatusMode }>>(
-            resp,
-        );
+        const norm = await normalizeApiResponse<
+            Partial<{ ytStatusVisible: boolean; ytStatusMode: YtStatusMode }>
+        >(resp);
         if (!norm.success) {
             try {
                 const err = norm.error;
                 const parsed = parseApiErrorForUI({
                     code: err.code ?? undefined,
-                    message: err.message,
                     details: err.details,
+                    message: err.message,
                 });
                 try {
                     const mod = await import('@/shared/utils/uiActionExecutor');
                     mod.executeParsedApiError(parsed, { conformFields: undefined });
-                } catch (errExec: unknown) {
-                    if (import.meta.env.DEV) console.warn('loadFromServer server error', parsed, errExec);
+                } catch (error) {
+                    if (import.meta.env.DEV) console.warn('loadFromServer server error', parsed, error);
                 }
             } catch {
                 if (import.meta.env.DEV) console.warn('loadFromServer server error', norm.error);
@@ -44,21 +46,21 @@ const loadFromServerAsync = async (): Promise<void> => {
         if (typeof server.ytStatusVisible === 'boolean')
             useSettingsStore.getState().setYtStatusVisible(server.ytStatusVisible);
         if (typeof server.ytStatusMode === 'string') useSettingsStore.getState().setYtStatusMode(server.ytStatusMode);
-    } catch (_e: unknown) {
-        if (import.meta.env.DEV) console.warn('loadFromServer error', _e);
+    } catch (error) {
+        if (import.meta.env.DEV) console.warn('loadFromServer error', error);
     }
 };
 
 const _syncToServerAsync = async (): Promise<void> => {
     try {
         const payload = {
-            ytStatusVisible: useSettingsStore.getState().ytStatusVisible,
             ytStatusMode: useSettingsStore.getState().ytStatusMode,
+            ytStatusVisible: useSettingsStore.getState().ytStatusVisible,
         };
         const resp = await fetch('/api/settings', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
             body: JSON.stringify(payload),
+            headers: { 'content-type': 'application/json' },
+            method: 'POST',
         });
         const norm = await normalizeApiResponse(resp);
         if (!norm.success) {
@@ -66,45 +68,56 @@ const _syncToServerAsync = async (): Promise<void> => {
                 const err = norm.error;
                 const parsed = parseApiErrorForUI({
                     code: err.code ?? undefined,
-                    message: err.message,
                     details: err.details,
+                    message: err.message,
                 });
                 try {
                     const mod = await import('@/shared/utils/uiActionExecutor');
                     mod.executeParsedApiError(parsed, { conformFields: undefined });
-                } catch (errExec: unknown) {
-                    if (import.meta.env.DEV) console.warn('syncToServer error', parsed, errExec);
+                } catch (error) {
+                    if (import.meta.env.DEV) console.warn('syncToServer error', parsed, error);
                 }
             } catch {
                 if (import.meta.env.DEV) console.warn('syncToServer error', norm.error);
             }
         }
-    } catch (_e: unknown) {
-        if (import.meta.env.DEV) console.warn('syncToServer error', _e);
+    } catch (error) {
+        if (import.meta.env.DEV) console.warn('syncToServer error', error);
     }
 };
 
 export const useSettingsStore = create<SettingsStore>()(
     persist(
         (set, get) => ({
-            ytStatusVisible: true,
-            ytStatusMode: 'player',
-            setYtStatusVisible: (v: boolean) => set({ ytStatusVisible: v }),
-            setYtStatusMode: (v: YtStatusMode) => set({ ytStatusMode: v }),
-            loadFromServer: (data?: Partial<{ ytStatusVisible: boolean; ytStatusMode: YtStatusMode }>) => {
+            loadFromServer: (
+                data?: Partial<{
+                    ytStatusVisible: boolean;
+                    ytStatusMode: YtStatusMode;
+                }>,
+            ) => {
                 if (!data) {
                     void loadFromServerAsync();
                     return;
                 }
                 if (typeof data.ytStatusVisible === 'boolean') set({ ytStatusVisible: data.ytStatusVisible });
-                const d = data as Partial<{ ytStatusVisible: boolean; ytStatusMode: YtStatusMode }>;
+                const d = data as Partial<{
+                    ytStatusVisible: boolean;
+                    ytStatusMode: YtStatusMode;
+                }>;
                 if (d.ytStatusMode === 'compact' || d.ytStatusMode === 'player') set({ ytStatusMode: d.ytStatusMode });
             },
+            reset: () => set({ ytStatusMode: 'player', ytStatusVisible: true }),
+            setYtStatusMode: (v: YtStatusMode) => set({ ytStatusMode: v }),
+            setYtStatusVisible: (v: boolean) => set({ ytStatusVisible: v }),
             syncToServer: () => {
                 void _syncToServerAsync();
-                return { ytStatusVisible: get().ytStatusVisible, ytStatusMode: get().ytStatusMode };
+                return {
+                    ytStatusMode: get().ytStatusMode,
+                    ytStatusVisible: get().ytStatusVisible,
+                };
             },
-            reset: () => set({ ytStatusVisible: true, ytStatusMode: 'player' }),
+            ytStatusMode: 'player',
+            ytStatusVisible: true,
         }),
         { name: 'settings-storage' },
     ),

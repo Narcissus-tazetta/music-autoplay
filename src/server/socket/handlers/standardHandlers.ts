@@ -14,7 +14,7 @@ export function createGetAllMusicsHandler(musicDB: Map<string, Music>) {
             let hasError = false;
 
             try {
-                const list = Array.from(musicDB.values());
+                const list = [...musicDB.values()];
 
                 if (metricsManager) metricsManager.updateRpcGetAllMusics(Date.now() - start, hasError);
 
@@ -25,8 +25,8 @@ export function createGetAllMusicsHandler(musicDB: Map<string, Music>) {
                 if (metricsManager) metricsManager.updateRpcGetAllMusics(Date.now() - start, hasError);
 
                 logger.error('getAllMusics handler error', {
-                    socketId: context.socketId,
                     error,
+                    socketId: context.socketId,
                 });
 
                 return [];
@@ -39,7 +39,9 @@ export function createGetAllMusicsHandler(musicDB: Map<string, Music>) {
 
 type RemoteStatusSupplier = RemoteStatus | (() => RemoteStatus);
 
-export function createGetRemoteStatusHandler(remoteStatusOrSupplier: RemoteStatusSupplier) {
+export function createGetRemoteStatusHandler(
+    remoteStatusOrSupplier: RemoteStatusSupplier,
+) {
     return createSocketEventHandler({
         event: 'getRemoteStatus',
         handler(): RemoteStatus {

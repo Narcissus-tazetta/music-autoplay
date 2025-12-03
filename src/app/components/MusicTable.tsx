@@ -34,7 +34,7 @@ function MusicTableInner({
             </Table.Header>
             <Table.Body>
                 <AnimatePresence initial={false}>
-                    {0 < musics.length
+                    {musics.length > 0
                         ? (
                             musics.map((music, i) => (
                                 <MemoizedMusicTableRow

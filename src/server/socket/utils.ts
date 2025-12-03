@@ -51,15 +51,15 @@ export function snapshotHeaders(socket: SocketLike): HeaderSnapshot {
             }
         }
         return undefined;
-    } catch (err: unknown) {
-        safeLog('debug', 'snapshotHeaders failed', { error: err });
+    } catch (error) {
+        safeLog('debug', 'snapshotHeaders failed', { error: error });
         return undefined;
     }
 }
 
 export function sanitizeArgs(args: unknown[]): unknown[] {
     return args.map(a => {
-        if (a == null) return a;
+        if (a == undefined) return a;
         if (
             typeof a === 'string'
             || typeof a === 'number'

@@ -3,7 +3,7 @@ import { themeSessionResolver } from '../../sessions.server';
 
 export const action = createThemeAction(themeSessionResolver);
 export default function SetTheme() {
-    return null;
+    return;
 }
 // これは action のみのルートです
 // クライアント側のコンポーネントは不要です

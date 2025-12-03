@@ -52,47 +52,14 @@ interface MusicStore {
 }
 
 export const useMusicStore = create<MusicStore>(set => {
-    let socket: Socket<S2C, C2S> | null = null;
+    let socket: Socket<S2C, C2S> | null;
     const STORAGE_KEY = 'music-auto-play:musics:v1';
 
     return {
-        musics: [],
-        error: undefined,
-        resetError: () => {
-            set({ error: undefined });
-        },
-        socket: null,
-        remoteStatus: null,
         addMusic(music) {
             set(state => ({
                 musics: [...state.musics, music],
             }));
-        },
-        setMusics(musics: Music[]) {
-            try {
-                if (typeof window !== 'undefined') window.localStorage.setItem(STORAGE_KEY, JSON.stringify(musics));
-            } catch (err: unknown) {
-                if (import.meta.env.DEV) console.debug('musicStore setMusics localStorage failed', err);
-            }
-            set({ musics });
-        },
-        hydrateFromLocalStorage() {
-            try {
-                const storage: Storage | undefined = typeof window !== 'undefined'
-                    ? window.localStorage
-                    : (globalThis as { localStorage?: Storage }).localStorage;
-                if (!storage) return;
-                const raw = storage.getItem(STORAGE_KEY);
-                if (!raw) return;
-                const parsed = JSON.parse(raw) as unknown;
-                if (!Array.isArray(parsed)) return;
-                set(state => {
-                    if (state.musics.length > 0) return {} as Partial<MusicStore>;
-                    return { musics: parsed as Music[] } as Partial<MusicStore>;
-                });
-            } catch (err: unknown) {
-                if (import.meta.env.DEV) console.debug('musicStore hydrateFromLocalStorage failed', err);
-            }
         },
         connectSocket() {
             if (socket) return;
@@ -169,8 +136,8 @@ export const useMusicStore = create<MusicStore>(set => {
                     try {
                         attemptGetAllMusics(socket as Socket<S2C, C2S>);
                         attemptGetRemoteStatus(socket as Socket<S2C, C2S>);
-                    } catch (err: unknown) {
-                        if (import.meta.env.DEV) console.debug('Initial data fetch failed', err);
+                    } catch (error) {
+                        if (import.meta.env.DEV) console.debug('Initial data fetch failed', error);
                     }
                 })
                 .on('musicAdded', (music: Music) => {
@@ -199,7 +166,10 @@ export const useMusicStore = create<MusicStore>(set => {
                             debugFields.musicTitle = state.musicTitle ?? undefined;
                             debugFields.isTransitioning = state.isTransitioning ?? undefined;
                         }
-                        console.debug('[musicStore] remoteStatusUpdated fields:', debugFields);
+                        console.debug(
+                            '[musicStore] remoteStatusUpdated fields:',
+                            debugFields,
+                        );
                     }
                     set({
                         remoteStatus: state,
@@ -207,9 +177,16 @@ export const useMusicStore = create<MusicStore>(set => {
                 });
 
             const socketAny = socket as unknown;
-            if (typeof socketAny === 'object' && socketAny !== null && 'on' in socketAny) {
+            if (
+                typeof socketAny === 'object'
+                && socketAny !== null
+                && 'on' in socketAny
+            ) {
                 const s = socketAny as {
-                    on: (event: string, listener: (...args: unknown[]) => void) => unknown;
+                    on: (
+                        event: string,
+                        listener: (...args: unknown[]) => void,
+                    ) => unknown;
                 };
                 s.on('reconnect_attempt', () => {
                     try {
@@ -233,5 +210,38 @@ export const useMusicStore = create<MusicStore>(set => {
 
             set({ socket });
         },
+        error: undefined,
+        hydrateFromLocalStorage() {
+            try {
+                const storage: Storage | undefined = typeof window !== 'undefined'
+                    ? window.localStorage
+                    : (globalThis as { localStorage?: Storage }).localStorage;
+                if (!storage) return;
+                const raw = storage.getItem(STORAGE_KEY);
+                if (!raw) return;
+                const parsed = JSON.parse(raw) as unknown;
+                if (!Array.isArray(parsed)) return;
+                set(state => {
+                    if (state.musics.length > 0) return {} as Partial<MusicStore>;
+                    return { musics: parsed as Music[] } as Partial<MusicStore>;
+                });
+            } catch (error) {
+                if (import.meta.env.DEV) console.debug('musicStore hydrateFromLocalStorage failed', error);
+            }
+        },
+        musics: [],
+        remoteStatus: undefined,
+        resetError: () => {
+            set({ error: undefined });
+        },
+        setMusics(musics: Music[]) {
+            try {
+                if (typeof window !== 'undefined') window.localStorage.setItem(STORAGE_KEY, JSON.stringify(musics));
+            } catch (error) {
+                if (import.meta.env.DEV) console.debug('musicStore setMusics localStorage failed', error);
+            }
+            set({ musics });
+        },
+        socket: undefined,
     };
 });

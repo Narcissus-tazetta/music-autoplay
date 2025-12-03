@@ -8,11 +8,11 @@ import { isRemoteStatusEqual, shouldDebounce } from './remoteStatus';
 
 export type EmitFn = (ev: string, payload: unknown) => boolean | undefined;
 
-export type ManagerConfig = {
+export interface ManagerConfig {
     debounceMs: number;
     graceMs: number;
     inactivityMs: number;
-};
+}
 
 export class SocketManager {
     private remoteStatus: RemoteStatus = { type: 'closed' };
@@ -30,9 +30,11 @@ export class SocketManager {
 
     initWithDI() {
         try {
-            if (container.has('remoteStatusManager'))
-                this.remoteStatusManager = container.get('remoteStatusManager') as RemoteStatusManager;
-            else {
+            if (container.has('remoteStatusManager')) {
+                this.remoteStatusManager = container.get(
+                    'remoteStatusManager',
+                ) as RemoteStatusManager;
+            } else {
                 this.remoteStatusManager = new RemoteStatusManager(
                     (ev, payload) => this.emit(ev, payload),
                     this.timerManager,
@@ -41,8 +43,8 @@ export class SocketManager {
             const cur = this.remoteStatusManager.getCurrent();
             this.remoteStatus = cur;
             this.remoteStatusUpdatedAt = this.remoteStatusManager.getUpdatedAt();
-        } catch (e: unknown) {
-            logger.debug('SocketManager.initWithDI failed', { error: e });
+        } catch (error) {
+            logger.debug('SocketManager.initWithDI failed', { error: error });
         }
     }
 
@@ -51,13 +53,19 @@ export class SocketManager {
             this.timerManager.clear('pendingClose');
             this.timerManager.clear('inactivity');
             try {
-                if (typeof (this.timerManager as { clearAll?: unknown }).clearAll === 'function')
+                if (
+                    typeof (this.timerManager as { clearAll?: unknown }).clearAll
+                        === 'function'
+                ) {
                     this.timerManager.clearAll();
-            } catch (e: unknown) {
-                logger.warn('SocketManager failed to clearAll timers', { error: e });
+                }
+            } catch (error) {
+                logger.warn('SocketManager failed to clearAll timers', {
+                    error: error,
+                });
             }
-        } catch (e: unknown) {
-            logger.warn('SocketManager shutdown error', { error: e });
+        } catch (error) {
+            logger.warn('SocketManager shutdown error', { error: error });
         }
     }
 
@@ -79,11 +87,11 @@ export class SocketManager {
                             this.emit('remoteStatusUpdated', this.remoteStatus);
                         }
                         logger.info('remoteStatus updated (grace close)', {
-                            status: this.remoteStatus,
                             source,
+                            status: this.remoteStatus,
                         });
-                    } catch (e: unknown) {
-                        logger.warn('failed to apply grace close', { error: e });
+                    } catch (error) {
+                        logger.warn('failed to apply grace close', { error: error });
                     }
                 });
                 this.timerManager.clear('inactivity');
@@ -97,8 +105,8 @@ export class SocketManager {
             this.timerManager.clear('graceClose');
             try {
                 this.scheduleInactivityTimer(source);
-            } catch (e: unknown) {
-                logger.warn('failed to schedule inactivity timer', { error: e });
+            } catch (error) {
+                logger.warn('failed to schedule inactivity timer', { error: error });
             }
 
             if (isRemoteStatusEqual(this.remoteStatus, status)) return;
@@ -122,7 +130,13 @@ export class SocketManager {
             } else {
                 const stateChange = this.remoteStatus.type !== status.type;
 
-                if (shouldDebounce(this.remoteStatusUpdatedAt, now, this.config.debounceMs)) {
+                if (
+                    shouldDebounce(
+                        this.remoteStatusUpdatedAt,
+                        now,
+                        this.config.debounceMs,
+                    )
+                ) {
                     this.remoteStatus = status;
                     this.remoteStatusUpdatedAt = now;
                     this.emit('remoteStatusUpdated', this.remoteStatus);
@@ -147,8 +161,8 @@ export class SocketManager {
                     logger.info(`${statusString} state=${this.remoteStatus.type}`);
                 }
             }
-        } catch (e: unknown) {
-            logger.warn('SocketManager update failed', { error: e });
+        } catch (error) {
+            logger.warn('SocketManager update failed', { error: error });
         }
     }
 
@@ -168,11 +182,11 @@ export class SocketManager {
                     this.emit('remoteStatusUpdated', this.remoteStatus);
                 }
                 logger.info('remoteStatus updated (inactivity)', {
-                    status: this.remoteStatus,
                     source,
+                    status: this.remoteStatus,
                 });
-            } catch (e: unknown) {
-                logger.warn('failed to apply inactivity close', { error: e });
+            } catch (error) {
+                logger.warn('failed to apply inactivity close', { error: error });
             }
         });
     }

@@ -23,9 +23,9 @@ export function useMusicForm() {
 
     const [form, fields] = useForm({
         lastResult: fetcher.data as SubmissionResult | null | undefined,
-        shouldValidate: 'onBlur',
-        shouldRevalidate: 'onInput',
         onValidate: ({ formData }) => parseWithZod(formData, { schema: AddMusicSchema }),
+        shouldRevalidate: 'onInput',
+        shouldValidate: 'onBlur',
     });
 
     const isSubmitting = fetcher.state === 'submitting';
@@ -44,14 +44,14 @@ export function useMusicForm() {
                         const mod = await import('@/shared/utils/uiActionExecutor');
                         mod.executeUiAction(
                             {
-                                type: 'showToast',
                                 level: 'success',
                                 message: getMessage('SUCCESS_ADDED'),
+                                type: 'showToast',
                             },
                             { conformFields: fields as Record<string, unknown> },
                         );
-                    } catch (err: unknown) {
-                        if (import.meta.env.DEV) console.debug('showToast failed', err);
+                    } catch (error) {
+                        if (import.meta.env.DEV) console.debug('showToast failed', error);
                     }
                 })();
             }
@@ -73,7 +73,7 @@ export function useMusicForm() {
                 if (retryAfterHeader instanceof Headers) {
                     const retryValue = retryAfterHeader.get('Retry-After');
                     if (retryValue) {
-                        const parsed = parseInt(retryValue, 10);
+                        const parsed = Number.parseInt(retryValue, 10);
                         if (!isNaN(parsed)) seconds = parsed;
                     }
                 }
@@ -99,14 +99,14 @@ export function useMusicForm() {
                     const mod = await import('@/shared/utils/uiActionExecutor');
                     mod.executeUiAction(
                         {
-                            type: 'showToast',
                             level: 'error',
                             message: errorMessage,
+                            type: 'showToast',
                         },
                         { conformFields: fields as Record<string, unknown> },
                     );
-                } catch (err: unknown) {
-                    if (import.meta.env.DEV) console.debug('showToast failed', err);
+                } catch (error) {
+                    if (import.meta.env.DEV) console.debug('showToast failed', error);
                 }
             })();
         }
@@ -123,11 +123,11 @@ export function useMusicForm() {
     }, []);
 
     return {
-        fetcher,
-        form,
-        fields,
-        isSubmitting,
         canSubmit,
+        fetcher,
+        fields,
+        form,
+        isSubmitting,
         retryAfter,
     };
 }

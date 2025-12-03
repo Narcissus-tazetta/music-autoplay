@@ -4,7 +4,7 @@ import type { Music } from '@/shared/stores/musicStore';
 import { Pool } from 'pg';
 import { container } from '../di/container';
 
-type DbMusicRow = {
+interface DbMusicRow {
     id: string;
     title: string;
     channel_name: string | null;
@@ -12,7 +12,7 @@ type DbMusicRow = {
     duration: number | null;
     requester_hash: string | null;
     created_at: string;
-};
+}
 
 export class PgStore {
     private pool: Pool;
@@ -59,17 +59,17 @@ export class PgStore {
             `SELECT * FROM musics ORDER BY created_at ASC`,
         );
         return res.rows.map(r => ({
-            id: r.id,
-            title: r.title,
-            channelName: r.channel_name ?? '',
             channelId: r.channel_id ?? '',
-            duration: r.duration != null ? `${r.duration}` : '',
+            channelName: r.channel_name ?? '',
+            duration: r.duration != undefined ? `${r.duration}` : '',
+            id: r.id,
             requesterHash: r.requester_hash ?? undefined,
+            title: r.title,
         }));
     }
 
     async add(m: Music) {
-        const durationNumber = m.duration ? Number(m.duration) : null;
+        const durationNumber = m.duration ? Number(m.duration) : undefined;
         await this.pool.query(
             `INSERT INTO musics (id, title, channel_name, channel_id, duration, requester_hash, created_at)
              VALUES ($1,$2,$3,$4,$5,$6,now())
@@ -80,7 +80,7 @@ export class PgStore {
                 m.channelName,
                 m.channelId,
                 durationNumber,
-                m.requesterHash ?? null,
+                m.requesterHash ?? undefined,
             ],
         );
     }

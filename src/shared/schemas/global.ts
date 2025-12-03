@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 export const WindowExtensionsSchema = z
     .object({
-        SOCKET_URL: z.string().optional(),
         SOCKET_PATH: z.string().optional(),
+        SOCKET_URL: z.string().optional(),
         __app__: z
             .object({
                 navigate: z.function().optional(),
@@ -32,7 +32,7 @@ export function getWindowExtensions():
         z.infer<typeof WindowExtensionsSchema>
     >
     | null {
-    if (typeof window === 'undefined') return null;
+    if (typeof window === 'undefined') return;
     return WindowExtensionsSchema.safeParse(window);
 }
 

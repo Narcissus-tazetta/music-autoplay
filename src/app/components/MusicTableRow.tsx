@@ -38,11 +38,11 @@ export default function MusicTableRow({
     className,
 }: MusicTableRowProps) {
     const { isExpanded, canDelete, handleDelete, toggleExpanded } = useMusicRow({
+        isAdmin,
         musicId: music.id,
+        onDelete,
         requesterHash: music.requesterHash,
         userHash,
-        isAdmin,
-        onDelete,
     });
 
     const mergedRowClass = cn(
@@ -114,9 +114,9 @@ export default function MusicTableRow({
                 {isExpanded && (
                     <Table.Row
                         as={motion.tr}
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.2, ease: 'easeInOut' }}
                         className='border-b border-border/30'
                     >

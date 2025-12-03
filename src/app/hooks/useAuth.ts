@@ -11,8 +11,8 @@ const handleLogout = (): void => {
     try {
         const isAdmin = useAdminStore.getState().isAdmin;
         if (isAdmin) useAdminStore.getState().logout();
-    } catch (err: unknown) {
-        if (import.meta.env.DEV) console.error(err);
+    } catch (error) {
+        if (import.meta.env.DEV) console.error(error);
     }
 };
 
@@ -21,9 +21,9 @@ export function useAuth(userName?: string): UseAuthResult {
     const showLogout = !!userName || isAdmin;
 
     return {
-        isAdmin,
-        userName,
-        showLogout,
         handleLogout,
+        isAdmin,
+        showLogout,
+        userName,
     };
 }

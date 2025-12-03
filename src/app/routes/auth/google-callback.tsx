@@ -26,13 +26,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
         const message = error instanceof Error
             ? error.message
-            : typeof error === 'string'
-            ? error
-            : 'authentication error';
-        return respondWithResult(makeErr({ message, code: 'unauthorized' }));
+            : (typeof error === 'string'
+                ? error
+                : 'authentication error');
+        return respondWithResult(makeErr({ code: 'unauthorized', message }));
     }
 };
 
 export default function GoogleCallback() {
-    return null; // これは loader のみのルートです
+    return; // これは loader のみのルートです
 }

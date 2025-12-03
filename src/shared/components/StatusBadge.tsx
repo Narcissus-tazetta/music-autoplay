@@ -50,13 +50,13 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
                 setVisibility('hiding');
                 timerRef.current = window.setTimeout(() => {
                     setVisibility('hidden');
-                    timerRef.current = null;
+                    timerRef.current = undefined;
                 }, 600);
             }, 30_000);
         } else {
             if (timerRef.current) {
                 clearTimeout(timerRef.current);
-                timerRef.current = null;
+                timerRef.current = undefined;
             }
             setVisibility('visible');
         }
@@ -64,12 +64,12 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
         return () => {
             if (timerRef.current) {
                 clearTimeout(timerRef.current);
-                timerRef.current = null;
+                timerRef.current = undefined;
             }
         };
     }, [status]);
 
-    if (!status || !ytStatusVisible || visibility === 'hidden') return null;
+    if (!status || !ytStatusVisible || visibility === 'hidden') return;
 
     return (
         <motion.div
@@ -87,7 +87,11 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
                 />
             )}
             {isAdvertisement
-                ? <span className='text-gray-800 dark:text-gray-100 font-medium text-xs sm:text-sm'>広告再生中</span>
+                ? (
+                    <span className='text-gray-800 dark:text-gray-100 font-medium text-xs sm:text-sm'>
+                        広告再生中
+                    </span>
+                )
                 : isTransitioning
                 ? (
                     <span className='text-gray-800 dark:text-gray-100 font-medium text-xs sm:text-sm'>
@@ -156,13 +160,21 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
                                     );
                                 }
                                 return (
-                                    <span className={`${textColorClass} font-medium text-xs sm:text-sm`}>再生中</span>
+                                    <span
+                                        className={`${textColorClass} font-medium text-xs sm:text-sm`}
+                                    >
+                                        再生中
+                                    </span>
                                 );
                             })()
                         )
                 )
                 : status.type === 'paused'
-                ? <span className='text-gray-800 dark:text-gray-100 text-xs sm:text-sm'>一時停止中</span>
+                ? (
+                    <span className='text-gray-800 dark:text-gray-100 text-xs sm:text-sm'>
+                        一時停止中
+                    </span>
+                )
                 : (
                     visibility === 'visible' && (
                         <span className='text-gray-800 dark:text-gray-100 text-xs sm:text-sm'>

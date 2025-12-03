@@ -6,11 +6,11 @@ export type MessageKey =
     | 'ERROR_ADD_FAILED';
 
 const MESSAGES = {
-    SUCCESS_ADDED: '楽曲を追加しました',
-    ERROR_ALREADY_EXISTS: (position: number) => `この楽曲はすでに${position}番目に登録されています`,
-    ERROR_NOT_FOUND: 'この楽曲は登録されていません',
-    ERROR_FORBIDDEN: 'この楽曲を削除する権限がありません',
     ERROR_ADD_FAILED: '楽曲の追加に失敗しました。後ほど再度お試しください。',
+    ERROR_ALREADY_EXISTS: (position: number) => `この楽曲はすでに${position}番目に登録されています`,
+    ERROR_FORBIDDEN: 'この楽曲を削除する権限がありません',
+    ERROR_NOT_FOUND: 'この楽曲は登録されていません',
+    SUCCESS_ADDED: '楽曲を追加しました',
 } as const;
 
 export function getMessage(key: MessageKey, ...args: unknown[]): string {

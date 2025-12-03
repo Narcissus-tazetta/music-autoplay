@@ -9,11 +9,11 @@ export type EngineLike =
         unknown
     >;
 
-export type RequestLike = {
+export interface RequestLike {
     url?: string;
     headers?: Record<string, unknown>;
     method?: string;
-};
+}
 
 export type HeaderSnapshot = Record<string, string | undefined> | undefined;
 

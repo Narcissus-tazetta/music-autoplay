@@ -19,8 +19,8 @@ export class YouTubeResolver {
 
         if (!id) {
             return err({
-                message: 'URLからIDを取得できませんでした',
                 code: 'INVALID_URL',
+                message: 'URLからIDを取得できませんでした',
             });
         }
 
@@ -30,8 +30,8 @@ export class YouTubeResolver {
             if (!res.ok) {
                 const errorMessage = this.extractErrorMessage(res.error);
                 return err({
-                    message: errorMessage,
                     code: 'YOUTUBE_API_ERROR',
+                    message: errorMessage,
                     meta: { originalError: res.error },
                 });
             }
@@ -40,8 +40,8 @@ export class YouTubeResolver {
 
             if (!normalized) {
                 return err({
-                    message: '動画メタデータの取得に失敗しました',
                     code: 'NORMALIZE_FAILED',
+                    message: '動画メタデータの取得に失敗しました',
                 });
             }
 
@@ -49,8 +49,8 @@ export class YouTubeResolver {
 
             if (!parsed.success) {
                 return err({
-                    message: '動画メタデータの検証に失敗しました',
                     code: 'VALIDATION_FAILED',
+                    message: '動画メタデータの検証に失敗しました',
                     meta: { errors: parsed.error.errors },
                 });
             }
@@ -79,8 +79,8 @@ export class YouTubeResolver {
     validateMetadata(meta: VideoMeta): Result<void, HandlerError> {
         if (meta.isAgeRestricted) {
             return err({
-                message: '年齢制限付き動画は登録できません',
                 code: 'AGE_RESTRICTED',
+                message: '年齢制限付き動画は登録できません',
             });
         }
 

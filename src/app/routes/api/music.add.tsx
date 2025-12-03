@@ -5,7 +5,7 @@ import { AddMusicSchema } from '@/shared/schemas/music';
 import type { ServerContext } from '@/shared/types/server';
 import { safeExecuteAsync } from '@/shared/utils/errors';
 import { parseWithZod } from '@conform-to/zod';
-import { createHash, hash } from 'crypto';
+import { createHash, hash } from 'node:crypto';
 import type { ActionFunctionArgs } from 'react-router';
 import { loginSession } from '../../sessions.server';
 
@@ -39,7 +39,7 @@ export const action = async ({
     if (!rateLimiter.check(rateLimitKey)) {
         const oldestAttempt = rateLimiter.getOldestAttempt(rateLimitKey);
         const retryAfter = typeof oldestAttempt === 'number'
-            ? Math.ceil((oldestAttempt + 60000 - Date.now()) / 1000)
+            ? Math.ceil((oldestAttempt + 60_000 - Date.now()) / 1000)
             : 60;
         logger.warn('Rate limit exceeded', {
             endpoint: '/api/music/add',
@@ -47,7 +47,7 @@ export const action = async ({
         });
         return Response.json(
             { error: 'レート制限を超えました。しばらくしてから再試行してください。' },
-            { status: 429, headers: { 'Retry-After': retryAfter.toString() } },
+            { headers: { 'Retry-After': retryAfter.toString() }, status: 429 },
         );
     }
 
@@ -92,5 +92,5 @@ export const action = async ({
 };
 
 export default function MusicAdd() {
-    return null;
+    return;
 }

@@ -23,9 +23,9 @@ import { useAppInitialization } from './hooks/useAppInitialization';
 import { useWindowAppApi } from './hooks/useWindowAppApi';
 
 export const links: LinksFunction = () => [
-    { rel: 'stylesheet', href: appCss },
-    { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
-    { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
+    { href: appCss, rel: 'stylesheet' },
+    { href: '/favicon.svg', rel: 'icon', type: 'image/svg+xml' },
+    { href: '/favicon.ico', rel: 'icon', sizes: 'any' },
 ];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -60,7 +60,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             code = typeof errObj.code === 'string' ? errObj.code : String(errObj.code);
         }
 
-        return respondWithResult(makeErr({ message, code }));
+        return respondWithResult(makeErr({ code, message }));
     }
     return res.value;
 };
@@ -112,9 +112,9 @@ export default function App() {
     const dataRaw = useLoaderData<typeof loader>() as unknown;
     const data = dataRaw instanceof Response
         ? undefined
-        : isLoaderData(dataRaw)
-        ? dataRaw
-        : undefined;
+        : (isLoaderData(dataRaw)
+            ? dataRaw
+            : undefined);
 
     const userName = data?.user?.name;
     useAdminKeyActivation();
@@ -134,11 +134,11 @@ function Providers({ children }: { children?: React.ReactNode }) {
     if (dataRaw instanceof Response) throw new Error('Response received instead of data');
 
     const data = isLoaderData(dataRaw) ? dataRaw : undefined;
-    const theme = data?.theme ?? null;
+    const theme = data?.theme ?? undefined;
     useAppInitialization();
     useWindowAppApi();
 
-    const specifiedTheme = typeof theme === 'string' ? theme : null;
+    const specifiedTheme = typeof theme === 'string' ? theme : undefined;
     return (
         <ThemeProvider
             specifiedTheme={specifiedTheme as unknown as Parameters<

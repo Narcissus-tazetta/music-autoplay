@@ -4,7 +4,7 @@ import { useAdminStore } from '../../../shared/stores/adminStore';
 export const AdminStatus = () => {
     const isAdmin = useAdminStore(s => s.isAdmin);
 
-    if (!isAdmin) return null;
+    if (!isAdmin) return;
 
     return (
         <span

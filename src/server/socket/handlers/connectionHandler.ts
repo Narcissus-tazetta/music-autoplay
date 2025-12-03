@@ -1,6 +1,6 @@
 import type { Music } from '@/shared/stores/musicStore';
 import { withErrorHandler } from '@/shared/utils/errors';
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 import type { Socket } from 'socket.io';
 import type { Server as IOServer } from 'socket.io';
 import logger, { logMetric, withContext } from '../../logger';
@@ -20,7 +20,7 @@ import { registerSocketHandlers } from './handlers';
 import { emitInitialData } from './initEmitter';
 import { setupSocketLogging } from './socketLogging';
 
-export type ConnectionDeps = {
+export interface ConnectionDeps {
     getIo: () => IOServer;
     getMusicService: () => MusicService;
     getManager: () => SocketManager | undefined;
@@ -36,7 +36,7 @@ export type ConnectionDeps = {
     };
     timerManager: TimerManager;
     windowCloseManager: InstanceType<typeof WindowCloseManager>;
-};
+}
 
 export type ConnectionHandlerFactory = (
     deps: ConnectionDeps,
@@ -52,15 +52,15 @@ export function makeConnectionHandler(
             const hdrs = snapshotHeaders(socket);
             const maybeId = hdrs?.['x-request-id'];
             if (typeof maybeId === 'string') requestId = maybeId;
-        } catch (err: unknown) {
+        } catch (error) {
             logger.debug('failed to extract request id from handshake headers', {
-                error: err,
+                error: error,
                 socketId: socket.id,
             });
             requestId = undefined;
         }
 
-        const log = withContext({ socketId: socket.id, connectionId, requestId });
+        const log = withContext({ connectionId, requestId, socketId: socket.id });
         const manager = deps.getManager() ?? deps.createManager();
 
         const headersSnapshot = snapshotHeaders(socket);
@@ -73,20 +73,20 @@ export function makeConnectionHandler(
         const clientSource = isExtension ? 'extension' : 'browser';
 
         log.info('socket connection established', {
-            socketId: socket.id,
-            connectionId,
             clientSource,
-            transport,
-            origin,
+            connectionId,
             headers: snapshotHeaders(socket),
+            origin,
+            socketId: socket.id,
             timestamp: new Date().toISOString(),
+            transport,
         });
 
         withErrorHandler(() => {
             logMetric(
                 'socketConnection',
-                { clientSource, transport, isExtension },
-                { socketId: socket.id, origin },
+                { clientSource, isExtension, transport },
+                { origin, socketId: socket.id },
             );
         }, 'socketConnection metric')();
 
@@ -96,33 +96,33 @@ export function makeConnectionHandler(
         try {
             registerSocketHandlers(
                 socket,
-                { socketId: socket.id, connectionId, requestId },
+                { connectionId, requestId, socketId: socket.id },
                 {
-                    musicDB: deps.musicDB,
-                    io: deps.getIo(),
+                    adminHash: deps.adminHash,
                     emit: (ev: string, payload: unknown, opts?: EmitOptions) => handlerEmitter.emit(ev, payload, opts),
-                    youtubeService: deps.youtubeService,
-                    manager,
                     fileStore: deps.fileStore,
+                    io: deps.getIo(),
                     isAdmin: (h?: string) => {
                         try {
                             return !!(h && h === deps.adminHash);
-                        } catch (err: unknown) {
-                            log.warn('isAdmin check failed', { error: err });
+                        } catch (error) {
+                            log.warn('isAdmin check failed', { error: error });
                             return false;
                         }
                     },
-                    adminHash: deps.adminHash,
-                    rateLimiter: deps.rateLimiter,
+                    manager,
+                    musicDB: deps.musicDB,
                     rateLimitConfig: deps.rateLimitConfig,
+                    rateLimiter: deps.rateLimiter,
+                    youtubeService: deps.youtubeService,
                 },
             );
-        } catch (err: unknown) {
+        } catch (error) {
             log.error('registerSocketHandlers failed', {
-                error: err,
+                error: error,
                 socketId: socket.id,
             });
-            throw err;
+            throw error;
         }
 
         if (isExtension) {
@@ -136,9 +136,9 @@ export function makeConnectionHandler(
                             timestamp: new Date().toISOString(),
                         });
                     });
-                } catch (err: unknown) {
+                } catch (error) {
                     log.debug('failed to register upgrade handler', {
-                        error: err,
+                        error: error,
                         socketId: socket.id,
                     });
                 }
@@ -148,15 +148,15 @@ export function makeConnectionHandler(
                         log.warn(
                             'extension websocket upgrade failed, continuing with polling',
                             {
-                                socketId: socket.id,
                                 error,
+                                socketId: socket.id,
                                 timestamp: new Date().toISOString(),
                             },
                         );
                     });
-                } catch (err: unknown) {
+                } catch (error) {
                     log.debug('failed to register upgradeError handler', {
-                        error: err,
+                        error: error,
                         socketId: socket.id,
                     });
                 }
@@ -167,12 +167,12 @@ export function makeConnectionHandler(
         emitInitialData(socket, log, deps.getMusicService);
 
         log.info('socket connected', {
-            socketId: socket.id,
+            clientSource,
             connectionId,
             requestId,
-            clientSource,
-            transport,
+            socketId: socket.id,
             timestamp: new Date().toISOString(),
+            transport,
         });
 
         if (isExtension) {

@@ -13,7 +13,10 @@ interface AudioPlayerProps {
     music?: Music;
 }
 
-function AudioPlayerInner({ status, music }: AudioPlayerProps): ReactElement | null {
+function AudioPlayerInner({
+    status,
+    music,
+}: AudioPlayerProps): ReactElement | null {
     const videoId = (status?.type === 'playing' && (status.musicId || status.videoId))
         || (status?.type === 'paused' && status.musicId)
         || music?.id
@@ -27,7 +30,9 @@ function AudioPlayerInner({ status, music }: AudioPlayerProps): ReactElement | n
     const duration = useMemo((): number | undefined => {
         if (status?.type === 'playing' && typeof status.duration === 'number') return status.duration;
         if (music?.duration) {
-            const parts = music.duration.split(':').map(p => parseInt(p, 10));
+            const parts = music.duration
+                .split(':')
+                .map(p => Number.parseInt(p, 10));
             if (parts.every(p => !isNaN(p))) {
                 if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
                 if (parts.length === 2) return parts[0] * 60 + parts[1];
@@ -36,8 +41,11 @@ function AudioPlayerInner({ status, music }: AudioPlayerProps): ReactElement | n
         return undefined;
     }, [status, music?.duration]);
 
-    const { currentTime: localCurrentTime, isEffectivelyPaused } = useInterpolatedTime({ status, duration });
-    const visibility = useVisibilityTimer({ hasStatus: !!status, isClosed: status?.type === 'closed' });
+    const { currentTime: localCurrentTime, isEffectivelyPaused } = useInterpolatedTime({ duration, status });
+    const visibility = useVisibilityTimer({
+        hasStatus: !!status,
+        isClosed: status?.type === 'closed',
+    });
     const thumbnail = useThumbnail(videoId);
 
     const isAdvertisement = status?.type === 'playing' && status.isAdvertisement === true;
@@ -57,9 +65,11 @@ function AudioPlayerInner({ status, music }: AudioPlayerProps): ReactElement | n
         [isAdvertisement, isExternalVideo, pausedIndicator],
     );
 
-    if (!status || visibility === 'hidden') return null;
+    if (!status || visibility === 'hidden') return;
 
-    const progressPercent = duration != null && duration > 0 ? Math.min((localCurrentTime / duration) * 100, 100) : 0;
+    const progressPercent = duration != undefined && duration > 0
+        ? Math.min((localCurrentTime / duration) * 100, 100)
+        : 0;
 
     const href = videoId ? watchUrl(videoId) : undefined;
 
@@ -104,7 +114,11 @@ function AudioPlayerInner({ status, music }: AudioPlayerProps): ReactElement | n
                                 className='text-gray-800 dark:text-gray-100 font-medium hover:underline line-clamp-1 sm:line-clamp-2 text-sm sm:text-base'
                             />
                         )
-                        : <span className='line-clamp-1 sm:line-clamp-2'>{title || '再生中'}</span>}
+                        : (
+                            <span className='line-clamp-1 sm:line-clamp-2'>
+                                {title || '再生中'}
+                            </span>
+                        )}
                 </div>
 
                 <div className='w-full'>
@@ -123,12 +137,20 @@ function AudioPlayerInner({ status, music }: AudioPlayerProps): ReactElement | n
                     </div>
                 </div>
 
-                {duration != null && (
+                {duration != undefined && (
                     <div className='text-xs sm:text-sm text-gray-600 dark:text-gray-400 flex justify-between items-center'>
-                        <span className={isAdvertisement || pausedIndicator ? 'text-orange-400' : 'text-slate-400'}>
+                        <span
+                            className={isAdvertisement || pausedIndicator
+                                ? 'text-orange-400'
+                                : 'text-slate-400'}
+                        >
                             {formatSecondsToTime(localCurrentTime)}
                         </span>
-                        <span className={isAdvertisement || pausedIndicator ? 'text-orange-400' : 'text-slate-400'}>
+                        <span
+                            className={isAdvertisement || pausedIndicator
+                                ? 'text-orange-400'
+                                : 'text-slate-400'}
+                        >
                             {formatSecondsToTime(duration)}
                         </span>
                     </div>

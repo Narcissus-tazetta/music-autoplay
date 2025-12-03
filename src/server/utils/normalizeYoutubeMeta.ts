@@ -21,7 +21,7 @@ export function normalizeYoutubeMeta(
     id: string,
     meta: unknown,
 ): YouTubeMeta | null {
-    if (!meta || typeof meta !== 'object') return null;
+    if (!meta || typeof meta !== 'object') return;
     const m = meta as Record<string, unknown>;
 
     let title: string | undefined = typeof m.title === 'string' ? m.title : undefined;
@@ -86,7 +86,7 @@ export function normalizeYoutubeMeta(
         }
     }
 
-    if (!title || !channelTitle || !channelId) return null;
+    if (!title || !channelTitle || !channelId) return;
     let finalDuration: string | undefined = undefined;
     let durationFromRaw = false;
     if (typeof m.duration === 'string') durationFromRaw = false;
@@ -103,12 +103,12 @@ export function normalizeYoutubeMeta(
                 try {
                     const secs = parseISO8601ToSeconds(s);
                     finalDuration = secondsToHMS(secs);
-                } catch (err: unknown) {
+                } catch (error) {
                     safeLog(
                         'debug',
                         'normalizeYoutubeMeta: failed to parse ISO8601 duration',
                         {
-                            error: err,
+                            error: error,
                             value: s,
                         },
                     );
@@ -130,11 +130,11 @@ export function normalizeYoutubeMeta(
     }
 
     return {
-        id,
-        title,
         channelId,
         channelTitle,
         duration: finalDuration,
+        id,
         isAgeRestricted: isAgeRestricted ?? false,
+        title,
     } as YouTubeMeta;
 }

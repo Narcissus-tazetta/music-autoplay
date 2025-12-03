@@ -2,12 +2,18 @@ import type { HandlerError } from './core';
 import { toHandlerError } from './core';
 import { getErrorLogger } from './wrappers';
 
-export type Ok<T> = { ok: true; value: T };
-export type Err<E> = { ok: false; error: E };
+export interface Ok<T> {
+    ok: true;
+    value: T;
+}
+export interface Err<E> {
+    ok: false;
+    error: E;
+}
 export type Result<T, E> = Ok<T> | Err<E>;
 
 export const ok = <T>(value: T): Ok<T> => ({ ok: true, value });
-export const err = <E>(error: E): Err<E> => ({ ok: false, error });
+export const err = <E>(error: E): Err<E> => ({ error, ok: false });
 
 export function safeExecute<T>(
     fn: () => T,
@@ -103,9 +109,7 @@ export function chainResult<T, U, E>(
     return result;
 }
 
-export function combineResults<T, E>(
-    results: Array<Result<T, E>>,
-): Result<T[], E> {
+export function combineResults<T, E>(results: Result<T, E>[]): Result<T[], E> {
     const values: T[] = [];
 
     for (const result of results) {
@@ -116,7 +120,7 @@ export function combineResults<T, E>(
     return ok(values);
 }
 
-export function collectOks<T, E>(results: Array<Result<T, E>>): T[] {
+export function collectOks<T, E>(results: Result<T, E>[]): T[] {
     const values: T[] = [];
 
     for (const result of results) if (result.ok) values.push(result.value);
@@ -124,7 +128,7 @@ export function collectOks<T, E>(results: Array<Result<T, E>>): T[] {
     return values;
 }
 
-export function collectErrors<T, E>(results: Array<Result<T, E>>): E[] {
+export function collectErrors<T, E>(results: Result<T, E>[]): E[] {
     const errors: E[] = [];
 
     for (const result of results) if (!result.ok) errors.push(result.error);

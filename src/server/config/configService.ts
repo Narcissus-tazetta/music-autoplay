@@ -111,12 +111,12 @@ export class ConfigService {
 
     getSocketConfig(): SocketConfig {
         return {
+            rateLimitMaxAttempts: this.getNumber('RATE_LIMIT_MAX_ATTEMPTS', 10) ?? 10,
+            rateLimitWindowMs: this.getNumber('RATE_LIMIT_WINDOW_MS', 60_000) ?? 60_000,
             remoteStatusDebounceMs: this.getNumber('REMOTE_STATUS_DEBOUNCE_MS', 0) ?? 0,
             remoteStatusGraceMs: this.getNumber('REMOTE_STATUS_GRACE_MS', 0) ?? 0,
             remoteStatusInactivityMs: this.getNumber('REMOTE_STATUS_INACTIVITY_MS', 0) ?? 0,
             windowCloseDebounce: this.getNumber('WINDOW_CLOSE_DEBOUNCE_MS', 500) ?? 500,
-            rateLimitMaxAttempts: this.getNumber('RATE_LIMIT_MAX_ATTEMPTS', 10) ?? 10,
-            rateLimitWindowMs: this.getNumber('RATE_LIMIT_WINDOW_MS', 60000) ?? 60000,
         };
     }
 
@@ -136,8 +136,8 @@ export class ConfigService {
     getLoggingConfig(): LoggingConfig {
         const nodeEnv = this.getString('NODE_ENV', 'development') ?? 'development';
         return {
-            level: this.getString('LOG_LEVEL', 'info') ?? 'info',
             isDev: nodeEnv === 'development',
+            level: this.getString('LOG_LEVEL', 'info') ?? 'info',
         };
     }
 

@@ -9,7 +9,7 @@ describe('safeEmit utilities', () => {
     });
 
     it('calls emit on a valid emitter', () => {
-        const calls: Array<{ ev: string; payload?: unknown }> = [];
+        const calls: { ev: string; payload?: unknown }[] = [];
         const emitter = {
             emit: (ev: string, payload?: unknown) => calls.push({ ev, payload }),
         } as any;
@@ -38,11 +38,11 @@ describe('safeEmit utilities', () => {
     it('createSafeEmitter merges default and user context and forwards options', () => {
         const received: any[] = [];
         const emitter = {
-            emit: (ev: string, payload: unknown, opts: any) => received.push({ ev, payload, opts }),
+            emit: (ev: string, payload: unknown, opts: any) => received.push({ ev, opts, payload }),
         } as any;
         const se = createSafeEmitter(emitter, {
-            operation: 'op',
             identifiers: { id: 'x' },
+            operation: 'op',
         });
         const ok = se(
             'evt' as any,
