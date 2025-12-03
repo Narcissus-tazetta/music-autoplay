@@ -1,274 +1,271 @@
 import {
-  createAuthErrorReply,
-  createRateLimitReply,
-  createServerErrorReply,
-  createValidationErrorReply,
-  type ReplyOptions,
-} from "@/shared/utils/errors";
-import { wrapAsync } from "@/shared/utils/errors";
-import type { Socket } from "socket.io";
-import type { ZodError, ZodSchema } from "zod";
-import logger, { withContext } from "../../logger";
-import { RateLimiter } from "../../services/rateLimiter";
+    createAuthErrorReply,
+    createRateLimitReply,
+    createServerErrorReply,
+    createValidationErrorReply,
+    type ReplyOptions,
+} from '@/shared/utils/errors';
+import { wrapAsync } from '@/shared/utils/errors';
+import type { Socket } from 'socket.io';
+import type { ZodError, ZodSchema } from 'zod';
+import logger, { withContext } from '../../logger';
+import { RateLimiter } from '../../services/rateLimiter';
 
 export interface AuthContext {
-  socketId: string;
-  requesterHash?: string;
+    socketId: string;
+    requesterHash?: string;
 }
 
 export interface EventContext extends Record<string, unknown> {
-  socketId: string;
-  requestId?: string;
-  connectionId?: string;
+    socketId: string;
+    requestId?: string;
+    connectionId?: string;
 }
 
 export type AuthChecker = (context: AuthContext) => boolean | Promise<boolean>;
 
 export interface RateLimiterConfig {
-  maxAttempts: number;
-  windowMs: number;
-  keyGenerator?: (socket: Socket) => string;
+    maxAttempts: number;
+    windowMs: number;
+    keyGenerator?: (socket: Socket) => string;
 }
 
 export interface ValidationError {
-  field: string;
-  message: string;
+    field: string;
+    message: string;
 }
 
 export interface EventHandlerConfig<TPayload, TResponse> {
-  event: string;
-  validator?: ZodSchema<TPayload>;
-  handler: (
-    payload: TPayload,
-    context: EventContext,
-  ) => Promise<TResponse> | TResponse;
-  rateLimiter?: RateLimiterConfig;
-  auth?: AuthChecker;
-  logPayload?: boolean;
-  logResponse?: boolean;
+    event: string;
+    validator?: ZodSchema<TPayload>;
+    handler: (
+        payload: TPayload,
+        context: EventContext,
+    ) => Promise<TResponse> | TResponse;
+    rateLimiter?: RateLimiterConfig;
+    auth?: AuthChecker;
+    logPayload?: boolean;
+    logResponse?: boolean;
 }
 
 interface CallbackFunction {
-  (response: ReplyOptions): void;
+    (response: ReplyOptions): void;
 }
 
 function formatZodErrors(error: ZodError): Record<string, string[]> {
-  const fieldErrors: Record<string, string[]> = {};
+    const fieldErrors: Record<string, string[]> = {};
 
-  for (const issue of error.errors) {
-    const path = issue.path.join(".");
-    const field = path || "root";
+    for (const issue of error.errors) {
+        const path = issue.path.join('.');
+        const field = path || 'root';
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (!fieldErrors[field]) fieldErrors[field] = [];
-    fieldErrors[field].push(issue.message);
-  }
-  return fieldErrors;
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        if (!fieldErrors[field]) fieldErrors[field] = [];
+        fieldErrors[field].push(issue.message);
+    }
+    return fieldErrors;
 }
 
 function extractPayloadFromArgs(args: unknown[]): unknown {
-  if (args.length === 0) return undefined;
-  if (args.length === 1) return args[0];
+    if (args.length === 0) return undefined;
+    if (args.length === 1) return args[0];
 
-  const lastArg = args[args.length - 1];
-  if (typeof lastArg === "function")
-    return args.length === 2 ? args[0] : args.slice(0, -1);
+    const lastArg = args[args.length - 1];
+    if (typeof lastArg === 'function') return args.length === 2 ? args[0] : args.slice(0, -1);
 
-  return args;
+    return args;
 }
 
 function extractCallbackFromArgs(
-  args: unknown[],
+    args: unknown[],
 ): CallbackFunction | undefined {
-  if (args.length === 0) return undefined;
+    if (args.length === 0) return undefined;
 
-  const lastArg = args[args.length - 1];
-  if (typeof lastArg === "function") return lastArg as CallbackFunction;
+    const lastArg = args[args.length - 1];
+    if (typeof lastArg === 'function') return lastArg as CallbackFunction;
 
-  return undefined;
+    return undefined;
 }
 
 export function createSocketEventHandler<TPayload, TResponse>(
-  config: EventHandlerConfig<TPayload, TResponse>,
+    config: EventHandlerConfig<TPayload, TResponse>,
 ) {
-  const rateLimiter = config.rateLimiter
-    ? new RateLimiter(
-        config.rateLimiter.maxAttempts,
-        config.rateLimiter.windowMs,
-      )
-    : undefined;
+    const rateLimiter = config.rateLimiter
+        ? new RateLimiter(
+            config.rateLimiter.maxAttempts,
+            config.rateLimiter.windowMs,
+        )
+        : undefined;
 
-  return (socket: Socket, context?: EventContext) => {
-    const ctx: EventContext = context ?? {
-      socketId: socket.id,
-    };
-
-    const log = context
-      ? withContext(context as Record<string, unknown>)
-      : logger;
-
-    const wrappedHandler = wrapAsync(async (...args: unknown[]) => {
-      const payload = extractPayloadFromArgs(args);
-      const callback = extractCallbackFromArgs(args);
-
-      if (config.logPayload) {
-        log.debug(`socket event received: ${config.event}`, {
-          socketId: ctx.socketId,
-          payload,
-        });
-      }
-
-      let rateLimitKey: string | undefined;
-      if (rateLimiter && config.rateLimiter) {
-        if (config.rateLimiter.keyGenerator)
-          rateLimitKey = config.rateLimiter.keyGenerator(socket);
-        else rateLimitKey = socket.id;
-
-        if (!rateLimiter.check(rateLimitKey)) {
-          const oldest = rateLimiter.getOldestAttempt(rateLimitKey);
-          const retryAfter = oldest
-            ? Math.ceil(
-                (config.rateLimiter.windowMs - (Date.now() - oldest)) / 1000,
-              )
-            : Math.ceil(config.rateLimiter.windowMs / 1000);
-
-          const reply = createRateLimitReply(retryAfter);
-          if (callback) callback(reply);
-
-          log.warn(`rate limit exceeded: ${config.event}`, {
-            socketId: ctx.socketId,
-            key: rateLimitKey,
-            retryAfter,
-          });
-
-          return;
-        }
-      }
-
-      if (config.auth) {
-        const authContext: AuthContext = {
-          socketId: socket.id,
-          requesterHash:
-            typeof payload === "object" &&
-            payload !== null &&
-            "requesterHash" in payload
-              ? String((payload as { requesterHash?: unknown }).requesterHash)
-              : undefined,
+    return (socket: Socket, context?: EventContext) => {
+        const ctx: EventContext = context ?? {
+            socketId: socket.id,
         };
 
-        const isAuthorized = await config.auth(authContext);
+        const log = context
+            ? withContext(context as Record<string, unknown>)
+            : logger;
 
-        if (!isAuthorized) {
-          const reply = createAuthErrorReply();
-          if (callback) callback(reply);
+        const wrappedHandler = wrapAsync(async (...args: unknown[]) => {
+            const payload = extractPayloadFromArgs(args);
+            const callback = extractCallbackFromArgs(args);
 
-          log.warn(`auth failed: ${config.event}`, {
-            socketId: ctx.socketId,
-          });
+            if (config.logPayload) {
+                log.debug(`socket event received: ${config.event}`, {
+                    socketId: ctx.socketId,
+                    payload,
+                });
+            }
 
-          return;
-        }
-      }
+            let rateLimitKey: string | undefined;
+            if (rateLimiter && config.rateLimiter) {
+                if (config.rateLimiter.keyGenerator) rateLimitKey = config.rateLimiter.keyGenerator(socket);
+                else rateLimitKey = socket.id;
 
-      if (config.validator) {
-        const validation = config.validator.safeParse(payload);
+                if (!rateLimiter.check(rateLimitKey)) {
+                    const oldest = rateLimiter.getOldestAttempt(rateLimitKey);
+                    const retryAfter = oldest
+                        ? Math.ceil(
+                            (config.rateLimiter.windowMs - (Date.now() - oldest)) / 1000,
+                        )
+                        : Math.ceil(config.rateLimiter.windowMs / 1000);
 
-        if (!validation.success) {
-          const fieldErrors = formatZodErrors(validation.error);
-          const reply = createValidationErrorReply(fieldErrors);
+                    const reply = createRateLimitReply(retryAfter);
+                    if (callback) callback(reply);
 
-          if (callback) callback(reply);
+                    log.warn(`rate limit exceeded: ${config.event}`, {
+                        socketId: ctx.socketId,
+                        key: rateLimitKey,
+                        retryAfter,
+                    });
 
-          log.debug(`validation failed: ${config.event}`, {
-            socketId: ctx.socketId,
-            errors: fieldErrors,
-          });
+                    return;
+                }
+            }
 
-          return;
-        }
+            if (config.auth) {
+                const authContext: AuthContext = {
+                    socketId: socket.id,
+                    requesterHash: typeof payload === 'object'
+                            && payload !== null
+                            && 'requesterHash' in payload
+                        ? String((payload as { requesterHash?: unknown }).requesterHash)
+                        : undefined,
+                };
 
-        try {
-          const result = await config.handler(validation.data, ctx);
+                const isAuthorized = await config.auth(authContext);
 
-          if (rateLimiter && rateLimitKey) rateLimiter.consume(rateLimitKey);
+                if (!isAuthorized) {
+                    const reply = createAuthErrorReply();
+                    if (callback) callback(reply);
 
-          if (config.logResponse) {
-            log.debug(`socket event response: ${config.event}`, {
-              socketId: ctx.socketId,
-              result,
-            });
-          }
+                    log.warn(`auth failed: ${config.event}`, {
+                        socketId: ctx.socketId,
+                    });
 
-          if (callback) callback(result as ReplyOptions);
-        } catch (error: unknown) {
-          log.error(`handler error: ${config.event}`, {
-            socketId: ctx.socketId,
-            error,
-          });
+                    return;
+                }
+            }
 
-          const reply = createServerErrorReply(error);
-          if (callback) callback(reply);
-        }
-      } else {
-        try {
-          const result = await config.handler(payload as TPayload, ctx);
+            if (config.validator) {
+                const validation = config.validator.safeParse(payload);
 
-          if (rateLimiter && rateLimitKey) rateLimiter.consume(rateLimitKey);
+                if (!validation.success) {
+                    const fieldErrors = formatZodErrors(validation.error);
+                    const reply = createValidationErrorReply(fieldErrors);
 
-          if (config.logResponse) {
-            log.debug(`socket event response: ${config.event}`, {
-              socketId: ctx.socketId,
-              result,
-            });
-          }
+                    if (callback) callback(reply);
 
-          if (callback) callback(result as ReplyOptions);
-        } catch (error: unknown) {
-          log.error(`handler error: ${config.event}`, {
-            socketId: ctx.socketId,
-            error,
-          });
+                    log.debug(`validation failed: ${config.event}`, {
+                        socketId: ctx.socketId,
+                        errors: fieldErrors,
+                    });
 
-          const reply = createServerErrorReply(error);
-          if (callback) callback(reply);
-        }
-      }
-    }, `socket:${config.event}`);
+                    return;
+                }
 
-    socket.on(config.event, wrappedHandler);
-  };
+                try {
+                    const result = await config.handler(validation.data, ctx);
+
+                    if (rateLimiter && rateLimitKey) rateLimiter.consume(rateLimitKey);
+
+                    if (config.logResponse) {
+                        log.debug(`socket event response: ${config.event}`, {
+                            socketId: ctx.socketId,
+                            result,
+                        });
+                    }
+
+                    if (callback) callback(result as ReplyOptions);
+                } catch (error: unknown) {
+                    log.error(`handler error: ${config.event}`, {
+                        socketId: ctx.socketId,
+                        error,
+                    });
+
+                    const reply = createServerErrorReply(error);
+                    if (callback) callback(reply);
+                }
+            } else {
+                try {
+                    const result = await config.handler(payload as TPayload, ctx);
+
+                    if (rateLimiter && rateLimitKey) rateLimiter.consume(rateLimitKey);
+
+                    if (config.logResponse) {
+                        log.debug(`socket event response: ${config.event}`, {
+                            socketId: ctx.socketId,
+                            result,
+                        });
+                    }
+
+                    if (callback) callback(result as ReplyOptions);
+                } catch (error: unknown) {
+                    log.error(`handler error: ${config.event}`, {
+                        socketId: ctx.socketId,
+                        error,
+                    });
+
+                    const reply = createServerErrorReply(error);
+                    if (callback) callback(reply);
+                }
+            }
+        }, `socket:${config.event}`);
+
+        socket.on(config.event, wrappedHandler);
+    };
 }
 
 export function createTypedSocketEventHandler<
-  TPayload extends Record<string, unknown>,
-  TResponse,
+    TPayload extends Record<string, unknown>,
+    TResponse,
 >(config: EventHandlerConfig<TPayload, TResponse>) {
-  return createSocketEventHandler(config);
+    return createSocketEventHandler(config);
 }
 
 export interface BatchEventHandlerConfig {
-  handlers: Array<{
-    event: string;
-    handler: (socket: Socket, context?: EventContext) => void;
-  }>;
+    handlers: Array<{
+        event: string;
+        handler: (socket: Socket, context?: EventContext) => void;
+    }>;
 }
 
 export function registerBatchHandlers(
-  socket: Socket,
-  config: BatchEventHandlerConfig,
-  context?: EventContext,
+    socket: Socket,
+    config: BatchEventHandlerConfig,
+    context?: EventContext,
 ): void {
-  for (const { event, handler } of config.handlers) {
-    try {
-      handler(socket, context);
-    } catch (error: unknown) {
-      const log = context
-        ? withContext(context as Record<string, unknown>)
-        : logger;
-      log.error(`failed to register handler: ${event}`, {
-        socketId: socket.id,
-        error,
-      });
+    for (const { event, handler } of config.handlers) {
+        try {
+            handler(socket, context);
+        } catch (error: unknown) {
+            const log = context
+                ? withContext(context as Record<string, unknown>)
+                : logger;
+            log.error(`failed to register handler: ${event}`, {
+                socketId: socket.id,
+                error,
+            });
+        }
     }
-  }
 }

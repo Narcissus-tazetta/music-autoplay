@@ -58,3 +58,4 @@ Thumbs.db
 .backup
 .history/
 tmp_test_data/
+data/*.json

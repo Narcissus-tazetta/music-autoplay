@@ -1,37 +1,39 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const WindowExtensionsSchema = z
-  .object({
-    SOCKET_URL: z.string().optional(),
-    SOCKET_PATH: z.string().optional(),
-    __app__: z
-      .object({
-        navigate: z.function().optional(),
-        showToast: z.function().optional(),
-      })
-      .optional(),
-  })
-  .passthrough();
+    .object({
+        SOCKET_URL: z.string().optional(),
+        SOCKET_PATH: z.string().optional(),
+        __app__: z
+            .object({
+                navigate: z.function().optional(),
+                showToast: z.function().optional(),
+            })
+            .optional(),
+    })
+    .passthrough();
 
 export const GlobalThisSchema = z
-  .object({
-    structuredClone: z.function().optional(),
-  })
-  .passthrough();
+    .object({
+        structuredClone: z.function().optional(),
+    })
+    .passthrough();
 
 export function hasStructuredClone(
-  global: unknown,
+    global: unknown,
 ): global is { structuredClone: (x: unknown) => unknown } {
-  const result = GlobalThisSchema.safeParse(global);
-  return result.success && typeof result.data.structuredClone === "function";
+    const result = GlobalThisSchema.safeParse(global);
+    return result.success && typeof result.data.structuredClone === 'function';
 }
 
-export function getWindowExtensions(): z.SafeParseReturnType<
-  unknown,
-  z.infer<typeof WindowExtensionsSchema>
-> | null {
-  if (typeof window === "undefined") return null;
-  return WindowExtensionsSchema.safeParse(window);
+export function getWindowExtensions():
+    | z.SafeParseReturnType<
+        unknown,
+        z.infer<typeof WindowExtensionsSchema>
+    >
+    | null {
+    if (typeof window === 'undefined') return null;
+    return WindowExtensionsSchema.safeParse(window);
 }
 
 export type WindowExtensions = z.infer<typeof WindowExtensionsSchema>;

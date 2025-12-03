@@ -1,19 +1,19 @@
 export function getClientIP(request: Request): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    const ips = forwardedFor.split(",").map((ip) => ip.trim());
-    return ips[0];
-  }
+    const forwardedFor = request.headers.get('x-forwarded-for');
+    if (forwardedFor) {
+        const ips = forwardedFor.split(',').map(ip => ip.trim());
+        return ips[0];
+    }
 
-  const realIP = request.headers.get("x-real-ip");
-  if (realIP) return realIP.trim();
+    const realIP = request.headers.get('x-real-ip');
+    if (realIP) return realIP.trim();
 
-  try {
-    const cfConnectingIP = request.headers.get("cf-connecting-ip");
-    if (cfConnectingIP) return cfConnectingIP.trim();
-  } catch {
-    // ignore
-  }
+    try {
+        const cfConnectingIP = request.headers.get('cf-connecting-ip');
+        if (cfConnectingIP) return cfConnectingIP.trim();
+    } catch {
+        // ignore
+    }
 
-  return "unknown";
+    return 'unknown';
 }
