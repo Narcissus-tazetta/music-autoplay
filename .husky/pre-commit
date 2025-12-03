@@ -1,2 +1,4 @@
-bun lint-staged
-
+bunx lint-staged
+bunx oxlint .
+bunx knip-bun
+bun test

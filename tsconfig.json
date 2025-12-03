@@ -7,17 +7,16 @@
   ],
   "compilerOptions": {
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
-    "types": ["node", "vite/client", "bun-types"],
+    "types": ["vite/client", "bun"],
     "target": "ES2022",
     "module": "ES2022",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
     "rootDirs": [".", "./.react-router/types"],
-    "baseUrl": ".",
     "paths": {
       "~/*": ["./src/app/*"],
       "@/*": ["./src/*"],
-      "@shadcn/*": ["src/app/components/ui/shadcn/*"]
+      "@shadcn/ui/*": ["./src/app/components/ui/shadcn/*"]
     },
     "esModuleInterop": true,
     "verbatimModuleSyntax": true,

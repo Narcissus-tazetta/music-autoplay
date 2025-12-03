@@ -1,5 +1,5 @@
 import type { Music } from '@/shared/stores/musicStore';
-import { Table } from '@shadcn/table';
+import { Table } from '@shadcn/ui/table';
 import { AnimatePresence } from 'framer-motion';
 import { memo } from 'react';
 import { MemoizedMusicTableRow } from './MusicTableRow';
