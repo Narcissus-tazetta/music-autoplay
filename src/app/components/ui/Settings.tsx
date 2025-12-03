@@ -1,6 +1,6 @@
 import { useSettingsSync } from '@/app/hooks/useSettingsSync';
-import { Label } from '@shadcn/label';
-import { ToggleGroup } from '@shadcn/toggle-group';
+import { Label } from '@shadcn/ui/label';
+import { ToggleGroup } from '@shadcn/ui/toggle-group';
 import { Eye, EyeOff, List, MoonIcon, Play, SparklesIcon, SunIcon } from 'lucide-react';
 import { memo } from 'react';
 import { type Theme, useTheme } from 'remix-themes';

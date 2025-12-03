@@ -1,6 +1,6 @@
 import { useAuth } from '@/app/hooks/useAuth';
-import { Button } from '@shadcn/button';
-import { Sheet } from '@shadcn/sheet';
+import { Button } from '@shadcn/ui/button';
+import { Sheet } from '@shadcn/ui/sheet';
 import { SlidersHorizontalIcon } from 'lucide-react';
 import { memo } from 'react';
 import { Form, Link } from 'react-router';

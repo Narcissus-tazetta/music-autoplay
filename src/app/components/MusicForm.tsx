@@ -1,6 +1,6 @@
-import { Button } from '@shadcn/button';
-import { Card } from '@shadcn/card';
-import { Input } from '@shadcn/input';
+import { Button } from '@shadcn/ui/button';
+import { Card } from '@shadcn/ui/card';
+import { Input } from '@shadcn/ui/input';
 import { Link as LinkIcon, Loader, Send } from 'lucide-react';
 import { memo } from 'react';
 
