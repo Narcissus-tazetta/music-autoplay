@@ -14,7 +14,7 @@ import type { YouTubeService } from '../../services/youtubeService';
 import { createSocketEmitter } from '../../utils/safeEmit';
 import { createSocketEventHandler, type EventContext, registerBatchHandlers } from './eventHandler';
 
-type Deps = {
+interface Deps {
     musicDB: Map<string, Music>;
     io?: Server;
     emit?: (
@@ -26,7 +26,7 @@ type Deps = {
     fileStore: Store;
     isAdmin?: (requesterHash?: string) => boolean;
     rateLimiter?: RateLimiter;
-};
+}
 
 export function createMusicHandlers(deps: Deps): {
     register: (socket: Socket, context?: EventContext) => void;
@@ -49,37 +49,29 @@ export function createMusicHandlers(deps: Deps): {
     }
 
     const musicService: MusicService = createMusicService({
-        youtubeService,
-        musicDB,
-        fileStore,
         emitFn,
+        fileStore,
+        musicDB,
+        youtubeService,
     });
 
     const addMusicHandler = createSocketEventHandler({
         event: 'addMusic',
-        validator: AddMusicSchema,
-        rateLimiter: deps.rateLimiter
-            ? {
-                maxAttempts: 10,
-                windowMs: 60000,
-                keyGenerator: socket => socket.handshake.address || socket.id,
-            }
-            : undefined,
         handler: async (payload, context): Promise<ReplyOptions> => {
             const { url, requesterHash, requesterName } = payload;
             const l = withContext(context as Record<string, unknown>);
 
             const result = await musicService.addMusic({
-                url,
                 requesterHash,
                 requesterName,
+                url,
             });
 
             if (!result.ok) {
                 l.warn('addMusic failed', {
                     error: result.error,
-                    url,
                     requesterHash,
+                    url,
                 });
                 return {
                     formErrors: [result.error.message],
@@ -95,29 +87,29 @@ export function createMusicHandlers(deps: Deps): {
         },
         logPayload: false,
         logResponse: false,
+        rateLimiter: deps.rateLimiter
+            ? {
+                keyGenerator: socket => socket.handshake.address || socket.id,
+                maxAttempts: 10,
+                windowMs: 60_000,
+            }
+            : undefined,
+        validator: AddMusicSchema,
     });
 
     const removeMusicHandler = createSocketEventHandler({
         event: 'removeMusic',
-        validator: RemoveMusicSchema,
-        rateLimiter: deps.rateLimiter
-            ? {
-                maxAttempts: 10,
-                windowMs: 60000,
-                keyGenerator: socket => socket.handshake.address || socket.id,
-            }
-            : undefined,
         handler: async (payload, context): Promise<ReplyOptions> => {
             const { url, requesterHash } = payload;
             const l = withContext(context as Record<string, unknown>);
 
-            const result = await musicService.removeMusic({ url, requesterHash });
+            const result = await musicService.removeMusic({ requesterHash, url });
 
             if (!result.ok) {
                 l.warn('removeMusic failed', {
                     error: result.error,
-                    url,
                     requesterHash,
+                    url,
                 });
                 return {
                     formErrors: [result.error.message],
@@ -125,14 +117,22 @@ export function createMusicHandlers(deps: Deps): {
             }
 
             l.info('removeMusic succeeded', {
-                url,
                 requesterHash,
+                url,
             });
 
             return {};
         },
         logPayload: false,
         logResponse: false,
+        rateLimiter: deps.rateLimiter
+            ? {
+                keyGenerator: socket => socket.handshake.address || socket.id,
+                maxAttempts: 10,
+                windowMs: 60_000,
+            }
+            : undefined,
+        validator: RemoveMusicSchema,
     });
 
     const register = withErrorHandler((socket: Socket, ctx?: EventContext) => {

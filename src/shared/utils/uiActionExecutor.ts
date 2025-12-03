@@ -33,24 +33,27 @@ const tryRedirect = (to: string): void => {
     window.location.href = to;
 };
 
-export type UiActionExecutorOptions = {
+export interface UiActionExecutorOptions {
     conformFields?: Record<string, unknown> | undefined;
-};
+}
 
 export function executeUiAction(
     action: UiAction,
     opts?: UiActionExecutorOptions,
 ): void {
     switch (action.type) {
-        case 'noop':
+        case 'noop': {
             return;
-        case 'redirect':
+        }
+        case 'redirect': {
             tryRedirect(action.to);
             return;
-        case 'showToast':
+        }
+        case 'showToast': {
             tryShowToast(action.level, action.message);
             return;
-        case 'fieldErrors':
+        }
+        case 'fieldErrors': {
             try {
                 if (opts?.conformFields) {
                     const maybeFields = opts.conformFields;
@@ -74,8 +77,10 @@ export function executeUiAction(
                 if (import.meta.env.DEV) console.debug('uiActionExecutor action failed');
             }
             return;
-        default:
+        }
+        default: {
             return;
+        }
     }
 }
 

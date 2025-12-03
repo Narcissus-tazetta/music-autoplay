@@ -1,8 +1,8 @@
-export type RetryOptions = {
+export interface RetryOptions {
     retries?: number;
     baseMs?: number;
     factor?: number;
-};
+}
 
 export async function retry<T>(
     fn: () => Promise<T>,
@@ -15,8 +15,8 @@ export async function retry<T>(
     for (let attempt = 0; attempt <= retries; attempt++) {
         try {
             return await fn();
-        } catch (e: unknown) {
-            lastErr = e;
+        } catch (error) {
+            lastErr = error;
             if (attempt === retries) break;
             const wait = base * Math.pow(factor, attempt);
             await new Promise(r => setTimeout(r, wait));

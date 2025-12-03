@@ -2,7 +2,7 @@ import type { HandlerError } from '@/shared/utils/errors';
 import { toHandlerError } from '@/shared/utils/errors';
 import type { Result } from '@/shared/utils/errors/result-handlers';
 import { err, ok } from '@/shared/utils/errors/result-handlers';
-import { createHash, timingSafeEqual } from 'crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import type ConfigService from '../../config/configService';
 import ServiceResolver from '../../utils/serviceResolver';
 
@@ -80,8 +80,8 @@ export class AuthChecker {
             const isAdmin = adminCheckResult.value;
 
             return ok({
-                isAuthenticated: true,
                 isAdmin,
+                isAuthenticated: true,
                 userId: context.requesterHash,
             });
         } catch (error: unknown) {

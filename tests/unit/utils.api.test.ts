@@ -5,7 +5,7 @@ describe('API normalization utilities', () => {
     describe('normalizeApiResponse', () => {
         test('normalizes successful response', async () => {
             const resp = new Response(
-                JSON.stringify({ success: true, data: { id: 1, name: 'test' } }),
+                JSON.stringify({ data: { id: 1, name: 'test' }, success: true }),
                 {
                     status: 200,
                 },
@@ -19,8 +19,8 @@ describe('API normalization utilities', () => {
         test('normalizes error response with code and message', async () => {
             const resp = new Response(
                 JSON.stringify({
-                    success: false,
                     error: { code: 'VALIDATION_ERROR', message: 'Invalid input' },
+                    success: false,
                 }),
                 { status: 400 },
             );
@@ -36,12 +36,12 @@ describe('API normalization utilities', () => {
         test('normalizes error response with details', async () => {
             const resp = new Response(
                 JSON.stringify({
-                    success: false,
                     error: {
                         code: 'VALIDATION',
-                        message: 'Validation failed',
                         details: { url: 'Invalid URL' },
+                        message: 'Validation failed',
                     },
+                    success: false,
                 }),
                 { status: 422 },
             );
@@ -89,7 +89,7 @@ describe('API normalization utilities', () => {
         });
 
         test('handles error without message field', async () => {
-            const resp = new Response(JSON.stringify({ success: false, error: {} }), {
+            const resp = new Response(JSON.stringify({ error: {}, success: false }), {
                 status: 500,
             });
 
@@ -101,8 +101,8 @@ describe('API normalization utilities', () => {
         test('converts numeric error code to string', async () => {
             const resp = new Response(
                 JSON.stringify({
-                    success: false,
                     error: { code: 404, message: 'Not found' },
+                    success: false,
                 }),
                 { status: 404 },
             );
@@ -115,8 +115,8 @@ describe('API normalization utilities', () => {
         test('handles 500 internal server error', async () => {
             const resp = new Response(
                 JSON.stringify({
-                    success: false,
                     error: { message: 'Internal error' },
+                    success: false,
                 }),
                 {
                     status: 500,

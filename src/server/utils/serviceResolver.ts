@@ -21,7 +21,7 @@ export class ServiceResolver {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
     resolveRequired<T = unknown>(token: string): T {
         const service = container.getOptional(token);
-        if (service == null) throw new Error(`Required service not found: ${token}`);
+        if (service == undefined) throw new Error(`Required service not found: ${token}`);
         return service as T;
     }
 

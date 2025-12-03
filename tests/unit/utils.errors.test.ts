@@ -64,7 +64,7 @@ describe('result-handlers utilities', () => {
 
         test('passes through error result', () => {
             const error = new Error('test');
-            const result = { ok: false, error } as const;
+            const result = { error, ok: false } as const;
             const mapped = mapResult(result, (v: number) => v * 2);
             expect(isErr(mapped)).toBe(true);
             if (isErr(mapped)) expect(mapped.error).toBe(error);
@@ -84,7 +84,7 @@ describe('result-handlers utilities', () => {
 
         test('stops chain on error', () => {
             const error = new Error('test');
-            const result = { ok: false, error } as const;
+            const result = { error, ok: false } as const;
             const chained = chainResult(
                 result,
                 (v: number) => ({ ok: true, value: v * 2 }) as const,
@@ -96,7 +96,7 @@ describe('result-handlers utilities', () => {
         test('propagates error from chain operation', () => {
             const result = { ok: true, value: 10 } as const;
             const error = new Error('chain error');
-            const chained = chainResult(result, () => ({ ok: false, error }));
+            const chained = chainResult(result, () => ({ error, ok: false }));
             expect(isErr(chained)).toBe(true);
             if (isErr(chained)) expect(chained.error).toBe(error);
         });
@@ -104,7 +104,7 @@ describe('result-handlers utilities', () => {
 
     describe('combineResults', () => {
         test('combines all ok results', () => {
-            const results: Array<{ ok: true; value: number }> = [
+            const results: { ok: true; value: number }[] = [
                 { ok: true, value: 1 },
                 { ok: true, value: 2 },
                 { ok: true, value: 3 },
@@ -116,11 +116,12 @@ describe('result-handlers utilities', () => {
 
         test('returns first error when any result fails', () => {
             const error = new Error('test');
-            const results: Array<
-                { ok: true; value: number } | { ok: false; error: Error }
-            > = [
+            const results: (
+                | { ok: true; value: number }
+                | { ok: false; error: Error }
+            )[] = [
                 { ok: true, value: 1 },
-                { ok: false, error },
+                { error, ok: false },
                 { ok: true, value: 3 },
             ];
             const combined = combineResults(results);
@@ -143,7 +144,7 @@ describe('result-handlers utilities', () => {
         });
 
         test('isErr correctly identifies error result', () => {
-            const result = { ok: false, error: new Error() } as const;
+            const result = { error: new Error(), ok: false } as const;
             expect(isOk(result)).toBe(false);
             expect(isErr(result)).toBe(true);
         });

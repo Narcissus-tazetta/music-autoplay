@@ -11,7 +11,10 @@ interface UseInterpolatedTimeParams {
     duration?: number;
 }
 
-export function useInterpolatedTime({ status, duration }: UseInterpolatedTimeParams): {
+export function useInterpolatedTime({
+    status,
+    duration,
+}: UseInterpolatedTimeParams): {
     currentTime: number;
     isEffectivelyPaused: boolean;
 } {
@@ -32,11 +35,18 @@ export function useInterpolatedTime({ status, duration }: UseInterpolatedTimePar
     useEffect(() => {
         if (status?.type === 'playing' && typeof status.currentTime === 'number') {
             const newTimestamp = status.lastProgressUpdate || Date.now();
-            const timeDiff = Math.abs(status.currentTime - localCurrentTimeRef.current);
+            const timeDiff = Math.abs(
+                status.currentTime - localCurrentTimeRef.current,
+            );
             const seekDetected = timeDiff >= SEEK_THRESHOLD || lastUpdateTimestampRef.current === 0;
 
-            const delta = Math.abs(status.currentTime - lastStatusCurrentTimeRef.current);
-            if (delta < EFFECTIVE_PAUSE_DELTA && lastStatusCurrentTimeRef.current > 0) {
+            const delta = Math.abs(
+                status.currentTime - lastStatusCurrentTimeRef.current,
+            );
+            if (
+                delta < EFFECTIVE_PAUSE_DELTA
+                && lastStatusCurrentTimeRef.current > 0
+            ) {
                 zeroProgressCountRef.current += 1;
                 if (zeroProgressCountRef.current >= EFFECTIVE_PAUSE_THRESHOLD) {
                     if (!effectivePausedRef.current) {
@@ -79,7 +89,7 @@ export function useInterpolatedTime({ status, duration }: UseInterpolatedTimePar
         if (!status || status.type === 'closed') {
             if (animationFrameRef.current) {
                 cancelAnimationFrame(animationFrameRef.current);
-                animationFrameRef.current = null;
+                animationFrameRef.current = undefined;
             }
             return;
         }
@@ -88,8 +98,10 @@ export function useInterpolatedTime({ status, duration }: UseInterpolatedTimePar
             const now = Date.now();
             const elapsed = (now - lastUpdateTimestampRef.current) / 1000;
             const isPlayingNow = status.type === 'playing' && !effectivePausedRef.current;
-            const newTime = isPlayingNow ? baseTimeRef.current + elapsed : baseTimeRef.current;
-            const clampedTime = duration != null ? Math.min(newTime, duration) : newTime;
+            const newTime = isPlayingNow
+                ? baseTimeRef.current + elapsed
+                : baseTimeRef.current;
+            const clampedTime = duration != undefined ? Math.min(newTime, duration) : newTime;
             setLocalCurrentTime(clampedTime);
             animationFrameRef.current = requestAnimationFrame(animate);
         };
@@ -99,7 +111,7 @@ export function useInterpolatedTime({ status, duration }: UseInterpolatedTimePar
         return () => {
             if (animationFrameRef.current) {
                 cancelAnimationFrame(animationFrameRef.current);
-                animationFrameRef.current = null;
+                animationFrameRef.current = undefined;
             }
         };
     }, [status, duration]);
@@ -117,7 +129,10 @@ interface UseVisibilityTimerParams {
     isClosed: boolean;
 }
 
-export function useVisibilityTimer({ hasStatus, isClosed }: UseVisibilityTimerParams): VisibilityState {
+export function useVisibilityTimer({
+    hasStatus,
+    isClosed,
+}: UseVisibilityTimerParams): VisibilityState {
     const [visibility, setVisibility] = useState<VisibilityState>('visible');
     const timerRef = useRef<number | null>(null);
 
@@ -134,13 +149,13 @@ export function useVisibilityTimer({ hasStatus, isClosed }: UseVisibilityTimerPa
                 setVisibility('hiding');
                 timerRef.current = window.setTimeout(() => {
                     setVisibility('hidden');
-                    timerRef.current = null;
+                    timerRef.current = undefined;
                 }, FADE_OUT_DURATION);
             }, FADE_OUT_DELAY);
         } else {
             if (timerRef.current) {
                 clearTimeout(timerRef.current);
-                timerRef.current = null;
+                timerRef.current = undefined;
             }
             setVisibility('visible');
         }
@@ -148,7 +163,7 @@ export function useVisibilityTimer({ hasStatus, isClosed }: UseVisibilityTimerPa
         return () => {
             if (timerRef.current) {
                 clearTimeout(timerRef.current);
-                timerRef.current = null;
+                timerRef.current = undefined;
             }
         };
     }, [hasStatus, isClosed]);
@@ -173,7 +188,10 @@ const makeCandidates = (videoId: string): string[] => [
 
 export function useThumbnail(videoId?: string): ThumbnailResult {
     const [loaded, setLoaded] = useState(false);
-    const [failedIndices, setFailedIndices] = useState<{ id: string; indices: Set<number> }>({
+    const [failedIndices, setFailedIndices] = useState<{
+        id: string;
+        indices: Set<number>;
+    }>({
         id: '',
         indices: new Set(),
     });
@@ -183,16 +201,22 @@ export function useThumbnail(videoId?: string): ThumbnailResult {
 
     const src = (() => {
         if (!videoId) return '/favicon.svg';
-        const firstValidIndex = candidates.findIndex((_, i) => !activeIndices.has(i));
-        return firstValidIndex >= 0 ? candidates[firstValidIndex] : '/favicon.svg';
+        const firstValidIndex = candidates.findIndex(
+            (_, i) => !activeIndices.has(i),
+        );
+        return firstValidIndex !== -1
+            ? candidates[firstValidIndex]
+            : '/favicon.svg';
     })();
 
     const handleError = (): void => {
         const currentIndex = candidates.indexOf(src);
-        if (currentIndex >= 0 && videoId) {
+        if (currentIndex !== -1 && videoId) {
             setFailedIndices(prev => ({
                 id: videoId,
-                indices: prev.id === videoId ? new Set([...prev.indices, currentIndex]) : new Set([currentIndex]),
+                indices: prev.id === videoId
+                    ? new Set([...prev.indices, currentIndex])
+                    : new Set([currentIndex]),
             }));
         }
         setLoaded(true);
@@ -206,5 +230,5 @@ export function useThumbnail(videoId?: string): ThumbnailResult {
         setLoaded(false);
     }, [src]);
 
-    return { src, loaded, handleLoad, handleError };
+    return { handleError, handleLoad, loaded, src };
 }

@@ -13,8 +13,8 @@ export function useAdminKeyActivation(): void {
                     .then(({ useAdminStore }) => {
                         useAdminStore.getState().setIsAdmin(true);
                     })
-                    .catch((err: unknown) => {
-                        if (import.meta.env.DEV) console.error('adminStore import failed', err);
+                    .catch(error => {
+                        if (import.meta.env.DEV) console.error('adminStore import failed', error);
                     });
             }
         }

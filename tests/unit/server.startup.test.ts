@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import express from 'express';
-import { createServer, Server } from 'http';
+import { createServer, Server } from 'node:http';
 import { describe, expect, it } from '../bunTestCompat';
 describe('HTTP Server startup and error handling', () => {
     it('emits EADDRINUSE when port already in use', done => {
@@ -17,9 +17,9 @@ describe('HTTP Server startup and error handling', () => {
                     srvA.close(() => {
                         done();
                     });
-                } catch (e) {
+                } catch (error) {
                     srvA.close(() => {
-                        done(e as Error);
+                        done(error as Error);
                     });
                 }
             });

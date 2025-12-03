@@ -20,17 +20,26 @@ function SettingsInner() {
                 unselectable='off'
                 value={meta.definedBy === 'USER' ? (theme ?? 'system') : 'system'}
                 onValueChange={theme => {
-                    if (theme) setTheme(theme === 'system' ? null : (theme as Theme));
+                    if (theme) setTheme(theme === 'system' ? undefined : (theme as Theme));
                 }}
                 className='w-full'
             >
-                <ToggleGroup.Item value='light' className='w-full h-11 sm:h-10 touch-target'>
+                <ToggleGroup.Item
+                    value='light'
+                    className='w-full h-11 sm:h-10 touch-target'
+                >
                     <SunIcon className='h-5 w-5 sm:h-4 sm:w-4' />
                 </ToggleGroup.Item>
-                <ToggleGroup.Item value='system' className='w-full h-11 sm:h-10 touch-target'>
+                <ToggleGroup.Item
+                    value='system'
+                    className='w-full h-11 sm:h-10 touch-target'
+                >
                     <SparklesIcon className='h-5 w-5 sm:h-4 sm:w-4' />
                 </ToggleGroup.Item>
-                <ToggleGroup.Item value='dark' className='w-full h-11 sm:h-10 touch-target'>
+                <ToggleGroup.Item
+                    value='dark'
+                    className='w-full h-11 sm:h-10 touch-target'
+                >
                     <MoonIcon className='h-5 w-5 sm:h-4 sm:w-4' />
                 </ToggleGroup.Item>
             </ToggleGroup>

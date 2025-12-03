@@ -1,6 +1,6 @@
 import logger from '@/server/logger';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const DEFAULT_FILE_PATH = path.resolve(process.cwd(), 'data', 'settings.json');
 
@@ -11,7 +11,7 @@ type PersistFile = Record<
 
 export class SettingsStore {
     private filePath: string;
-    private current: PersistFile | null = null;
+    private current: PersistFile | null = undefined;
 
     constructor(filePath?: string) {
         this.filePath = filePath ?? DEFAULT_FILE_PATH;
@@ -29,38 +29,38 @@ export class SettingsStore {
             const raw = fs.readFileSync(this.filePath, 'utf8');
             const parsed = JSON.parse(raw) as PersistFile;
             return parsed;
-        } catch (e: unknown) {
-            logger.warn('settingsPersistence: failed to read file', { error: e });
+        } catch (error) {
+            logger.warn('settingsPersistence: failed to read file', { error: error });
             return {};
         }
     }
 
     private writeFileAtomicSync(obj: unknown) {
-        const payload = JSON.stringify(obj, null, 2);
+        const payload = JSON.stringify(obj, undefined, 2);
         const tmp = `${this.filePath}.${process.pid}.${Date.now()}.tmp`;
         try {
             fs.writeFileSync(tmp, payload, 'utf8');
             fs.renameSync(tmp, this.filePath);
-        } catch (e: unknown) {
+        } catch (error) {
             try {
                 if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
-            } catch (cleanupErr: unknown) {
+            } catch (error) {
                 logger.warn('settingsPersistence: failed to cleanup temp file', {
-                    error: cleanupErr,
+                    error: error,
                 });
             }
-            throw e;
+            throw error;
         }
     }
 
     load(userId: string) {
         if (!this.current) this.current = this.readFileSafeSync();
-        return this.current[userId] || null;
+        return this.current[userId] || undefined;
     }
 
     save(userId: string, value: Record<string, unknown>) {
         if (!this.current) this.current = this.readFileSafeSync();
-        this.current[userId] = { value, lastUpdated: new Date().toISOString() };
+        this.current[userId] = { lastUpdated: new Date().toISOString(), value };
         this.writeFileAtomicSync(this.current);
     }
 }

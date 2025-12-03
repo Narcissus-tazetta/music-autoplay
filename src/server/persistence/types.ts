@@ -1,6 +1,9 @@
 import type { Music } from '@/shared/stores/musicStore';
 
-export type PersistFile = { items?: Music[]; lastUpdated?: string };
+export interface PersistFile {
+    items?: Music[];
+    lastUpdated?: string;
+}
 
 export interface Store {
     load(): Music[];

@@ -1,8 +1,8 @@
-export type ApiError = {
+export interface ApiError {
     code?: string | null;
     message: string;
     details?: unknown;
-};
+}
 
 export type NormalizedApiResponse<T> =
     | { success: true; data: T }
@@ -62,46 +62,46 @@ export function parseApiErrorForUI(err: ApiError): ParsedApiErrorWithAction {
         || code === 'not_authenticated'
     ) {
         return {
-            kind: 'unauthorized',
-            message,
             action: {
-                type: 'showToast',
                 level: 'warning',
                 message: '認証が必要です。ログインしてください。',
+                type: 'showToast',
             },
+            kind: 'unauthorized',
+            message,
         };
     }
 
     if (code === 'forbidden' || code === '403') {
         return {
+            action: { level: 'error', message, type: 'showToast' },
             kind: 'forbidden',
             message,
-            action: { type: 'showToast', level: 'error', message },
         };
     }
 
     if (code === 'validation' || code === 'unprocessable' || code === '422') {
         const fieldErrors = extractFieldErrors();
         return {
+            action: fieldErrors
+                ? { fields: fieldErrors, type: 'fieldErrors' }
+                : { level: 'error', message, type: 'showToast' },
+            fieldErrors,
             kind: 'validation',
             message,
-            fieldErrors,
-            action: fieldErrors
-                ? { type: 'fieldErrors', fields: fieldErrors }
-                : { type: 'showToast', level: 'error', message },
         };
     }
 
     if (code === 'not_found' || code === '404') {
         return {
+            action: { level: 'info', message, type: 'showToast' },
             kind: 'not_found',
             message,
-            action: { type: 'showToast', level: 'info', message },
         };
     }
     return {
+        action: { level: 'error', message, type: 'showToast' },
         kind: 'internal',
         message,
-        action: { type: 'showToast', level: 'error', message },
     };
 }

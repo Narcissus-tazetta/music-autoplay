@@ -3,8 +3,8 @@ import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
 import type { C2S, S2C } from '@/shared/types/socket';
 import { withErrorHandler } from '@/shared/utils/errors';
 import { isObject } from '@/shared/utils/typeGuards';
-import { type Server as HttpServer } from 'http';
-import { type Server } from 'socket.io';
+import type { Server as HttpServer } from 'node:http';
+import type { Server } from 'socket.io';
 import type { Server as IOServer } from 'socket.io';
 import { container } from './di/container';
 import logger from './logger';
@@ -12,13 +12,13 @@ import type { MusicService } from './music/musicService';
 import { createMusicService } from './music/musicServiceFactory';
 import { defaultFileStore } from './persistence';
 import type { Store } from './persistence';
-import { type RateLimiter } from './services/rateLimiter';
+import type { RateLimiter } from './services/rateLimiter';
 import { RateLimiterManager } from './services/rateLimiterManager';
-import { type WindowCloseManager } from './services/windowCloseManager';
-import { type YouTubeService } from './services/youtubeService';
+import type { WindowCloseManager } from './services/windowCloseManager';
+import type { YouTubeService } from './services/youtubeService';
 import { createSocketServerBuilder } from './socket/builder';
-import { type SocketManager } from './socket/managers/manager';
-import { type SocketRuntime } from './socket/managers/runtime';
+import type { SocketManager } from './socket/managers/manager';
+import type { SocketRuntime } from './socket/managers/runtime';
 import type { ReplyOptions } from './socket/types';
 import type { EngineLike, RequestLike } from './socket/types';
 import { createSocketEmitter } from './utils/safeEmit';
@@ -65,8 +65,8 @@ export class SocketServerInstance {
             if (isObject(headers) && typeof headers.origin === 'string') return headers.origin;
             if (isObject(req) && typeof (req as RequestLike).url === 'string') return undefined;
             return undefined;
-        } catch (err: unknown) {
-            logger.debug('getOriginFromReq failed', { error: err });
+        } catch (error) {
+            logger.debug('getOriginFromReq failed', { error: error });
             return undefined;
         }
     }
@@ -95,8 +95,8 @@ export class SocketServerInstance {
         this.remoteStatusInactivityMs = components.socketConfig.remoteStatusInactivityMs;
         try {
             container.register('socketServer', () => this);
-        } catch (_e: unknown) {
-            void _e;
+        } catch (error) {
+            void error;
         }
     }
     async init(server: HttpServer): Promise<void> {
@@ -111,15 +111,15 @@ export class SocketServerInstance {
         const { initSocketServer } = await import('./socket/core/factory');
         logger.info('initSocketServer imported');
         const res = await initSocketServer(server, {
-            musicDB: this.musicDB,
-            fileStore: this.fileStore,
-            youtubeService: this.youtubeService,
             adminHash: this.adminHash,
+            fileStore: this.fileStore,
+            musicDB: this.musicDB,
             opts: {
                 debounceMs: this.remoteStatusDebounceMs,
                 graceMs: this.remoteStatusGraceMs,
                 inactivityMs: this.remoteStatusInactivityMs,
             },
+            youtubeService: this.youtubeService,
         });
         logger.info('initSocketServer completed');
         this.io = res.io as Server<C2S, S2C>;
@@ -143,8 +143,8 @@ export class SocketServerInstance {
                 resolve();
             });
             if (typeof (closeResult as { then?: unknown }).then === 'function') {
-                void (closeResult as Promise<unknown>).catch((err: unknown) => {
-                    logger.warn('socket.io close error', { error: err });
+                void (closeResult as Promise<unknown>).catch(error => {
+                    logger.warn('socket.io close error', { error: error });
                     resolve();
                 });
             }
@@ -170,10 +170,10 @@ export class SocketServerInstance {
         if (!this.musicService) {
             const emitter = createSocketEmitter(() => this.getIo());
             this.musicService = createMusicService({
-                youtubeService: this.youtubeService,
-                musicDB: this.musicDB,
-                fileStore: this.fileStore,
                 emitFn: (ev, payload, opts?) => emitter.emit(ev, payload, opts),
+                fileStore: this.fileStore,
+                musicDB: this.musicDB,
+                youtubeService: this.youtubeService,
             });
         }
         return this.musicService;
@@ -184,9 +184,9 @@ export class SocketServerInstance {
         requesterName?: string,
     ): Promise<ReplyOptions> {
         const result = await this.getMusicService().addMusic({
-            url,
             requesterHash,
             requesterName,
+            url,
         });
         if (result.ok) return {};
         return { formErrors: [result.error.message] };
@@ -194,8 +194,8 @@ export class SocketServerInstance {
 
     async removeMusic(url: string, requesterHash: string): Promise<ReplyOptions> {
         const result = await this.getMusicService().removeMusic({
-            url,
             requesterHash,
+            url,
         });
         if (result.ok) return {};
         return { formErrors: [result.error.message] };

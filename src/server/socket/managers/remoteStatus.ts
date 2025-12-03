@@ -9,15 +9,22 @@ export function isRemoteStatusEqual(a: RemoteStatus, b: RemoteStatus): boolean {
             && a.adTimestamp === b.adTimestamp
             && a.isExternalVideo === b.isExternalVideo
             && a.videoId === b.videoId
-            && (a.lastProgressUpdate ?? null) === (b.lastProgressUpdate ?? null)
-            && (typeof a.progressPercent === 'number' ? a.progressPercent : null)
-                === (typeof b.progressPercent === 'number' ? b.progressPercent : null)
+            && (a.lastProgressUpdate ?? undefined)
+                === (b.lastProgressUpdate ?? undefined)
+            && (typeof a.progressPercent === 'number'
+                    ? a.progressPercent
+                    : undefined)
+                === (typeof b.progressPercent === 'number' ? b.progressPercent : undefined)
         );
     }
     if (a.type === 'paused' && b.type === 'paused') return a.isTransitioning === b.isTransitioning;
     return true;
 }
 
-export function shouldDebounce(prevUpdatedAt: number, now: number, debounceMs: number): boolean {
+export function shouldDebounce(
+    prevUpdatedAt: number,
+    now: number,
+    debounceMs: number,
+): boolean {
     return now - prevUpdatedAt < debounceMs;
 }

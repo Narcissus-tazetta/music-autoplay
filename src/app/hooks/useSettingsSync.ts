@@ -35,9 +35,9 @@ export function useSettingsSync() {
     }, [loadFromServer, syncToServer, ytStatusVisible, ytStatusMode]);
 
     return {
-        ytStatusVisible,
+        setYtStatusMode,
         setYtStatusVisible,
         ytStatusMode,
-        setYtStatusMode,
+        ytStatusVisible,
     };
 }

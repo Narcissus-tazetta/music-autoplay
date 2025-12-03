@@ -3,17 +3,17 @@ import type { Server as IOServer } from 'socket.io';
 import type { MusicService } from '../../music/musicService';
 import { createMusicService } from '../../music/musicServiceFactory';
 import type { Store } from '../../persistence';
-import { type WindowCloseManager } from '../../services/windowCloseManager';
-import { type YouTubeService } from '../../services/youtubeService';
+import type { WindowCloseManager } from '../../services/windowCloseManager';
+import type { YouTubeService } from '../../services/youtubeService';
 import { createSocketEmitter } from '../../utils/safeEmit';
 import type { TimerManager } from '../../utils/timerManager';
 import { SocketManager } from './manager';
 
-export type RuntimeOptions = {
+export interface RuntimeOptions {
     debounceMs: number;
     graceMs: number;
     inactivityMs: number;
-};
+}
 
 export class SocketRuntime {
     private manager?: SocketManager;
@@ -68,10 +68,10 @@ export class SocketRuntime {
                 source: 'MusicService',
             });
             this.musicService = createMusicService({
-                youtubeService: this.youtubeService,
-                musicDB: this.musicDB,
-                fileStore: this.fileStore,
                 emitFn: (ev, payload, opts?) => musicEmitter.emit(ev, payload, opts),
+                fileStore: this.fileStore,
+                musicDB: this.musicDB,
+                youtubeService: this.youtubeService,
             });
         }
         return this.musicService;

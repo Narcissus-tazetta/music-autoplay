@@ -43,14 +43,14 @@ describe('HTTP Rate Limiting', () => {
 
     describe('RateLimiter with IP-based keys', () => {
         test('allows requests within limit', () => {
-            const limiter = new RateLimiter(10, 60000);
+            const limiter = new RateLimiter(10, 60_000);
             const ip = '192.168.1.1';
 
             for (let i = 0; i < 10; i++) expect(limiter.tryConsume(ip)).toBe(true);
         });
 
         test('blocks requests exceeding limit', () => {
-            const limiter = new RateLimiter(3, 60000);
+            const limiter = new RateLimiter(3, 60_000);
             const ip = '192.168.1.1';
 
             expect(limiter.tryConsume(ip)).toBe(true);
@@ -60,7 +60,7 @@ describe('HTTP Rate Limiting', () => {
         });
 
         test('isolates different IPs', () => {
-            const limiter = new RateLimiter(2, 60000);
+            const limiter = new RateLimiter(2, 60_000);
             const ip1 = '192.168.1.1';
             const ip2 = '192.168.1.2';
 
@@ -87,7 +87,7 @@ describe('HTTP Rate Limiting', () => {
         });
 
         test('getOldestAttempt returns correct timestamp', () => {
-            const limiter = new RateLimiter(10, 60000);
+            const limiter = new RateLimiter(10, 60_000);
             const ip = '192.168.1.1';
 
             const before = Date.now();
@@ -104,12 +104,12 @@ describe('HTTP Rate Limiting', () => {
         });
 
         test('getOldestAttempt returns undefined for non-existent key', () => {
-            const limiter = new RateLimiter(10, 60000);
+            const limiter = new RateLimiter(10, 60_000);
             expect(limiter.getOldestAttempt('192.168.1.1')).toBeUndefined();
         });
 
         test('calculates correct retryAfter', () => {
-            const limiter = new RateLimiter(1, 60000);
+            const limiter = new RateLimiter(1, 60_000);
             const ip = '192.168.1.1';
 
             limiter.tryConsume(ip);
@@ -117,14 +117,14 @@ describe('HTTP Rate Limiting', () => {
 
             const oldest = limiter.getOldestAttempt(ip);
             if (typeof oldest === 'number') {
-                const retryAfter = Math.ceil((oldest + 60000 - Date.now()) / 1000);
+                const retryAfter = Math.ceil((oldest + 60_000 - Date.now()) / 1000);
                 expect(retryAfter).toBeGreaterThan(0);
                 expect(retryAfter).toBeLessThanOrEqual(60);
             }
         });
 
         test("handles 'unknown' IP gracefully", () => {
-            const limiter = new RateLimiter(10, 60000);
+            const limiter = new RateLimiter(10, 60_000);
             const unknownIP = 'unknown';
 
             for (let i = 0; i < 10; i++) expect(limiter.tryConsume(unknownIP)).toBe(true);
@@ -134,7 +134,7 @@ describe('HTTP Rate Limiting', () => {
 
     describe('Rate limit statistics', () => {
         test('tracks multiple IPs in stats', () => {
-            const limiter = new RateLimiter(10, 60000);
+            const limiter = new RateLimiter(10, 60_000);
 
             limiter.tryConsume('192.168.1.1');
             limiter.tryConsume('192.168.1.1');

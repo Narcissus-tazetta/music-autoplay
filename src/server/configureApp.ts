@@ -1,18 +1,18 @@
 import { SERVER_ENV } from '@/app/env.server';
 import logger from '@/server/logger';
 import compression from 'compression';
-import { randomUUID } from 'crypto';
 import express from 'express';
-import fs from 'fs';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import path from 'path';
+import { randomUUID } from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import type { ServerBuild } from 'react-router';
 import { getConfig } from './utils/configUtils';
 
-export type ConfigureAppResult = {
+export interface ConfigureAppResult {
     buildValue: ServerBuild | (() => Promise<ServerBuild>);
-};
+}
 
 export async function configureApp(
     app: express.Express,
@@ -26,7 +26,21 @@ export async function configureApp(
         helmet({
             contentSecurityPolicy: {
                 directives: {
+                    baseUri: ["'self'"],
+                    connectSrc: ["'self'", 'ws:', 'wss:'],
                     defaultSrc: ["'self'"],
+                    fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+                    frameSrc: ['https://www.youtube.com'],
+                    imgSrc: [
+                        "'self'",
+                        'data:',
+                        'https://i.ytimg.com',
+                        'https://i1.ytimg.com',
+                        'https://i2.ytimg.com',
+                        'https://i3.ytimg.com',
+                        'https://i4.ytimg.com',
+                    ],
+                    objectSrc: ["'none'"],
                     scriptSrc: [
                         "'self'",
                         "'unsafe-inline'",
@@ -38,26 +52,12 @@ export async function configureApp(
                         "'unsafe-inline'",
                         'https://fonts.googleapis.com',
                     ],
-                    fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-                    imgSrc: [
-                        "'self'",
-                        'data:',
-                        'https://i.ytimg.com',
-                        'https://i1.ytimg.com',
-                        'https://i2.ytimg.com',
-                        'https://i3.ytimg.com',
-                        'https://i4.ytimg.com',
-                    ],
-                    connectSrc: ["'self'", 'ws:', 'wss:'],
-                    frameSrc: ['https://www.youtube.com'],
-                    objectSrc: ["'none'"],
-                    baseUri: ["'self'"],
                 },
             },
             crossOriginEmbedderPolicy: false,
             hsts: {
-                maxAge: 31536000,
                 includeSubDomains: true,
+                maxAge: 31_536_000,
                 preload: true,
             },
         }),
@@ -78,9 +78,9 @@ export async function configureApp(
             req.requestId = rid;
             try {
                 res.setHeader('X-Request-Id', rid);
-            } catch (err: unknown) {
+            } catch (error) {
                 logger.debug('bootstrap: failed to set X-Request-Id header', {
-                    error: err,
+                    error: error,
                 });
             }
             next();
@@ -136,8 +136,8 @@ export async function configureApp(
                         const query = parts[1] ? `?${parts[1]}` : '';
                         req.url = prefix + match + query;
                     }
-                } catch (err: unknown) {
-                    logger.debug('vite deps rewrite middleware error', { error: err });
+                } catch (error) {
+                    logger.debug('vite deps rewrite middleware error', { error: error });
                 }
                 next();
             },
@@ -159,9 +159,11 @@ export async function configureApp(
         const rawSocketPath = config.getString('SOCKET_PATH');
         const socketPath = rawSocketPath.length > 0 ? rawSocketPath : SERVER_ENV.SOCKET_PATH;
         if (config.nodeEnv !== 'production') {
-            const prefixes = Array.from(
-                new Set([socketPath, '/socket.io', '/api/socket.io'].filter(Boolean)),
-            );
+            const prefixes = [
+                ...new Set(
+                    [socketPath, '/socket.io', '/api/socket.io'].filter(Boolean),
+                ),
+            ];
             for (const p of prefixes) {
                 app.use(
                     p,
@@ -179,25 +181,25 @@ export async function configureApp(
                             res.setHeader('Vary', 'Origin');
                             try {
                                 logger.info('bootstrap: socketPath middleware request', {
-                                    mountedPath: p,
-                                    url: req.url,
                                     method: req.method,
-                                    origin: req.headers.origin ?? null,
-                                    referer: req.headers.referer ?? null,
-                                    ua: req.headers['user-agent'] ?? null,
+                                    mountedPath: p,
+                                    origin: req.headers.origin ?? undefined,
+                                    referer: req.headers.referer ?? undefined,
                                     ts: new Date().toISOString(),
+                                    ua: req.headers['user-agent'] ?? undefined,
+                                    url: req.url,
                                 });
-                            } catch (e: unknown) {
+                            } catch (error) {
                                 logger.debug(
                                     'bootstrap: failed to log socketPath middleware request',
                                     {
-                                        error: e,
+                                        error: error,
                                     },
                                 );
                             }
-                        } catch (err: unknown) {
+                        } catch (error) {
                             logger.debug('bootstrap: failed to set dev socket CORS headers', {
-                                error: err,
+                                error: error,
                             });
                         }
                         next();
@@ -205,10 +207,10 @@ export async function configureApp(
                 );
             }
         }
-    } catch (err: unknown) {
+    } catch (error) {
         logger.debug(
             'bootstrap: error while registering dev socket CORS middleware',
-            { error: err },
+            { error: error },
         );
     }
 
@@ -219,24 +221,24 @@ export async function configureApp(
             const socketPath = config.getString('SOCKET_PATH');
             const allowExtensionOrigins = config.getString('ALLOW_EXTENSION_ORIGINS') === 'true';
             res.json({
-                ok: true,
-                origin: origin ?? null,
-                socketPath,
                 allowExtensionOrigins,
-                note: 'Use this endpoint from extension or browser to check request origin and server config',
                 debug: {
                     'SERVER_ENV.SOCKET_PATH': SERVER_ENV.SOCKET_PATH,
-                    'process.env.SOCKET_PATH': SERVER_ENV.SOCKET_PATH,
                     'computed socketPath': socketPath,
+                    'process.env.SOCKET_PATH': SERVER_ENV.SOCKET_PATH,
                 },
+                note: 'Use this endpoint from extension or browser to check request origin and server config',
+                ok: true,
+                origin: origin ?? undefined,
+                socketPath,
             });
-        } catch (e: unknown) {
-            const safe = typeof e === 'string'
-                ? e
-                : e instanceof Error
-                ? e.message
-                : JSON.stringify(e);
-            res.status(500).json({ ok: false, error: safe });
+        } catch (error) {
+            const safe = typeof error === 'string'
+                ? error
+                : (error instanceof Error
+                    ? error.message
+                    : JSON.stringify(error));
+            res.status(500).json({ error: safe, ok: false });
         }
     });
     app.get('/api/musics', (req, res) => {
@@ -249,24 +251,24 @@ export async function configureApp(
                 const musicDB = (ioObj as Record<string, unknown>).musicDB;
                 if (musicDB && musicDB instanceof Map) {
                     try {
-                        const list = Array.from(musicDB.values());
-                        res.json({ ok: true, musics: list });
+                        const list = [...musicDB.values()];
+                        res.json({ musics: list, ok: true });
                         return;
-                    } catch (e: unknown) {
+                    } catch (error) {
                         logger.debug('/api/musics: failed to serialize musicDB', {
-                            error: e,
+                            error: error,
                         });
                     }
                 }
             }
-            res.json({ ok: true, musics: [] });
-        } catch (e: unknown) {
-            const safe = typeof e === 'string'
-                ? e
-                : e instanceof Error
-                ? e.message
-                : JSON.stringify(e);
-            res.status(500).json({ ok: false, error: safe });
+            res.json({ musics: [], ok: true });
+        } catch (error) {
+            const safe = typeof error === 'string'
+                ? error
+                : (error instanceof Error
+                    ? error.message
+                    : JSON.stringify(error));
+            res.status(500).json({ error: safe, ok: false });
         }
     });
     {
@@ -283,8 +285,8 @@ export async function configureApp(
                         return (
                             path.startsWith('/socket.io') || path.startsWith(socketPrefix)
                         );
-                    } catch (err: unknown) {
-                        logger.debug('morgan: error while deciding skip', { error: err });
+                    } catch (error) {
+                        logger.debug('morgan: error while deciding skip', { error: error });
                         return false;
                     }
                 },
@@ -321,7 +323,7 @@ export async function configureApp(
         }
     } catch (error: unknown) {
         logger.error('Failed to configure build value', { error });
-        throw new Error('Build configuration failed');
+        throw new Error('Build configuration failed', { cause: error });
     }
     logger.info('App middleware configuration completed successfully');
     return { buildValue };

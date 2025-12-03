@@ -47,7 +47,7 @@ function MusicTitleWithHoverInner({
         indices: new Set(),
     });
 
-    if (!videoId || !title) return null;
+    if (!videoId || !title) return;
 
     const merged = cn(DEFAULT_LINK_CLASS, className ?? DEFAULT_COLOR_CLASS);
     const candidates = makeCandidates(videoId, music?.thumbnail);
@@ -57,12 +57,14 @@ function MusicTitleWithHoverInner({
         const firstValidIndex = candidates.findIndex(
             (_, i) => !activeIndices.has(i),
         );
-        return firstValidIndex >= 0 ? candidates[firstValidIndex] : '/favicon.svg';
+        return firstValidIndex !== -1
+            ? candidates[firstValidIndex]
+            : '/favicon.svg';
     })();
 
     const handleError = () => {
         const currentIndex = candidates.indexOf(currentSrc);
-        if (currentIndex >= 0) {
+        if (currentIndex !== -1) {
             setFailedIndices(prev => ({
                 id: videoId,
                 indices: prev.id === videoId

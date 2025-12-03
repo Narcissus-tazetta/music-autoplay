@@ -87,10 +87,10 @@ async function gracefulShutdown() {
         try {
             await socketServer.close();
             logger.info('socket.io closed');
-        } catch (e: unknown) {
-            const errorMsg = e && typeof e === 'object' && 'message' in e
-                ? String(e.message)
-                : String(e);
+        } catch (error) {
+            const errorMsg = error && typeof error === 'object' && 'message' in error
+                ? String(error.message)
+                : String(error);
             if (
                 errorMsg.includes('not running')
                 || errorMsg.includes('already closed')
@@ -98,7 +98,7 @@ async function gracefulShutdown() {
                 logger.info('socket.io already closed during shutdown');
             } else {
                 logger.warn('socket.io close failed', {
-                    error: e,
+                    error: error,
                 });
             }
         }
@@ -106,19 +106,19 @@ async function gracefulShutdown() {
         for (const h of appShutdownHandlers) {
             try {
                 await h();
-            } catch (e: unknown) {
-                logger.warn('shutdown handler failed', { error: e });
+            } catch (error) {
+                logger.warn('shutdown handler failed', { error: error });
             }
         }
 
         clearTimeout(timer);
         logger.info('graceful shutdown complete, exiting');
         process.exit(0);
-    } catch (e: unknown) {
+    } catch (error) {
         clearTimeout(timer);
-        const errorMsg = e && typeof e === 'object' && 'message' in e
-            ? String(e.message)
-            : String(e);
+        const errorMsg = error && typeof error === 'object' && 'message' in error
+            ? String(error.message)
+            : String(error);
         if (
             errorMsg.includes('Server is not running')
             || errorMsg.includes('already closed')
@@ -126,7 +126,7 @@ async function gracefulShutdown() {
             logger.info('graceful shutdown complete (server already stopped)');
             process.exit(0);
         } else {
-            logger.error('graceful shutdown failed', { error: e });
+            logger.error('graceful shutdown failed', { error: error });
             process.exit(1);
         }
     }
@@ -154,15 +154,15 @@ process.on('SIGUSR2', () => {
 });
 
 const viteDevServer = config.nodeEnv === 'production'
-    ? null
+    ? undefined
     : await import('vite').then(vite =>
         vite.createServer({
-            server: {
-                middlewareMode: true,
-                hmr: false,
-            },
             optimizeDeps: {
                 include: ['socket.io-client', 'framer-motion', 'zustand'],
+            },
+            server: {
+                hmr: false,
+                middlewareMode: true,
             },
         })
     );
@@ -178,15 +178,15 @@ app.get('/api/metrics', (req, res) => {
     try {
         const metrics = metricsManager.getMetrics();
         res.json({
-            status: 'ok',
             data: {
                 apiMusics: metrics.apiMusics,
                 rpcGetAllMusics: metrics.rpcGetAllMusics,
             },
+            status: 'ok',
         });
     } catch (error: unknown) {
         logger.error('Error in /api/metrics endpoint', { error });
-        res.status(500).json({ ok: false, error: 'Internal server error' });
+        res.status(500).json({ error: 'Internal server error', ok: false });
     }
 });
 
@@ -214,10 +214,10 @@ app.get('/api/socket-info', (req, res) => {
         logger.error('Error in /api/socket-info endpoint', { error });
         const safe = typeof error === 'string'
             ? error
-            : error instanceof Error
-            ? error.message
-            : JSON.stringify(error);
-        res.status(500).json({ ok: false, error: safe });
+            : (error instanceof Error
+                ? error.message
+                : JSON.stringify(error));
+        res.status(500).json({ error: safe, ok: false });
     }
 });
 
@@ -227,8 +227,8 @@ app.all(
         build: configResult.buildValue,
         getLoadContext: () =>
             ({
-                io: socketServer,
                 httpRateLimiter: socketServer.getHttpRateLimiter(),
+                io: socketServer,
             }) satisfies ServerContext,
     }),
 );

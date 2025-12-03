@@ -3,35 +3,35 @@ import { afterEach, beforeEach, describe, expect, it } from '../bunTestCompat';
 function makeLocalStorageMock(initial: Record<string, string> = {}) {
     let store: Record<string, string> = { ...initial };
     return {
-        getItem(key: string) {
-            return Object.prototype.hasOwnProperty.call(store, key)
-                ? store[key]
-                : null;
+        clear() {
+            store = {};
         },
-        setItem(key: string, value: string) {
-            store[key] = value;
+        getItem(key: string) {
+            return Object.hasOwn(store, key) ? store[key] : undefined;
         },
         removeItem(key: string) {
             // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
             delete store[key];
         },
-        clear() {
-            store = {};
+        setItem(key: string, value: string) {
+            store[key] = value;
         },
     } as Storage;
 }
 
 const STORAGE_KEY = 'music-auto-play:musics:v1';
 
-type MusicItem = {
+interface MusicItem {
     id: string;
     title: string;
     channelName: string;
     channelId: string;
     duration: string;
-};
+}
 
-type RemoteStatus = { type: string };
+interface RemoteStatus {
+    type: string;
+}
 
 let _state: {
     musics: MusicItem[];
@@ -39,28 +39,28 @@ let _state: {
     remoteStatus: RemoteStatus;
 } = {
     musics: [],
-    socket: null,
     remoteStatus: { type: 'closed' },
+    socket: undefined,
 };
 
 const useMusicStore = {
-    setState(partial: Partial<typeof _state>) {
-        _state = { ..._state, ...partial };
-        return _state;
-    },
     getState() {
         return {
             ..._state,
-            hydrateFromLocalStorage: function() {
+            hydrateFromLocalStorage: function hydrateFromLocalStorage() {
                 if (_state.musics.length > 0) return;
                 try {
                     const raw = (globalThis as any).localStorage?.getItem(STORAGE_KEY);
                     if (!raw) return;
                     const parsed = JSON.parse(raw) as MusicItem[];
                     _state = { ..._state, musics: parsed };
-                } catch (_e) {}
+                } catch {}
             },
         } as typeof _state & { hydrateFromLocalStorage?: () => void };
+    },
+    setState(partial: Partial<typeof _state>) {
+        _state = { ..._state, ...partial };
+        return _state;
     },
 };
 
@@ -69,21 +69,21 @@ describe('musicStore hydration', () => {
         // reset store state
         useMusicStore.setState({
             musics: [],
-            socket: null,
             remoteStatus: { type: 'closed' },
+            socket: undefined,
         });
     });
 
     afterEach(() => {
         useMusicStore.setState({
             musics: [],
-            socket: null,
             remoteStatus: { type: 'closed' },
+            socket: undefined,
         });
         try {
             delete (globalThis as { localStorage?: unknown }).localStorage;
-        } catch (_e: unknown) {
-            void _e;
+        } catch (error) {
+            void error;
         }
     });
 
@@ -97,11 +97,11 @@ describe('musicStore hydration', () => {
         const mock = makeLocalStorageMock({
             [STORAGE_KEY]: JSON.stringify([
                 {
+                    channelId: 'cid',
+                    channelName: 'C',
+                    duration: '3:00',
                     id: 't1',
                     title: 'T',
-                    channelName: 'C',
-                    channelId: 'cid',
-                    duration: '3:00',
                 },
             ]),
         });
@@ -120,11 +120,11 @@ describe('musicStore hydration', () => {
         useMusicStore.setState({
             musics: [
                 {
+                    channelId: 'cid',
+                    channelName: 'C',
+                    duration: '2:00',
                     id: 'server1',
                     title: 'S',
-                    channelName: 'C',
-                    channelId: 'cid',
-                    duration: '2:00',
                 },
             ],
         });
@@ -132,11 +132,11 @@ describe('musicStore hydration', () => {
         const mock = makeLocalStorageMock({
             [STORAGE_KEY]: JSON.stringify([
                 {
+                    channelId: 'cid',
+                    channelName: 'C',
+                    duration: '3:00',
                     id: 't1',
                     title: 'T',
-                    channelName: 'C',
-                    channelId: 'cid',
-                    duration: '3:00',
                 },
             ]),
         });

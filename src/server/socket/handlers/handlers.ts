@@ -12,7 +12,7 @@ import { registerBatchHandlers } from './eventHandler';
 import { createMusicHandlers } from './musicHandlers';
 import { createGetAllMusicsHandler, createGetRemoteStatusHandler } from './standardHandlers';
 
-export type HandlerDeps = {
+export interface HandlerDeps {
     musicDB: Map<string, Music>;
     io: IOServer;
     emit?: (ev: string, payload: unknown, opts?: EmitOptions) => boolean;
@@ -26,7 +26,7 @@ export type HandlerDeps = {
         maxAttempts: number;
         windowMs: number;
     };
-};
+}
 
 export function registerSocketHandlers(
     socket: Socket,
@@ -59,12 +59,12 @@ export function registerSocketHandlers(
     if (!youtubeService || !fileStore) throw new Error('youtubeService and fileStore are required');
 
     const musicHandlers = createMusicHandlers({
-        musicDB: deps.musicDB,
-        io: deps.io,
-        youtubeService,
         fileStore,
+        io: deps.io,
         isAdmin: deps.isAdmin,
+        musicDB: deps.musicDB,
         rateLimiter: deps.rateLimiter,
+        youtubeService,
     });
 
     const handlers = [

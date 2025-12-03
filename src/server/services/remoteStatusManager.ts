@@ -26,8 +26,8 @@ export class RemoteStatusManager {
         this.updatedAt = Date.now();
         try {
             this.emit('remoteStatusUpdated', this.remoteStatus);
-        } catch (e: unknown) {
-            logger.warn('RemoteStatusManager emit failed', { error: e });
+        } catch (error) {
+            logger.warn('RemoteStatusManager emit failed', { error: error });
         }
     }
 
@@ -44,34 +44,44 @@ export class RemoteStatusManager {
         if (status.type === 'playing') {
             const withinGracePeriod = now - this.lastPausedAt < PAUSED_GRACE_PERIOD_MS;
             if (withinGracePeriod && source === 'progress_update') {
-                logger.debug('remoteStatusManager: ignoring progress_update within grace period', {
-                    source,
-                    timeSincePaused: now - this.lastPausedAt,
-                });
+                logger.debug(
+                    'remoteStatusManager: ignoring progress_update within grace period',
+                    {
+                        source,
+                        timeSincePaused: now - this.lastPausedAt,
+                    },
+                );
                 return;
             }
 
             const currentTime = status.currentTime ?? 0;
             const deltaPlayback = Math.abs(currentTime - this.lastCurrentTime);
 
-            if (source === 'progress_update' && this.lastCurrentTime > 0 && deltaPlayback < 0.1) {
+            if (
+                source === 'progress_update'
+                && this.lastCurrentTime > 0
+                && deltaPlayback < 0.1
+            ) {
                 this.consecutiveZeroProgress++;
                 logger.debug('remoteStatusManager: detected zero progress', {
                     consecutiveZeroProgress: this.consecutiveZeroProgress,
                     currentTime,
-                    lastCurrentTime: this.lastCurrentTime,
                     deltaPlayback,
+                    lastCurrentTime: this.lastCurrentTime,
                 });
 
                 if (this.consecutiveZeroProgress >= ZERO_PROGRESS_THRESHOLD) {
                     const pausedStatus: RemoteStatus = {
-                        type: 'paused',
-                        musicTitle: status.musicTitle,
                         musicId: status.musicId,
+                        musicTitle: status.musicTitle,
+                        type: 'paused',
                     };
-                    logger.info('remoteStatusManager: forcing paused due to consecutive zero progress', {
-                        consecutiveZeroProgress: this.consecutiveZeroProgress,
-                    });
+                    logger.info(
+                        'remoteStatusManager: forcing paused due to consecutive zero progress',
+                        {
+                            consecutiveZeroProgress: this.consecutiveZeroProgress,
+                        },
+                    );
                     this.lastPausedAt = now;
                     this.consecutiveZeroProgress = 0;
                     this.set(pausedStatus);

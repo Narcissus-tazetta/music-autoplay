@@ -21,24 +21,22 @@ export function useAppInitialization(): void {
                         parsed.success
                         && typeof parsed.data.ytStatusVisible === 'boolean'
                     ) {
-                        const { useSettingsStore } = await import(
-                            '@/shared/stores/settingsStore'
-                        );
+                        const { useSettingsStore } = await import('@/shared/stores/settingsStore');
                         useSettingsStore
                             .getState()
                             .setYtStatusVisible(parsed.data.ytStatusVisible);
                     }
                 }
-            } catch (err: unknown) {
-                if (import.meta.env.DEV) console.debug('loadFromServer failed', err);
+            } catch (error) {
+                if (import.meta.env.DEV) console.debug('loadFromServer failed', error);
             }
 
             try {
                 store.connectSocket();
-            } catch (err: unknown) {
+            } catch (error) {
                 if (import.meta.env.DEV) {
-                    if (err instanceof Error) console.error('connectSocket failed', err);
-                    else console.error('connectSocket failed', String(err));
+                    if (error instanceof Error) console.error('connectSocket failed', error);
+                    else console.error('connectSocket failed', String(error));
                 }
             }
             const doBackgroundFetch = async () => {
@@ -53,8 +51,8 @@ export function useAppInitialization(): void {
                         try {
                             const parsed = parseApiErrorForUI({
                                 code: norm.error.code,
-                                message: norm.error.message,
                                 details: norm.error.details,
+                                message: norm.error.message,
                             });
 
                             if (import.meta.env.DEV) {
@@ -67,13 +65,13 @@ export function useAppInitialization(): void {
                             try {
                                 const mod = await import('@/shared/utils/uiActionExecutor');
                                 mod.executeParsedApiError(parsed, { conformFields: undefined });
-                            } catch (err: unknown) {
-                                if (import.meta.env.DEV) console.error('uiActionExecutor failed', err);
+                            } catch (error) {
+                                if (import.meta.env.DEV) console.error('uiActionExecutor failed', error);
                             }
 
                             if (parsed.kind === 'unauthorized') return;
-                        } catch (err: unknown) {
-                            if (import.meta.env.DEV) console.debug('parseApiErrorForUI failed', err);
+                        } catch (error) {
+                            if (import.meta.env.DEV) console.debug('parseApiErrorForUI failed', error);
                         }
                         const maybeErr: unknown = norm.error;
                         let fallbackMsg = 'Unknown error';
@@ -126,12 +124,12 @@ export function useAppInitialization(): void {
                         await doFetchOnce(controller.signal);
                         clearTimeout(timeout);
                         break;
-                    } catch (err: unknown) {
+                    } catch (error) {
                         clearTimeout(timeout);
                         if (import.meta.env.DEV) {
                             console.debug('/api/musics fetch attempt failed', {
                                 attempt: i + 1,
-                                error: err instanceof Error ? err.message : String(err),
+                                error: error instanceof Error ? error.message : String(error),
                             });
                             if (i === attempts.length - 1) {
                                 console.debug(
@@ -153,16 +151,20 @@ export function useAppInitialization(): void {
             if (!fetchSucceeded) {
                 try {
                     store.hydrateFromLocalStorage?.();
-                } catch (err: unknown) {
-                    if (import.meta.env.DEV) console.debug('hydrateFromLocalStorage failed', err);
+                } catch (error) {
+                    if (import.meta.env.DEV) console.debug('hydrateFromLocalStorage failed', error);
                 }
             }
         };
 
-        run().catch((err: unknown) => {
+        run().catch(error => {
             if (import.meta.env.DEV) {
-                if (err instanceof Error) console.error(err);
-                else console.error(typeof err === 'string' ? err : JSON.stringify(err));
+                if (error instanceof Error) console.error(error);
+                else {
+                    console.error(
+                        typeof error === 'string' ? error : JSON.stringify(error),
+                    );
+                }
             }
         });
     }, []);

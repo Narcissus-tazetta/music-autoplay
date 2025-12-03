@@ -14,7 +14,7 @@ export class ErrorService {
 
     formatForUser(error: unknown): { message: string; code?: string } {
         const info = extractErrorInfo(error);
-        return { message: info.message || 'internal error', code: info.code };
+        return { code: info.code, message: info.message || 'internal error' };
     }
 }
 

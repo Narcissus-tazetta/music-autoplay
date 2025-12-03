@@ -16,7 +16,7 @@ export function useUiActionExecutor({
     useEffect(() => {
         if (!parsedAction) {
             if (lastParsedActionRef.current !== null) {
-                lastParsedActionRef.current = null;
+                lastParsedActionRef.current = undefined;
                 hasExecutedRef.current = false;
             }
             return;
@@ -33,11 +33,11 @@ export function useUiActionExecutor({
                     mod.executeUiAction(parsedAction, {
                         conformFields: conformFields as Record<string, unknown> | undefined,
                     });
-                } catch (err: unknown) {
-                    if (import.meta.env.DEV) console.debug('uiActionExecutor.executeUiAction failed', err);
+                } catch (error) {
+                    if (import.meta.env.DEV) console.debug('uiActionExecutor.executeUiAction failed', error);
                 }
-            } catch (err: unknown) {
-                if (import.meta.env.DEV) console.debug('dynamic import uiActionExecutor failed', err);
+            } catch (error) {
+                if (import.meta.env.DEV) console.debug('dynamic import uiActionExecutor failed', error);
             }
         })();
     }, [parsedAction, conformFields]);

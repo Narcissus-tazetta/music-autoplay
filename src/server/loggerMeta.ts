@@ -1,11 +1,11 @@
 import { hasOwnProperty, isRecord } from '@/shared/utils/typeGuards';
 
-type ExtractResult = {
+interface ExtractResult {
     consumedKey?: string;
     extractedState?: string | undefined;
     extractedUrl?: string | undefined;
     rest: Record<string, unknown>;
-};
+}
 
 function extractStringField(
     obj: Record<string, unknown>,

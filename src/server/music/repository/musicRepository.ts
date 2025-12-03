@@ -50,7 +50,7 @@ export class MusicRepository {
     }
 
     list(): Music[] {
-        return Array.from(this.musicDB.values());
+        return [...this.musicDB.values()];
     }
 
     buildCompatList(): (Music & { url: string })[] {

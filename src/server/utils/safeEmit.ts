@@ -12,8 +12,8 @@ export interface EmitContext {
 function serializeError(error: unknown) {
     if (error instanceof Error) {
         return {
-            name: error.name,
             message: error.message,
+            name: error.name,
             stack: error.stack,
         };
     }
@@ -63,9 +63,9 @@ export function safeEmit<K extends EventName>(
         } else {
             if (!silent) {
                 logger[logLevel](`${errorPrefix}: invalid emitter`, {
-                    event,
                     context,
                     emitterType: typeof emitter,
+                    event,
                 });
             }
             return false;
@@ -123,9 +123,9 @@ export function safeEmitSync<K extends EventName>(
         } else {
             if (!silent) {
                 logger[logLevel](`${errorPrefix}: invalid emitter`, {
-                    event,
                     context,
                     emitterType: typeof emitter,
+                    event,
                 });
             }
             return false;
@@ -193,9 +193,9 @@ export function createSafeEmitter(
                 logger[mergedOptions.logLevel ?? 'warn'](
                     'failed to emit: invalid emitter',
                     {
-                        event,
                         context: mergedOptions.context,
                         emitterType: typeof emitter,
+                        event,
                     },
                 );
             }
@@ -264,9 +264,9 @@ export function createSafeEmitterSync(
                 logger[mergedOptions.logLevel ?? 'warn'](
                     'failed to emit: invalid emitter',
                     {
-                        event,
                         context: mergedOptions.context,
                         emitterType: typeof emitter,
+                        event,
                     },
                 );
             }
@@ -333,7 +333,7 @@ export function wrapEmitWithSafety(
     };
 }
 
-export type EmitOptions = {
+export interface EmitOptions {
     context?: {
         source?: string;
         operation?: string;
@@ -342,7 +342,7 @@ export type EmitOptions = {
     errorPrefix?: string;
     logLevel?: 'debug' | 'info' | 'warn' | 'error';
     silent?: boolean;
-};
+}
 
 export type LegacyEmitFn =
     & ((
@@ -370,29 +370,29 @@ export class SocketEmitter {
             logLevel = 'warn',
             silent = false,
         } = opts;
-        const mergedContext = { ...(this.defaultContext || {}), ...context };
+        const mergedContext = { ...this.defaultContext, ...context };
 
         try {
             const io = this.ioGetter();
             if (typeof io.emit !== 'function') {
                 if (!silent) {
                     logger[logLevel](`${errorPrefix}: invalid emitter`, {
-                        event,
                         context: mergedContext,
+                        event,
                     });
                 }
                 return false;
             }
             io.emit(event, payload);
             return true;
-        } catch (err: unknown) {
+        } catch (error) {
             if (!silent) {
                 logger[logLevel](`${errorPrefix} ${event}`, {
-                    error: err,
+                    error: error,
                     event,
                     payload: safeString(payload),
                     context: mergedContext,
-                    ...(mergedContext.identifiers || {}),
+                    ...mergedContext.identifiers,
                 });
             }
             return false;

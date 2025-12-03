@@ -3,55 +3,92 @@ import { z } from 'zod';
 
 dotenv.config();
 
-const NODE_ENV = (process.env.NODE_ENV ?? 'development') as 'development' | 'test' | 'production';
+const NODE_ENV = (process.env.NODE_ENV ?? 'development') as
+    | 'development'
+    | 'test'
+    | 'production';
 
 const isTest = NODE_ENV === 'test';
 
 const clientUrlDefault = process.env.CLIENT_URL
-    ?? (NODE_ENV === 'production' ? 'https://music-autoplay.onrender.com' : 'http://localhost:3000');
+    ?? (NODE_ENV === 'production'
+        ? 'https://music-autoplay.onrender.com'
+        : 'http://localhost:3000');
 
 const toNumber = (v: unknown) => {
-    if (v == null || v === '') return undefined;
+    if (v == undefined || v === '') return undefined;
     const n = Number(v);
     return Number.isFinite(n) ? n : undefined;
 };
 
 const serverEnvSchema = z
     .object({
-        NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-        PORT: z.preprocess(v => toNumber(v), z.number().int().positive().default(3000)),
-        LOG_LEVEL: z
-            .enum(['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly'])
-            .default(NODE_ENV === 'production' ? 'info' : isTest ? 'error' : 'debug'),
-        SHUTDOWN_TIMEOUT_MS: z.preprocess(v => toNumber(v), z.number().int().nonnegative().default(5000)),
-
-        YOUTUBE_API_KEY: isTest
-            ? z.string().default('test-youtube-api-key')
-            : z.string().min(1, 'YOUTUBE_API_KEY is required'),
-        SESSION_SECRET: isTest
-            ? z.string().default('test-session-secret-at-least-32-chars')
-            : z.string().min(1, 'SESSION_SECRET is required'),
         ADMIN_SECRET: isTest
             ? z.string().default('test-admin-secret-32-characters-long')
             : z.string().min(32, 'ADMIN_SECRET must be >= 32 characters'),
-
+        ALLOW_EXTENSION_ORIGINS: z.preprocess(v => {
+            if (v == undefined || v === '') return undefined;
+            if (typeof v === 'string') return v === 'true' ? true : (v === 'false' ? false : undefined);
+            return undefined;
+        }, z.boolean().optional()),
+        CLIENT_URL: z.string().url().default(clientUrlDefault),
+        CORS_ORIGINS: z.string().optional(),
+        DATABASE_URL: z.string().optional(),
         GOOGLE_CLIENT_ID: isTest
             ? z.string().default('test-google-client-id')
             : z.string().min(1, 'GOOGLE_CLIENT_ID is required'),
         GOOGLE_CLIENT_SECRET: isTest
             ? z.string().default('test-google-client-secret')
             : z.string().min(1, 'GOOGLE_CLIENT_SECRET is required'),
-
-        CLIENT_URL: z.string().url().default(clientUrlDefault),
-        CORS_ORIGINS: z.string().optional(),
-        ALLOW_EXTENSION_ORIGINS: z.preprocess(v => {
-            if (v == null || v === '') return undefined;
-            if (typeof v === 'string') return v === 'true' ? true : v === 'false' ? false : undefined;
+        LOG_LEVEL: z
+            .enum(['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly'])
+            .default(NODE_ENV === 'production' ? 'info' : (isTest ? 'error' : 'debug')),
+        MORGAN_FORMAT: z.string().default('tiny'),
+        MORGAN_LOG_SOCKETIO: z.preprocess(v => {
+            if (v == undefined || v === '') return undefined;
+            if (typeof v === 'string') return v === 'true' ? true : (v === 'false' ? false : undefined);
             return undefined;
         }, z.boolean().optional()),
-
-        REMOTE_STATUS_DEBOUNCE_MS: z.preprocess(v => toNumber(v), z.number().int().nonnegative().default(250)),
-        REMOTE_STATUS_GRACE_MS: z.preprocess(v => toNumber(v), z.number().int().nonnegative().default(5000)),
+        NODE_ENV: z
+            .enum(['development', 'test', 'production'])
+            .default('development'),
+        PORT: z.preprocess(
+            v => toNumber(v),
+            z.number().int().positive().default(3000),
+        ),
+        PROGRESS_COOLDOWN_MS: z.preprocess(
+            v => toNumber(v),
+            z.number().int().nonnegative().default(5000),
+        ),
+        PROGRESS_MIN_DELTA_SEC: z.preprocess(
+            v => toNumber(v),
+            z.number().nonnegative().default(0.5),
+        ),
+        PROGRESS_STALL_COUNT: z.preprocess(
+            v => toNumber(v),
+            z.number().int().positive().default(3),
+        ),
+        PROGRESS_STALL_THRESHOLD_MS: z.preprocess(
+            v => toNumber(v),
+            z.number().int().nonnegative().default(3000),
+        ),
+        RATE_LIMIT_MAX_ATTEMPTS: z.preprocess(
+            v => toNumber(v),
+            z.number().int().positive().default(10),
+            // 10 times per minute
+        ),
+        RATE_LIMIT_WINDOW_MS: z.preprocess(
+            v => toNumber(v),
+            z.number().int().positive().default(60_000),
+        ),
+        REMOTE_STATUS_DEBOUNCE_MS: z.preprocess(
+            v => toNumber(v),
+            z.number().int().nonnegative().default(250),
+        ),
+        REMOTE_STATUS_GRACE_MS: z.preprocess(
+            v => toNumber(v),
+            z.number().int().nonnegative().default(5000),
+        ),
         REMOTE_STATUS_INACTIVITY_MS: z.preprocess(
             v => toNumber(v),
             z
@@ -60,25 +97,21 @@ const serverEnvSchema = z
                 .nonnegative()
                 .default(1000 * 60 * 10),
         ),
-        WINDOW_CLOSE_DEBOUNCE_MS: z.preprocess(v => toNumber(v), z.number().int().nonnegative().default(500)),
-        RATE_LIMIT_MAX_ATTEMPTS: z.preprocess(
+        SESSION_SECRET: isTest
+            ? z.string().default('test-session-secret-at-least-32-chars')
+            : z.string().min(1, 'SESSION_SECRET is required'),
+        SHUTDOWN_TIMEOUT_MS: z.preprocess(
             v => toNumber(v),
-            z.number().int().positive().default(10),
-            // 10 times per minute
+            z.number().int().nonnegative().default(5000),
         ),
-        RATE_LIMIT_WINDOW_MS: z.preprocess(v => toNumber(v), z.number().int().positive().default(60000)),
-        PROGRESS_STALL_THRESHOLD_MS: z.preprocess(v => toNumber(v), z.number().int().nonnegative().default(3000)),
-        PROGRESS_MIN_DELTA_SEC: z.preprocess(v => toNumber(v), z.number().nonnegative().default(0.5)),
-        PROGRESS_STALL_COUNT: z.preprocess(v => toNumber(v), z.number().int().positive().default(3)),
-        PROGRESS_COOLDOWN_MS: z.preprocess(v => toNumber(v), z.number().int().nonnegative().default(5000)),
-        DATABASE_URL: z.string().optional(),
         SOCKET_PATH: z.string().default('/api/socket.io'),
-        MORGAN_FORMAT: z.string().default('tiny'),
-        MORGAN_LOG_SOCKETIO: z.preprocess(v => {
-            if (v == null || v === '') return undefined;
-            if (typeof v === 'string') return v === 'true' ? true : v === 'false' ? false : undefined;
-            return undefined;
-        }, z.boolean().optional()),
+        WINDOW_CLOSE_DEBOUNCE_MS: z.preprocess(
+            v => toNumber(v),
+            z.number().int().nonnegative().default(500),
+        ),
+        YOUTUBE_API_KEY: isTest
+            ? z.string().default('test-youtube-api-key')
+            : z.string().min(1, 'YOUTUBE_API_KEY is required'),
     })
     .strict();
 
@@ -88,44 +121,46 @@ export const SERVER_ENV = (() => {
             'Environment variable ADMIN_MAX_ATTEMPTS is deprecated. Please use RATE_LIMIT_MAX_ATTEMPTS instead.',
         );
     }
-    if (process.env.ADMIN_WINDOW_MS !== undefined)
-        throw new Error('Environment variable ADMIN_WINDOW_MS is deprecated. Please use RATE_LIMIT_WINDOW_MS instead.');
+    if (process.env.ADMIN_WINDOW_MS !== undefined) {
+        throw new Error(
+            'Environment variable ADMIN_WINDOW_MS is deprecated. Please use RATE_LIMIT_WINDOW_MS instead.',
+        );
+    }
 
     const parsed = serverEnvSchema.safeParse({
-        NODE_ENV: process.env.NODE_ENV,
-        PORT: process.env.PORT,
-        LOG_LEVEL: process.env.LOG_LEVEL,
-        SHUTDOWN_TIMEOUT_MS: process.env.SHUTDOWN_TIMEOUT_MS,
-
-        YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY,
-        SESSION_SECRET: process.env.SESSION_SECRET,
         ADMIN_SECRET: process.env.ADMIN_SECRET,
-
-        GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
-        GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
-
+        ALLOW_EXTENSION_ORIGINS: process.env.ALLOW_EXTENSION_ORIGINS,
         CLIENT_URL: process.env.CLIENT_URL,
         CORS_ORIGINS: process.env.CORS_ORIGINS,
-        ALLOW_EXTENSION_ORIGINS: process.env.ALLOW_EXTENSION_ORIGINS,
-
+        DATABASE_URL: process.env.DATABASE_URL,
+        GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+        LOG_LEVEL: process.env.LOG_LEVEL,
+        MORGAN_FORMAT: process.env.MORGAN_FORMAT,
+        MORGAN_LOG_SOCKETIO: process.env.MORGAN_LOG_SOCKETIO,
+        NODE_ENV: process.env.NODE_ENV,
+        PORT: process.env.PORT,
+        PROGRESS_COOLDOWN_MS: process.env.PROGRESS_COOLDOWN_MS,
+        PROGRESS_MIN_DELTA_SEC: process.env.PROGRESS_MIN_DELTA_SEC,
+        PROGRESS_STALL_COUNT: process.env.PROGRESS_STALL_COUNT,
+        PROGRESS_STALL_THRESHOLD_MS: process.env.PROGRESS_STALL_THRESHOLD_MS,
+        RATE_LIMIT_MAX_ATTEMPTS: process.env.RATE_LIMIT_MAX_ATTEMPTS,
+        RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS,
         REMOTE_STATUS_DEBOUNCE_MS: process.env.REMOTE_STATUS_DEBOUNCE_MS,
         REMOTE_STATUS_GRACE_MS: process.env.REMOTE_STATUS_GRACE_MS,
         REMOTE_STATUS_INACTIVITY_MS: process.env.REMOTE_STATUS_INACTIVITY_MS,
-        WINDOW_CLOSE_DEBOUNCE_MS: process.env.WINDOW_CLOSE_DEBOUNCE_MS,
-        RATE_LIMIT_MAX_ATTEMPTS: process.env.RATE_LIMIT_MAX_ATTEMPTS,
-        RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS,
-        PROGRESS_STALL_THRESHOLD_MS: process.env.PROGRESS_STALL_THRESHOLD_MS,
-        PROGRESS_MIN_DELTA_SEC: process.env.PROGRESS_MIN_DELTA_SEC,
-        PROGRESS_STALL_COUNT: process.env.PROGRESS_STALL_COUNT,
-        PROGRESS_COOLDOWN_MS: process.env.PROGRESS_COOLDOWN_MS,
-        DATABASE_URL: process.env.DATABASE_URL,
+        SESSION_SECRET: process.env.SESSION_SECRET,
+        SHUTDOWN_TIMEOUT_MS: process.env.SHUTDOWN_TIMEOUT_MS,
         SOCKET_PATH: process.env.SOCKET_PATH,
-        MORGAN_FORMAT: process.env.MORGAN_FORMAT,
-        MORGAN_LOG_SOCKETIO: process.env.MORGAN_LOG_SOCKETIO,
+        WINDOW_CLOSE_DEBOUNCE_MS: process.env.WINDOW_CLOSE_DEBOUNCE_MS,
+        YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY,
     });
 
     if (!parsed.success) {
-        const allErrors = Object.values(parsed.error.flatten().fieldErrors).flat().filter(Boolean).join('\n');
+        const allErrors = Object.values(parsed.error.flatten().fieldErrors)
+            .flat()
+            .filter(Boolean)
+            .join('\n');
         throw new Error(`Invalid server environment:\n${allErrors}`);
     }
 

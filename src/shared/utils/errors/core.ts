@@ -42,9 +42,9 @@ export function extractErrorInfo(error: unknown): ErrorInfo {
         }
 
         return {
+            code,
             message: error.message || 'unknown error',
             stack: error.stack,
-            code,
         };
     }
 
@@ -64,10 +64,10 @@ export function extractErrorInfo(error: unknown): ErrorInfo {
         }
 
         return {
-            message: msg,
-            stack: typeof obj.stack === 'string' ? obj.stack : undefined,
             code: typeof obj.code === 'string' ? obj.code : undefined,
+            message: msg,
             meta: extractErrorMeta(obj),
+            stack: typeof obj.stack === 'string' ? obj.stack : undefined,
         };
     }
 
@@ -100,8 +100,8 @@ export function toHandlerError(error: unknown): HandlerError {
     const info = extractErrorInfo(error);
 
     return {
-        message: info.message,
         code: info.code,
+        message: info.message,
         meta: {
             stack: info.stack,
             ...info.meta,
@@ -110,7 +110,7 @@ export function toHandlerError(error: unknown): HandlerError {
 }
 
 export function safeString(val: unknown): string {
-    if (val == null) return '';
+    if (val == undefined) return '';
     if (typeof val === 'string') return val;
     if (typeof val === 'symbol') return String(val);
     if (
@@ -143,20 +143,20 @@ export function normalizeWrapOptions(
     if (typeof contextOrOpts === 'string') {
         return {
             context: contextOrOpts,
-            operation: contextOrOpts,
             logLevel: 'error',
-            silent: false,
+            operation: contextOrOpts,
             returnOnError: 'undefined',
+            silent: false,
         };
     }
 
     const opts: WrapOptions = contextOrOpts || {};
     return {
         context: opts.context || '',
-        operation: opts.operation || opts.context || '',
         logLevel: opts.logLevel || 'error',
-        silent: opts.silent || false,
+        operation: opts.operation || opts.context || '',
         returnOnError: opts.returnOnError || 'undefined',
+        silent: opts.silent || false,
     };
 }
 

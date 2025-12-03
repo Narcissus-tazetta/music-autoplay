@@ -1,4 +1,7 @@
-type Entry<V> = { value: V; expiresAt: number };
+interface Entry<V> {
+    value: V;
+    expiresAt: number;
+}
 
 export class CacheService<V = unknown> {
     private map = new Map<string, Entry<V>>();
@@ -19,7 +22,7 @@ export class CacheService<V = unknown> {
             const first = this.map.keys().next().value;
             if (first) this.map.delete(first);
         }
-        this.map.set(key, { value, expiresAt: Date.now() + ttlMs });
+        this.map.set(key, { expiresAt: Date.now() + ttlMs, value });
     }
 
     clear() {

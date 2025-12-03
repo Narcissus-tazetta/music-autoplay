@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import FileStore from '../../src/server/persistence/file';
 import { afterEach, beforeEach, describe, expect, it } from '../bunTestCompat';
 
@@ -15,7 +15,7 @@ describe('FileStore persistence basic operations', () => {
     afterEach(() => {
         try {
             if (fs.existsSync(FILE_PATH)) fs.unlinkSync(FILE_PATH);
-        } catch (_e) {}
+        } catch {}
     });
 
     it('loads empty when file missing and persists add/remove', async () => {

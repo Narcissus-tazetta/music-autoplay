@@ -7,7 +7,7 @@ import { safeExecuteAsync } from '@/shared/utils/errors';
 import { err as makeErr } from '@/shared/utils/errors/result-handlers';
 import { respondWithResult } from '@/shared/utils/httpResponse';
 import { parseWithZod } from '@conform-to/zod';
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 import type { ActionFunctionArgs } from 'react-router';
 import { SERVER_ENV } from '../../env.server';
 import { loginSession } from '../../sessions.server';
@@ -48,31 +48,31 @@ export const action = async ({
         if (!rateLimiter.tryConsume(clientIP)) {
             const oldestAttempt = rateLimiter.getOldestAttempt(clientIP);
             const retryAfter = typeof oldestAttempt === 'number'
-                ? Math.ceil((oldestAttempt + 60000 - Date.now()) / 1000)
+                ? Math.ceil((oldestAttempt + 60_000 - Date.now()) / 1000)
                 : 60;
             logger.warn('Rate limit exceeded', {
-                endpoint: '/api/music/remove',
                 clientIP,
+                endpoint: '/api/music/remove',
             });
             return Response.json(
                 {
                     error: 'レート制限を超えました。しばらくしてから再試行してください。',
                 },
-                { status: 429, headers: { 'Retry-After': retryAfter.toString() } },
+                { headers: { 'Retry-After': retryAfter.toString() }, status: 429 },
             );
         }
     }
 
     logger.info('Debug remove request', {
         hasUser: !!user?.id,
-        userId: user?.id,
         isAdminRequest,
+        userId: user?.id,
     });
     if (!isAdminRequest && !user?.id) {
         return respondWithResult(
             makeErr({
-                message: 'ログインしていないため、楽曲を削除できません',
                 code: 'unauthorized',
+                message: 'ログインしていないため、楽曲を削除できません',
             }),
         );
     }
@@ -102,8 +102,8 @@ export const action = async ({
             if (!user?.id) {
                 return respondWithResult(
                     makeErr({
-                        message: 'ユーザーIDが見つかりません',
                         code: 'unauthorized',
+                        message: 'ユーザーIDが見つかりません',
                     }),
                 );
             }
@@ -142,27 +142,27 @@ export const action = async ({
 
         const value = result.value;
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        if (typeof value === 'object' && value != null) {
+        if (typeof value === 'object' && value != undefined) {
             const rec = value as Record<string, unknown>;
             const fe = rec.formErrors;
             if (Array.isArray(fe) && fe.length > 0) {
                 return Response.json(
-                    { success: false, error: (fe as string[]).join(' ') },
+                    { error: (fe as string[]).join(' '), success: false },
                     { status: 403 },
                 );
             }
         }
 
-        return Response.json({ success: true, data: value });
+        return Response.json({ data: value, success: true });
     } catch (error: unknown) {
         logger.error('楽曲削除エラー', { error });
         return Response.json(
-            { success: false, error: '楽曲の削除に失敗しました' },
+            { error: '楽曲の削除に失敗しました', success: false },
             { status: 500 },
         );
     }
 };
 
 export default function MusicRemove() {
-    return null; // このルートはアクション専用のため UI をレンダリングしません
+    return; // このルートはアクション専用のため UI をレンダリングしません
 }

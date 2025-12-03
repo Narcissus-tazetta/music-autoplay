@@ -10,14 +10,14 @@ import logger from '../logger';
 import { logSecurityEvent } from '../utils/securityLogger';
 import type CacheService from './cacheService';
 
-export type VideoDetails = {
+export interface VideoDetails {
     title: string;
     channelTitle: string;
     channelId: string;
     duration: string;
     isAgeRestricted: boolean;
     raw?: unknown;
-};
+}
 
 class EvictingMap<K, V> extends Map<K, V> {
     private getMaxEntries: () => number;
@@ -49,7 +49,7 @@ export class YouTubeService {
     private maxEntries = 1000;
     private cleanupTimer?: NodeJS.Timeout;
     private rateLimitRetry = 2000;
-    private requestQueue: Array<() => Promise<void>> = [];
+    private requestQueue: (() => Promise<void>)[] = [];
     private isProcessingQueue = false;
     private domPurify: ReturnType<typeof DOMPurify>;
 
@@ -66,7 +66,7 @@ export class YouTubeService {
                 'YouTube API key is not configured; some metadata lookups may fail',
             );
         }
-        this.youtube = google.youtube({ version: 'v3', auth: key });
+        this.youtube = google.youtube({ auth: key, version: 'v3' });
         this.cleanupTimer = setInterval(
             () => {
                 this.cleanupExpired();
@@ -103,8 +103,8 @@ export class YouTubeService {
                 try {
                     const ttl = Math.max(0, val.expiresAt - Date.now());
                     cacheService.set(k, val, ttl);
-                } catch (_e: unknown) {
-                    void _e;
+                } catch (error) {
+                    void error;
                 }
                 return adapter;
             };
@@ -156,11 +156,11 @@ export class YouTubeService {
         if (!input || typeof input !== 'string') return '';
 
         const cleaned = this.domPurify.sanitize(input, {
-            ALLOWED_TAGS: [],
             ALLOWED_ATTR: [],
+            ALLOWED_TAGS: [],
             ALLOW_DATA_ATTR: false,
-            FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed'],
             FORBID_ATTR: ['onclick', 'onload', 'onerror', 'onmouseover'],
+            FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed'],
             KEEP_CONTENT: true,
             USE_PROFILES: { html: false },
         });
@@ -175,15 +175,15 @@ export class YouTubeService {
     ): void {
         if (original !== sanitized) {
             logSecurityEvent({
-                type: 'suspicious_request',
-                severity: 'medium',
-                source: 'youtube_data_sanitization',
                 message: `Potentially malicious content detected in YouTube API response field: ${field}`,
                 metadata: {
                     field,
                     original: original.substring(0, 100),
                     sanitized: sanitized.substring(0, 100),
                 },
+                severity: 'medium',
+                source: 'youtube_data_sanitization',
+                type: 'suspicious_request',
             });
         }
     }
@@ -210,7 +210,7 @@ export class YouTubeService {
                     try {
                         // cast signal to the expected type; googleapis currently accepts AbortSignal-like objects
                         const result = await this.youtube.videos.list(
-                            { part: ['snippet', 'contentDetails'], id: [id] },
+                            { id: [id], part: ['snippet', 'contentDetails'] },
                             { signal: controller.signal as unknown },
                         );
                         return result;
@@ -281,15 +281,15 @@ export class YouTubeService {
                     || !durationRaw
                 ) {
                     logSecurityEvent({
-                        type: 'invalid_url',
-                        severity: 'medium',
-                        source: 'youtube_api_validation',
                         message: 'YouTube API returned incomplete or invalid video data',
                         metadata: {
-                            videoId: id,
-                            title: sanitizedTitle,
                             channelTitle: sanitizedChannelTitle,
+                            title: sanitizedTitle,
+                            videoId: id,
                         },
+                        severity: 'medium',
+                        source: 'youtube_api_validation',
+                        type: 'invalid_url',
                     });
                     return err('動画の情報が取得できませんでした。');
                 }
@@ -307,26 +307,26 @@ export class YouTubeService {
                 }`;
 
                 const details: VideoDetails = {
-                    title: sanitizedTitle,
-                    channelTitle: sanitizedChannelTitle,
                     channelId: sanitizedChannelId,
+                    channelTitle: sanitizedChannelTitle,
                     duration: durationStr,
                     isAgeRestricted,
                     raw: item,
+                    title: sanitizedTitle,
                 };
                 try {
-                    this.cache.set(id, { value: details, expiresAt: Date.now() + ttl });
-                } catch (_e: unknown) {
-                    void _e;
+                    this.cache.set(id, { expiresAt: Date.now() + ttl, value: details });
+                } catch (error) {
+                    void error;
                 }
                 return ok(details);
-            } catch (e: unknown) {
+            } catch (error) {
                 logger.warn('YouTubeService getVideoDetails attempt failed', {
-                    id,
                     attempt,
-                    error: e,
+                    error: error,
+                    id,
                 });
-                if (attempt === retries) return err(String(e));
+                if (attempt === retries) return err(String(error));
                 await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
             }
         }

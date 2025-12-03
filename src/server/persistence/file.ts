@@ -1,7 +1,7 @@
 import logger from '@/server/logger';
 import type { Music } from '@/shared/stores/musicStore';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import type { PersistFile, Store } from './types';
 
 const DEFAULT_FILE_PATH = path.resolve(
@@ -16,8 +16,8 @@ const FLUSH_DELAY_MS = 500;
 
 export class FileStore implements Store {
     private filePath: string;
-    private current: PersistFile | null = null;
-    private flushTimer: NodeJS.Timeout | null = null;
+    private current: PersistFile | null = undefined;
+    private flushTimer: NodeJS.Timeout | null = undefined;
 
     constructor(filePath?: string) {
         this.filePath = filePath ?? DEFAULT_FILE_PATH;
@@ -45,16 +45,16 @@ export class FileStore implements Store {
             }
 
             return parsed;
-        } catch (e: unknown) {
+        } catch (error) {
             logger.warn('musicPersistence: failed to read file', {
-                error: e,
+                error: error,
             });
             return { items: [] };
         }
     }
 
     private async writeFileAtomicAsync(obj: unknown) {
-        const payload = JSON.stringify(obj, null, 2);
+        const payload = JSON.stringify(obj, undefined, 2);
         const tmpBase = `${this.filePath}.${process.pid}`;
 
         for (let attempt = 0; attempt < MAX_WRITE_RETRIES; attempt++) {
@@ -63,19 +63,19 @@ export class FileStore implements Store {
                 await fs.promises.writeFile(tmp, payload, 'utf8');
                 await fs.promises.rename(tmp, this.filePath);
                 return;
-            } catch (e: unknown) {
+            } catch (error) {
                 try {
                     if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
-                } catch (e2: unknown) {
+                } catch (error) {
                     logger.warn('musicPersistence: failed to remove tmp file', {
-                        error: e2,
+                        error: error,
                     });
                 }
                 const backoff = WRITE_BACKOFF_BASE_MS * Math.pow(2, attempt);
                 logger.warn(
                     `musicPersistence: write attempt ${attempt + 1} failed, retrying in ${backoff}ms`,
                     {
-                        error: e,
+                        error: error,
                     },
                 );
                 await new Promise(r => setTimeout(r, backoff));
@@ -88,9 +88,9 @@ export class FileStore implements Store {
         if (!this.current) return;
         try {
             await this.writeFileAtomicAsync(this.current);
-        } catch (e: unknown) {
+        } catch (error) {
             logger.warn('musicPersistence: failed to flush to disk', {
-                error: e,
+                error: error,
             });
             setTimeout(() => {
                 void this.flushToDisk();
@@ -101,7 +101,7 @@ export class FileStore implements Store {
     private scheduleFlush() {
         if (this.flushTimer) clearTimeout(this.flushTimer);
         this.flushTimer = setTimeout(() => {
-            this.flushTimer = null;
+            this.flushTimer = undefined;
             void this.flushToDisk();
         }, FLUSH_DELAY_MS);
     }
@@ -120,7 +120,7 @@ export class FileStore implements Store {
         if (!this.current) this.current = this.readFileSafeSync();
         this.current.items = this.current.items || [];
         const idx = this.current.items.findIndex(x => x.id === m.id);
-        if (idx >= 0) this.current.items[idx] = m;
+        if (idx !== -1) this.current.items[idx] = m;
         else this.current.items.push(m);
         this.current.lastUpdated = new Date().toISOString();
         this.scheduleFlush();
@@ -152,7 +152,7 @@ export class FileStore implements Store {
     async flush() {
         if (this.flushTimer) {
             clearTimeout(this.flushTimer);
-            this.flushTimer = null;
+            this.flushTimer = undefined;
         }
         await this.flushToDisk();
     }
@@ -161,11 +161,11 @@ export class FileStore implements Store {
         if (!this.current) return;
         try {
             const tmp = `${this.filePath}.${process.pid}.shutdown.tmp`;
-            fs.writeFileSync(tmp, JSON.stringify(this.current, null, 2), 'utf8');
+            fs.writeFileSync(tmp, JSON.stringify(this.current, undefined, 2), 'utf8');
             fs.renameSync(tmp, this.filePath);
-        } catch (e: unknown) {
+        } catch (error) {
             logger.warn('musicPersistence: failed to flush sync on exit', {
-                error: e,
+                error: error,
             });
         }
     }

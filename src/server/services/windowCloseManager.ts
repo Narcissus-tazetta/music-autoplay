@@ -1,11 +1,11 @@
 import { TimerManager } from '../utils/timerManager';
 
-type Event = {
+interface Event {
     origin?: string | undefined;
     socketId?: string | undefined;
     type: string;
     ts?: number;
-};
+}
 
 export class WindowCloseManager {
     private timers = new TimerManager();

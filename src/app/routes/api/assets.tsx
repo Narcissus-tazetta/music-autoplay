@@ -71,24 +71,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         }
 
         return {
-            title: meta.title,
-            thumbnail,
-            length: meta.duration,
-            isMusic: !meta.isAgeRestricted,
             channelId: meta.channelId,
             channelName: meta.channelTitle,
             id: videoId,
+            isMusic: !meta.isAgeRestricted,
+            length: meta.duration,
+            thumbnail,
+            title: meta.title,
         };
     });
 
     if (!res.ok) return respondWithResult(makeErr({ message: toMsg(res.error) }));
 
     return new Response(JSON.stringify(res.value), {
-        status: 200,
         headers: { 'Content-Type': 'application/json' },
+        status: 200,
     });
 };
 
 export default function Route() {
-    return null;
+    return;
 }

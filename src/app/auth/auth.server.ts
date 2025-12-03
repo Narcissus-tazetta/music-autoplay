@@ -16,8 +16,8 @@ authenticator.use(
             if (!profile.email_verified) throw new Error('メールアドレスが確認されていません。');
 
             return {
-                id: profile.sub,
                 email: profile.email,
+                id: profile.sub,
                 name: profile.name,
             };
         },

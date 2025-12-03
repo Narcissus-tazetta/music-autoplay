@@ -20,8 +20,8 @@ describe('getAllMusics', () => {
 
         const registerHandler = createGetAllMusicsHandler(musicDB);
         registerHandler(socketStub, {
-            socketId: 'stub-socket',
             connectionId: 'test-conn',
+            socketId: 'stub-socket',
         });
 
         const resultPromise = new Promise<unknown>(resolve => {
@@ -37,7 +37,7 @@ describe('getAllMusics', () => {
         expect(Array.isArray(result)).toBe(true);
         const ids = (Array.isArray(result) ? result : [])
             .map((m: unknown) => (m as Record<string, unknown>).id)
-            .sort();
+            .toSorted();
         expect(ids).toEqual(['a1', 'b2']);
     });
 });

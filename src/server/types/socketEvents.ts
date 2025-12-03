@@ -3,7 +3,7 @@ import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
 // Minimal ReplyOptions shape used by socket events
 type ReplyOptions = { formErrors?: string[] } | Record<string, unknown>;
 
-export type EventMap = {
+export interface EventMap {
     // client -> server
     addMusic: [
         url: string,
@@ -49,6 +49,6 @@ export type EventMap = {
     url_list: [Array<Music & { url: string }>];
     // メモ: 今後追加されるイベントはここに追記してください
     deleteMusic: [string];
-};
+}
 
 export type EventName = keyof EventMap;

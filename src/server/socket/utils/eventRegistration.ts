@@ -16,23 +16,23 @@ export function registerSocketEventSafely(
             try {
                 const result = handler(data);
                 if (result && typeof result.catch === 'function') {
-                    result.catch((err: unknown) => {
+                    result.catch(error => {
                         log.warn(`failed to process ${eventName}`, {
-                            error: err,
+                            error: error,
                             socketId: context.socketId,
                         });
                     });
                 }
-            } catch (err: unknown) {
+            } catch (error) {
                 log.warn(`failed to process ${eventName}`, {
-                    error: err,
+                    error: error,
                     socketId: context.socketId,
                 });
             }
         });
-    } catch (err: unknown) {
+    } catch (error) {
         log.debug(`failed to register ${eventName}`, {
-            error: err,
+            error: error,
             socketId: context.socketId,
         });
     }

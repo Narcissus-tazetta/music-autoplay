@@ -27,12 +27,12 @@ export class GoogleOIDCStrategy<User> extends OAuth2Strategy<User> {
     ) {
         super(
             {
+                authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
                 clientId: options.clientId,
                 clientSecret: options.clientSecret,
                 redirectURI: options.redirectURI,
-                authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-                tokenEndpoint: 'https://oauth2.googleapis.com/token',
                 scopes: ['openid', 'email', 'profile'],
+                tokenEndpoint: 'https://oauth2.googleapis.com/token',
             },
             async ({ tokens }) => {
                 const profile = await this.verifyIdToken(
@@ -53,12 +53,12 @@ export class GoogleOIDCStrategy<User> extends OAuth2Strategy<User> {
             const jwks = await fetch(
                 `https://www.googleapis.com/oauth2/v3/certs`,
             ).then(
-                res => res.json() as Promise<{ keys: Array<Record<string, unknown>> }>,
+                res => res.json() as Promise<{ keys: Record<string, unknown>[] }>,
             );
 
             const [header] = idToken.split('.');
             const decodedHeader = JSON.parse(
-                Buffer.from(header, 'base64').toString('utf-8'),
+                Buffer.from(header, 'base64').toString('utf8'),
             ) as Record<string, string>;
 
             const key = jwks.keys.find(k => k.kid === decodedHeader.kid);
@@ -69,8 +69,8 @@ export class GoogleOIDCStrategy<User> extends OAuth2Strategy<User> {
                 idToken,
                 publicKey,
                 {
-                    issuer: 'https://accounts.google.com',
                     audience: clientId,
+                    issuer: 'https://accounts.google.com',
                 },
             );
 
@@ -79,7 +79,7 @@ export class GoogleOIDCStrategy<User> extends OAuth2Strategy<User> {
             return payload;
         } catch (error: unknown) {
             logger.error('Failed to verify Google ID token', { error });
-            throw new Error('Invalid ID token');
+            throw new Error('Invalid ID token', { cause: error });
         }
     }
 }
