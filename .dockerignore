@@ -1,0 +1,14 @@
+.git
+.github
+.vscode
+.husky
+node_modules
+build
+dist
+*.md
+tests
+docs
+.eslint-report.json
+playwright.config.ts
+*.test.ts
+*.test.js
