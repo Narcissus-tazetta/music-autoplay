@@ -1,0 +1,55 @@
+services:
+  - type: web
+    name: music-autoplay
+    runtime: docker
+    env: docker
+    region: oregon
+    plan: starter
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ADMIN_SECRET
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: CLIENT_URL
+        value: https://music-autoplay.onrender.com
+      - key: LOG_LEVEL
+        value: info
+      - key: CORS_ORIGINS
+        value: https://music-autoplay.onrender.com
+      - key: ALLOW_EXTENSION_ORIGINS
+        value: true
+      - key: REMOTE_STATUS_DEBOUNCE_MS
+        value: 250
+      - key: REMOTE_STATUS_GRACE_MS
+        value: 5000
+      - key: REMOTE_STATUS_INACTIVITY_MS
+        value: 600000
+      - key: WINDOW_CLOSE_DEBOUNCE_MS
+        value: 500
+      - key: RATE_LIMIT_MAX_ATTEMPTS
+        value: 10
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 60000
+      - key: PROGRESS_STALL_THRESHOLD_MS
+        value: 3000
+      - key: PROGRESS_MIN_DELTA_SEC
+        value: 0.5
+      - key: PROGRESS_STALL_COUNT
+        value: 3
+      - key: PROGRESS_COOLDOWN_MS
+        value: 5000
+      - key: SOCKET_PATH
+        value: /api/socket.io
+      - key: MORGAN_FORMAT
+        value: tiny
