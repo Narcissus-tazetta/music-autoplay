@@ -53,3 +53,5 @@ services:
         value: /api/socket.io
       - key: MORGAN_FORMAT
         value: tiny
+      - key: DATABASE_URL
+        sync: false
