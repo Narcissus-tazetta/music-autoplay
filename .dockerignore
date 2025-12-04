@@ -12,3 +12,9 @@ docs
 playwright.config.ts
 *.test.ts
 *.test.js
+.env
+.env.*
+*.pem
+*.key
+*.crt
+secrets/

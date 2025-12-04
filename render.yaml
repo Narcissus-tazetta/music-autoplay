@@ -16,7 +16,7 @@ services:
       - key: SESSION_SECRET
         generateValue: true
       - key: ADMIN_SECRET
-        generateValue: true
+        sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
@@ -29,29 +29,16 @@ services:
         value: https://music-autoplay.onrender.com
       - key: ALLOW_EXTENSION_ORIGINS
         value: false
-      - key: REMOTE_STATUS_DEBOUNCE_MS
-        value: 250
-      - key: REMOTE_STATUS_GRACE_MS
-        value: 5000
-      - key: REMOTE_STATUS_INACTIVITY_MS
-        value: 600000
-      - key: WINDOW_CLOSE_DEBOUNCE_MS
-        value: 500
-      - key: RATE_LIMIT_MAX_ATTEMPTS
-        value: 10
-      - key: RATE_LIMIT_WINDOW_MS
-        value: 60000
-      - key: PROGRESS_STALL_THRESHOLD_MS
-        value: 3000
-      - key: PROGRESS_MIN_DELTA_SEC
-        value: 0.5
-      - key: PROGRESS_STALL_COUNT
-        value: 3
-      - key: PROGRESS_COOLDOWN_MS
-        value: 5000
       - key: SOCKET_PATH
         value: /api/socket.io
       - key: MORGAN_FORMAT
         value: tiny
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: music-autoplay-db
+          property: connectionString
+
+databases:
+  - name: music-autoplay-db
+    databaseName: music_autoplay
+    user: music_autoplay
