@@ -16,7 +16,7 @@ services:
       - key: SESSION_SECRET
         generateValue: true
       - key: ADMIN_SECRET
-        generateValue: true
+        value: "b7f8c2e1a9d4f6g3h5j8k1l0m2n6p4q7r9s3t5u8v0w2x4y6z8a1b3c5d7e9f"
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
