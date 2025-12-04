@@ -28,7 +28,7 @@ services:
       - key: CORS_ORIGINS
         value: https://music-autoplay.onrender.com
       - key: ALLOW_EXTENSION_ORIGINS
-        value: true
+        value: false
       - key: REMOTE_STATUS_DEBOUNCE_MS
         value: 250
       - key: REMOTE_STATUS_GRACE_MS
