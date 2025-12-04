@@ -54,4 +54,6 @@ services:
       - key: MORGAN_FORMAT
         value: tiny
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: music-autoplay-db
+          property: connectionString
