@@ -106,11 +106,12 @@ export const useMusicStore = create<MusicStore>((set) => {
     } else {
       const { _meta, ...statusWithoutMeta } = incomingState;
 
-      if (import.meta.env.DEV)
+      if (import.meta.env.DEV) {
         console.warn(
           "[musicStore] received status without _meta (legacy format)",
           statusWithoutMeta,
         );
+      }
 
       set({
         remoteStatus: statusWithoutMeta,

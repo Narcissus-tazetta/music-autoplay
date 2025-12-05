@@ -73,7 +73,7 @@ function AudioPlayerInner({
   const isExternalVideo =
     status?.type === "playing" && status.isExternalVideo === true;
   const isPaused = status?.type === "paused";
-  const pausedIndicator = isPaused || isEffectivelyPaused;
+  const pausedIndicator = isPaused || (isEffectivelyPaused && !isAdvertisement);
 
   const progressBarColor = useMemo(
     () =>

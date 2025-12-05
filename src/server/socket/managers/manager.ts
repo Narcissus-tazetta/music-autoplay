@@ -52,8 +52,9 @@ export class SocketManager {
         if (
           typeof (this.timerManager as { clearAll?: unknown }).clearAll ===
           "function"
-        )
+        ) {
           this.timerManager.clearAll();
+        }
       } catch (e: unknown) {
         logger.warn("SocketManager failed to clearAll timers", { error: e });
       }
@@ -140,8 +141,9 @@ export class SocketManager {
       if (
         stateChange ||
         !shouldDebounce(this.remoteStatusUpdatedAt, now, this.config.debounceMs)
-      )
+      ) {
         this.applyStatusChange(finalStatus, source, traceId);
+      }
     } catch (e: unknown) {
       logger.warn("SocketManager processUpdate failed", { error: e, update });
     }

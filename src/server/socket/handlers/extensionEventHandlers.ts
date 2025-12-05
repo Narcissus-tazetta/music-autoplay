@@ -918,8 +918,9 @@ export function setupExtensionEventHandlers(
       else if (
         currentStatus.type === "playing" &&
         currentStatus.isAdvertisement === true
-      )
+      ) {
         isAdvertisement = true;
+      }
 
       if (isBuffering || visibilityState === "hidden") consecutiveStalls = 0;
       else if (isAdvertisement === true) consecutiveStalls = 0;

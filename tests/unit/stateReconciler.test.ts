@@ -274,12 +274,13 @@ describe("StateReconciler", () => {
 
       reconciler.reconcile({ type: "closed" }, playingStatus, "extension");
 
-      for (let i = 0; i < 3; i++)
+      for (let i = 0; i < 3; i++) {
         reconciler.reconcile(
           playingStatus,
           { ...playingStatus, currentTime: 10.01 },
           "progress_update",
         );
+      }
 
       const closedStatus: RemoteStatus = { type: "closed" };
       reconciler.reconcile(playingStatus, closedStatus, "window_close");
