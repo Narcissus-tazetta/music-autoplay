@@ -105,7 +105,7 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, "mode">) {
             </span>
             <MusicTitleWithHover
               music={music}
-              className="text-gray-800 dark:text-gray-100 font-medium hover:underline wrap-break-word min-w-0 text-xs sm:text-sm"
+              className="text-gray-800 dark:text-gray-100 font-medium hover:underline break-words min-w-0 text-xs sm:text-sm"
             />
           </span>
         ) : (
