@@ -33,9 +33,14 @@ function AudioPlayerInner({
     music?.title ||
     "";
 
+  const statusDuration =
+    (status?.type === "playing" || status?.type === "paused") &&
+    typeof status.duration === "number"
+      ? status.duration
+      : undefined;
+
   const duration = useMemo((): number | undefined => {
-    if (status?.type === "playing" && typeof status.duration === "number")
-      return status.duration;
+    if (statusDuration !== undefined) return statusDuration;
     if (music?.duration) {
       const parts = music.duration.split(":").map((p) => parseInt(p, 10));
       if (parts.every((p) => !isNaN(p))) {
@@ -45,10 +50,18 @@ function AudioPlayerInner({
       }
     }
     return undefined;
-  }, [status, music?.duration]);
+  }, [statusDuration, music?.duration]);
+
+  const isAdvertisementFlag =
+    status?.type === "playing" ? status.isAdvertisement : undefined;
 
   const { currentTime: localCurrentTime, isEffectivelyPaused } =
-    useInterpolatedTime({ status, duration });
+    useInterpolatedTime({
+      status,
+      duration,
+      videoId,
+      isAdvertisement: isAdvertisementFlag,
+    });
   const visibility = useVisibilityTimer({
     hasStatus: !!status,
     isClosed: status?.type === "closed",

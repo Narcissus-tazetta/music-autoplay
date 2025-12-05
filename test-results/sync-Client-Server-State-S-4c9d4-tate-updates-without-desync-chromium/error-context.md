@@ -1,0 +1,54 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+    - generic [ref=e2]:
+        - link "Music Autoplay" [ref=e3] [cursor=pointer]:
+            - /url: /
+        - generic [ref=e4]:
+            - button "Googleでログイン" [ref=e6]:
+                - generic [ref=e7]: Googleでログイン
+            - button [ref=e8]:
+                - img
+    - generic [ref=e10]:
+        - generic [ref=e14]:
+            - generic [ref=e15]:
+                - generic:
+                    - img
+                - textbox "https://www.youtube.com/watch?v=..." [ref=e16]
+            - button "再生リストに追加" [ref=e17]:
+                - img
+                - paragraph [ref=e18]: 再生リストに追加
+        - generic [ref=e20]:
+            - img "のサムネイル" [ref=e22]
+            - generic [ref=e23]:
+                - generic [ref=e25]: 再生中
+                - generic [ref=e27]:
+                    - progressbar
+        - table [ref=e29]:
+            - rowgroup [ref=e30]:
+                - row "No. 楽曲名 操作" [ref=e31]:
+                    - columnheader "No." [ref=e32]
+                    - columnheader "楽曲名" [ref=e33]
+                    - columnheader "操作" [ref=e34]:
+                        - generic [ref=e35]: 操作
+            - rowgroup [ref=e36]:
+                - row "1 平井 堅 『怪物さん feat.あいみょん』MUSIC VIDEO 詳細を開く" [ref=e37]:
+                    - cell "1" [ref=e38]:
+                        - paragraph [ref=e39]: "1"
+                    - cell "平井 堅 『怪物さん feat.あいみょん』MUSIC VIDEO" [ref=e40]:
+                        - link "平井 堅 『怪物さん feat.あいみょん』MUSIC VIDEO" [ref=e41] [cursor=pointer]:
+                            - /url: https://www.youtube.com/watch?v=k9VOuzOXAVo
+                    - cell "詳細を開く" [ref=e42]:
+                        - button "詳細を開く" [ref=e44]:
+                            - img
+                - row "2 米津玄師 - 馬と鹿 Kenshi Yonezu - Uma to Shika 詳細を開く" [ref=e45]:
+                    - cell "2" [ref=e46]:
+                        - paragraph [ref=e47]: "2"
+                    - cell "米津玄師 - 馬と鹿 Kenshi Yonezu - Uma to Shika" [ref=e48]:
+                        - link "米津玄師 - 馬と鹿 Kenshi Yonezu - Uma to Shika" [ref=e49] [cursor=pointer]:
+                            - /url: https://www.youtube.com/watch?v=ptnYBctoexk
+                    - cell "詳細を開く" [ref=e50]:
+                        - button "詳細を開く" [ref=e52]:
+                            - img
+```
