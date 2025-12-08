@@ -5,6 +5,12 @@ import { SERVER_ENV } from '~/env.server';
 import { getConfig } from '../../utils/configUtils';
 import type { EngineLike, RequestLike } from '../types';
 
+const safeBool = (v: unknown, fallback = false) => {
+    if (typeof v === 'boolean') return v;
+    if (typeof v === 'string') return v === 'true';
+    return fallback;
+};
+
 export function getOriginFromReq(req: unknown): string | undefined {
     try {
         if (!isObject(req)) return undefined;
@@ -79,12 +85,6 @@ export function registerEngineAugmentations(
     socketPath: string,
 ): void {
     const config = getConfig();
-
-    const safeBool = (v: unknown, fallback = false) => {
-        if (typeof v === 'boolean') return v;
-        if (typeof v === 'string') return v === 'true';
-        return fallback;
-    };
 
     try {
         if (!isObject(engine)) return;

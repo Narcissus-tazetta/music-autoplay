@@ -26,14 +26,14 @@ export function hasStructuredClone(
     return result.success && typeof result.data.structuredClone === 'function';
 }
 
-export function getWindowExtensions():
+export const getWindowExtensions = ():
     | z.SafeParseReturnType<
         unknown,
         z.infer<typeof WindowExtensionsSchema>
     >
-    | null {
-    if (typeof window === 'undefined') return;
+    | null => {
+    if (typeof window === 'undefined') return null;
     return WindowExtensionsSchema.safeParse(window);
-}
+};
 
 export type WindowExtensions = z.infer<typeof WindowExtensionsSchema>;

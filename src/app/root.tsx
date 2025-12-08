@@ -22,6 +22,10 @@ import { useAdminKeyActivation } from './hooks/useAdminKeyActivation';
 import { useAppInitialization } from './hooks/useAppInitialization';
 import { useWindowAppApi } from './hooks/useWindowAppApi';
 
+const isErrLike = (
+    v: unknown,
+): v is { code?: string | number; message?: unknown; details?: unknown } => !!v && typeof v === 'object';
+
 export const links: LinksFunction = () => [
     { href: appCss, rel: 'stylesheet' },
     { href: '/favicon.svg', rel: 'icon', type: 'image/svg+xml' },
@@ -44,9 +48,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     if (!res.ok) {
         const errObj = res.error;
-        const isErrLike = (
-            v: unknown,
-        ): v is { code?: string | number; message?: unknown; details?: unknown } => !!v && typeof v === 'object';
         let message: string;
         let code: string | undefined;
         if (isErrLike(errObj) && typeof errObj.message === 'string') message = errObj.message;

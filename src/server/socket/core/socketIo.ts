@@ -11,7 +11,7 @@ export interface CreatedIo {
     socketPath: string;
 }
 
-export function createSocketIo(server: HttpServer): CreatedIo {
+export const createSocketIo = (server: HttpServer): CreatedIo => {
     const cfg = container.getOptional('configService') as
         | { getString?(key: string): string }
         | undefined;
@@ -87,8 +87,8 @@ export function createSocketIo(server: HttpServer): CreatedIo {
         return { io, socketPath };
     } catch (error) {
         logger.error('socket.io initialization failed', { error: error });
-        return { io: undefined, socketPath };
+        return { io: null, socketPath };
     }
-}
+};
 
 export default createSocketIo;

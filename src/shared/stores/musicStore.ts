@@ -1,3 +1,4 @@
+import type { RemoteStatusWithMeta } from '@/shared/types/remoteStatus';
 import type { C2S, S2C } from '@/shared/types/socket';
 import type { Socket } from 'socket.io-client';
 import { create } from 'zustand';
@@ -23,6 +24,8 @@ export type RemoteStatus =
         musicTitle?: string;
         musicId?: string;
         isTransitioning?: boolean;
+        currentTime?: number;
+        duration?: number;
     }
     | {
         type: 'closed';
@@ -42,6 +45,8 @@ interface MusicStore {
     musics: Music[];
     socket?: Socket<S2C, C2S> | null;
     remoteStatus: RemoteStatus | null;
+    lastSequenceNumber: number;
+    lastServerTimestamp: number;
     error?: string;
     resetError?: () => void;
     setMusics?: (musics: Music[]) => void;
@@ -49,11 +54,69 @@ interface MusicStore {
 
     addMusic(music: Music): void;
     connectSocket(): void;
+    remoteStatusUpdated(incomingState: RemoteStatusWithMeta): void;
 }
 
 export const useMusicStore = create<MusicStore>(set => {
     let socket: Socket<S2C, C2S> | null;
     const STORAGE_KEY = 'music-auto-play:musics:v1';
+
+    // Extracted logic for handling remote status updates
+    const handleRemoteStatusUpdate = (incomingState: RemoteStatusWithMeta) => {
+        const meta = incomingState._meta;
+
+        if (meta) {
+            set(state => {
+                const isStale = meta.sequenceNumber <= state.lastSequenceNumber;
+                const isTooOld = meta.serverTimestamp < state.lastServerTimestamp - 5000;
+
+                if (isStale || isTooOld) {
+                    if (import.meta.env.DEV) {
+                        console.warn('[musicStore] ignoring stale update', {
+                            currentSeq: state.lastSequenceNumber,
+                            currentTimestamp: state.lastServerTimestamp,
+                            incomingSeq: meta.sequenceNumber,
+                            incomingTimestamp: meta.serverTimestamp,
+                            isStale,
+                            isTooOld,
+                            traceId: meta.traceId,
+                        });
+                    }
+                    return {};
+                }
+
+                const { _meta, ...statusWithoutMeta } = incomingState;
+
+                if (import.meta.env.DEV) {
+                    console.info('[musicStore] remoteStatusUpdated', {
+                        sequenceNumber: meta.sequenceNumber,
+                        serverTimestamp: meta.serverTimestamp,
+                        traceId: meta.traceId,
+                        type: statusWithoutMeta.type,
+                    });
+                }
+
+                return {
+                    lastSequenceNumber: meta.sequenceNumber,
+                    lastServerTimestamp: meta.serverTimestamp,
+                    remoteStatus: statusWithoutMeta,
+                };
+            });
+        } else {
+            const { _meta, ...statusWithoutMeta } = incomingState;
+
+            if (import.meta.env.DEV) {
+                console.warn(
+                    '[musicStore] received status without _meta (legacy format)',
+                    statusWithoutMeta,
+                );
+            }
+
+            set({
+                remoteStatus: statusWithoutMeta,
+            });
+        }
+    };
 
     return {
         addMusic(music) {
@@ -150,30 +213,8 @@ export const useMusicStore = create<MusicStore>(set => {
                         musics: state.musics.filter(music => music.id !== musicId),
                     }));
                 })
-                .on('remoteStatusUpdated', (state: RemoteStatus) => {
-                    if (import.meta.env.DEV) {
-                        console.info('[musicStore] remoteStatusUpdated event:', state);
-                        const debugFields: Record<string, unknown> = { type: state.type };
-                        if (state.type === 'playing') {
-                            debugFields.musicId = state.musicId;
-                            debugFields.videoId = state.videoId ?? undefined;
-                            debugFields.currentTime = state.currentTime ?? undefined;
-                            debugFields.lastProgressUpdate = state.lastProgressUpdate ?? undefined;
-                            debugFields.duration = state.duration ?? undefined;
-                            debugFields.progressPercent = state.progressPercent ?? undefined;
-                        } else if (state.type === 'paused') {
-                            debugFields.musicId = state.musicId ?? undefined;
-                            debugFields.musicTitle = state.musicTitle ?? undefined;
-                            debugFields.isTransitioning = state.isTransitioning ?? undefined;
-                        }
-                        console.debug(
-                            '[musicStore] remoteStatusUpdated fields:',
-                            debugFields,
-                        );
-                    }
-                    set({
-                        remoteStatus: state,
-                    });
+                .on('remoteStatusUpdated', (incomingState: RemoteStatusWithMeta) => {
+                    handleRemoteStatusUpdate(incomingState);
                 });
 
             const socketAny = socket as unknown;
@@ -229,8 +270,13 @@ export const useMusicStore = create<MusicStore>(set => {
                 if (import.meta.env.DEV) console.debug('musicStore hydrateFromLocalStorage failed', error);
             }
         },
+        lastSequenceNumber: 0,
+        lastServerTimestamp: 0,
         musics: [],
-        remoteStatus: undefined,
+        remoteStatus: null,
+        remoteStatusUpdated(incomingState: RemoteStatusWithMeta) {
+            handleRemoteStatusUpdate(incomingState);
+        },
         resetError: () => {
             set({ error: undefined });
         },

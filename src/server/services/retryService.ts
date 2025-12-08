@@ -14,11 +14,14 @@ export async function retry<T>(
     let lastErr: unknown;
     for (let attempt = 0; attempt <= retries; attempt++) {
         try {
+            // Intentional sequential await in retry loop.
+            // eslint-disable-next-line no-await-in-loop
             return await fn();
         } catch (error) {
             lastErr = error;
             if (attempt === retries) break;
             const wait = base * Math.pow(factor, attempt);
+            // eslint-disable-next-line no-await-in-loop
             await new Promise(r => setTimeout(r, wait));
         }
     }

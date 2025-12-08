@@ -42,6 +42,6 @@ export function getMusicService(): MusicService {
     return instance;
 }
 
-export function resetMusicService(): void {
-    instance = undefined;
-}
+export const resetMusicService = (): void => {
+    instance = null;
+};

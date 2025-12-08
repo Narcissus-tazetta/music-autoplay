@@ -3,7 +3,6 @@
   "categories": {
     "correctness": "error",
     "perf": "warn",
-    "style": "warn",
     "suspicious": "error"
   },
   "rules": {
@@ -39,5 +38,14 @@
     "builtin": true
   },
   "globals": {},
-  "ignorePatterns": []
+  "ignorePatterns": [],
+  "overrides": [
+    {
+      "files": ["tests/**", "**/*.test.ts", "**/*.test.tsx"],
+      "rules": {
+        "unicorn/consistent-function-scoping": "off",
+        "no-await-in-loop": "off"
+      }
+    }
+  ]
 }

@@ -43,9 +43,12 @@ const loadFromServerAsync = async (): Promise<void> => {
             return;
         }
         const server = norm.data;
-        if (typeof server.ytStatusVisible === 'boolean')
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        if (server && typeof server.ytStatusVisible === 'boolean')
             useSettingsStore.getState().setYtStatusVisible(server.ytStatusVisible);
-        if (typeof server.ytStatusMode === 'string') useSettingsStore.getState().setYtStatusMode(server.ytStatusMode);
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        if (server && typeof server.ytStatusMode === 'string')
+            useSettingsStore.getState().setYtStatusMode(server.ytStatusMode);
     } catch (error) {
         if (import.meta.env.DEV) console.warn('loadFromServer error', error);
     }

@@ -27,21 +27,31 @@ function AudioPlayerInner({
         || music?.title
         || '';
 
+    const statusDuration = (status?.type === 'playing' || status?.type === 'paused')
+            && typeof status.duration === 'number'
+        ? status.duration
+        : undefined;
+
     const duration = useMemo((): number | undefined => {
-        if (status?.type === 'playing' && typeof status.duration === 'number') return status.duration;
+        if (statusDuration !== undefined) return statusDuration;
         if (music?.duration) {
-            const parts = music.duration
-                .split(':')
-                .map(p => Number.parseInt(p, 10));
+            const parts = music.duration.split(':').map(p => parseInt(p, 10));
             if (parts.every(p => !isNaN(p))) {
                 if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
                 if (parts.length === 2) return parts[0] * 60 + parts[1];
             }
         }
         return undefined;
-    }, [status, music?.duration]);
+    }, [statusDuration, music?.duration]);
 
-    const { currentTime: localCurrentTime, isEffectivelyPaused } = useInterpolatedTime({ duration, status });
+    const isAdvertisementFlag = status?.type === 'playing' ? status.isAdvertisement : undefined;
+
+    const { currentTime: localCurrentTime, isEffectivelyPaused } = useInterpolatedTime({
+        duration,
+        isAdvertisement: isAdvertisementFlag,
+        status,
+        videoId,
+    });
     const visibility = useVisibilityTimer({
         hasStatus: !!status,
         isClosed: status?.type === 'closed',
@@ -51,12 +61,12 @@ function AudioPlayerInner({
     const isAdvertisement = status?.type === 'playing' && status.isAdvertisement === true;
     const isExternalVideo = status?.type === 'playing' && status.isExternalVideo === true;
     const isPaused = status?.type === 'paused';
-    const pausedIndicator = isPaused || isEffectivelyPaused;
+    const pausedIndicator = isPaused || (isEffectivelyPaused && !isAdvertisement);
 
     const progressBarColor = useMemo(
         () =>
             isAdvertisement
-                ? 'bg-orange-600'
+                ? 'bg-yellow-500'
                 : isExternalVideo
                 ? 'bg-purple-500'
                 : pausedIndicator
@@ -65,7 +75,7 @@ function AudioPlayerInner({
         [isAdvertisement, isExternalVideo, pausedIndicator],
     );
 
-    if (!status || visibility === 'hidden') return;
+    if (!status || visibility === 'hidden') return null;
 
     const progressPercent = duration != undefined && duration > 0
         ? Math.min((localCurrentTime / duration) * 100, 100)
@@ -86,7 +96,7 @@ function AudioPlayerInner({
                 href={href}
                 target='_blank'
                 rel='noopener noreferrer'
-                className='relative w-16 sm:w-20 md:w-24 aspect-video flex-shrink-0 rounded-md overflow-hidden bg-gray-200 dark:bg-gray-800'
+                className='relative w-16 sm:w-20 md:w-24 aspect-video shrink-0 rounded-md overflow-hidden bg-gray-200 dark:bg-gray-800'
             >
                 {!thumbnail.loaded && <div className='absolute inset-0 bg-gray-300 dark:bg-gray-700 animate-pulse' />}
                 <img
@@ -140,16 +150,20 @@ function AudioPlayerInner({
                 {duration != undefined && (
                     <div className='text-xs sm:text-sm text-gray-600 dark:text-gray-400 flex justify-between items-center'>
                         <span
-                            className={isAdvertisement || pausedIndicator
-                                ? 'text-orange-400'
-                                : 'text-slate-400'}
+                            className={isAdvertisement
+                                ? 'text-yellow-400'
+                                : (pausedIndicator
+                                    ? 'text-orange-400'
+                                    : 'text-slate-400')}
                         >
                             {formatSecondsToTime(localCurrentTime)}
                         </span>
                         <span
-                            className={isAdvertisement || pausedIndicator
-                                ? 'text-orange-400'
-                                : 'text-slate-400'}
+                            className={isAdvertisement
+                                ? 'text-yellow-400'
+                                : (pausedIndicator
+                                    ? 'text-orange-400'
+                                    : 'text-slate-400')}
                         >
                             {formatSecondsToTime(duration)}
                         </span>

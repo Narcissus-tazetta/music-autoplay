@@ -130,22 +130,22 @@ export function handleAsyncError(
     };
 }
 
-export function trySync<T>(fn: () => T): [T, null] | [null, unknown] {
+export const trySync = <T>(fn: () => T): [T, null] | [null, unknown] => {
     try {
         const result = fn();
-        return [result, undefined];
+        return [result, null];
     } catch (error: unknown) {
-        return [undefined, error];
+        return [null, error];
     }
-}
+};
 
-export async function tryAsync<T>(
+export const tryAsync = async <T>(
     fn: () => Promise<T>,
-): Promise<[T, null] | [null, unknown]> {
+): Promise<[T, null] | [null, unknown]> => {
     try {
         const result = await fn();
-        return [result, undefined];
+        return [result, null];
     } catch (error: unknown) {
-        return [undefined, error];
+        return [null, error];
     }
-}
+};

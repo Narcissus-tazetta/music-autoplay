@@ -11,7 +11,7 @@ type PersistFile = Record<
 
 export class SettingsStore {
     private filePath: string;
-    private current: PersistFile | null = undefined;
+    private current: PersistFile | null = null;
 
     constructor(filePath?: string) {
         this.filePath = filePath ?? DEFAULT_FILE_PATH;

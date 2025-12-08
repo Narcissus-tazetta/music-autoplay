@@ -1,7 +1,7 @@
 import type { RemoteStatus } from '@/shared/stores/musicStore';
-import { container } from '../../di/container';
+import { randomUUID } from 'node:crypto';
 import logger from '../../logger';
-import { RemoteStatusManager } from '../../services/remoteStatusManager';
+import { StateReconciler } from '../../services/stateReconciler';
 import type { WindowCloseManager } from '../../services/windowCloseManager';
 import type { TimerManager } from '../../utils/timerManager';
 import { isRemoteStatusEqual, shouldDebounce } from './remoteStatus';
@@ -14,44 +14,40 @@ export interface ManagerConfig {
     inactivityMs: number;
 }
 
+interface QueuedUpdate {
+    status: RemoteStatus;
+    source: string;
+    timestamp: number;
+    traceId: string;
+}
+
 export class SocketManager {
     private remoteStatus: RemoteStatus = { type: 'closed' };
     private remoteStatusUpdatedAt = 0;
-    private remoteStatusManager?: RemoteStatusManager;
-    getCurrent(): RemoteStatus {
-        return this.remoteStatus;
-    }
+    private stateReconciler: StateReconciler;
+    private updateQueue: QueuedUpdate[] = [];
+    private isProcessing = false;
+    private sequenceNumber = 0;
+
     constructor(
         private emit: EmitFn,
         private timerManager: TimerManager,
-        private windowCloseManager: InstanceType<typeof WindowCloseManager>,
+        private windowCloseManager: WindowCloseManager,
         private config: ManagerConfig,
-    ) {}
+    ) {
+        this.stateReconciler = new StateReconciler();
+    }
 
-    initWithDI() {
-        try {
-            if (container.has('remoteStatusManager')) {
-                this.remoteStatusManager = container.get(
-                    'remoteStatusManager',
-                ) as RemoteStatusManager;
-            } else {
-                this.remoteStatusManager = new RemoteStatusManager(
-                    (ev, payload) => this.emit(ev, payload),
-                    this.timerManager,
-                );
-            }
-            const cur = this.remoteStatusManager.getCurrent();
-            this.remoteStatus = cur;
-            this.remoteStatusUpdatedAt = this.remoteStatusManager.getUpdatedAt();
-        } catch (error) {
-            logger.debug('SocketManager.initWithDI failed', { error: error });
-        }
+    getCurrent(): RemoteStatus {
+        return this.remoteStatus;
     }
 
     shutdown() {
         try {
+            this.updateQueue = [];
             this.timerManager.clear('pendingClose');
             this.timerManager.clear('inactivity');
+            this.stateReconciler.reset();
             try {
                 if (
                     typeof (this.timerManager as { clearAll?: unknown }).clearAll
@@ -60,9 +56,7 @@ export class SocketManager {
                     this.timerManager.clearAll();
                 }
             } catch (error) {
-                logger.warn('SocketManager failed to clearAll timers', {
-                    error: error,
-                });
+                logger.warn('SocketManager failed to clearAll timers', { error: error });
             }
         } catch (error) {
             logger.warn('SocketManager shutdown error', { error: error });
@@ -70,121 +64,139 @@ export class SocketManager {
     }
 
     update(status: RemoteStatus, source?: string) {
+        const traceId = randomUUID();
+        const timestamp = Date.now();
+        const updateSource = source ?? 'unknown';
+
+        this.updateQueue.push({
+            source: updateSource,
+            status,
+            timestamp,
+            traceId,
+        });
+
+        if (!this.isProcessing) this.processQueue();
+    }
+
+    private processQueue(): void {
+        if (this.isProcessing || this.updateQueue.length === 0) return;
+
+        this.isProcessing = true;
+
         try {
+            while (this.updateQueue.length > 0) {
+                const update = this.updateQueue.shift();
+                if (!update) break;
+
+                this.processUpdate(update);
+            }
+        } finally {
+            this.isProcessing = false;
+        }
+    }
+
+    private processUpdate(update: QueuedUpdate): void {
+        try {
+            const { status, source, traceId } = update;
             const now = Date.now();
+
             if (status.type === 'closed') {
                 if (this.remoteStatus.type === 'closed') return;
                 this.timerManager.clear('pendingClose');
                 this.timerManager.start('pendingClose', this.config.graceMs, () => {
-                    try {
-                        if (this.remoteStatusManager) {
-                            this.remoteStatusManager.update(status, source ?? 'grace_close');
-                            this.remoteStatus = this.remoteStatusManager.getCurrent();
-                            this.remoteStatusUpdatedAt = this.remoteStatusManager.getUpdatedAt();
-                        } else {
-                            this.remoteStatus = status;
-                            this.remoteStatusUpdatedAt = Date.now();
-                            this.emit('remoteStatusUpdated', this.remoteStatus);
-                        }
-                        logger.info('remoteStatus updated (grace close)', {
-                            source,
-                            status: this.remoteStatus,
-                        });
-                    } catch (error) {
-                        logger.warn('failed to apply grace close', { error: error });
-                    }
+                    this.applyStatusChange(status, source, traceId, 'grace_close');
                 });
                 this.timerManager.clear('inactivity');
                 logger.info('scheduled remoteStatus close (grace)', {
                     graceMs: this.config.graceMs,
                     source,
+                    traceId,
                 });
                 return;
             }
 
             this.timerManager.clear('graceClose');
-            try {
-                this.scheduleInactivityTimer(source);
-            } catch (error) {
-                logger.warn('failed to schedule inactivity timer', { error: error });
-            }
+            this.scheduleInactivityTimer(source, traceId);
 
             if (isRemoteStatusEqual(this.remoteStatus, status)) return;
 
-            if (this.remoteStatusManager) {
-                this.remoteStatusManager.update(status, source ?? 'unknown');
-                this.remoteStatus = this.remoteStatusManager.getCurrent();
-                this.remoteStatusUpdatedAt = this.remoteStatusManager.getUpdatedAt();
+            const reconciliationResult = this.stateReconciler.reconcile(
+                this.remoteStatus,
+                status,
+                source,
+            );
 
-                const statusString = this.remoteStatus.type === 'playing'
-                    ? `${this.remoteStatus.musicId || this.remoteStatus.videoId}`
-                    : this.remoteStatus.type;
-                const stateChange = this.remoteStatus.type !== status.type;
+            if (!reconciliationResult.shouldEmit) {
+                logger.debug('skipping emit due to reconciliation', {
+                    reason: reconciliationResult.reason,
+                    source,
+                    traceId,
+                });
+                return;
+            }
 
-                if (stateChange) {
-                    logger.info('remoteStatus updated', {
-                        source,
-                    });
-                    logger.info(`${statusString} state=${this.remoteStatus.type}`);
-                }
-            } else {
-                const stateChange = this.remoteStatus.type !== status.type;
+            const finalStatus = reconciliationResult.status;
+            const stateChange = this.remoteStatus.type !== finalStatus.type;
 
-                if (
-                    shouldDebounce(
-                        this.remoteStatusUpdatedAt,
-                        now,
-                        this.config.debounceMs,
-                    )
-                ) {
-                    this.remoteStatus = status;
-                    this.remoteStatusUpdatedAt = now;
-                    this.emit('remoteStatusUpdated', this.remoteStatus);
-                    if (stateChange) {
-                        const statusString = this.remoteStatus.type === 'playing'
-                            ? `${this.remoteStatus.musicId || this.remoteStatus.videoId}`
-                            : this.remoteStatus.type;
-                        logger.info('remoteStatus updated', { source });
-                        logger.info(`${statusString} state=${this.remoteStatus.type}`);
-                    }
-                    return;
-                }
-
-                this.remoteStatus = status;
-                this.remoteStatusUpdatedAt = now;
-                this.emit('remoteStatusUpdated', this.remoteStatus);
-                if (stateChange) {
-                    const statusString = this.remoteStatus.type === 'playing'
-                        ? `${this.remoteStatus.musicId || this.remoteStatus.videoId}`
-                        : this.remoteStatus.type;
-                    logger.info('remoteStatus updated', { source });
-                    logger.info(`${statusString} state=${this.remoteStatus.type}`);
-                }
+            if (
+                stateChange
+                || !shouldDebounce(this.remoteStatusUpdatedAt, now, this.config.debounceMs)
+            ) {
+                this.applyStatusChange(finalStatus, source, traceId);
             }
         } catch (error) {
-            logger.warn('SocketManager update failed', { error: error });
+            logger.warn('SocketManager processUpdate failed', { error: error, update });
         }
     }
 
-    private scheduleInactivityTimer(source?: string) {
+    private applyStatusChange(
+        status: RemoteStatus,
+        source: string,
+        traceId: string,
+        reason?: string,
+    ): void {
+        this.remoteStatus = status;
+        this.remoteStatusUpdatedAt = Date.now();
+        this.sequenceNumber++;
+
+        if (status.type === 'playing') status.lastProgressUpdate = this.remoteStatusUpdatedAt;
+
+        const enrichedStatus = {
+            ...status,
+            _meta: {
+                sequenceNumber: this.sequenceNumber,
+                serverTimestamp: this.remoteStatusUpdatedAt,
+                traceId,
+            },
+        };
+
+        this.emit('remoteStatusUpdated', enrichedStatus);
+
+        const statusString = status.type === 'playing'
+            ? `${status.musicId || status.videoId}`
+            : status.type;
+
+        logger.info('remoteStatus updated', {
+            reason,
+            sequenceNumber: this.sequenceNumber,
+            source,
+            traceId,
+        });
+        logger.info(`${statusString} state=${status.type}`);
+    }
+
+    private scheduleInactivityTimer(source: string, traceId: string): void {
         this.timerManager.clear('inactivity');
         if (!this.config.inactivityMs || this.config.inactivityMs <= 0) return;
+
         this.timerManager.start('inactivity', this.config.inactivityMs, () => {
             try {
-                const closedStatus: RemoteStatus = { type: 'closed' };
-                if (this.remoteStatusManager) {
-                    this.remoteStatusManager.update(closedStatus, source ?? 'inactivity');
-                    this.remoteStatus = this.remoteStatusManager.getCurrent();
-                    this.remoteStatusUpdatedAt = this.remoteStatusManager.getUpdatedAt();
-                } else {
-                    this.remoteStatus = closedStatus;
-                    this.remoteStatusUpdatedAt = Date.now();
-                    this.emit('remoteStatusUpdated', this.remoteStatus);
-                }
-                logger.info('remoteStatus updated (inactivity)', {
+                this.applyStatusChange(
+                    { type: 'closed' },
                     source,
-                    status: this.remoteStatus,
-                });
+                    traceId,
+                    'inactivity',
+                );
             } catch (error) {
                 logger.warn('failed to apply inactivity close', { error: error });
             }

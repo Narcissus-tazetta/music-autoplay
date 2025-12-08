@@ -2,12 +2,11 @@ import type { C2S, S2C } from '@/shared/types/socket';
 import { io, type Socket } from 'socket.io-client';
 
 let socket: Socket<S2C, C2S> | null;
+const safeLog = (...args: unknown[]): void => {
+    if (import.meta.env.DEV) console.info(...args);
+};
 
 function attachDebugListeners(s: Socket<S2C, C2S>): void {
-    const safeLog = (...args: unknown[]): void => {
-        if (import.meta.env.DEV) console.info(...args);
-    };
-
     s.on('connect', () => {
         safeLog('[socket] connect', s.id);
     });

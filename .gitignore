@@ -43,7 +43,8 @@ yarn.lock
 package-lock.json
 
 # IDE/Editor
-.vscode/
+.vscode/*
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo

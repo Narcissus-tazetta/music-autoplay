@@ -9,11 +9,15 @@ const EFFECTIVE_PAUSE_DELTA = 0.1;
 interface UseInterpolatedTimeParams {
     status: RemoteStatus | null;
     duration?: number;
+    videoId?: string;
+    isAdvertisement?: boolean;
 }
 
 export function useInterpolatedTime({
     status,
     duration,
+    videoId,
+    isAdvertisement,
 }: UseInterpolatedTimeParams): {
     currentTime: number;
     isEffectivelyPaused: boolean;
@@ -27,10 +31,41 @@ export function useInterpolatedTime({
     const lastStatusCurrentTimeRef = useRef<number>(0);
     const zeroProgressCountRef = useRef<number>(0);
     const effectivePausedRef = useRef<boolean>(false);
+    const lastVideoIdRef = useRef<string>('');
+    const lastIsAdvertisementRef = useRef<boolean | undefined>(undefined);
 
     useEffect(() => {
         localCurrentTimeRef.current = localCurrentTime;
     }, [localCurrentTime]);
+
+    useEffect(() => {
+        const videoIdChanged = videoId && videoId !== lastVideoIdRef.current;
+        const adJustEnded = lastIsAdvertisementRef.current === true && isAdvertisement === false;
+
+        if (videoIdChanged || adJustEnded) {
+            if (videoIdChanged) lastVideoIdRef.current = videoId;
+            if (adJustEnded) {
+                console.debug(
+                    '[useInterpolatedTime] advertisement ended, resetting state',
+                    {
+                        newIsAdvertisement: isAdvertisement,
+                        oldIsAdvertisement: lastIsAdvertisementRef.current,
+                    },
+                );
+            }
+            if (isAdvertisement !== lastIsAdvertisementRef.current) lastIsAdvertisementRef.current = isAdvertisement;
+
+            setLocalCurrentTime(0);
+            baseTimeRef.current = 0;
+            lastUpdateTimestampRef.current = 0;
+            lastStatusCurrentTimeRef.current = 0;
+            zeroProgressCountRef.current = 0;
+            effectivePausedRef.current = false;
+            setIsEffectivelyPaused(false);
+        } else if (isAdvertisement !== lastIsAdvertisementRef.current) {
+            lastIsAdvertisementRef.current = isAdvertisement;
+        }
+    }, [videoId, isAdvertisement]);
 
     useEffect(() => {
         if (status?.type === 'playing' && typeof status.currentTime === 'number') {
@@ -89,7 +124,7 @@ export function useInterpolatedTime({
         if (!status || status.type === 'closed') {
             if (animationFrameRef.current) {
                 cancelAnimationFrame(animationFrameRef.current);
-                animationFrameRef.current = undefined;
+                animationFrameRef.current = null;
             }
             return;
         }
@@ -111,7 +146,7 @@ export function useInterpolatedTime({
         return () => {
             if (animationFrameRef.current) {
                 cancelAnimationFrame(animationFrameRef.current);
-                animationFrameRef.current = undefined;
+                animationFrameRef.current = null;
             }
         };
     }, [status, duration]);
@@ -149,13 +184,13 @@ export function useVisibilityTimer({
                 setVisibility('hiding');
                 timerRef.current = window.setTimeout(() => {
                     setVisibility('hidden');
-                    timerRef.current = undefined;
+                    timerRef.current = null;
                 }, FADE_OUT_DURATION);
             }, FADE_OUT_DELAY);
         } else {
             if (timerRef.current) {
                 clearTimeout(timerRef.current);
-                timerRef.current = undefined;
+                timerRef.current = null;
             }
             setVisibility('visible');
         }
@@ -163,7 +198,7 @@ export function useVisibilityTimer({
         return () => {
             if (timerRef.current) {
                 clearTimeout(timerRef.current);
-                timerRef.current = undefined;
+                timerRef.current = null;
             }
         };
     }, [hasStatus, isClosed]);
@@ -204,9 +239,7 @@ export function useThumbnail(videoId?: string): ThumbnailResult {
         const firstValidIndex = candidates.findIndex(
             (_, i) => !activeIndices.has(i),
         );
-        return firstValidIndex !== -1
-            ? candidates[firstValidIndex]
-            : '/favicon.svg';
+        return firstValidIndex !== -1 ? candidates[firstValidIndex] : '/favicon.svg';
     })();
 
     const handleError = (): void => {

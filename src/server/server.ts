@@ -105,6 +105,8 @@ async function gracefulShutdown() {
 
         for (const h of appShutdownHandlers) {
             try {
+                // shutdown handlers may be asynchronous and intentionally run sequentially
+                // eslint-disable-next-line no-await-in-loop
                 await h();
             } catch (error) {
                 logger.warn('shutdown handler failed', { error: error });
@@ -154,7 +156,7 @@ process.on('SIGUSR2', () => {
 });
 
 const viteDevServer = config.nodeEnv === 'production'
-    ? undefined
+    ? null
     : await import('vite').then(vite =>
         vite.createServer({
             optimizeDeps: {

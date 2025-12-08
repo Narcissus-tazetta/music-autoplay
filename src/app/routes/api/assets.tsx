@@ -4,24 +4,24 @@ import { respondWithResult } from '@/shared/utils/httpResponse';
 import type { ActionFunctionArgs } from 'react-router';
 import { YouTubeService } from '../../../server/services/youtubeService';
 
-export const action = async ({ request }: ActionFunctionArgs) => {
-    const toMsg = (x: unknown) => {
-        if (typeof x === 'string') return x;
-        if (
-            x
-            && typeof x === 'object'
-            && 'message' in (x as Record<string, unknown>)
-        ) {
-            const m = (x as Record<string, unknown>).message;
-            if (typeof m === 'string') return m;
-        }
-        try {
-            return JSON.stringify(x);
-        } catch {
-            return Object.prototype.toString.call(x);
-        }
-    };
+function toMsg(x: unknown): string {
+    if (typeof x === 'string') return x;
+    if (
+        x
+        && typeof x === 'object'
+        && 'message' in (x as Record<string, unknown>)
+    ) {
+        const m = (x as Record<string, unknown>).message;
+        if (typeof m === 'string') return m;
+    }
+    try {
+        return JSON.stringify(x);
+    } catch {
+        return Object.prototype.toString.call(x);
+    }
+}
 
+export const action = async ({ request }: ActionFunctionArgs) => {
     const res = await safeExecuteAsync(async () => {
         const form = await request.formData();
         const videoIdRaw = form.get('videoId');

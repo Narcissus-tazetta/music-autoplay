@@ -14,20 +14,18 @@ function isValidYoutubeDomain(hostname: string): boolean {
 }
 
 function sanitizeVideoId(id: string): string | null {
-    if (!id || typeof id !== 'string') return;
+    if (!id || typeof id !== 'string') return null;
     const cleaned = id.trim().replace(/[^\w-]/g, '');
-    return YOUTUBE_VIDEO_ID_PATTERN.test(cleaned) ? cleaned : undefined;
+    return YOUTUBE_VIDEO_ID_PATTERN.test(cleaned) ? cleaned : null;
 }
 
-export function extractYoutubeId(url: string): string | null {
-    if (!url || typeof url !== 'string' || url.length > 2048) return;
-
+export const extractYoutubeId = (url: string): string | null => {
+    if (!url || typeof url !== 'string' || url.length > 2048) return null;
     try {
         const u = new URL(url);
 
-        if (!isValidYoutubeDomain(u.hostname)) return;
-
-        if (u.protocol !== 'https:' && u.protocol !== 'http:') return;
+        if (!isValidYoutubeDomain(u.hostname)) return null;
+        if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
 
         if (u.hostname.includes('youtube.com')) {
             const v = u.searchParams.get('v');
@@ -43,11 +41,11 @@ export function extractYoutubeId(url: string): string | null {
         const YOUTUBE_PATTERN =
             /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/ ]{11})/i;
         const m = url.match(YOUTUBE_PATTERN);
-        return m ? sanitizeVideoId(m[1]) : undefined;
+        return m ? sanitizeVideoId(m[1]) : null;
     } catch {
-        return;
+        return null;
     }
-}
+};
 
 export const YOUTUBE_PATTERN =
     /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/ ]{11})/i;

@@ -11,7 +11,13 @@ export interface CorsConfig {
     allowExtensionOrigins: boolean;
 }
 
-export function buildCorsConfig(): CorsConfig {
+const safeBool = (v: unknown, fallback = false): boolean => {
+    if (typeof v === 'boolean') return v;
+    if (typeof v === 'string') return v === 'true';
+    return fallback;
+};
+
+export const buildCorsConfig = (): CorsConfig => {
     const config = getConfig();
     const corsRaw = config.getString('CORS_ORIGINS') || SERVER_ENV.CLIENT_URL;
     const safeCorsRaw = corsRaw || '';
@@ -29,11 +35,6 @@ export function buildCorsConfig(): CorsConfig {
     }
     const allowAllOrigins = isDev && origins.length === 0 && config.nodeEnv !== 'production';
 
-    const safeBool = (v: unknown, fallback = false) => {
-        if (typeof v === 'boolean') return v;
-        if (typeof v === 'string') return v === 'true';
-        return fallback;
-    };
     const allowExtensionOrigins = config.nodeEnv === 'production'
         ? false
         : safeBool(
@@ -60,14 +61,14 @@ export function buildCorsConfig(): CorsConfig {
     }
 
     return { allowAllOrigins, allowExtensionOrigins, origins };
-}
+};
 
-export function makeOriginChecker(
+export const makeOriginChecker = (
     cfg: CorsConfig,
 ): (
     origin: unknown,
     callback: (err: Error | null, allow?: boolean) => void,
-) => void {
+) => void => {
     const originChecker = withErrorHandler(
         (
             origin: unknown,
@@ -80,7 +81,7 @@ export function makeOriginChecker(
                 logger.info('socket connection: no origin (server/API)', {
                     timestamp: new Date().toISOString(),
                 });
-                callback(undefined, true);
+                callback(null, true);
                 return;
             }
 
@@ -105,7 +106,7 @@ export function makeOriginChecker(
             });
 
             if (cfg.allowAllOrigins) {
-                callback(undefined, true);
+                callback(null, true);
                 return;
             }
 
@@ -120,7 +121,7 @@ export function makeOriginChecker(
                 }
 
                 if (isAllowed) {
-                    callback(undefined, true);
+                    callback(null, true);
                     return;
                 }
 
@@ -142,4 +143,4 @@ export function makeOriginChecker(
     );
 
     return originChecker;
-}
+};

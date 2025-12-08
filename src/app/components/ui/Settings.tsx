@@ -2,16 +2,16 @@ import { useSettingsSync } from '@/app/hooks/useSettingsSync';
 import { Label } from '@shadcn/ui/label';
 import { ToggleGroup } from '@shadcn/ui/toggle-group';
 import { Eye, EyeOff, List, MoonIcon, Play, SparklesIcon, SunIcon } from 'lucide-react';
-import { memo } from 'react';
+import { type FC, memo } from 'react';
 import { type Theme, useTheme } from 'remix-themes';
 
-function SettingsInner() {
+const SettingsInner: FC = () => {
     const [theme, setTheme, meta] = useTheme();
     const { ytStatusVisible, setYtStatusVisible, ytStatusMode, setYtStatusMode } = useSettingsSync();
 
     return (
         <div className='flex flex-col gap-4 p-3 sm:p-4'>
-            <Label className='flex items-center gap-2 text-sm sm:text-base bg-[image:repeating-linear-gradient(315deg,_var(--pattern-fg)_0,_var(--pattern-fg)_1px,_transparent_0,_transparent_50%)]'>
+            <Label className='flex items-center gap-2 text-sm sm:text-base bg-[repeating-linear-gradient(315deg,var(--pattern-fg)_0,var(--pattern-fg)_1px,transparent_0,transparent_50%)]'>
                 テーマ
             </Label>
             <ToggleGroup
@@ -19,8 +19,10 @@ function SettingsInner() {
                 variant='outline'
                 unselectable='off'
                 value={meta.definedBy === 'USER' ? (theme ?? 'system') : 'system'}
-                onValueChange={theme => {
-                    if (theme) setTheme(theme === 'system' ? undefined : (theme as Theme));
+                onValueChange={value => {
+                    if (value === undefined) return;
+                    // oxlint-disable-next-line no-null
+                    setTheme(value === 'system' ? null : (value as Theme));
                 }}
                 className='w-full'
             >
@@ -45,7 +47,7 @@ function SettingsInner() {
             </ToggleGroup>
 
             <div className='h-2' />
-            <Label className='flex items-center gap-2 text-sm sm:text-base bg-[image:repeating-linear-gradient(315deg,_var(--pattern-fg)_0,_var(--pattern-fg)_1px,_transparent_0,_transparent_50%)]'>
+            <Label className='flex items-center gap-2 text-sm sm:text-base bg-[repeating-linear-gradient(315deg,var(--pattern-fg)_0,var(--pattern-fg)_1px,transparent_0,transparent_50%)]'>
                 YouTube status
             </Label>
 
@@ -54,8 +56,9 @@ function SettingsInner() {
                 variant='outline'
                 unselectable='off'
                 value={ytStatusMode}
-                onValueChange={v => {
-                    if (v) setYtStatusMode(v as 'compact' | 'player');
+                onValueChange={value => {
+                    if (value === undefined) return;
+                    setYtStatusMode(value as 'compact' | 'player');
                 }}
                 className='w-full'
             >
@@ -80,8 +83,9 @@ function SettingsInner() {
                 variant='outline'
                 unselectable='off'
                 value={ytStatusVisible ? 'on' : 'off'}
-                onValueChange={v => {
-                    if (v) setYtStatusVisible(v === 'on');
+                onValueChange={value => {
+                    if (value === undefined) return;
+                    setYtStatusVisible(value === 'on');
                 }}
                 className='w-full'
             >
@@ -102,6 +106,6 @@ function SettingsInner() {
             </ToggleGroup>
         </div>
     );
-}
+};
 
 export const Settings = memo(SettingsInner);

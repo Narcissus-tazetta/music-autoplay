@@ -17,11 +17,11 @@ function secondsToHMS(sec: number): string {
     return `${`${hours}`.padStart(2, '0')}:${`${mins}`.padStart(2, '0')}:${`${secs}`.padStart(2, '0')}`;
 }
 
-export function normalizeYoutubeMeta(
+export const normalizeYoutubeMeta = (
     id: string,
     meta: unknown,
-): YouTubeMeta | null {
-    if (!meta || typeof meta !== 'object') return;
+): YouTubeMeta | null => {
+    if (!meta || typeof meta !== 'object') return null;
     const m = meta as Record<string, unknown>;
 
     let title: string | undefined = typeof m.title === 'string' ? m.title : undefined;
@@ -86,7 +86,7 @@ export function normalizeYoutubeMeta(
         }
     }
 
-    if (!title || !channelTitle || !channelId) return;
+    if (!title || !channelTitle || !channelId) return null;
     let finalDuration: string | undefined = undefined;
     let durationFromRaw = false;
     if (typeof m.duration === 'string') durationFromRaw = false;
@@ -137,4 +137,4 @@ export function normalizeYoutubeMeta(
         isAgeRestricted: isAgeRestricted ?? false,
         title,
     } as YouTubeMeta;
-}
+};

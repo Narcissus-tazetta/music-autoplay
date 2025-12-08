@@ -25,8 +25,9 @@ export interface HeaderProps {
     userName?: string;
 }
 
-function HeaderInner({ userName }: HeaderProps) {
+const HeaderInner = ({ userName }: HeaderProps) => {
     const { showLogout, handleLogout } = useAuth(userName);
+    const LAST_INDEX_OFFSET = 1;
 
     return (
         <div className='flex items-center justify-between w-full p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 transition-[border-color] duration-500'>
@@ -101,7 +102,7 @@ function HeaderInner({ userName }: HeaderProps) {
                         <Settings />
                         <Sheet.Footer className='flex-col gap-2'>
                             <span className='text-xs'>
-                                © 2025 {developers.map((dev, i) => (
+                                © 2025 {developers.map((dev, index) => (
                                     <span key={dev.name}>
                                         <DropdownMenu>
                                             <DropdownMenu.Trigger className='text-blue-500 dark:text-purple-400 hover:underline'>
@@ -130,7 +131,7 @@ function HeaderInner({ userName }: HeaderProps) {
                                                 </DropdownMenu.Group>
                                             </DropdownMenu.Content>
                                         </DropdownMenu>
-                                        {i < developers.length - 1 && ', '}
+                                        {index < developers.length - LAST_INDEX_OFFSET && ', '}
                                     </span>
                                 ))}
                             </span>
@@ -140,6 +141,6 @@ function HeaderInner({ userName }: HeaderProps) {
             </div>
         </div>
     );
-}
+};
 
 export const Header = memo(HeaderInner);

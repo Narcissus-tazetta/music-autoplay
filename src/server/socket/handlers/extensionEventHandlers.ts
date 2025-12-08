@@ -75,6 +75,19 @@ export function setupExtensionEventHandlers(
 
             const stateRaw = payload['state'] as string | undefined;
             const url = typeof payload['url'] === 'string' ? payload['url'] : undefined;
+            const isAdvertisement = payload['isAdvertisement'] === true;
+
+            // Extension側で広告中とマークされたイベントは完全に無視
+            if (isAdvertisement) {
+                log.debug(
+                    'youtube_video_state: ignoring event marked as advertisement by extension',
+                    {
+                        state: stateRaw,
+                        url,
+                    },
+                );
+                return;
+            }
 
             if (stateRaw === 'window_close') {
                 const status: RemoteStatus = { type: 'closed' };
@@ -166,23 +179,10 @@ export function setupExtensionEventHandlers(
             }
 
             if (stateRaw === 'playing' || stateRaw === 'paused') {
-                const currentStatus = manager.getCurrent();
-                if (
-                    currentStatus.type === 'playing'
-                    && currentStatus.isAdvertisement === true
-                ) {
-                    log.debug(
-                        'youtube_video_state: ignoring state during advertisement',
-                        {
-                            state: stateRaw,
-                            url,
-                        },
-                    );
-                    return;
-                }
+                // 広告保護ロジックは不要（Extension側でisAdvertisementフラグを付与）
 
                 const state = stateRaw === 'playing' ? 'playing' : 'paused';
-                let match: { url: string; title?: string } | null;
+                let match: { url: string; title?: string } | null = null;
                 let isExternalVideo = false;
                 let externalVideoId: string | undefined;
 
@@ -610,20 +610,39 @@ export function setupExtensionEventHandlers(
                 });
 
                 if (isAd) {
+                    const currentStatus = manager.getCurrent();
                     const music = repository.get(videoId);
                     const adStatus: RemoteStatus = music
                         ? {
                             adTimestamp: timestamp,
+                            currentTime: currentStatus.type === 'playing'
+                                ? currentStatus.currentTime
+                                : undefined,
+                            duration: currentStatus.type === 'playing'
+                                ? currentStatus.duration
+                                : undefined,
                             isAdvertisement: true,
                             musicId: videoId,
                             musicTitle: music.title,
+                            progressPercent: currentStatus.type === 'playing'
+                                ? currentStatus.progressPercent
+                                : undefined,
                             type: 'playing',
                         }
                         : {
                             adTimestamp: timestamp,
+                            currentTime: currentStatus.type === 'playing'
+                                ? currentStatus.currentTime
+                                : undefined,
+                            duration: currentStatus.type === 'playing'
+                                ? currentStatus.duration
+                                : undefined,
                             isAdvertisement: true,
                             musicId: undefined,
                             musicTitle: '',
+                            progressPercent: currentStatus.type === 'playing'
+                                ? currentStatus.progressPercent
+                                : undefined,
                             type: 'playing',
                         };
                     manager.update(adStatus, 'ad_started');
@@ -805,6 +824,9 @@ export function setupExtensionEventHandlers(
         const timestamp = typeof payload['timestamp'] === 'number'
             ? payload['timestamp']
             : Date.now();
+        const isAdvertisementFromExtension = typeof payload['isAdvertisement'] === 'boolean'
+            ? payload['isAdvertisement']
+            : undefined;
 
         if (
             !url
@@ -854,10 +876,24 @@ export function setupExtensionEventHandlers(
             const deltaPlayback = currentTime - state.lastTime;
             const expectedDelta = (deltaWall / 1000) * playbackRate;
 
-            let isAdvertisement: boolean | undefined;
+            const currentStatus = manager.getCurrent();
+            let isAdvertisement: boolean | undefined = currentStatus.type === 'playing'
+                ? currentStatus.isAdvertisement
+                : undefined;
             let consecutiveStalls = state.consecutiveStalls;
 
+            // Extension側から明示的に広告状態が送られてきた場合、それを優先
+            if (isAdvertisementFromExtension !== undefined) isAdvertisement = isAdvertisementFromExtension;
+            // Extension側からの情報がない場合、現在のステータスを維持
+            else if (
+                currentStatus.type === 'playing'
+                && currentStatus.isAdvertisement === true
+            ) {
+                isAdvertisement = true;
+            }
+
             if (isBuffering || visibilityState === 'hidden') consecutiveStalls = 0;
+            else if (isAdvertisement === true) consecutiveStalls = 0;
             else if (deltaWall > stallThreshold) {
                 const seekDetected = Math.abs(deltaPlayback) > 5;
 

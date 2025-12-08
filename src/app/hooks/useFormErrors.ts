@@ -14,25 +14,25 @@ const EMPTY_RESULT: FormErrorResult = {
     parsedAction: undefined,
 };
 
-function isRecord(value: unknown): value is UnknownRecord {
+const isRecord = (value: unknown): value is UnknownRecord => {
     return value != undefined && typeof value === 'object';
-}
+};
 
-function extractDeepestData(data: unknown): unknown {
+const extractDeepestData = (data: unknown): unknown => {
     if (!isRecord(data)) return data;
 
     if ('result' in data && data.result) return extractDeepestData(data.result);
 
     return data;
-}
+};
 
-function joinErrorArray(errors: unknown): string | undefined {
+const joinErrorArray = (errors: unknown): string | undefined => {
     if (!Array.isArray(errors)) return undefined;
     const stringErrors = errors.filter((e): e is string => typeof e === 'string');
     return stringErrors.length > 0 ? stringErrors.join(' ') : undefined;
-}
+};
 
-function extractFormErrors(data: UnknownRecord): FormErrorResult | null {
+const extractFormErrors = (data: UnknownRecord): FormErrorResult | null => {
     if ('submission' in data && isRecord(data.submission)) {
         const submission = data.submission;
         if ('error' in submission) {
@@ -51,11 +51,11 @@ function extractFormErrors(data: UnknownRecord): FormErrorResult | null {
         if (errorString) return { formErrorsString: errorString, parsedAction: undefined };
     }
 
-    return;
-}
+    return null;
+};
 
-function extractApiError(data: UnknownRecord): FormErrorResult | null {
-    if (data.success !== false || !isRecord(data.error)) return;
+const extractApiError = (data: UnknownRecord): FormErrorResult | null => {
+    if (data.success !== false || !isRecord(data.error)) return null;
 
     const errObj = data.error;
     const code = typeof errObj.code === 'string' ? errObj.code : undefined;
@@ -71,9 +71,9 @@ function extractApiError(data: UnknownRecord): FormErrorResult | null {
         formErrorsString,
         parsedAction: parsed.action as UiAction | undefined,
     };
-}
+};
 
-export function useFormErrors(fetcherData: unknown): FormErrorResult {
+export const useFormErrors = (fetcherData: unknown): FormErrorResult => {
     const deepData = extractDeepestData(fetcherData);
 
     if (!isRecord(deepData)) return EMPTY_RESULT;
@@ -88,6 +88,6 @@ export function useFormErrors(fetcherData: unknown): FormErrorResult {
     return fallbackError
         ? { formErrorsString: fallbackError, parsedAction: undefined }
         : EMPTY_RESULT;
-}
+};
 
 export default useFormErrors;

@@ -50,13 +50,13 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
                 setVisibility('hiding');
                 timerRef.current = window.setTimeout(() => {
                     setVisibility('hidden');
-                    timerRef.current = undefined;
+                    timerRef.current = null;
                 }, 600);
             }, 30_000);
         } else {
             if (timerRef.current) {
                 clearTimeout(timerRef.current);
-                timerRef.current = undefined;
+                timerRef.current = null;
             }
             setVisibility('visible');
         }
@@ -64,7 +64,7 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
         return () => {
             if (timerRef.current) {
                 clearTimeout(timerRef.current);
-                timerRef.current = undefined;
+                timerRef.current = null;
             }
         };
     }, [status]);
@@ -82,7 +82,7 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
         >
             {visibility === 'visible' && (
                 <span
-                    className={`inline-block w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0 ${dotClass}`}
+                    className={`inline-block w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shrink-0 ${dotClass}`}
                     aria-hidden
                 />
             )}
@@ -108,7 +108,7 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
                                 </span>
                                 <MusicTitleWithHover
                                     music={music}
-                                    className='text-gray-800 dark:text-gray-100 font-medium hover:underline break-words min-w-0 text-xs sm:text-sm'
+                                    className='text-gray-800 dark:text-gray-100 font-medium hover:underline wrap-break-word min-w-0 text-xs sm:text-sm'
                                 />
                             </span>
                         )
@@ -134,7 +134,7 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
                                                     videoId={videoId}
                                                     title={musicTitle}
                                                     href={searchUrl(musicTitle)}
-                                                    className={`${textColorClass} font-medium hover:underline break-words min-w-0 text-xs sm:text-sm`}
+                                                    className={`${textColorClass} font-medium hover:underline wrap-break-word min-w-0 text-xs sm:text-sm`}
                                                 />
                                             </span>
                                         );
@@ -151,7 +151,7 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
                                                 href={searchUrl(musicTitle)}
                                                 target='_blank'
                                                 rel='noopener noreferrer'
-                                                className={`${textColorClass} font-medium hover:underline break-words min-w-0 text-xs sm:text-sm`}
+                                                className={`${textColorClass} font-medium hover:underline wrap-break-word min-w-0 text-xs sm:text-sm`}
                                                 title={musicTitle}
                                             >
                                                 {musicTitle}

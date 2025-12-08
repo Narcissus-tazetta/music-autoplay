@@ -16,8 +16,8 @@ const FLUSH_DELAY_MS = 500;
 
 export class FileStore implements Store {
     private filePath: string;
-    private current: PersistFile | null = undefined;
-    private flushTimer: NodeJS.Timeout | null = undefined;
+    private current: PersistFile | null = null;
+    private flushTimer: NodeJS.Timeout | null = null;
 
     constructor(filePath?: string) {
         this.filePath = filePath ?? DEFAULT_FILE_PATH;
@@ -60,7 +60,10 @@ export class FileStore implements Store {
         for (let attempt = 0; attempt < MAX_WRITE_RETRIES; attempt++) {
             const tmp = `${tmpBase}.${Date.now()}.tmp`;
             try {
+                // writeFile/rename are intentionally awaited sequentially; disable rule here
+                // eslint-disable-next-line no-await-in-loop
                 await fs.promises.writeFile(tmp, payload, 'utf8');
+                // eslint-disable-next-line no-await-in-loop
                 await fs.promises.rename(tmp, this.filePath);
                 return;
             } catch (error) {
@@ -78,6 +81,7 @@ export class FileStore implements Store {
                         error: error,
                     },
                 );
+                // eslint-disable-next-line no-await-in-loop
                 await new Promise(r => setTimeout(r, backoff));
             }
         }
@@ -101,7 +105,7 @@ export class FileStore implements Store {
     private scheduleFlush() {
         if (this.flushTimer) clearTimeout(this.flushTimer);
         this.flushTimer = setTimeout(() => {
-            this.flushTimer = undefined;
+            this.flushTimer = null;
             void this.flushToDisk();
         }, FLUSH_DELAY_MS);
     }
@@ -152,7 +156,7 @@ export class FileStore implements Store {
     async flush() {
         if (this.flushTimer) {
             clearTimeout(this.flushTimer);
-            this.flushTimer = undefined;
+            this.flushTimer = null;
         }
         await this.flushToDisk();
     }

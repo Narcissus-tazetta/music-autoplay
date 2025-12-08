@@ -141,10 +141,13 @@ export class YouTubeService {
             const request = this.requestQueue.shift();
             if (request) {
                 try {
+                    // Intentional sequential processing of queued requests.
+                    // eslint-disable-next-line no-await-in-loop
                     await request();
                 } catch (error: unknown) {
                     logger.debug('Request queue error', { error });
                 }
+                // eslint-disable-next-line no-await-in-loop
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
         }
@@ -219,6 +222,8 @@ export class YouTubeService {
                     }
                 };
 
+                // Queue requests are intentionally awaited sequentially.
+                // eslint-disable-next-line no-await-in-loop
                 const res = await this.queueRequest(
                     apiRequest as () => Promise<unknown>,
                 );
@@ -327,6 +332,7 @@ export class YouTubeService {
                     id,
                 });
                 if (attempt === retries) return err(String(error));
+                // eslint-disable-next-line no-await-in-loop
                 await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
             }
         }

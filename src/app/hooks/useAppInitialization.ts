@@ -3,6 +3,18 @@ import normalizeApiResponse from '@/shared/utils/api';
 import { parseApiErrorForUI } from '@/shared/utils/apiUi';
 import { useEffect } from 'react';
 
+const isMusic = (v: unknown): v is Music => {
+    if (!v || typeof v !== 'object') return false;
+    const r = v as Record<string, unknown>;
+    return (
+        typeof r.id === 'string'
+        && typeof r.title === 'string'
+        && typeof r.channelName === 'string'
+        && typeof r.channelId === 'string'
+        && typeof r.duration === 'string'
+    );
+};
+
 export function useAppInitialization(): void {
     useEffect(() => {
         const run = async () => {
@@ -97,30 +109,20 @@ export function useAppInitialization(): void {
                     const musicsRaw = (norm.data as { musics?: unknown } | null)?.musics;
                     if (!Array.isArray(musicsRaw)) throw new Error('no-musics');
                     const maybeMusics = musicsRaw;
-                    const isMusic = (v: unknown): v is Music => {
-                        if (!v || typeof v !== 'object') return false;
-                        const r = v as Record<string, unknown>;
-                        return (
-                            typeof r.id === 'string'
-                            && typeof r.title === 'string'
-                            && typeof r.channelName === 'string'
-                            && typeof r.channelId === 'string'
-                            && typeof r.duration === 'string'
-                        );
-                    };
-
                     const musics = maybeMusics.filter(isMusic);
                     store.setMusics?.(musics);
                 };
 
                 const attempts = [0, 500, 1000];
                 for (let i = 0; i < attempts.length; i++) {
+                    // oxlint-disable-next-line no-await-in-loop
                     if (i > 0) await new Promise(r => setTimeout(r, attempts[i]));
                     const controller = new AbortController();
                     const timeout = setTimeout(() => {
                         controller.abort();
                     }, 3000);
                     try {
+                        // oxlint-disable-next-line no-await-in-loop
                         await doFetchOnce(controller.signal);
                         clearTimeout(timeout);
                         break;
