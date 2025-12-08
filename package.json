@@ -8,7 +8,9 @@
     "lint": "oxlint --fix && dprint fmt",
     "prepare": "husky",
     "start": "cross-env NODE_ENV=production bun run src/server/server.ts",
-    "test": "bun test"
+    "test": "bun test",
+    "test:critical": "bun test tests/critical",
+    "test:unit": "bun test tests/unit"
   },
   "commitlint": {
     "extends": [
