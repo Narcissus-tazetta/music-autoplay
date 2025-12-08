@@ -15,7 +15,7 @@ describe('FileStore persistence basic operations', () => {
     afterEach(() => {
         try {
             if (fs.existsSync(FILE_PATH)) fs.unlinkSync(FILE_PATH);
-        } catch (_e) {}
+        } catch {}
     });
 
     it('loads empty when file missing and persists add/remove', async () => {

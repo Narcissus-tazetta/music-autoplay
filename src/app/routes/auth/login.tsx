@@ -19,26 +19,26 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
         const errorDetails = error instanceof Error
             ? {
-                name: error.name,
                 message: error.message,
+                name: error.name,
                 stack: error.stack,
             }
-            : typeof error === 'string'
-            ? { message: error }
-            : { raw: String(error) };
+            : (typeof error === 'string'
+                ? { message: error }
+                : { raw: String(error) });
 
         logger.error('Login action error', errorDetails);
 
         const message = error instanceof Error
             ? error.message
-            : typeof error === 'string'
-            ? error
-            : 'login failed';
-        return respondWithResult(makeErr({ message, code: 'unauthorized' }));
+            : (typeof error === 'string'
+                ? error
+                : 'login failed');
+        return respondWithResult(makeErr({ code: 'unauthorized', message }));
     }
 };
 
 // クライアント側のコンポーネント（オプション、フォーム送信用）
 export default function Login() {
-    return null;
+    return;
 }

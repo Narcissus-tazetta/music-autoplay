@@ -10,11 +10,14 @@ export async function persistAdd(
     try {
         const res = store.add(music);
         if (res && typeof (res as { then?: unknown }).then === 'function') await res;
-    } catch (e: unknown) {
+    } catch (error) {
         try {
-            logger.warn('failed to persist music add', { error: e, id: music.id });
-        } catch (_e: unknown) {
-            void _e;
+            logger.warn('failed to persist music add', {
+                error: error,
+                id: music.id,
+            });
+        } catch (error) {
+            void error;
         }
     }
 }
@@ -27,11 +30,11 @@ export async function persistRemove(
     try {
         const res = store.remove(id);
         if (res && typeof (res as { then?: unknown }).then === 'function') await res;
-    } catch (e: unknown) {
+    } catch (error) {
         try {
-            logger.warn('failed to persist music removal', { error: e, id });
-        } catch (_e: unknown) {
-            void _e;
+            logger.warn('failed to persist music removal', { error: error, id });
+        } catch (error) {
+            void error;
         }
     }
 }

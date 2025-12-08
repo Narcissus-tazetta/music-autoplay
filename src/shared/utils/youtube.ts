@@ -1,9 +1,16 @@
-const ALLOWED_YOUTUBE_DOMAINS = ['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be'];
+const ALLOWED_YOUTUBE_DOMAINS = [
+    'youtube.com',
+    'www.youtube.com',
+    'm.youtube.com',
+    'youtu.be',
+];
 
 const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 
 function isValidYoutubeDomain(hostname: string): boolean {
-    return ALLOWED_YOUTUBE_DOMAINS.some(domain => hostname === domain || hostname.endsWith(`.${domain}`));
+    return ALLOWED_YOUTUBE_DOMAINS.some(
+        domain => hostname === domain || hostname.endsWith(`.${domain}`),
+    );
 }
 
 function sanitizeVideoId(id: string): string | null {
@@ -12,14 +19,12 @@ function sanitizeVideoId(id: string): string | null {
     return YOUTUBE_VIDEO_ID_PATTERN.test(cleaned) ? cleaned : null;
 }
 
-export function extractYoutubeId(url: string): string | null {
+export const extractYoutubeId = (url: string): string | null => {
     if (!url || typeof url !== 'string' || url.length > 2048) return null;
-
     try {
         const u = new URL(url);
 
         if (!isValidYoutubeDomain(u.hostname)) return null;
-
         if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
 
         if (u.hostname.includes('youtube.com')) {
@@ -40,7 +45,7 @@ export function extractYoutubeId(url: string): string | null {
     } catch {
         return null;
     }
-}
+};
 
 export const YOUTUBE_PATTERN =
     /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/ ]{11})/i;

@@ -38,8 +38,8 @@ export class RateLimiter {
         let totalAttempts = 0;
         for (const arr of this.attempts.values()) totalAttempts += arr.length;
         return {
-            totalKeys: this.attempts.size,
             totalAttempts,
+            totalKeys: this.attempts.size,
         };
     }
 

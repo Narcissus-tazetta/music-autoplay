@@ -60,21 +60,21 @@ export class RateLimiterManager {
 
     private executeCleanup(): void {
         try {
-            const stats: Array<{ name: string; keys: number; attempts: number }> = [];
+            const stats: { name: string; keys: number; attempts: number }[] = [];
 
             for (const [name, limiter] of this.limiters) {
                 const before = limiter.getStats();
                 limiter.clearAll();
                 stats.push({
-                    name,
-                    keys: before.totalKeys,
                     attempts: before.totalAttempts,
+                    keys: before.totalKeys,
+                    name,
                 });
             }
 
             logger.info('Rate limiter cleanup completed', {
-                timestamp: new Date().toISOString(),
                 stats,
+                timestamp: new Date().toISOString(),
             });
         } catch (error: unknown) {
             logger.error('Rate limiter cleanup failed', { error });

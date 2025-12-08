@@ -5,7 +5,11 @@ import type { AppLogger } from '../../logger';
 import type { MusicService } from '../../music/musicService';
 import ServiceResolver from '../../utils/serviceResolver';
 
-export function emitInitialData(socket: Socket, log: AppLogger, getMusicService: () => MusicService) {
+export function emitInitialData(
+    socket: Socket,
+    log: AppLogger,
+    getMusicService: () => MusicService,
+) {
     withErrorHandler(() => {
         const compatList = getMusicService().buildCompatList();
         socket.emit('initMusics', compatList);
@@ -17,8 +21,8 @@ export function emitInitialData(socket: Socket, log: AppLogger, getMusicService:
             nodeEnv = configService.getString('NODE_ENV') ?? 'development';
         if (nodeEnv !== 'production') {
             log.debug('emitted init events to socket', {
-                socketId: socket.id,
                 count: compatList.length,
+                socketId: socket.id,
             });
         }
     }, 'socket init emit')();

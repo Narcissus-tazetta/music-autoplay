@@ -3,13 +3,13 @@ import { useFormErrors } from '../../src/app/hooks/useFormErrors';
 
 describe('useFormErrors hook', () => {
     test('returns undefined when no error data', () => {
-        const result = useFormErrors(null);
+        const result = useFormErrors(undefined);
         expect(result.formErrorsString).toBeUndefined();
         expect(result.parsedAction).toBeUndefined();
     });
 
     test('returns undefined when success is true', () => {
-        const result = useFormErrors({ success: true, data: {} });
+        const result = useFormErrors({ data: {}, success: true });
         expect(result.formErrorsString).toBeUndefined();
         expect(result.parsedAction).toBeUndefined();
     });
@@ -17,15 +17,15 @@ describe('useFormErrors hook', () => {
     test('parses validation error with fieldErrors', () => {
         const fetcherData = {
             result: {
-                success: false,
                 error: {
                     code: 'VALIDATION',
-                    message: 'バリデーションエラー',
                     details: {
                         url: 'URLが不正です',
                         title: 'タイトルが必要です',
                     },
+                    message: 'バリデーションエラー',
                 },
+                success: false,
             },
         };
 
@@ -37,11 +37,11 @@ describe('useFormErrors hook', () => {
 
     test('extracts message from non-validation error', () => {
         const fetcherData = {
-            success: false,
             error: {
                 code: 'NETWORK_ERROR',
                 message: 'ネットワークエラーが発生しました',
             },
+            success: false,
         };
 
         const result = useFormErrors(fetcherData);
@@ -51,10 +51,10 @@ describe('useFormErrors hook', () => {
     test('handles nested result structure', () => {
         const fetcherData = {
             result: {
-                success: false,
                 error: {
                     message: '内部エラー',
                 },
+                success: false,
             },
         };
 
@@ -64,8 +64,8 @@ describe('useFormErrors hook', () => {
 
     test('handles malformed error gracefully', () => {
         const fetcherData = {
-            success: false,
             error: 'string error',
+            success: false,
         };
 
         const result = useFormErrors(fetcherData);
@@ -74,11 +74,11 @@ describe('useFormErrors hook', () => {
 
     test('returns action with toast when code is DUPLICATE_MUSIC', () => {
         const fetcherData = {
-            success: false,
             error: {
                 code: 'DUPLICATE_MUSIC',
                 message: 'この楽曲は既に追加されています',
             },
+            success: false,
         };
 
         const result = useFormErrors(fetcherData);
@@ -90,10 +90,10 @@ describe('useFormErrors hook', () => {
         const fetcherData = {
             result: {
                 result: {
-                    success: false,
                     error: {
                         message: '深くネストされたエラー',
                     },
+                    success: false,
                 },
             },
         };

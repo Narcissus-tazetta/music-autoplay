@@ -44,21 +44,21 @@ export class MusicService {
         if (this.repository.has(meta.id)) {
             const position = this.repository.getPosition(meta.id);
             return err({
-                message: getMessage('ERROR_ALREADY_EXISTS', position + 1),
                 code: 'ALREADY_EXISTS',
+                message: getMessage('ERROR_ALREADY_EXISTS', position + 1),
                 meta: { position },
             });
         }
 
         const music: Music = {
-            id: meta.id,
-            title: meta.title,
-            channelName: meta.channelTitle,
             channelId: meta.channelId,
+            channelName: meta.channelTitle,
             duration: meta.duration ?? 'PT0S',
+            id: meta.id,
+            requestedAt: new Date().toISOString(),
             requesterHash,
             requesterName,
-            requestedAt: new Date().toISOString(),
+            title: meta.title,
         };
 
         const addResult = this.repository.add(music);
@@ -66,8 +66,8 @@ export class MusicService {
 
         logger.info('music added', {
             id: music.id,
-            title: music.title,
             requesterHash,
+            title: music.title,
         });
 
         const emitResult = this.emitter.emitMusicAdded(music);
@@ -112,16 +112,16 @@ export class MusicService {
 
         if (!this.repository.has(id)) {
             return err({
-                message: getMessage('ERROR_NOT_FOUND'),
                 code: 'NOT_FOUND',
+                message: getMessage('ERROR_NOT_FOUND'),
             });
         }
 
         const existing = this.repository.get(id);
         if (!existing) {
             return err({
-                message: getMessage('ERROR_NOT_FOUND'),
                 code: 'NOT_FOUND',
+                message: getMessage('ERROR_NOT_FOUND'),
             });
         }
 
@@ -133,8 +133,8 @@ export class MusicService {
 
         if (!canRemove.value) {
             return err({
-                message: getMessage('ERROR_FORBIDDEN'),
                 code: 'FORBIDDEN',
+                message: getMessage('ERROR_FORBIDDEN'),
             });
         }
 

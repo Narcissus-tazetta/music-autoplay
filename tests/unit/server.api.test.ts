@@ -25,10 +25,10 @@ describe('API Endpoints', () => {
                 musicDB: Map<string, unknown>;
             };
         const fakeVite = {
-            ssrLoadModule: async (_: string) => ({}),
             middlewares: (req: any, res: any, next: any) => next(),
+            ssrLoadModule: async (_: string) => ({}),
         };
-        const { buildValue } = await configureApp(
+        await configureApp(
             app,
             getIo as any,
             fakeVite as any,
@@ -39,7 +39,7 @@ describe('API Endpoints', () => {
         expect(Array.isArray(res.body.musics)).toBe(true);
         const ids = res.body.musics
             .map((m: unknown) => (m as Record<string, unknown>).id)
-            .sort();
+            .toSorted();
         expect(ids).toEqual(['m1', 'm2']);
     });
 });

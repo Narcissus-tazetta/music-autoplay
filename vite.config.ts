@@ -4,21 +4,21 @@ import { defineConfig } from 'vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
-    plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
-    optimizeDeps: {
-        include: ['socket.io-client', 'framer-motion', 'zustand'],
-        force: false,
+    build: {
+        rollupOptions: {},
     },
+    optimizeDeps: {
+        force: false,
+        include: ['socket.io-client', 'framer-motion', 'zustand'],
+    },
+    plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
     server: {
         proxy: {
             '/socket.io': {
-                target: 'http://localhost:3000',
                 changeOrigin: true,
+                target: 'http://localhost:3000',
                 ws: true,
             },
         },
-    },
-    build: {
-        rollupOptions: {},
     },
 });

@@ -10,14 +10,14 @@ export const defaultLogger: Logger = {
     debug: (msg, meta) => {
         console.debug(msg, meta);
     },
+    error: (msg, meta) => {
+        console.error(msg, meta);
+    },
     info: (msg, meta) => {
         console.info(msg, meta);
     },
     warn: (msg, meta) => {
         console.warn(msg, meta);
-    },
-    error: (msg, meta) => {
-        console.error(msg, meta);
     },
 };
 
@@ -56,8 +56,8 @@ function logError(
 
 function sanitizeErrorForLog(errorInfo: ErrorInfo): ErrorInfo {
     const sanitized: ErrorInfo = {
-        message: errorInfo.message,
         code: errorInfo.code,
+        message: errorInfo.message,
     };
     if (errorInfo.stack && errorInfo.stack.length < 2000) sanitized.stack = errorInfo.stack;
     if (errorInfo.meta) {
@@ -130,22 +130,22 @@ export function handleAsyncError(
     };
 }
 
-export function trySync<T>(fn: () => T): [T, null] | [null, unknown] {
+export const trySync = <T>(fn: () => T): [T, null] | [null, unknown] => {
     try {
         const result = fn();
         return [result, null];
     } catch (error: unknown) {
         return [null, error];
     }
-}
+};
 
-export async function tryAsync<T>(
+export const tryAsync = async <T>(
     fn: () => Promise<T>,
-): Promise<[T, null] | [null, unknown]> {
+): Promise<[T, null] | [null, unknown]> => {
     try {
         const result = await fn();
         return [result, null];
     } catch (error: unknown) {
         return [null, error];
     }
-}
+};

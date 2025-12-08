@@ -13,8 +13,8 @@ export class TimerManager {
             this.timers.delete(key);
             try {
                 cb();
-            } catch (e: unknown) {
-                safeLog('warn', 'timer callback threw', { key, error: e } as Record<
+            } catch (error) {
+                safeLog('warn', 'timer callback threw', { error: error, key } as Record<
                     string,
                     unknown
                 >);

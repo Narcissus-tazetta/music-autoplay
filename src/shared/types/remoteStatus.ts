@@ -1,11 +1,11 @@
-import type { RemoteStatus } from "@/shared/stores/musicStore";
+import type { RemoteStatus } from '@/shared/stores/musicStore';
 
 export interface RemoteStatusMeta {
-  sequenceNumber: number;
-  serverTimestamp: number;
-  traceId: string;
+    sequenceNumber: number;
+    serverTimestamp: number;
+    traceId: string;
 }
 
 export type RemoteStatusWithMeta = RemoteStatus & {
-  _meta?: RemoteStatusMeta;
+    _meta?: RemoteStatusMeta;
 };

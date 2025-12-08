@@ -41,7 +41,7 @@ describe('AudioPlayer utilities', () => {
 
     test('進捗バーの色決定ロジック', () => {
         const getProgressBarColor = (status: RemoteStatus | null) => {
-            if (!status) return null;
+            if (!status) return;
 
             const isAdvertisement = status.type === 'playing' && status.isAdvertisement === true;
             const isExternalVideo = status.type === 'playing' && status.isExternalVideo === true;
@@ -56,52 +56,52 @@ describe('AudioPlayer utilities', () => {
         // 通常再生
         expect(
             getProgressBarColor({
-                type: 'playing',
-                musicTitle: 'test',
                 currentTime: 10,
                 duration: 100,
+                musicTitle: 'test',
+                type: 'playing',
             }),
         ).toBe('bg-emerald-600');
 
         // 一時停止
         expect(
             getProgressBarColor({
-                type: 'paused',
                 musicTitle: 'test',
+                type: 'paused',
             }),
         ).toBe('bg-orange-600');
 
         // 広告検出
         expect(
             getProgressBarColor({
-                type: 'playing',
-                musicTitle: 'test',
                 currentTime: 10,
                 duration: 100,
                 isAdvertisement: true,
+                musicTitle: 'test',
+                type: 'playing',
             }),
         ).toBe('bg-yellow-500');
 
         // 外部動画
         expect(
             getProgressBarColor({
-                type: 'playing',
-                musicTitle: 'test',
                 currentTime: 10,
                 duration: 100,
                 isExternalVideo: true,
+                musicTitle: 'test',
+                type: 'playing',
             }),
         ).toBe('bg-purple-500');
 
         // 広告と外部両方の場合、広告が優先
         expect(
             getProgressBarColor({
-                type: 'playing',
-                musicTitle: 'test',
                 currentTime: 10,
                 duration: 100,
                 isAdvertisement: true,
                 isExternalVideo: true,
+                musicTitle: 'test',
+                type: 'playing',
             }),
         ).toBe('bg-yellow-500');
     });
@@ -148,7 +148,7 @@ describe('AudioPlayer utilities', () => {
             baseTime: number,
             lastUpdateTimestamp: number,
             currentTimestamp: number,
-            playbackRate = 1.0,
+            playbackRate = 1,
         ) => {
             const elapsed = (currentTimestamp - lastUpdateTimestamp) / 1000; // 秒
             return baseTime + elapsed * playbackRate;
@@ -167,6 +167,6 @@ describe('AudioPlayer utilities', () => {
         expect(calculateInterpolatedTime(baseTime, now, now + 500)).toBe(100.5);
 
         // 再生レート2.0の場合（ただし実装では使わない）
-        expect(calculateInterpolatedTime(baseTime, now, now + 1000, 2.0)).toBe(102);
+        expect(calculateInterpolatedTime(baseTime, now, now + 1000, 2)).toBe(102);
     });
 });

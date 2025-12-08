@@ -48,9 +48,7 @@ export interface EventHandlerConfig<TPayload, TResponse> {
     logResponse?: boolean;
 }
 
-interface CallbackFunction {
-    (response: ReplyOptions): void;
-}
+type CallbackFunction = (response: ReplyOptions) => void;
 
 function formatZodErrors(error: ZodError): Record<string, string[]> {
     const fieldErrors: Record<string, string[]> = {};
@@ -112,8 +110,8 @@ export function createSocketEventHandler<TPayload, TResponse>(
 
             if (config.logPayload) {
                 log.debug(`socket event received: ${config.event}`, {
-                    socketId: ctx.socketId,
                     payload,
+                    socketId: ctx.socketId,
                 });
             }
 
@@ -134,9 +132,9 @@ export function createSocketEventHandler<TPayload, TResponse>(
                     if (callback) callback(reply);
 
                     log.warn(`rate limit exceeded: ${config.event}`, {
-                        socketId: ctx.socketId,
                         key: rateLimitKey,
                         retryAfter,
+                        socketId: ctx.socketId,
                     });
 
                     return;
@@ -145,12 +143,12 @@ export function createSocketEventHandler<TPayload, TResponse>(
 
             if (config.auth) {
                 const authContext: AuthContext = {
-                    socketId: socket.id,
                     requesterHash: typeof payload === 'object'
                             && payload !== null
                             && 'requesterHash' in payload
                         ? String((payload as { requesterHash?: unknown }).requesterHash)
                         : undefined,
+                    socketId: socket.id,
                 };
 
                 const isAuthorized = await config.auth(authContext);
@@ -177,8 +175,8 @@ export function createSocketEventHandler<TPayload, TResponse>(
                     if (callback) callback(reply);
 
                     log.debug(`validation failed: ${config.event}`, {
-                        socketId: ctx.socketId,
                         errors: fieldErrors,
+                        socketId: ctx.socketId,
                     });
 
                     return;
@@ -191,16 +189,16 @@ export function createSocketEventHandler<TPayload, TResponse>(
 
                     if (config.logResponse) {
                         log.debug(`socket event response: ${config.event}`, {
-                            socketId: ctx.socketId,
                             result,
+                            socketId: ctx.socketId,
                         });
                     }
 
                     if (callback) callback(result as ReplyOptions);
                 } catch (error: unknown) {
                     log.error(`handler error: ${config.event}`, {
-                        socketId: ctx.socketId,
                         error,
+                        socketId: ctx.socketId,
                     });
 
                     const reply = createServerErrorReply(error);
@@ -214,16 +212,16 @@ export function createSocketEventHandler<TPayload, TResponse>(
 
                     if (config.logResponse) {
                         log.debug(`socket event response: ${config.event}`, {
-                            socketId: ctx.socketId,
                             result,
+                            socketId: ctx.socketId,
                         });
                     }
 
                     if (callback) callback(result as ReplyOptions);
                 } catch (error: unknown) {
                     log.error(`handler error: ${config.event}`, {
-                        socketId: ctx.socketId,
                         error,
+                        socketId: ctx.socketId,
                     });
 
                     const reply = createServerErrorReply(error);
@@ -244,10 +242,10 @@ export function createTypedSocketEventHandler<
 }
 
 export interface BatchEventHandlerConfig {
-    handlers: Array<{
+    handlers: {
         event: string;
         handler: (socket: Socket, context?: EventContext) => void;
-    }>;
+    }[];
 }
 
 export function registerBatchHandlers(
@@ -263,8 +261,8 @@ export function registerBatchHandlers(
                 ? withContext(context as Record<string, unknown>)
                 : logger;
             log.error(`failed to register handler: ${event}`, {
-                socketId: socket.id,
                 error,
+                socketId: socket.id,
             });
         }
     }

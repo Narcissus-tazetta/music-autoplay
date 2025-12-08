@@ -1,5 +1,5 @@
 import type { Music } from '@/shared/stores/musicStore';
-import { Table } from '@shadcn/table';
+import { Table } from '@shadcn/ui/table';
 import { AnimatePresence } from 'framer-motion';
 import { memo } from 'react';
 import { MemoizedMusicTableRow } from './MusicTableRow';
@@ -34,7 +34,7 @@ function MusicTableInner({
             </Table.Header>
             <Table.Body>
                 <AnimatePresence initial={false}>
-                    {0 < musics.length
+                    {musics.length > 0
                         ? (
                             musics.map((music, i) => (
                                 <MemoizedMusicTableRow

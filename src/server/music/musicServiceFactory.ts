@@ -1,6 +1,6 @@
 import type { Music } from '@/shared/stores/musicStore';
 import type { Store } from '../persistence';
-import { type YouTubeService } from '../services/youtubeService';
+import type { YouTubeService } from '../services/youtubeService';
 import { AuthChecker } from './auth/authChecker';
 import { MusicEventEmitter } from './emitter/musicEventEmitter';
 import type { EmitFn } from './emitter/musicEventEmitter';
@@ -8,7 +8,7 @@ import { MusicService } from './musicService';
 import { MusicRepository } from './repository/musicRepository';
 import { YouTubeResolver } from './resolver/youtubeResolver';
 
-let instance: MusicService | null = null;
+let instance: MusicService | null;
 
 export interface MusicServiceFactoryOptions {
     youtubeService: YouTubeService;
@@ -42,6 +42,6 @@ export function getMusicService(): MusicService {
     return instance;
 }
 
-export function resetMusicService(): void {
+export const resetMusicService = (): void => {
     instance = null;
-}
+};

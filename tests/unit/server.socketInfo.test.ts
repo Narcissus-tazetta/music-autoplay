@@ -7,14 +7,14 @@ describe('/api/socket-info endpoint', () => {
     it('returns socket diagnostics for socket middleware', async () => {
         const app = express();
         const fakeVite = {
-            ssrLoadModule: async (_: string) => ({}),
             middlewares: (
                 req: unknown,
                 res: unknown,
                 next: (...args: unknown[]) => void,
             ) => next(),
+            ssrLoadModule: async (_: string) => ({}),
         };
-        const getIo = () => null;
+        const getIo = () => undefined;
         await configureApp(
             app,
             getIo as unknown as any,

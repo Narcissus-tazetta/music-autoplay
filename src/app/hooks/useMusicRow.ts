@@ -31,9 +31,9 @@ export function useMusicRow({
     };
 
     return {
-        isExpanded,
         canDelete,
         handleDelete,
+        isExpanded,
         toggleExpanded,
     };
 }

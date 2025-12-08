@@ -16,17 +16,17 @@ import MetricsManager from './services/metricsManager';
 import retry from './services/retryService';
 import { YouTubeService } from './services/youtubeService';
 import { SocketServerInstance } from './socket';
-export type Metrics = {
+export interface Metrics {
     apiMusics: { calls: number; errors: number; totalMs: number };
     rpcGetAllMusics: { calls: number; errors: number; totalMs: number };
-};
+}
 
-export type BootstrapResult = {
-    appShutdownHandlers: Array<() => Promise<void> | void>;
+export interface BootstrapResult {
+    appShutdownHandlers: (() => Promise<void> | void)[];
     fileStore: InstanceType<typeof FileStore>;
     socketServer: InstanceType<typeof SocketServerInstance>;
     metricsManager: MetricsManager;
-};
+}
 
 export async function bootstrap(): Promise<BootstrapResult> {
     const configService = getConfigService();
@@ -50,22 +50,22 @@ export async function bootstrap(): Promise<BootstrapResult> {
     container.register('retryService', () => retry);
     container.register('metricsManager', () => metricsManager);
 
-    const appShutdownHandlers: Array<() => Promise<void> | void> = [];
+    const appShutdownHandlers: (() => Promise<void> | void)[] = [];
     appShutdownHandlers.push(async () => {
         try {
             await fileStore.flush();
             logger.info('filestore flushed');
-        } catch (e: unknown) {
+        } catch (error) {
             logger.warn('fileStore.flush failed, attempting sync close', {
-                error: e,
+                error: error,
             });
             try {
                 fileStore.closeSync();
-            } catch (err: unknown) {
-                logger.warn('fileStore.closeSync failed', { error: err });
+            } catch (error) {
+                logger.warn('fileStore.closeSync failed', { error: error });
             }
         }
     });
 
-    return { appShutdownHandlers, fileStore, socketServer, metricsManager };
+    return { appShutdownHandlers, fileStore, metricsManager, socketServer };
 }

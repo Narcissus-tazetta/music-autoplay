@@ -51,7 +51,7 @@ export function extractErrorMessage(
     function walk(value: unknown, depth: number): void {
         if (userMessages.length >= 10) return;
 
-        if (value == null) return;
+        if (value == undefined) return;
 
         if (typeof value === 'string') {
             addMessage(value);
@@ -89,7 +89,7 @@ export function extractErrorMessage(
 
                     if (['status', 'url', 'fields', 'code', 'stack'].includes(key)) continue;
 
-                    if (val == null) continue;
+                    if (val == undefined) continue;
 
                     if (Array.isArray(val)) {
                         for (const item of val) if (typeof item === 'string') addMessage(item);
@@ -186,7 +186,7 @@ export function getDetailedErrorInfo(error: unknown): string {
 
     if (info.meta) {
         try {
-            parts.push(`Meta: ${JSON.stringify(info.meta, null, 2)}`);
+            parts.push(`Meta: ${JSON.stringify(info.meta, undefined, 2)}`);
         } catch {
             parts.push(`Meta: [unserializable]`);
         }

@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 export const WindowExtensionsSchema = z
     .object({
-        SOCKET_URL: z.string().optional(),
         SOCKET_PATH: z.string().optional(),
+        SOCKET_URL: z.string().optional(),
         __app__: z
             .object({
                 navigate: z.function().optional(),
@@ -26,14 +26,14 @@ export function hasStructuredClone(
     return result.success && typeof result.data.structuredClone === 'function';
 }
 
-export function getWindowExtensions():
+export const getWindowExtensions = ():
     | z.SafeParseReturnType<
         unknown,
         z.infer<typeof WindowExtensionsSchema>
     >
-    | null {
+    | null => {
     if (typeof window === 'undefined') return null;
     return WindowExtensionsSchema.safeParse(window);
-}
+};
 
 export type WindowExtensions = z.infer<typeof WindowExtensionsSchema>;

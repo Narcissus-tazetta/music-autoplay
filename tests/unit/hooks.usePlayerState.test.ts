@@ -4,11 +4,11 @@ import { describe, expect, test } from 'bun:test';
 describe('usePlayerState hooks', () => {
     test('RemoteStatus type is properly defined', () => {
         const playingStatus: RemoteStatus = {
-            type: 'playing',
-            musicTitle: 'Test Song',
             currentTime: 10,
             duration: 100,
             lastProgressUpdate: Date.now(),
+            musicTitle: 'Test Song',
+            type: 'playing',
         };
         expect(playingStatus.type).toBe('playing');
         expect(playingStatus.musicTitle).toBe('Test Song');
@@ -16,9 +16,9 @@ describe('usePlayerState hooks', () => {
 
     test('paused status has correct shape', () => {
         const pausedStatus: RemoteStatus = {
-            type: 'paused',
-            musicTitle: 'Test Song',
             musicId: 'test-id',
+            musicTitle: 'Test Song',
+            type: 'paused',
         };
         expect(pausedStatus.type).toBe('paused');
         expect(pausedStatus.musicId).toBe('test-id');

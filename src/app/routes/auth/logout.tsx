@@ -13,5 +13,5 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 // クライアント側のコンポーネント（オプション、フォーム送信用）
 export default function Logout() {
-    return null;
+    return;
 }

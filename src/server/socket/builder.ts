@@ -80,16 +80,16 @@ export class SocketServerBuilder {
             container.register('httpRateLimiter', () => httpRateLimiter);
 
             return {
-                youtubeService,
-                fileStore,
-                musicDB: this.config.musicDB ?? new Map(),
-                remoteStatus: this.config.remoteStatus ?? { type: 'closed' },
                 adminHash,
-                windowCloseManager,
-                rateLimiter,
+                fileStore,
                 httpRateLimiter,
+                musicDB: this.config.musicDB ?? new Map(),
+                rateLimiter,
                 rateLimiterManager,
+                remoteStatus: this.config.remoteStatus ?? { type: 'closed' },
                 socketConfig,
+                windowCloseManager,
+                youtubeService,
             };
         }, 'SocketServerBuilder.build')();
 

@@ -33,8 +33,8 @@ export function useWindowAppApi(): void {
                 };
             }
             win.__app__ = g;
-        } catch (err: unknown) {
-            if (import.meta.env.DEV) console.error('window.__app__ init failed', err);
+        } catch (error) {
+            if (import.meta.env.DEV) console.error('window.__app__ init failed', error);
         }
     }, []);
 }

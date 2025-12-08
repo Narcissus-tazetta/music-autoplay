@@ -1,6 +1,6 @@
 import logger from '@/server/logger';
 import type { Request } from 'express';
-import type { IncomingMessage } from 'http';
+import type { IncomingMessage } from 'node:http';
 
 function getHeader(
     req: Request | IncomingMessage,
@@ -54,16 +54,19 @@ export function logSecurityEvent(
 
     switch (event.severity) {
         case 'critical':
-        case 'high':
+        case 'high': {
             logger.error('Security Event', logData);
             break;
-        case 'medium':
+        }
+        case 'medium': {
             logger.warn('Security Event', logData);
             break;
+        }
         case 'low':
-        default:
+        default: {
             logger.info('Security Event', logData);
             break;
+        }
     }
 }
 
@@ -74,11 +77,11 @@ export function logAuthFailure(
 ): void {
     logSecurityEvent(
         {
-            type: 'auth_failure',
-            severity: 'high',
-            source: 'authentication',
             message: `Authentication failed: ${reason}`,
             metadata: userId ? { userId } : undefined,
+            severity: 'high',
+            source: 'authentication',
+            type: 'auth_failure',
         },
         req,
     );
@@ -91,11 +94,11 @@ export function logInvalidUrl(
 ): void {
     logSecurityEvent(
         {
-            type: 'invalid_url',
+            message: `Invalid URL rejected: ${reason}`,
+            metadata: { reason, url },
             severity: 'medium',
             source: 'url_validation',
-            message: `Invalid URL rejected: ${reason}`,
-            metadata: { url, reason },
+            type: 'invalid_url',
         },
         req,
     );
@@ -108,11 +111,11 @@ export function logRateLimit(
 ): void {
     logSecurityEvent(
         {
-            type: 'rate_limit',
-            severity: 'medium',
-            source: 'rate_limiting',
             message: `Rate limit exceeded for endpoint: ${endpoint}`,
             metadata: { endpoint },
+            severity: 'medium',
+            source: 'rate_limiting',
+            type: 'rate_limit',
         },
         req,
     );
@@ -125,11 +128,11 @@ export function logCorsViolation(
 ): void {
     logSecurityEvent(
         {
-            type: 'cors_violation',
-            severity: 'high',
-            source: 'cors',
             message: `CORS violation: ${reason}`,
             metadata: { origin, reason },
+            severity: 'high',
+            source: 'cors',
+            type: 'cors_violation',
         },
         req,
     );
@@ -142,11 +145,11 @@ export function logSuspiciousRequest(
 ): void {
     logSecurityEvent(
         {
-            type: 'suspicious_request',
-            severity: 'medium',
-            source: 'request_analysis',
             message: `Suspicious request detected: ${reason}`,
             metadata,
+            severity: 'medium',
+            source: 'request_analysis',
+            type: 'suspicious_request',
         },
         req,
     );

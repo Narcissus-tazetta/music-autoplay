@@ -5,23 +5,26 @@
   "scripts": {
     "build": "react-router build",
     "dev": "bun run --watch src/server/server.ts",
+    "lint": "oxlint --fix && dprint fmt",
+    "prepare": "husky",
     "start": "cross-env NODE_ENV=production bun run src/server/server.ts",
-    "typecheck": "react-router typegen && tsc",
-    "lint": "eslint . --cache",
-    "lint:fix": "eslint . --cache --fix",
-    "format": "dprint fmt",
-    "format:check": "dprint check",
-    "quality": "bun run typecheck && bun run lint && bun run format:check",
-    "test": "cross-env NODE_ENV=test bun test",
-    "test:e2e": "bunx playwright test",
-    "test:unit": "cross-env NODE_ENV=test bash scripts/run-unit-tests.sh",
-    "test:unit:simple": "cross-env NODE_ENV=test sh -lc 'for f in tests/unit/*.test.ts; do bun test \"$f\" || exit 1; done'",
-    "test:coverage": "vitest run --coverage",
-    "ci": "bun run quality && bun run test:unit && bun run build",
-    "ci:skip-lint": "bun run typecheck && bun run test:unit && bun run build",
-    "migrate:add-requesterHash": "node scripts/migrate-add-requesterHash.js",
-    "test:e2e:ui": "bunx playwright test --ui",
-    "prepare": "husky"
+    "test": "bun test"
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,css,md,json}": [
+      "dprint fmt"
+    ],
+    "*.{ts,tsx,js,jsx}": [
+      "oxlint --fix"
+    ],
+    "package.json": [
+      "sort-package-json"
+    ]
   },
   "dependencies": {
     "@conform-to/dom": "^1.14.1",
@@ -60,31 +63,24 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@conform-to/react": "^1.14.1",
-    "@eslint/js": "^9.39.1",
-    "@playwright/test": "^1.57.0",
-    "@react-router/dev": "^7.10.1",
-    "@react-router/express": "^7.10.1",
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
+    "@conform-to/react": "^1.14.0",
+    "@react-router/dev": "^7.10.0",
+    "@react-router/express": "^7.10.0",
     "@tailwindcss/vite": "^4.1.17",
     "@types/bun": "^1.3.3",
     "@types/compression": "^1.8.1",
     "@types/express": "^5.0.6",
     "@types/jsdom": "^27.0.0",
     "@types/morgan": "^1.9.10",
-    "@types/node": "^20.19.25",
     "@types/pg": "^8.15.6",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
-    "@types/supertest": "^6.0.3",
-    "@vitest/browser": "^3.2.4",
     "compression": "^1.8.1",
     "convert-iso8601-duration": "^3.0.0",
     "cross-env": "^7.0.3",
     "dprint": "^0.50.2",
-    "eslint": "^9.39.1",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.24",
     "framer-motion": "^12.23.25",
     "husky": "^9.1.7",
     "immer": "^10.2.0",
@@ -93,23 +89,16 @@
     "knip": "^5.71.0",
     "lint-staged": "^16.2.7",
     "morgan": "^1.10.1",
-    "playwright": "^1.57.0",
-    "prettier": "^3.7.4",
+    "oxlint": "^1.31.0",
+    "oxlint-tsgolint": "^0.8.3",
     "remix-auth": "^4.2.0",
     "remix-auth-oauth2": "^3.4.1",
     "remix-themes": "^2.0.4",
     "socket.io-client": "^4.8.1",
-    "supertest": "^7.1.4",
+    "sort-package-json": "^3.5.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.48.1",
     "vite": "^6.4.1",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.2.4",
     "zustand": "^5.0.9"
-  },
-  "lint-staged": {
-    "*.{ts,tsx,js,jsx,css,md,json}": [
-      "prettier --write"
-    ]
   }
 }

@@ -46,21 +46,21 @@ private checkVideoAndSendProgress(): void {
 
 ```typescript
 const notifyState = (state: string) => {
-  try {
-    const currentTime = video.currentTime ?? null;
-    const duration = video.duration ?? null;
-    console.debug("[Content] notifyState", { state, currentTime, duration });
-    chrome.runtime.sendMessage({
-      type: "youtube_video_state",
-      url: location.href,
-      state,
-      currentTime,
-      timestamp: Date.now(),
-    });
-    if (state === "ended") chrome.storage.local.set({ latestUrl: "ended" });
-  } catch {
-    return;
-  }
+    try {
+        const currentTime = video.currentTime ?? null;
+        const duration = video.duration ?? null;
+        console.debug('[Content] notifyState', { state, currentTime, duration });
+        chrome.runtime.sendMessage({
+            type: 'youtube_video_state',
+            url: location.href,
+            state,
+            currentTime,
+            timestamp: Date.now(),
+        });
+        if (state === 'ended') chrome.storage.local.set({ latestUrl: 'ended' });
+    } catch {
+        return;
+    }
 };
 ```
 
@@ -68,28 +68,28 @@ const notifyState = (state: string) => {
 
 ```typescript
 const notifyState = (state: string) => {
-  try {
-    const currentTime = video.currentTime ?? null;
-    const duration = video.duration ?? null;
-    const isAd = adDetector.getCurrentAdState(); // 追加
-    console.debug("[Content] notifyState", {
-      state,
-      currentTime,
-      duration,
-      isAd,
-    }); // 修正
-    chrome.runtime.sendMessage({
-      type: "youtube_video_state",
-      url: location.href,
-      state,
-      currentTime,
-      timestamp: Date.now(),
-      isAdvertisement: isAd, // 追加
-    });
-    if (state === "ended") chrome.storage.local.set({ latestUrl: "ended" });
-  } catch {
-    return;
-  }
+    try {
+        const currentTime = video.currentTime ?? null;
+        const duration = video.duration ?? null;
+        const isAd = adDetector.getCurrentAdState(); // 追加
+        console.debug('[Content] notifyState', {
+            state,
+            currentTime,
+            duration,
+            isAd,
+        }); // 修正
+        chrome.runtime.sendMessage({
+            type: 'youtube_video_state',
+            url: location.href,
+            state,
+            currentTime,
+            timestamp: Date.now(),
+            isAdvertisement: isAd, // 追加
+        });
+        if (state === 'ended') chrome.storage.local.set({ latestUrl: 'ended' });
+    } catch {
+        return;
+    }
 };
 ```
 
@@ -108,14 +108,14 @@ const notifyState = (state: string) => {
 ```typescript
 // Extension側で広告中とマークされたイベントは完全に無視
 if (isAdvertisement) {
-  log.debug(
-    "youtube_video_state: ignoring event marked as advertisement by extension",
-    {
-      state: stateRaw,
-      url,
-    },
-  );
-  return;
+    log.debug(
+        'youtube_video_state: ignoring event marked as advertisement by extension',
+        {
+            state: stateRaw,
+            url,
+        },
+    );
+    return;
 }
 ```
 

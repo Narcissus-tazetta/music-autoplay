@@ -17,10 +17,10 @@ function secondsToHMS(sec: number): string {
     return `${`${hours}`.padStart(2, '0')}:${`${mins}`.padStart(2, '0')}:${`${secs}`.padStart(2, '0')}`;
 }
 
-export function normalizeYoutubeMeta(
+export const normalizeYoutubeMeta = (
     id: string,
     meta: unknown,
-): YouTubeMeta | null {
+): YouTubeMeta | null => {
     if (!meta || typeof meta !== 'object') return null;
     const m = meta as Record<string, unknown>;
 
@@ -103,12 +103,12 @@ export function normalizeYoutubeMeta(
                 try {
                     const secs = parseISO8601ToSeconds(s);
                     finalDuration = secondsToHMS(secs);
-                } catch (err: unknown) {
+                } catch (error) {
                     safeLog(
                         'debug',
                         'normalizeYoutubeMeta: failed to parse ISO8601 duration',
                         {
-                            error: err,
+                            error: error,
                             value: s,
                         },
                     );
@@ -130,11 +130,11 @@ export function normalizeYoutubeMeta(
     }
 
     return {
-        id,
-        title,
         channelId,
         channelTitle,
         duration: finalDuration,
+        id,
         isAgeRestricted: isAgeRestricted ?? false,
+        title,
     } as YouTubeMeta;
-}
+};

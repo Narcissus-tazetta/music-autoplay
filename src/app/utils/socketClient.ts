@@ -1,13 +1,12 @@
 import type { C2S, S2C } from '@/shared/types/socket';
 import { io, type Socket } from 'socket.io-client';
 
-let socket: Socket<S2C, C2S> | null = null;
+let socket: Socket<S2C, C2S> | null;
+const safeLog = (...args: unknown[]): void => {
+    if (import.meta.env.DEV) console.info(...args);
+};
 
 function attachDebugListeners(s: Socket<S2C, C2S>): void {
-    const safeLog = (...args: unknown[]): void => {
-        if (import.meta.env.DEV) console.info(...args);
-    };
-
     s.on('connect', () => {
         safeLog('[socket] connect', s.id);
     });
@@ -28,16 +27,16 @@ export function getSocket(): Socket<S2C, C2S> {
         const options = {
             autoConnect: false,
             path: socketPath,
-            transports: ['websocket', 'polling'],
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
-            timeout: 20000,
+            timeout: 20_000,
+            transports: ['websocket', 'polling'],
         };
         socket = io(options) as Socket<S2C, C2S>;
         try {
             attachDebugListeners(socket);
-        } catch (e: unknown) {
-            if (import.meta.env.DEV) console.warn('[socket] failed to attach debug listeners', e);
+        } catch (error) {
+            if (import.meta.env.DEV) console.warn('[socket] failed to attach debug listeners', error);
         }
     }
     return socket;

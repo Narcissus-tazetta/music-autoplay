@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { useAdminStore } from '../../src/shared/stores/adminStore';
 
 describe('adminStore', () => {

@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 import type { Socket } from 'socket.io';
 import logger from '../../logger';
 import type { RateLimiter } from '../../services/rateLimiter';
@@ -41,17 +41,17 @@ export function createAdminAuthHandlers(
             const success = hash === adminHash;
 
             return {
-                success,
                 error: success ? undefined : '認証に失敗しました',
+                success,
             };
-        },
-        rateLimiter: {
-            maxAttempts,
-            windowMs,
-            keyGenerator,
         },
         logPayload: false,
         logResponse: false,
+        rateLimiter: {
+            keyGenerator,
+            maxAttempts,
+            windowMs,
+        },
     });
 
     const adminAuthByQueryHandler = createSocketEventHandler<
@@ -64,17 +64,17 @@ export function createAdminAuthHandlers(
             const success = hash === adminHash;
 
             return {
-                success,
                 error: success ? undefined : '認証に失敗しました',
+                success,
             };
-        },
-        rateLimiter: {
-            maxAttempts,
-            windowMs,
-            keyGenerator,
         },
         logPayload: false,
         logResponse: false,
+        rateLimiter: {
+            keyGenerator,
+            maxAttempts,
+            windowMs,
+        },
     });
 
     return {

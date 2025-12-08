@@ -6,8 +6,8 @@ describe('PgHybridStore basic behavior', () => {
         const addSpy = vi.fn(() => Promise.resolve());
         const pgMock = {
             add: addSpy,
-            remove: vi.fn(() => Promise.resolve()),
             clear: vi.fn(() => Promise.resolve()),
+            remove: vi.fn(() => Promise.resolve()),
         } as any;
         const store = new PgHybridStore(pgMock, []);
         store.add({ id: 'p1', title: 'P' } as any);
@@ -20,8 +20,8 @@ describe('PgHybridStore basic behavior', () => {
         const removeSpy = vi.fn(() => Promise.resolve());
         const pgMock = {
             add: vi.fn(() => Promise.resolve()),
-            remove: removeSpy,
             clear: vi.fn(() => Promise.resolve()),
+            remove: removeSpy,
         } as any;
         const store = new PgHybridStore(pgMock, [{ id: 'r1', title: 'R' } as any]);
         expect(store.load().length).toBe(1);
@@ -35,8 +35,8 @@ describe('PgHybridStore basic behavior', () => {
         const clearSpy = vi.fn(() => Promise.resolve());
         const pgMock = {
             add: vi.fn(() => Promise.resolve()),
-            remove: vi.fn(() => Promise.resolve()),
             clear: clearSpy,
+            remove: vi.fn(() => Promise.resolve()),
         } as any;
         const store = new PgHybridStore(pgMock, [{ id: 'c1', title: 'C' } as any]);
         store.clear();

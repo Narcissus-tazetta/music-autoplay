@@ -3,7 +3,11 @@ import type { Socket } from 'socket.io';
 import type { AppLogger } from '../../logger';
 import { sanitizeArgs, snapshotHeaders } from '../utils';
 
-export function setupSocketLogging(socket: Socket, log: AppLogger, transport: string) {
+export function setupSocketLogging(
+    socket: Socket,
+    log: AppLogger,
+    transport: string,
+) {
     withErrorHandler(() => {
         socket.onAny((event: string, ...args: unknown[]) => {
             withErrorHandler(() => {
@@ -12,10 +16,10 @@ export function setupSocketLogging(socket: Socket, log: AppLogger, transport: st
                 const headers = snapshotHeaders(socket);
                 const origin = headers?.origin ?? headers?.referer;
                 log.info('socket event received', {
-                    event,
                     args: safeArgs,
-                    socketId: socket.id,
+                    event,
                     origin,
+                    socketId: socket.id,
                     transport,
                 });
             }, 'socket event logging')();

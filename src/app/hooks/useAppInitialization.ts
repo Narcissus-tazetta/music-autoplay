@@ -3,6 +3,18 @@ import normalizeApiResponse from '@/shared/utils/api';
 import { parseApiErrorForUI } from '@/shared/utils/apiUi';
 import { useEffect } from 'react';
 
+const isMusic = (v: unknown): v is Music => {
+    if (!v || typeof v !== 'object') return false;
+    const r = v as Record<string, unknown>;
+    return (
+        typeof r.id === 'string'
+        && typeof r.title === 'string'
+        && typeof r.channelName === 'string'
+        && typeof r.channelId === 'string'
+        && typeof r.duration === 'string'
+    );
+};
+
 export function useAppInitialization(): void {
     useEffect(() => {
         const run = async () => {
@@ -21,24 +33,22 @@ export function useAppInitialization(): void {
                         parsed.success
                         && typeof parsed.data.ytStatusVisible === 'boolean'
                     ) {
-                        const { useSettingsStore } = await import(
-                            '@/shared/stores/settingsStore'
-                        );
+                        const { useSettingsStore } = await import('@/shared/stores/settingsStore');
                         useSettingsStore
                             .getState()
                             .setYtStatusVisible(parsed.data.ytStatusVisible);
                     }
                 }
-            } catch (err: unknown) {
-                if (import.meta.env.DEV) console.debug('loadFromServer failed', err);
+            } catch (error) {
+                if (import.meta.env.DEV) console.debug('loadFromServer failed', error);
             }
 
             try {
                 store.connectSocket();
-            } catch (err: unknown) {
+            } catch (error) {
                 if (import.meta.env.DEV) {
-                    if (err instanceof Error) console.error('connectSocket failed', err);
-                    else console.error('connectSocket failed', String(err));
+                    if (error instanceof Error) console.error('connectSocket failed', error);
+                    else console.error('connectSocket failed', String(error));
                 }
             }
             const doBackgroundFetch = async () => {
@@ -53,8 +63,8 @@ export function useAppInitialization(): void {
                         try {
                             const parsed = parseApiErrorForUI({
                                 code: norm.error.code,
-                                message: norm.error.message,
                                 details: norm.error.details,
+                                message: norm.error.message,
                             });
 
                             if (import.meta.env.DEV) {
@@ -67,13 +77,13 @@ export function useAppInitialization(): void {
                             try {
                                 const mod = await import('@/shared/utils/uiActionExecutor');
                                 mod.executeParsedApiError(parsed, { conformFields: undefined });
-                            } catch (err: unknown) {
-                                if (import.meta.env.DEV) console.error('uiActionExecutor failed', err);
+                            } catch (error) {
+                                if (import.meta.env.DEV) console.error('uiActionExecutor failed', error);
                             }
 
                             if (parsed.kind === 'unauthorized') return;
-                        } catch (err: unknown) {
-                            if (import.meta.env.DEV) console.debug('parseApiErrorForUI failed', err);
+                        } catch (error) {
+                            if (import.meta.env.DEV) console.debug('parseApiErrorForUI failed', error);
                         }
                         const maybeErr: unknown = norm.error;
                         let fallbackMsg = 'Unknown error';
@@ -99,39 +109,29 @@ export function useAppInitialization(): void {
                     const musicsRaw = (norm.data as { musics?: unknown } | null)?.musics;
                     if (!Array.isArray(musicsRaw)) throw new Error('no-musics');
                     const maybeMusics = musicsRaw;
-                    const isMusic = (v: unknown): v is Music => {
-                        if (!v || typeof v !== 'object') return false;
-                        const r = v as Record<string, unknown>;
-                        return (
-                            typeof r.id === 'string'
-                            && typeof r.title === 'string'
-                            && typeof r.channelName === 'string'
-                            && typeof r.channelId === 'string'
-                            && typeof r.duration === 'string'
-                        );
-                    };
-
                     const musics = maybeMusics.filter(isMusic);
                     store.setMusics?.(musics);
                 };
 
                 const attempts = [0, 500, 1000];
                 for (let i = 0; i < attempts.length; i++) {
+                    // oxlint-disable-next-line no-await-in-loop
                     if (i > 0) await new Promise(r => setTimeout(r, attempts[i]));
                     const controller = new AbortController();
                     const timeout = setTimeout(() => {
                         controller.abort();
                     }, 3000);
                     try {
+                        // oxlint-disable-next-line no-await-in-loop
                         await doFetchOnce(controller.signal);
                         clearTimeout(timeout);
                         break;
-                    } catch (err: unknown) {
+                    } catch (error) {
                         clearTimeout(timeout);
                         if (import.meta.env.DEV) {
                             console.debug('/api/musics fetch attempt failed', {
                                 attempt: i + 1,
-                                error: err instanceof Error ? err.message : String(err),
+                                error: error instanceof Error ? error.message : String(error),
                             });
                             if (i === attempts.length - 1) {
                                 console.debug(
@@ -153,16 +153,20 @@ export function useAppInitialization(): void {
             if (!fetchSucceeded) {
                 try {
                     store.hydrateFromLocalStorage?.();
-                } catch (err: unknown) {
-                    if (import.meta.env.DEV) console.debug('hydrateFromLocalStorage failed', err);
+                } catch (error) {
+                    if (import.meta.env.DEV) console.debug('hydrateFromLocalStorage failed', error);
                 }
             }
         };
 
-        run().catch((err: unknown) => {
+        run().catch(error => {
             if (import.meta.env.DEV) {
-                if (err instanceof Error) console.error(err);
-                else console.error(typeof err === 'string' ? err : JSON.stringify(err));
+                if (error instanceof Error) console.error(error);
+                else {
+                    console.error(
+                        typeof error === 'string' ? error : JSON.stringify(error),
+                    );
+                }
             }
         });
     }, []);

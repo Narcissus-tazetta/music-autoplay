@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { useSettingsStore } from '../../src/shared/stores/settingsStore';
 
 describe('settingsStore', () => {
