@@ -36,19 +36,15 @@ describe('/api/socket-info endpoint', () => {
     });
 
     it('returns socket diagnostics when server is running', async () => {
-        try {
-            const response = await fetch(`${baseUrl}/api/socket-info`, {
-                method: 'GET',
-            });
+        const response = await fetch(`${baseUrl}/api/socket-info`, {
+            method: 'GET',
+        });
 
-            expect(response.status).toBe(200);
-            const data = await response.json();
-            expect(data).toBeDefined();
-            expect(data.ok).toBe(true);
-            expect(data.socket).toBeDefined();
-            expect(typeof data.socket.socketUrl).toBe('string');
-        } catch {
-            console.warn('Server not running, skipping test');
-        }
+        expect(response.status).toBe(200);
+        const data = await response.json();
+        expect(data).toBeDefined();
+        expect(data.ok).toBe(true);
+        expect(data.socket).toBeDefined();
+        expect(typeof data.socket.socketUrl).toBe('string');
     });
 });
