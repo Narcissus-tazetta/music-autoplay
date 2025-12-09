@@ -254,6 +254,12 @@ app.post('/api/admin/login', express.json(), (req, res) => {
                 return;
             }
 
+            // Enforce maximum length for username and password
+            const MAX_CREDENTIAL_LENGTH = 256;
+            if (username.length > MAX_CREDENTIAL_LENGTH || password.length > MAX_CREDENTIAL_LENGTH) {
+                res.status(400).json({ isAdmin: false, error: 'Username or password too long' });
+                return;
+            }
             if (adminRateLimiter.isLocked(username)) {
                 const retryAfter = adminRateLimiter.getRetryAfterSeconds(username);
                 logger.info('Admin login attempt on locked account', { username });
