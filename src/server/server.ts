@@ -249,7 +249,24 @@ app.post('/api/admin/login', express.json(), (req, res) => {
             const username = body.username;
             const password = body.password;
 
+            // Get client IP for rate limiting (prevents username enumeration)
+            const clientIp = req.ip || req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown';
+            const rateLimitKey = typeof clientIp === 'string' ? clientIp : clientIp[0] || 'unknown';
+
+            // Check rate limit BEFORE any validation (prevents username enumeration)
+            if (adminRateLimiter.isLocked(rateLimitKey)) {
+                const retryAfter = adminRateLimiter.getRetryAfterSeconds(rateLimitKey);
+                logger.info('Admin login attempt from rate-limited IP', { ip: rateLimitKey });
+                res.status(429).json({
+                    isAdmin: false,
+                    error: 'リクエストが多すぎます。しばらく後に再試行してください。',
+                    retryAfter,
+                });
+                return;
+            }
+
             if (typeof username !== 'string' || typeof password !== 'string') {
+                adminRateLimiter.recordFailure(rateLimitKey);
                 res.status(400).json({ isAdmin: false });
                 return;
             }
@@ -257,6 +274,7 @@ app.post('/api/admin/login', express.json(), (req, res) => {
             // Enforce maximum length for username and password
             const MAX_CREDENTIAL_LENGTH = 256;
             if (username.length > MAX_CREDENTIAL_LENGTH || password.length > MAX_CREDENTIAL_LENGTH) {
+                adminRateLimiter.recordFailure(rateLimitKey);
                 res.status(400).json({ isAdmin: false, error: 'Username or password too long' });
                 return;
             }
@@ -267,6 +285,7 @@ app.post('/api/admin/login', express.json(), (req, res) => {
             const clientUrl = config.getString('CLIENT_URL') || SERVER_ENV.CLIENT_URL;
 
             if (origin && !origin.includes(new URL(clientUrl).hostname)) {
+                adminRateLimiter.recordFailure(rateLimitKey);
                 logger.warn('Potential CSRF attack: Cross-origin admin login attempt', {
                     origin,
                     expectedHost: new URL(clientUrl).hostname,
@@ -278,25 +297,16 @@ app.post('/api/admin/login', express.json(), (req, res) => {
                 return;
             }
 
-            // Check rate limit after CSRF validation but before authentication
-            // This prevents username enumeration while still protecting against brute force
-            if (adminRateLimiter.isLocked(username)) {
-                logger.info('Admin login attempt on locked account', { username });
-                // Return same response as failed auth to avoid username enumeration
-                res.status(401).json({ isAdmin: false });
-                return;
-            }
-
             const isValid = adminAuthenticator.authenticate(username, password);
 
             if (!isValid) {
-                adminRateLimiter.recordFailure(username);
+                adminRateLimiter.recordFailure(rateLimitKey);
                 logger.info('Admin login failed', { username });
                 res.status(401).json({ isAdmin: false });
                 return;
             }
 
-            adminRateLimiter.recordSuccess(username);
+            adminRateLimiter.recordSuccess(rateLimitKey);
 
             const cookieHeader = req.headers.cookie ?? '';
             const session = await loginSession.getSession(cookieHeader);

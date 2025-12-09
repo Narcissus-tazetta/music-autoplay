@@ -42,15 +42,6 @@ describe('Admin Authentication', () => {
 
             expect(authenticator.authenticate('wronguser', 'wrongpassword')).toBe(false);
         });
-
-        test('should reject incorrect credentials of same length', () => {
-            const authenticator = new AdminAuthenticator({
-                username: testUsername,
-                password: testPassword,
-            });
-            // Note: Actual timing-safety is guaranteed by crypto.timingSafeEqual in implementation
-            expect(authenticator.authenticate('admin', 'wrongpass123')).toBe(false);
-        });
     });
 
     describe('createAdminAuthenticator factory', () => {

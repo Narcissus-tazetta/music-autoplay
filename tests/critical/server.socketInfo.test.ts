@@ -32,7 +32,7 @@ describe('/api/socket-info endpoint', () => {
     });
 
     afterAll(() => {
-        if (server?.stop) server.stop();
+        server?.stop?.();
     });
 
     it('returns socket diagnostics when server is running', async () => {
