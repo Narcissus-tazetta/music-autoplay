@@ -196,7 +196,7 @@ describe('Admin Rate Limiter', () => {
 
             expect(limiter).toBeInstanceOf(AdminRateLimiter);
 
-            // 5回まで失敗できる
+            // Can fail up to 5 times
             limiter.recordFailure('user1');
             limiter.recordFailure('user1');
             limiter.recordFailure('user1');
