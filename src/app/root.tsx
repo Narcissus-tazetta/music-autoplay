@@ -18,7 +18,6 @@ import { Header } from '~/components/ui/Header';
 import { themeSessionResolver, type UserSessionData } from '~/sessions.server';
 import { loginSession } from '~/sessions.server';
 import appCss from './App.css?url';
-import { useAdminKeyActivation } from './hooks/useAdminKeyActivation';
 import { useAppInitialization } from './hooks/useAppInitialization';
 import { useWindowAppApi } from './hooks/useWindowAppApi';
 
@@ -118,7 +117,6 @@ export default function App() {
             : undefined);
 
     const userName = data?.user?.name;
-    useAdminKeyActivation();
 
     return (
         <>

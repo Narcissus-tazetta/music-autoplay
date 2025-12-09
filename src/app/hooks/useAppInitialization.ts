@@ -18,6 +18,17 @@ const isMusic = (v: unknown): v is Music => {
 export function useAppInitialization(): void {
     useEffect(() => {
         const run = async () => {
+            const { useAdminStore } = await import('@/shared/stores/adminStore');
+            try {
+                const res = await fetch('/api/admin/status');
+                if (res.ok) {
+                    const data = await res.json() as { isAdmin?: boolean };
+                    if (data.isAdmin === true) useAdminStore.getState().setIsAdmin(true);
+                }
+            } catch {
+                if (import.meta.env.DEV) console.debug('admin status check failed');
+            }
+
             const { useMusicStore } = await import('@/shared/stores/musicStore');
             const store = useMusicStore.getState();
             try {
