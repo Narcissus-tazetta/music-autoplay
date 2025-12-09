@@ -25,7 +25,12 @@ const serverEnvSchema = z
     .object({
         ADMIN_PASSWORD: isTest
             ? z.string().default('password123')
-            : z.string().min(1, 'ADMIN_PASSWORD is required'),
+            : z.string()
+                .min(12, 'ADMIN_PASSWORD must be at least 12 characters')
+                .regex(/[a-z]/, 'ADMIN_PASSWORD must contain at least one lowercase letter')
+                .regex(/[A-Z]/, 'ADMIN_PASSWORD must contain at least one uppercase letter')
+                .regex(/[0-9]/, 'ADMIN_PASSWORD must contain at least one digit')
+                .regex(/[^A-Za-z0-9]/, 'ADMIN_PASSWORD must contain at least one special character'),
         ADMIN_SECRET: isTest
             ? z.string().default('test-admin-secret-32-characters-long')
             : z.string().min(32, 'ADMIN_SECRET must be >= 32 characters'),
