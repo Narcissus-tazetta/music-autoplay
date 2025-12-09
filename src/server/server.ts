@@ -315,7 +315,7 @@ app.post('/api/admin/login', express.json(), (req, res) => {
 
             if (!isValid) {
                 adminRateLimiter.recordFailure(rateLimitKey);
-                logger.info('Admin login failed', { username });
+                logger.info('Admin login failed', { ip: rateLimitKey });
                 res.status(401).json({ isAdmin: false });
                 return;
             }
