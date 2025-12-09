@@ -82,10 +82,11 @@ export function parseBasicAuth(
         if (parts.length !== 2 || parts[0] !== 'Basic') return null;
 
         const decoded = Buffer.from(parts[1], 'base64').toString('utf-8');
-        const [username, password] = decoded.split(':', 2);
-
+        const colonIndex = decoded.indexOf(':');
+        if (colonIndex === -1) return null;
+        const username = decoded.slice(0, colonIndex);
+        const password = decoded.slice(colonIndex + 1);
         if (!username || !password) return null;
-
         return { username, password };
     } catch {
         return null;
