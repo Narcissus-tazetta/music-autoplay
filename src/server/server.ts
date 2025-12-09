@@ -260,16 +260,6 @@ app.post('/api/admin/login', express.json(), (req, res) => {
                 res.status(400).json({ isAdmin: false, error: 'Username or password too long' });
                 return;
             }
-            if (adminRateLimiter.isLocked(username)) {
-                const retryAfter = adminRateLimiter.getRetryAfterSeconds(username);
-                logger.info('Admin login attempt on locked account', { username });
-                res.status(429).json({
-                    isAdmin: false,
-                    error: 'アカウントがロックされています。しばらく後に再試行してください。',
-                    retryAfter,
-                });
-                return;
-            }
 
             // CSRF PROTECTION: Check origin/referer to prevent cross-origin requests
             // This endpoint uses cookies for session state, so CSRF protection is essential
@@ -285,6 +275,15 @@ app.post('/api/admin/login', express.json(), (req, res) => {
                     isAdmin: false,
                     error: 'Cross-origin requests not allowed',
                 });
+                return;
+            }
+
+            // Check rate limit after CSRF validation but before authentication
+            // This prevents username enumeration while still protecting against brute force
+            if (adminRateLimiter.isLocked(username)) {
+                logger.info('Admin login attempt on locked account', { username });
+                // Return same response as failed auth to avoid username enumeration
+                res.status(401).json({ isAdmin: false });
                 return;
             }
 
