@@ -271,6 +271,23 @@ app.post('/api/admin/login', express.json(), (req, res) => {
                 return;
             }
 
+            // CSRF PROTECTION: Check origin/referer to prevent cross-origin requests
+            // This endpoint uses cookies for session state, so CSRF protection is essential
+            const origin = req.headers.origin || req.headers.referer;
+            const clientUrl = config.getString('CLIENT_URL') || SERVER_ENV.CLIENT_URL;
+
+            if (origin && !origin.includes(new URL(clientUrl).hostname)) {
+                logger.warn('Potential CSRF attack: Cross-origin admin login attempt', {
+                    origin,
+                    expectedHost: new URL(clientUrl).hostname,
+                });
+                res.status(403).json({
+                    isAdmin: false,
+                    error: 'Cross-origin requests not allowed',
+                });
+                return;
+            }
+
             const isValid = adminAuthenticator.authenticate(username, password);
 
             if (!isValid) {
