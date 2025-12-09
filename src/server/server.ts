@@ -263,10 +263,9 @@ app.post('/api/admin/login', express.json(), (req, res) => {
             if (adminRateLimiter.isLocked(username)) {
                 const retryAfter = adminRateLimiter.getRetryAfterSeconds(username);
                 logger.info('Admin login attempt on locked account', { username });
-                res.status(429).json({
+                res.status(401).json({
                     isAdmin: false,
-                    error: 'アカウントがロックされています。しばらく後に再試行してください。',
-                    retryAfter,
+                    error: 'ユーザー名またはパスワードが正しくありません。',
                 });
                 return;
             }
