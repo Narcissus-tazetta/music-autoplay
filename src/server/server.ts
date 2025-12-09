@@ -283,12 +283,26 @@ app.post('/api/admin/login', express.json(), (req, res) => {
             // This endpoint uses cookies for session state, so CSRF protection is essential
             const origin = req.headers.origin || req.headers.referer;
             const clientUrl = config.getString('CLIENT_URL') || SERVER_ENV.CLIENT_URL;
+            const allowedOrigin = new URL(clientUrl).origin;
 
-            if (origin && !origin.includes(new URL(clientUrl).hostname)) {
+            // Require origin header for CSRF protection
+            if (!origin) {
+                adminRateLimiter.recordFailure(rateLimitKey);
+                logger.warn('CSRF protection: Missing origin header');
+                res.status(403).json({
+                    isAdmin: false,
+                    error: 'Missing origin header',
+                });
+                return;
+            }
+
+            // Strict origin validation (exact match)
+            const requestOrigin = origin.startsWith('http') ? new URL(origin).origin : origin;
+            if (requestOrigin !== allowedOrigin) {
                 adminRateLimiter.recordFailure(rateLimitKey);
                 logger.warn('Potential CSRF attack: Cross-origin admin login attempt', {
-                    origin,
-                    expectedHost: new URL(clientUrl).hostname,
+                    origin: requestOrigin,
+                    expected: allowedOrigin,
                 });
                 res.status(403).json({
                     isAdmin: false,

@@ -57,7 +57,9 @@ export function AdminLoginModalContent({ onClose }: AdminLoginModalContentProps)
                 setPassword('');
                 onClose?.();
             } else {
-                setError(data.error || 'ログインに失敗しました');
+                // Sanitize error message to prevent XSS
+                const safeError = typeof data.error === 'string' ? data.error.slice(0, 200) : 'ログインに失敗しました';
+                setError(safeError);
             }
         } catch {
             setError('ネットワークエラーが発生しました');
