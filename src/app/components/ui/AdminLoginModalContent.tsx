@@ -57,7 +57,7 @@ export function AdminLoginModalContent({ onClose }: AdminLoginModalContentProps)
                 setPassword('');
                 onClose?.();
             } else {
-                // Sanitize error message to prevent XSS
+                // Limit error message length to prevent UI overflow (React handles XSS protection automatically)
                 const safeError = typeof data.error === 'string' ? data.error.slice(0, 200) : 'ログインに失敗しました';
                 setError(safeError);
             }

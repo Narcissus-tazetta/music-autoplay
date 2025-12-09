@@ -1,3 +1,4 @@
+import { useAdminStore } from '@/shared/stores/adminStore';
 import type { Music } from '@/shared/stores/musicStore';
 import normalizeApiResponse from '@/shared/utils/api';
 import { parseApiErrorForUI } from '@/shared/utils/apiUi';
@@ -18,7 +19,6 @@ const isMusic = (v: unknown): v is Music => {
 export function useAppInitialization(): void {
     useEffect(() => {
         const run = async () => {
-            const { useAdminStore } = await import('@/shared/stores/adminStore');
             try {
                 const res = await fetch('/api/admin/status');
                 if (res.ok) {
