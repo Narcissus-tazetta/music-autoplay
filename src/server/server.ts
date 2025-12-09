@@ -275,7 +275,7 @@ app.post('/api/admin/login', express.json(), (req, res) => {
             const MAX_CREDENTIAL_LENGTH = 256;
             if (username.length > MAX_CREDENTIAL_LENGTH || password.length > MAX_CREDENTIAL_LENGTH) {
                 adminRateLimiter.recordFailure(rateLimitKey);
-                res.status(400).json({ isAdmin: false, error: 'Username or password too long' });
+                res.status(400).json({ isAdmin: false, error: 'ユーザー名またはパスワードが長すぎます' });
                 return;
             }
 
