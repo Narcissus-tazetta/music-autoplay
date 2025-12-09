@@ -306,7 +306,7 @@ app.post('/api/admin/login', express.json(), (req, res) => {
                 });
                 res.status(403).json({
                     isAdmin: false,
-                    error: 'Cross-origin requests not allowed',
+                    error: 'クロスオリジンリクエストは許可されていません',
                 });
                 return;
             }
