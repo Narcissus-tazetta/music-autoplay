@@ -13,8 +13,8 @@ import { getConfig, safeNumber } from './utils/configUtils';
 const app = express();
 const config = getConfig();
 
-const adminUser = config.getString('ADMIN_USER') || SERVER_ENV.ADMIN_USER || 'admin';
-const adminPassword = config.getString('ADMIN_PASSWORD') || SERVER_ENV.ADMIN_PASSWORD || 'password123';
+const adminUser = config.getString('ADMIN_USER') || SERVER_ENV.ADMIN_USER;
+const adminPassword = config.getString('ADMIN_PASSWORD') || SERVER_ENV.ADMIN_PASSWORD;
 const adminAuthenticator = createAdminAuthenticator(adminUser, adminPassword);
 const adminRateLimiter = createAdminRateLimiter(3, 60 * 1000);
 
