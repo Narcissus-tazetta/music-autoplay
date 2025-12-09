@@ -171,7 +171,7 @@ describe('Admin Rate Limiter', () => {
 
             expect(limiter.isLocked('user1')).toBe(true);
 
-            // ロック期間待機
+            // Wait for lock period
             await new Promise(resolve => setTimeout(resolve, 150));
 
             expect(limiter.isLocked('user1')).toBe(false);
