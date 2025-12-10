@@ -337,7 +337,7 @@ function sendProgressNow(video: HTMLVideoElement): void {
         chrome.runtime.sendMessage(payload);
         adDetector.markProgressSent(payload.timestamp);
     } catch (e) {
-        void e;
+        console.error('Error in sendProgressNow:', e);
     }
 }
 const adDetector = new AdDetector();
