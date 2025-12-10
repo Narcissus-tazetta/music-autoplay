@@ -291,7 +291,7 @@ app.post('/api/admin/login', express.json(), (req, res) => {
                 logger.warn('CSRF protection: Missing origin header');
                 res.status(403).json({
                     isAdmin: false,
-                    error: 'Missing origin header',
+                    error: 'オリジンヘッダーが見つかりません',
                 });
                 return;
             }
