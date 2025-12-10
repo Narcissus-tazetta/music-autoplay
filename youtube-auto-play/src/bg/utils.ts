@@ -1,13 +1,5 @@
 import type { TabInfo } from './types';
-
-export function isPlaylistUrl(url: string): boolean {
-    try {
-        return new URL(url).searchParams.has('list');
-    } catch {
-        return false;
-    }
-}
-
+import { isPlaylistUrl } from '../shared/utils';
 export function extractYouTubeId(url: string | { url: string }): string | null {
     try {
         const urlString = typeof url === 'object' && url !== null && 'url' in url ? url.url : String(url);
