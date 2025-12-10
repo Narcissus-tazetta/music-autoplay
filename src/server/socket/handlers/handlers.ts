@@ -7,7 +7,6 @@ import type { YouTubeService } from '../../services/youtubeService';
 import type { EmitOptions } from '../../utils/safeEmit';
 import ServiceResolver from '../../utils/serviceResolver';
 import type { SocketManager } from '../managers/manager';
-import { createAdminAuthHandlers } from './adminHandlers';
 import { registerBatchHandlers } from './eventHandler';
 import { createMusicHandlers } from './musicHandlers';
 import { createGetAllMusicsHandler, createGetRemoteStatusHandler } from './standardHandlers';
@@ -75,28 +74,6 @@ export function registerSocketHandlers(
     ];
 
     registerBatchHandlers(socket, { handlers }, ctx);
-
-    if (deps.adminHash && deps.rateLimiter && deps.rateLimitConfig) {
-        const adminHandlers = createAdminAuthHandlers(
-            deps.adminHash,
-            deps.rateLimiter,
-            deps.rateLimitConfig.maxAttempts,
-            deps.rateLimitConfig.windowMs,
-        );
-        registerBatchHandlers(
-            socket,
-            {
-                handlers: [
-                    { event: 'adminAuth', handler: adminHandlers.adminAuth },
-                    {
-                        event: 'adminAuthByQuery',
-                        handler: adminHandlers.adminAuthByQuery,
-                    },
-                ],
-            },
-            ctx,
-        );
-    }
 
     musicHandlers.register(socket, ctx);
 }

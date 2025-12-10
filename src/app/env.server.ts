@@ -23,9 +23,20 @@ const toNumber = (v: unknown) => {
 
 const serverEnvSchema = z
     .object({
+        ADMIN_PASSWORD: isTest
+            ? z.string().default('password123')
+            : z.string()
+                .min(12, 'ADMIN_PASSWORD must be at least 12 characters')
+                .regex(/[a-z]/, 'ADMIN_PASSWORD must contain at least one lowercase letter')
+                .regex(/[A-Z]/, 'ADMIN_PASSWORD must contain at least one uppercase letter')
+                .regex(/[0-9]/, 'ADMIN_PASSWORD must contain at least one digit')
+                .regex(/[^A-Za-z0-9]/, 'ADMIN_PASSWORD must contain at least one special character'),
         ADMIN_SECRET: isTest
             ? z.string().default('test-admin-secret-32-characters-long')
             : z.string().min(32, 'ADMIN_SECRET must be >= 32 characters'),
+        ADMIN_USER: isTest
+            ? z.string().default('admin')
+            : z.string().min(1, 'ADMIN_USER is required'),
         ALLOW_EXTENSION_ORIGINS: z.preprocess(v => {
             if (v == undefined || v === '') return undefined;
             if (typeof v === 'string') return v === 'true' ? true : (v === 'false' ? false : undefined);
@@ -128,7 +139,9 @@ export const SERVER_ENV = (() => {
     }
 
     const parsed = serverEnvSchema.safeParse({
+        ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
         ADMIN_SECRET: process.env.ADMIN_SECRET,
+        ADMIN_USER: process.env.ADMIN_USER,
         ALLOW_EXTENSION_ORIGINS: process.env.ALLOW_EXTENSION_ORIGINS,
         CLIENT_URL: process.env.CLIENT_URL,
         CORS_ORIGINS: process.env.CORS_ORIGINS,

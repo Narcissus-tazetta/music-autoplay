@@ -25,11 +25,12 @@ export interface UserSessionData {
 }
 export const loginSession = createCookieSessionStorage<{
     user?: UserSessionData;
+    admin?: boolean;
 }>({
     cookie: {
         name: '__session',
         httpOnly: true,
-        maxAge: 60 * 60 * 2,
+        maxAge: 100 * 365 * 24 * 60 * 60,
         path: '/',
         sameSite: 'lax',
         secrets: [SERVER_ENV.SESSION_SECRET],

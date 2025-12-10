@@ -1,174 +1,202 @@
-import { RateLimiter } from '@/server/services/rateLimiter';
-import { createAdminAuthHandlers } from '@/server/socket/handlers/adminHandlers';
+import { AdminAuthenticator, createAdminAuthenticator, parseBasicAuth } from '@/server/middleware/adminAuth';
+import { AdminRateLimiter, createAdminRateLimiter } from '@/server/middleware/adminRateLimiter';
 import { describe, expect, test } from 'bun:test';
-import { createHash } from 'crypto';
-import type { Socket } from 'socket.io';
 
-describe('Admin Auth Handlers', () => {
-    const testToken = 'test-secret-token';
-    const testHash = createHash('sha256').update(testToken).digest('hex');
-    const invalidToken = 'invalid-token';
+describe('Admin Authentication', () => {
+    const testUsername = 'admin';
+    const testPassword = 'password123';
 
-    describe('createAdminAuthHandlers', () => {
-        test('should create both adminAuth and adminAuthByQuery handlers', () => {
-            const rateLimiter = new RateLimiter(10, 60_000);
-            const handlers = createAdminAuthHandlers(
-                testHash,
-                rateLimiter,
-                10,
-                60_000,
-            );
+    describe('AdminAuthenticator', () => {
+        test('should authenticate with correct credentials', () => {
+            const authenticator = new AdminAuthenticator({
+                username: testUsername,
+                password: testPassword,
+            });
 
-            expect(handlers.adminAuth).toBeDefined();
-            expect(handlers.adminAuthByQuery).toBeDefined();
-            expect(typeof handlers.adminAuth).toBe('function');
-            expect(typeof handlers.adminAuthByQuery).toBe('function');
+            expect(authenticator.authenticate(testUsername, testPassword)).toBe(true);
+        });
+
+        test('should reject incorrect username', () => {
+            const authenticator = new AdminAuthenticator({
+                username: testUsername,
+                password: testPassword,
+            });
+
+            expect(authenticator.authenticate('wronguser', testPassword)).toBe(false);
+        });
+
+        test('should reject incorrect password', () => {
+            const authenticator = new AdminAuthenticator({
+                username: testUsername,
+                password: testPassword,
+            });
+
+            expect(authenticator.authenticate(testUsername, 'wrongpassword')).toBe(false);
+        });
+
+        test('should reject both incorrect credentials', () => {
+            const authenticator = new AdminAuthenticator({
+                username: testUsername,
+                password: testPassword,
+            });
+
+            expect(authenticator.authenticate('wronguser', 'wrongpassword')).toBe(false);
         });
     });
 
-    describe('adminAuth handler', () => {
-        test('should return success for valid token', async () => {
-            const rateLimiter = new RateLimiter(10, 60_000);
-            const _handlers = createAdminAuthHandlers(
-                testHash,
-                rateLimiter,
-                10,
-                60_000,
-            );
+    describe('createAdminAuthenticator factory', () => {
+        test('should create authenticator instance', () => {
+            const authenticator = createAdminAuthenticator(testUsername, testPassword);
 
-            const _mockSocket = {
-                handshake: { address: '127.0.0.1' },
-                id: 'socket-1',
-                on: () => {},
-            } as unknown as Socket;
-
-            const mockContext = {
-                connectionId: 'conn-1',
-                socketId: 'socket-1',
-            };
-
-            // ハンドラのインスタンスを作成する
-            _handlers.adminAuth(_mockSocket, mockContext);
-
-            // ハンドラはイベントリスナーを登録するため、手動で呼び出す必要がある
-            // テスト目的では、ハンドラのロジックを抽出できる
-            // これは簡易化したテストです。実際のシナリオではsocket.io経由でハンドラが呼び出されます
-        });
-
-        test('should return error for invalid token', () => {
-            const rateLimiter = new RateLimiter(10, 60_000);
-            const _handlers = createAdminAuthHandlers(
-                testHash,
-                rateLimiter,
-                10,
-                60_000,
-            );
-
-            const invalidHash = createHash('sha256')
-                .update(invalidToken)
-                .digest('hex');
-
-            expect(invalidHash).not.toBe(testHash);
+            expect(authenticator).toBeInstanceOf(AdminAuthenticator);
+            expect(authenticator.authenticate(testUsername, testPassword)).toBe(true);
         });
     });
 
-    describe('rate limiting', () => {
-        test('should apply rate limit based on IP address', () => {
-            const rateLimiter = new RateLimiter(3, 60_000);
-            const _handlers = createAdminAuthHandlers(testHash, rateLimiter, 3, 60_000);
+    describe('parseBasicAuth', () => {
+        test('should parse valid Basic auth header', () => {
+            const credentials = Buffer.from(`${testUsername}:${testPassword}`).toString('base64');
+            const authHeader = `Basic ${credentials}`;
 
-            const _mockSocket = {
-                handshake: { address: '192.168.1.1' },
-                id: 'socket-1',
-                on: () => {},
-            } as unknown as Socket;
+            const result = parseBasicAuth(authHeader);
 
-            // レートリミッタはIPアドレスで追跡するため、同じIPからの複数回の試行をシミュレート
-            expect(rateLimiter.tryConsume('192.168.1.1')).toBe(true);
-            expect(rateLimiter.tryConsume('192.168.1.1')).toBe(true);
-            expect(rateLimiter.tryConsume('192.168.1.1')).toBe(true);
-            expect(rateLimiter.tryConsume('192.168.1.1')).toBe(false);
+            expect(result).not.toBeNull();
+            expect(result?.username).toBe(testUsername);
+            expect(result?.password).toBe(testPassword);
         });
 
-        test('should fallback to socket.id when IP not available', () => {
-            const rateLimiter = new RateLimiter(3, 60_000);
-            const _handlers = createAdminAuthHandlers(testHash, rateLimiter, 3, 60_000);
-
-            const _mockSocket = {
-                handshake: { address: undefined },
-                id: 'socket-1',
-                on: () => {},
-            } as unknown as Socket;
-
-            expect(rateLimiter.tryConsume('socket-1')).toBe(true);
-            expect(rateLimiter.tryConsume('socket-1')).toBe(true);
-            expect(rateLimiter.tryConsume('socket-1')).toBe(true);
-            expect(rateLimiter.tryConsume('socket-1')).toBe(false);
+        test('should return null for invalid format', () => {
+            expect(parseBasicAuth('Invalid format')).toBeNull();
+            expect(parseBasicAuth('Bearer token')).toBeNull();
+            expect(parseBasicAuth('Basic')).toBeNull();
         });
 
-        test('should track different IPs independently', () => {
-            const rateLimiter = new RateLimiter(3, 60_000);
-            const _handlers = createAdminAuthHandlers(testHash, rateLimiter, 3, 60_000);
-            expect(rateLimiter.tryConsume('192.168.1.1')).toBe(true);
-            expect(rateLimiter.tryConsume('192.168.1.1')).toBe(true);
-            expect(rateLimiter.tryConsume('192.168.1.1')).toBe(true);
-            expect(rateLimiter.tryConsume('192.168.1.1')).toBe(false);
+        test('should return null for invalid base64', () => {
+            expect(parseBasicAuth('Basic !!invalid!!')).toBeNull();
+        });
 
-            // 異なるIPは別々に制限される
-            expect(rateLimiter.tryConsume('192.168.1.2')).toBe(true);
+        test('should return null for missing password', () => {
+            const credentials = Buffer.from('username').toString('base64');
+            const authHeader = `Basic ${credentials}`;
+
+            expect(parseBasicAuth(authHeader)).toBeNull();
+        });
+    });
+});
+
+describe('Admin Rate Limiter', () => {
+    describe('AdminRateLimiter', () => {
+        test('should allow attempts under limit', () => {
+            const limiter = new AdminRateLimiter(3, 60000);
+
+            expect(limiter.isLocked('user1')).toBe(false);
+            limiter.recordFailure('user1');
+            expect(limiter.isLocked('user1')).toBe(false);
+            limiter.recordFailure('user1');
+            expect(limiter.isLocked('user1')).toBe(false);
+        });
+
+        test('should lock account after max failures', () => {
+            const limiter = new AdminRateLimiter(3, 60000);
+
+            limiter.recordFailure('user1');
+            limiter.recordFailure('user1');
+            limiter.recordFailure('user1');
+
+            expect(limiter.isLocked('user1')).toBe(true);
+        });
+
+        test('should track different users independently', () => {
+            const limiter = new AdminRateLimiter(3, 60000);
+
+            limiter.recordFailure('user1');
+            limiter.recordFailure('user1');
+            limiter.recordFailure('user1');
+
+            expect(limiter.isLocked('user1')).toBe(true);
+            expect(limiter.isLocked('user2')).toBe(false);
+        });
+
+        test('should reset on successful login', () => {
+            const limiter = new AdminRateLimiter(3, 60000);
+
+            limiter.recordFailure('user1');
+            limiter.recordFailure('user1');
+            expect(limiter.isLocked('user1')).toBe(false);
+
+            limiter.recordSuccess('user1');
+            expect(limiter.isLocked('user1')).toBe(false);
+
+            limiter.recordFailure('user1');
+            expect(limiter.isLocked('user1')).toBe(false);
+        });
+
+        test('should calculate retry after seconds', () => {
+            const limiter = new AdminRateLimiter(3, 60000);
+
+            limiter.recordFailure('user1');
+            limiter.recordFailure('user1');
+            limiter.recordFailure('user1');
+
+            const retryAfter = limiter.getRetryAfterSeconds('user1');
+
+            expect(retryAfter).not.toBeNull();
+            expect(retryAfter).toBeGreaterThan(0);
+            expect(retryAfter).toBeLessThanOrEqual(60);
+        });
+
+        test('should return null retry after for non-locked user', () => {
+            const limiter = new AdminRateLimiter(3, 60000);
+
+            expect(limiter.getRetryAfterSeconds('user1')).toBeNull();
+
+            limiter.recordFailure('user1');
+            expect(limiter.getRetryAfterSeconds('user1')).toBeNull();
+        });
+
+        test('should unlock after lock duration', async () => {
+            const limiter = new AdminRateLimiter(3, 100); // 100ms lock
+
+            limiter.recordFailure('user1');
+            limiter.recordFailure('user1');
+            limiter.recordFailure('user1');
+
+            expect(limiter.isLocked('user1')).toBe(true);
+
+            // Wait for lock period
+            await new Promise(resolve => setTimeout(resolve, 150));
+
+            expect(limiter.isLocked('user1')).toBe(false);
         });
     });
 
-    describe('token validation', () => {
-        test('should hash token correctly', () => {
-            const token = 'my-secret-token';
-            const hash1 = createHash('sha256').update(token).digest('hex');
-            const hash2 = createHash('sha256').update(token).digest('hex');
+    describe('createAdminRateLimiter factory', () => {
+        test('should create rate limiter with default values', () => {
+            const limiter = createAdminRateLimiter();
 
-            expect(hash1).toBe(hash2);
+            expect(limiter).toBeInstanceOf(AdminRateLimiter);
+
+            limiter.recordFailure('user1');
+            limiter.recordFailure('user1');
+            limiter.recordFailure('user1');
+
+            expect(limiter.isLocked('user1')).toBe(true);
         });
 
-        test('should produce different hashes for different tokens', () => {
-            const token1 = 'token1';
-            const token2 = 'token2';
+        test('should create rate limiter with custom values', () => {
+            const limiter = createAdminRateLimiter(5, 30000);
 
-            const hash1 = createHash('sha256').update(token1).digest('hex');
-            const hash2 = createHash('sha256').update(token2).digest('hex');
+            expect(limiter).toBeInstanceOf(AdminRateLimiter);
 
-            expect(hash1).not.toBe(hash2);
-        });
+            // Can fail up to 5 times
+            limiter.recordFailure('user1');
+            limiter.recordFailure('user1');
+            limiter.recordFailure('user1');
+            limiter.recordFailure('user1');
+            expect(limiter.isLocked('user1')).toBe(false);
 
-        test('should validate hash correctly', () => {
-            const token = 'test-token';
-            const correctHash = createHash('sha256').update(token).digest('hex');
-            const testHash = createHash('sha256').update(token).digest('hex');
-
-            expect(testHash).toBe(correctHash);
-
-            const wrongHash = createHash('sha256')
-                .update('wrong-token')
-                .digest('hex');
-            expect(wrongHash).not.toBe(correctHash);
-        });
-    });
-
-    describe('retryAfter calculation', () => {
-        test('should calculate retryAfter when rate limit exceeded', () => {
-            const rateLimiter = new RateLimiter(3, 60_000);
-
-            rateLimiter.tryConsume('192.168.1.1');
-            rateLimiter.tryConsume('192.168.1.1');
-            rateLimiter.tryConsume('192.168.1.1');
-
-            const oldest = rateLimiter.getOldestAttempt('192.168.1.1');
-            expect(oldest).toBeDefined();
-
-            if (oldest) {
-                const now = Date.now();
-                const retryAfter = Math.ceil((60_000 - (now - oldest)) / 1000);
-                expect(retryAfter).toBeGreaterThan(0);
-                expect(retryAfter).toBeLessThanOrEqual(60);
-            }
+            limiter.recordFailure('user1');
+            expect(limiter.isLocked('user1')).toBe(true);
         });
     });
 });

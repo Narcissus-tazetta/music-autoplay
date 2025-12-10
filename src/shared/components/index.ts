@@ -1,6 +1,7 @@
 export * from '../../app/components/ui/shadcn/alert';
 export * from '../../app/components/ui/shadcn/badge';
 export * from '../../app/components/ui/shadcn/button';
+export * from '../../app/components/ui/shadcn/dialog';
 export * from '../../app/components/ui/shadcn/hover-card';
 export * from '../../app/components/ui/shadcn/input';
 export * from '../../app/components/ui/shadcn/separator';

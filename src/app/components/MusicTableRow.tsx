@@ -123,7 +123,7 @@ export default function MusicTableRow({
                         <Table.Cell colSpan={3} className='bg-muted/30 py-3 sm:py-3'>
                             <div className='flex flex-col gap-2 sm:gap-2 text-xs sm:text-sm px-2 sm:px-2'>
                                 <div className='flex items-start sm:items-center gap-2'>
-                                    <div className='w-20 sm:w-24 flex-shrink-0 flex items-center justify-between'>
+                                    <div className='w-20 sm:w-24 shrink-0 flex items-center justify-between'>
                                         <span className='text-muted-foreground font-medium text-left truncate text-xs sm:text-sm'>
                                             チャンネル
                                         </span>
@@ -141,7 +141,7 @@ export default function MusicTableRow({
                                     </a>
                                 </div>
                                 <div className='flex items-center gap-2'>
-                                    <div className='w-20 sm:w-24 flex-shrink-0 flex items-center justify-between'>
+                                    <div className='w-20 sm:w-24 shrink-0 flex items-center justify-between'>
                                         <span className='text-muted-foreground font-medium text-left truncate text-xs sm:text-sm'>
                                             再生時間
                                         </span>
@@ -154,7 +154,7 @@ export default function MusicTableRow({
                                     </span>
                                 </div>
                                 <div className='flex items-center gap-2'>
-                                    <div className='w-20 sm:w-24 flex-shrink-0 flex items-center justify-between'>
+                                    <div className='w-20 sm:w-24 shrink-0 flex items-center justify-between'>
                                         <span className='text-muted-foreground font-medium text-left truncate text-xs sm:text-sm'>
                                             リクエスト
                                         </span>
@@ -167,7 +167,7 @@ export default function MusicTableRow({
                                     </span>
                                 </div>
                                 <div className='flex items-center gap-2'>
-                                    <div className='w-20 sm:w-24 flex-shrink-0 flex items-center justify-between'>
+                                    <div className='w-20 sm:w-24 shrink-0 flex items-center justify-between'>
                                         <span className='text-muted-foreground font-medium text-left truncate text-xs sm:text-sm'>
                                             リクエスター
                                         </span>

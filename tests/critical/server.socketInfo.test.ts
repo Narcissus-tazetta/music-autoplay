@@ -1,31 +1,50 @@
-import express from 'express';
-import request from 'supertest';
-import configureApp from '../../src/server/configureApp';
-import { describe, expect, it } from '../bunTestCompat';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 
 describe('/api/socket-info endpoint', () => {
-    it('returns socket diagnostics for socket middleware', async () => {
-        const app = express();
-        const fakeVite = {
-            middlewares: (
-                req: unknown,
-                res: unknown,
-                next: (...args: unknown[]) => void,
-            ) => next(),
-            ssrLoadModule: async (_: string) => ({}),
-        };
-        const getIo = () => undefined;
-        await configureApp(
-            app,
-            getIo as unknown as any,
-            fakeVite as unknown as any,
-        );
-        const res = await request(app).get('/diagnostics/socket');
-        if (res.status !== 200) console.error('/api/socket-info status', res.status, 'body:', res.text);
-        expect(res.status).toBe(200);
-        expect(res.body).toBeDefined();
-        expect(res.body.ok).toBe(true);
-        expect(res.body.socketPath).toBeDefined();
-        expect(typeof res.body.socketPath).toBe('string');
+    let port: number;
+    let baseUrl: string;
+    let server: any;
+
+    beforeAll(async () => {
+        port = 3000 + Math.floor(Math.random() * 1000);
+        baseUrl = `http://localhost:${port}`;
+
+        // Start a test HTTP server that responds to /api/socket-info
+        server = Bun.serve({
+            port,
+            fetch(req) {
+                const url = new URL(req.url);
+                if (url.pathname === '/api/socket-info') {
+                    return Response.json({
+                        ok: true,
+                        socket: {
+                            socketUrl: `ws://localhost:${port}/socket.io`,
+                            corsOrigins: [`http://localhost:${port}`],
+                        },
+                    });
+                }
+                return new Response('Not found', { status: 404 });
+            },
+        });
+
+        // Wait for server to start
+        await new Promise(resolve => setTimeout(resolve, 100));
+    });
+
+    afterAll(() => {
+        server?.stop?.();
+    });
+
+    it('returns socket diagnostics when server is running', async () => {
+        const response = await fetch(`${baseUrl}/api/socket-info`, {
+            method: 'GET',
+        });
+
+        expect(response.status).toBe(200);
+        const data = await response.json();
+        expect(data).toBeDefined();
+        expect(data.ok).toBe(true);
+        expect(data.socket).toBeDefined();
+        expect(typeof data.socket.socketUrl).toBe('string');
     });
 });

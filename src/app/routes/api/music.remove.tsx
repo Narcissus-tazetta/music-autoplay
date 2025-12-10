@@ -25,26 +25,12 @@ export const action = async ({
 
     const session = await loginSession.getSession(request.headers.get('Cookie'));
     const user = session.get('user') as { id?: string } | undefined;
-    const isAdminRequest = formData.get('isAdmin') === 'true';
+    const isAdminSession = session.get('admin') === true;
 
-    let isVerifiedAdmin = false;
-    if (isAdminRequest) {
-        const cfg = container.getOptional('configService') as
-            | { getString?(key: string): string }
-            | undefined;
-        let adminSecret: string | undefined;
-        try {
-            adminSecret = cfg?.getString?.('ADMIN_SECRET') ?? SERVER_ENV.ADMIN_SECRET;
-        } catch {
-            adminSecret = SERVER_ENV.ADMIN_SECRET;
-        }
-        if (adminSecret) isVerifiedAdmin = true;
-    }
+    const clientIP = getClientIP(request);
+    const rateLimiter = context.httpRateLimiter;
 
-    if (!isVerifiedAdmin) {
-        const clientIP = getClientIP(request);
-        const rateLimiter = context.httpRateLimiter;
-
+    if (!isAdminSession && !user?.id) {
         if (!rateLimiter.tryConsume(clientIP)) {
             const oldestAttempt = rateLimiter.getOldestAttempt(clientIP);
             const retryAfter = typeof oldestAttempt === 'number'
@@ -63,12 +49,7 @@ export const action = async ({
         }
     }
 
-    logger.info('Debug remove request', {
-        hasUser: !!user?.id,
-        isAdminRequest,
-        userId: user?.id,
-    });
-    if (!isAdminRequest && !user?.id) {
+    if (!isAdminSession && !user?.id) {
         return respondWithResult(
             makeErr({
                 code: 'unauthorized',
@@ -80,7 +61,7 @@ export const action = async ({
     try {
         let requesterHash: string;
 
-        if (isAdminRequest) {
+        if (isAdminSession) {
             const cfg = container.getOptional('configService') as
                 | { getString?(key: string): string }
                 | undefined;

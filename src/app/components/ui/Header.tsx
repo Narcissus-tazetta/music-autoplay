@@ -1,9 +1,12 @@
 import { useAuth } from '@/app/hooks/useAuth';
+import { useAdminStore } from '@/shared/stores/adminStore';
 import { Button } from '@shadcn/ui/button';
+import { Dialog } from '@shadcn/ui/dialog';
 import { Sheet } from '@shadcn/ui/sheet';
-import { SlidersHorizontalIcon } from 'lucide-react';
-import { memo } from 'react';
+import { Crown, KeyRoundIcon, SlidersHorizontalIcon } from 'lucide-react';
+import { memo, useState } from 'react';
 import { Form, Link } from 'react-router';
+import { AdminLoginModalContent } from '~/components/ui/AdminLoginModalContent';
 import { Settings } from '~/components/ui/Settings';
 import { DropdownMenu } from '~/components/ui/shadcn/dropdown-menu';
 import AdminStatus from './AdminStatus';
@@ -27,6 +30,8 @@ export interface HeaderProps {
 
 const HeaderInner = ({ userName }: HeaderProps) => {
     const { showLogout, handleLogout } = useAuth(userName);
+    const { isAdmin } = useAdminStore();
+    const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false);
     const LAST_INDEX_OFFSET = 1;
 
     return (
@@ -38,8 +43,28 @@ const HeaderInner = ({ userName }: HeaderProps) => {
                 Music Autoplay
             </Link>
             <div className='flex items-center gap-1 sm:gap-2'>
+                {!isAdmin && (
+                    <div className='hidden sm:block'>
+                        <AdminStatus />
+                    </div>
+                )}
                 <div className='hidden sm:block'>
-                    <AdminStatus />
+                    <Dialog open={isAdminDialogOpen} onOpenChange={setIsAdminDialogOpen}>
+                        <Dialog.Trigger asChild>
+                            <Button
+                                variant='ghost'
+                                size='icon'
+                                className='h-9 w-9 sm:h-10 sm:w-10'
+                            >
+                                {isAdmin
+                                    ? <Crown className='h-4 w-4 sm:h-5 sm:w-5 text-blue-500 dark:text-blue-400' />
+                                    : <KeyRoundIcon className='h-4 w-4 sm:h-5 sm:w-5' />}
+                            </Button>
+                        </Dialog.Trigger>
+                        <Dialog.Content>
+                            <AdminLoginModalContent onClose={() => setIsAdminDialogOpen(false)} />
+                        </Dialog.Content>
+                    </Dialog>
                 </div>
                 {(() => {
                     if (showLogout) {
@@ -55,7 +80,7 @@ const HeaderInner = ({ userName }: HeaderProps) => {
                                         type='submit'
                                         variant='outline'
                                         size='sm'
-                                        className='text-xs sm:text-sm'
+                                        className='text-xs sm:text-sm transition-opacity hover:opacity-80'
                                         onClick={handleLogout}
                                     >
                                         <span className='hidden sm:inline'>ログアウト</span>
@@ -96,8 +121,23 @@ const HeaderInner = ({ userName }: HeaderProps) => {
                                 ここでは、アプリケーションの動作や外観をカスタマイズできます。
                             </Sheet.Description>
                         </Sheet.Header>
-                        <div className='block sm:hidden mt-4'>
-                            <AdminStatus />
+                        {!isAdmin && (
+                            <div className='block sm:hidden mt-4'>
+                                <AdminStatus />
+                            </div>
+                        )}
+                        <div className='mt-4'>
+                            <Dialog open={isAdminDialogOpen} onOpenChange={setIsAdminDialogOpen}>
+                                <Dialog.Trigger asChild>
+                                    <Button variant='outline' className='w-full'>
+                                        <KeyRoundIcon className='mr-2 h-4 w-4' />
+                                        {isAdmin ? '管理者ログアウト' : '管理者ログイン'}
+                                    </Button>
+                                </Dialog.Trigger>
+                                <Dialog.Content>
+                                    <AdminLoginModalContent onClose={() => setIsAdminDialogOpen(false)} />
+                                </Dialog.Content>
+                            </Dialog>
                         </div>
                         <Settings />
                         <Sheet.Footer className='flex-col gap-2'>
