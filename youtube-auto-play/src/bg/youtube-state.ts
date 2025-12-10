@@ -1,7 +1,7 @@
 import { EXTENSION_NAMESPACE } from '../constants';
 import { addExtensionTab, isExtensionOpenedTab } from './tab-manager';
 import type { ExtensionGlobal, MessageSender, SocketInstance } from './types';
-import { sendTabMessage } from './utils';
+import { isPlaylistUrl, sendTabMessage } from './utils';
 
 interface YouTubeVideoStateMessage {
     type: 'youtube_video_state';
@@ -36,14 +36,6 @@ export function handleYouTubeVideoState(
     if (socket.connected) socket.emit('youtube_video_state', { state: message.state, url: message.url });
 
     if (message.state === 'ended') handleVideoEnded(message.url, sender.tab.id, socket);
-}
-
-function isPlaylistUrl(url: string): boolean {
-    try {
-        return new URL(url).searchParams.has('list');
-    } catch {
-        return false;
-    }
 }
 
 function hasChromeError(): boolean {

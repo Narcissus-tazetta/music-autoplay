@@ -827,6 +827,9 @@ export function setupExtensionEventHandlers(
         const isAdvertisementFromExtension = typeof payload['isAdvertisement'] === 'boolean'
             ? payload['isAdvertisement']
             : undefined;
+        const incomingMusicTitle = typeof payload['musicTitle'] === 'string'
+            ? payload['musicTitle']
+            : undefined;
 
         if (
             !url
@@ -928,11 +931,13 @@ export function setupExtensionEventHandlers(
                 currentTime,
                 duration,
                 isAdvertisement,
+                isExternalVideo: !music,
                 lastProgressUpdate: timestamp,
                 musicId: videoId,
-                musicTitle: music?.title || '',
+                musicTitle: incomingMusicTitle || music?.title || '',
                 progressPercent,
                 type: 'playing',
+                videoId: videoId,
             };
 
             manager.update(statusUpdate, eventName);

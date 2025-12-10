@@ -1,7 +1,7 @@
 import { EXTENSION_NAMESPACE, TIMING, YOUTUBE_WATCH_URL_PATTERN } from '../constants';
 import { addExtensionTab } from './tab-manager';
 import type { ExtensionGlobal, SocketInstance, TabInfo, VideoData } from './types';
-import { findPlayingTab, sendTabMessage } from './utils';
+import { findPlayingTab, isPlaylistUrl, sendTabMessage } from './utils';
 import { handleNoNextVideo, navigateToNextVideo } from './youtube-state';
 
 const YOUTUBE_BASE_URL_PATTERN = '*://www.youtube.com/*';
@@ -64,9 +64,9 @@ function isValidVideoData(data: unknown): data is VideoData {
     );
 }
 
-function notifyPopup(message: { type: string; [key: string]: unknown }): void {
+function notifyPopup(message: Record<string, unknown> & { type: string }): void {
     try {
-        chrome.runtime.sendMessage(message, () => {
+        chrome.runtime.sendMessage(message as never, () => {
             if (chrome.runtime.lastError) return;
         });
     } catch {
@@ -186,6 +186,7 @@ function openNewTab(url: string): void {
 
 function waitForVideoEnd(playingTab: TabInfo, nextUrl: string): void {
     if (!playingTab.id) return;
+    if (playingTab.url && isPlaylistUrl(playingTab.url)) return;
 
     let handled = false;
     const playingTabId = playingTab.id;
@@ -212,8 +213,10 @@ function waitForVideoEnd(playingTab: TabInfo, nextUrl: string): void {
         if (closedTabId === playingTabId && !handled) {
             handled = true;
             cleanup();
-            pauseOtherTabs(playingTabId);
-            openNewTab(nextUrl);
+            if (!(playingTab.url && isPlaylistUrl(playingTab.url))) {
+                pauseOtherTabs(playingTabId);
+                openNewTab(nextUrl);
+            }
         }
     };
 
@@ -221,8 +224,10 @@ function waitForVideoEnd(playingTab: TabInfo, nextUrl: string): void {
         if (msg.type === 'video_ended' && sender.tab?.id === playingTabId && !handled) {
             handled = true;
             cleanup();
-            pauseOtherTabs(playingTabId);
-            openNewTab(nextUrl);
+            if (!(sender.tab?.url && isPlaylistUrl(sender.tab.url))) {
+                pauseOtherTabs(playingTabId);
+                openNewTab(nextUrl);
+            }
         }
     };
 

@@ -42,7 +42,7 @@ export async function sendTabMessage<T = unknown>(
 
     return new Promise<T | null>(resolve => {
         try {
-            chrome.tabs.sendMessage(tabId, message, (response: unknown) => {
+            chrome.tabs.sendMessage(tabId, message as never, (response: unknown) => {
                 if (chrome.runtime.lastError) {
                     resolve(null);
                     return;

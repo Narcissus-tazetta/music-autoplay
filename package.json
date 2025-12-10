@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "react-router build",
+    "build:extension": "vite build --config youtube-auto-play/vite.config.ts && node youtube-auto-play/scripts/copy-manifest.js",
     "dev": "bun run --watch src/server/server.ts",
     "lint": "oxlint --fix && dprint fmt",
     "prepare": "husky",

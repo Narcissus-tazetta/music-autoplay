@@ -174,12 +174,14 @@ export function AdminLoginModalContent({ onClose }: AdminLoginModalContentProps)
                     size='lg'
                     className='h-12 text-base'
                 >
-                    {isLoading ? (
-                        <>
-                            <Loader className='animate-spin h-4 w-4' />
-                            <span className='sr-only'>ログイン処理中...</span>
-                        </>
-                    ) : 'ログイン'}
+                    {isLoading
+                        ? (
+                            <>
+                                <Loader className='animate-spin h-4 w-4' />
+                                <span className='sr-only'>ログイン処理中...</span>
+                            </>
+                        )
+                        : 'ログイン'}
                 </Button>
             </form>
         </div>
