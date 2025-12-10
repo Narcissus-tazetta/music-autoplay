@@ -634,15 +634,21 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
     if (type === 'get_video_info') {
         const info = getYouTubeVideoInfo();
-        if (info) sendResponse({ status: 'ok', url: info.url, title: info.title } as never);
-        else sendResponse({ status: 'error', error: 'Could not get video info' } as never);
+        if (info) {
+            const response: { status: 'ok'; url: string; title: string } = { status: 'ok', url: info.url, title: info.title };
+            sendResponse(response);
+        } else {
+            const response: { status: 'error'; error: string } = { status: 'error', error: 'Could not get video info' };
+            sendResponse(response);
+        }
         return false;
     }
     if (type === 'get_ad_state') {
-        sendResponse({
+        const response: { status: 'ok'; isAd: boolean } = {
             status: 'ok',
             isAd: adDetector.getCurrentAdState(),
-        } as never);
+        };
+        sendResponse(response);
         return false;
     }
 
