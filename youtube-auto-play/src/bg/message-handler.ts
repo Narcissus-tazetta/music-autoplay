@@ -42,32 +42,36 @@ function getChromeErrorMessage(): string {
 
 /* eslint-disable no-console */
 export function setupMessageHandler(socket: SocketInstance): void {
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-        const msg = message as ChromeMessage & Record<string, unknown>;
+    chrome.runtime.onMessage.addListener(
+        (
+            message: ChromeMessage,
+            sender: MessageSender,
+            sendResponse: (response: MessageResponse) => void
+        ) => {
+            const msg = message;
 
-        if (msg.type === 'move_prev_video' || msg.type === 'move_next_video') {
-            if (msg.url && typeof msg.url === 'string') {
-                handleMoveVideo({ type: msg.type, url: msg.url }, socket, sendResponse);
-                return true;
+            if (msg.type === 'move_prev_video' || msg.type === 'move_next_video') {
+                if (msg.url && typeof msg.url === 'string') {
+                    handleMoveVideo({ type: msg.type, url: msg.url }, socket, sendResponse);
+                    return true;
+                }
             }
-        }
 
-        if (msg.type === 'youtube_video_state') {
-            if (msg.state && msg.url && typeof msg.state === 'string' && typeof msg.url === 'string') {
-                handleYouTubeVideoState(
-                    { type: msg.type, state: msg.state, url: msg.url },
-                    sender as MessageSender,
-                    socket,
-                );
+            if (msg.type === 'youtube_video_state') {
+                if (msg.state && msg.url && typeof msg.state === 'string' && typeof msg.url === 'string') {
+                    handleYouTubeVideoState(
+                        { type: msg.type, state: msg.state, url: msg.url },
+                        sender,
+                        socket,
+                    );
+                }
+                return false;
             }
-            return false;
-        }
 
-        if (msg.type === 'reconnect_socket') {
-            if (!socket.connected) socket.connect();
-            return false;
-        }
-
+            if (msg.type === 'reconnect_socket') {
+                if (!socket.connected) socket.connect();
+                return false;
+            }
         if (msg.type === 'show_video_end_alert') {
             handleVideoEndAlert();
             return false;
