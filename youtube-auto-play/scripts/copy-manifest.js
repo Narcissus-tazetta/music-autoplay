@@ -60,5 +60,5 @@ try {
 
     fs.writeFileSync(path.join(dist, 'manifest.json'), JSON.stringify(manifest, null, 2));
 } catch (e) {
-    console.error('failed to copy/adjust manifest', e);
+    console.error(`Failed to copy/adjust manifest at ${path.join(root, 'manifest.json')}:`, e);
 }
