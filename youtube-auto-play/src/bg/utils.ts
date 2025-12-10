@@ -1,5 +1,13 @@
 import type { TabInfo } from './types';
-import { isPlaylistUrl } from '../shared/utils';
+
+export function isPlaylistUrl(url: string): boolean {
+    try {
+        return new URL(url).searchParams.has('list');
+    } catch {
+        return false;
+    }
+}
+
 export function extractYouTubeId(url: string | { url: string }): string | null {
     try {
         const urlString = typeof url === 'object' && url !== null && 'url' in url ? url.url : String(url);
@@ -34,7 +42,7 @@ export async function sendTabMessage<T = unknown>(
 
     return new Promise<T | null>(resolve => {
         try {
-            chrome.tabs.sendMessage(tabId, message as never, (response: unknown) => {
+            chrome.tabs.sendMessage(tabId, message, (response: unknown) => {
                 if (chrome.runtime.lastError) {
                     resolve(null);
                     return;

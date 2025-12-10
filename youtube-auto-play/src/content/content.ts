@@ -27,7 +27,6 @@ enum VideoState {
     WAITING_FOR_NEXT = 'waiting_for_next',
 }
 
-/* eslint-disable no-console */
 class AdDetector {
     private observer: MutationObserver | null = null;
     private isAdCurrently: boolean = false;
@@ -244,8 +243,7 @@ class AdDetector {
         return this.isAdCurrently;
     }
 }
-/* eslint-enable no-console */
-/* eslint-disable no-console */
+
 class VideoTransitionTracker {
     private isTransitioning: boolean = false;
     private transitionTimer: number | null = null;
@@ -276,7 +274,7 @@ class VideoTransitionTracker {
         return this.isTransitioning;
     }
 }
-/* eslint-enable no-console */
+
 function getYouTubeVideoInfo(): { url: string; title: string } | null {
     try {
         const url = location.href;
@@ -337,7 +335,7 @@ function sendProgressNow(video: HTMLVideoElement): void {
         chrome.runtime.sendMessage(payload);
         adDetector.markProgressSent(payload.timestamp);
     } catch (e) {
-        console.error('Error in sendProgressNow:', e);
+        void e;
     }
 }
 const adDetector = new AdDetector();
@@ -413,7 +411,6 @@ function attachVideoListeners(): void {
         videoEl.dataset.hasStateListener = 'true';
         adDetector.setVideoElement(video);
 
-        /* eslint-disable no-console */
         const notifyState = (state: string) => {
             try {
                 const currentTime = video.currentTime ?? null;
@@ -433,21 +430,18 @@ function attachVideoListeners(): void {
                 return;
             }
         };
-        /* eslint-enable no-console */
 
         video.addEventListener('ended', () => {
             const isAdPlaying = adDetector.getCurrentAdState();
 
             adDetector.markMainVideoEnded();
 
-            /* eslint-disable no-console */
             console.debug('[Content] video ended event', {
                 isAdPlaying,
                 videoState: adDetector.getCurrentAdState(),
                 currentTime: video.currentTime,
                 duration: video.duration,
             });
-            /* eslint-enable no-console */
 
             if (isAdPlaying) return;
 
@@ -459,21 +453,17 @@ function attachVideoListeners(): void {
         video.addEventListener('play', () => {
             adDetector.resetToPlaying();
             transitionTracker.onVideoPlaying();
-            /* eslint-disable no-console */
             console.debug('[Content] video play event', {
                 currentTime: video.currentTime,
                 duration: video.duration,
             });
-            /* eslint-enable no-console */
             notifyState('playing');
             sendProgressNow(video);
         });
 
         video.addEventListener('pause', () => {
             const isAdPlaying = adDetector.getCurrentAdState();
-            /* eslint-disable no-console */
             console.debug('[Content] video pause event', { isAdPlaying, currentTime: video.currentTime });
-            /* eslint-enable no-console */
             if (transitionTracker.shouldIgnorePause(isAdPlaying)) return;
             notifyState('paused');
             sendProgressNow(video);
@@ -554,7 +544,7 @@ async function handleGetVideoState(
     sendResponse: (response: ChromeMessageResponse) => void,
 ): Promise<void> {
     if (!isExtensionOpenedTab()) {
-        sendResponse({ status: 'not_extension_tab' });
+        sendResponse({ status: 'not_extension_tab' } as never);
         return;
     }
 
@@ -634,21 +624,15 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
     if (type === 'get_video_info') {
         const info = getYouTubeVideoInfo();
-        if (info) {
-            const response: { status: 'ok'; url: string; title: string } = { status: 'ok', url: info.url, title: info.title };
-            sendResponse(response);
-        } else {
-            const response: { status: 'error'; error: string } = { status: 'error', error: 'Could not get video info' };
-            sendResponse(response);
-        }
+        if (info) sendResponse({ status: 'ok', url: info.url, title: info.title } as never);
+        else sendResponse({ status: 'error', error: 'Could not get video info' } as never);
         return false;
     }
     if (type === 'get_ad_state') {
-        const response: { status: 'ok'; isAd: boolean } = {
+        sendResponse({
             status: 'ok',
             isAd: adDetector.getCurrentAdState(),
-        };
-        sendResponse(response);
+        } as never);
         return false;
     }
 

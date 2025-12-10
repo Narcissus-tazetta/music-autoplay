@@ -1,8 +1,7 @@
+import { EXTENSION_NAMESPACE } from '../constants';
 import { addExtensionTab, isExtensionOpenedTab } from './tab-manager';
 import type { ExtensionGlobal, MessageSender, SocketInstance } from './types';
-/* eslint-disable no-console */
-import { EXTENSION_NAMESPACE } from '../constants';
-import { isPlaylistUrl, sendTabMessage } from './utils';
+import { sendTabMessage } from './utils';
 
 interface YouTubeVideoStateMessage {
     type: 'youtube_video_state';
@@ -39,6 +38,14 @@ export function handleYouTubeVideoState(
     if (message.state === 'ended') handleVideoEnded(message.url, sender.tab.id, socket);
 }
 
+function isPlaylistUrl(url: string): boolean {
+    try {
+        return new URL(url).searchParams.has('list');
+    } catch {
+        return false;
+    }
+}
+
 function hasChromeError(): boolean {
     return !!chrome.runtime.lastError;
 }
@@ -73,5 +80,3 @@ export function handleNoNextVideo(tabId: number): void {
         if (hasChromeError()) console.error('[Background] Failed to save latestUrl as ended', chrome.runtime.lastError);
     });
 }
-
-/* eslint-enable no-console */

@@ -72,6 +72,10 @@ export async function findYouTubeTabs(): Promise<number[]> {
 export function queryYouTubeTabs(urlPattern: string): Promise<ChromeTabResult[]> {
     return new Promise(resolve => {
         chrome.tabs.query({ url: urlPattern }, tabs => {
+            if (chrome.runtime.lastError) {
+                resolve([]);
+                return;
+            }
             resolve(tabs);
         });
     });

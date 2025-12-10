@@ -108,7 +108,7 @@ setInterval(() => {
 extendedChrome?.alarms?.create?.('keepAlive', { periodInMinutes: KEEP_ALIVE_ALARM_INTERVAL });
 extendedChrome?.alarms?.onAlarm?.addListener(alarm => {
     if (alarm.name === 'keepAlive') {
-        chrome.storage.local.get([] as never, () => {});
+        chrome.storage.local.get([], () => {});
         reconnectSocketIfNeeded();
     }
 });

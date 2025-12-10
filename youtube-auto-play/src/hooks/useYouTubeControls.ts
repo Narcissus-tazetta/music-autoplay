@@ -37,13 +37,12 @@ export function useYouTubeControls(urls: UrlItem[]): UseYouTubeControlsReturn {
                     case 'prev':
                     case 'next': {
                         const targetIdx = name === 'prev' ? currentIdx - 1 : currentIdx + 1;
-                        if (targetIdx >= 0 && targetIdx < urls.length)
+                        if (targetIdx >= 0 && targetIdx < urls.length) {
                             chrome.tabs.update(tabId, { url: urls[targetIdx].url }, () => {
-                                if (chrome.runtime.lastError) {
-                                    // Optionally log or handle the error
-                                    // console.error('Failed to update tab:', chrome.runtime.lastError);
-                                }
+                                if (chrome.runtime.lastError)
+                                    console.error('Failed to update tab:', chrome.runtime.lastError);
                             });
+                        }
                         break;
                     }
                     case 'play':

@@ -46,7 +46,7 @@ export function setupMessageHandler(socket: SocketInstance): void {
         (
             message: ChromeMessage,
             sender: MessageSender,
-            sendResponse: (response: MessageResponse) => void
+            sendResponse: (response: MessageResponse) => void,
         ) => {
             const msg = message;
 
@@ -72,68 +72,69 @@ export function setupMessageHandler(socket: SocketInstance): void {
                 if (!socket.connected) socket.connect();
                 return false;
             }
-        if (msg.type === 'show_video_end_alert') {
-            handleVideoEndAlert();
-            return false;
-        }
+            if (msg.type === 'show_video_end_alert') {
+                handleVideoEndAlert();
+                return false;
+            }
 
-        if (msg.type === 'delete_url') {
-            if (msg.url && typeof msg.url === 'string') {
-                handleDeleteUrl({ type: msg.type, url: msg.url }, socket, sendResponse);
+            if (msg.type === 'delete_url') {
+                if (msg.url && typeof msg.url === 'string') {
+                    handleDeleteUrl({ type: msg.type, url: msg.url }, socket, sendResponse);
+                    return true;
+                }
+            }
+
+            if (msg.type === 'set_manual_autoplay') {
+                if (msg.enabled !== undefined && typeof msg.enabled === 'boolean') {
+                    handleManualAutoPlay({ type: msg.type, enabled: msg.enabled }, sendResponse);
+                    return true;
+                }
+            }
+
+            if (msg.type === 'deadline_activated') {
+                handleDeadlineActivated(sendResponse);
                 return true;
             }
-        }
 
-        if (msg.type === 'set_manual_autoplay') {
-            if (msg.enabled !== undefined && typeof msg.enabled === 'boolean') {
-                handleManualAutoPlay({ type: msg.type, enabled: msg.enabled }, sendResponse);
+            if (msg.type === 'add_external_music') {
+                handleAddExternalMusic(socket, sendResponse);
                 return true;
             }
-        }
-
-        if (msg.type === 'deadline_activated') {
-            handleDeadlineActivated(sendResponse);
-            return true;
-        }
-
-        if (msg.type === 'add_external_music') {
-            handleAddExternalMusic(socket, sendResponse);
-            return true;
-        }
-        if (msg.type === 'ad_state_changed') {
-            if (msg.isAd !== undefined && msg.url && typeof msg.url === 'string') {
-                handleAdStateChanged({ type: msg.type, isAd: msg.isAd, url: msg.url }, socket);
-                console.info('[Background] ad_state_changed received', { url: msg.url, isAd: msg.isAd });
+            if (msg.type === 'ad_state_changed') {
+                if (msg.isAd !== undefined && msg.url && typeof msg.url === 'string') {
+                    handleAdStateChanged({ type: msg.type, isAd: msg.isAd, url: msg.url }, socket);
+                    console.info('[Background] ad_state_changed received', { url: msg.url, isAd: msg.isAd });
+                }
+                sendResponse({ status: 'ok' });
+                return false;
             }
-            sendResponse({ status: 'ok' });
-            return false;
-        }
 
-        if (msg.type === 'ad_skip_to_next') {
-            console.info('[Background] ad_skip_to_next received', {
-                url: msg.url,
-                tabId: sender?.tab?.id,
-            });
-            if (msg.url && typeof msg.url === 'string')
-                handleAdSkipToNext({ type: msg.type, url: msg.url }, sender as MessageSender, socket);
-            return false;
-        }
-
-        if (msg.type === 'progress_update') {
-            if (
-                msg.url
-                && typeof msg.url === 'string'
-                && typeof msg.currentTime === 'number'
-                && typeof msg.duration === 'number'
-                && typeof msg.timestamp === 'number'
-            ) {
-                handleProgressUpdate(msg as ProgressUpdatePayload, socket);
+            if (msg.type === 'ad_skip_to_next') {
+                console.info('[Background] ad_skip_to_next received', {
+                    url: msg.url,
+                    tabId: sender?.tab?.id,
+                });
+                if (msg.url && typeof msg.url === 'string')
+                    handleAdSkipToNext({ type: msg.type, url: msg.url }, sender as MessageSender, socket);
+                return false;
             }
-            return false;
-        }
 
-        return false;
-    });
+            if (msg.type === 'progress_update') {
+                if (
+                    msg.url
+                    && typeof msg.url === 'string'
+                    && typeof msg.currentTime === 'number'
+                    && typeof msg.duration === 'number'
+                    && typeof msg.timestamp === 'number'
+                ) {
+                    handleProgressUpdate(msg as ProgressUpdatePayload, socket);
+                }
+                return false;
+            }
+
+            return false;
+        },
+    );
 }
 
 function handleAdStateChanged(
