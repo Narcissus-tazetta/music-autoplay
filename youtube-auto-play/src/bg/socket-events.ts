@@ -66,7 +66,7 @@ function isValidVideoData(data: unknown): data is VideoData {
 
 function notifyPopup(message: { type: string; [key: string]: unknown }): void {
     try {
-        chrome.runtime.sendMessage(message as never, () => {
+        chrome.runtime.sendMessage(message, () => {
             if (chrome.runtime.lastError) return;
         });
     } catch {
