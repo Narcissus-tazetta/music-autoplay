@@ -554,7 +554,7 @@ async function handleGetVideoState(
     sendResponse: (response: ChromeMessageResponse) => void,
 ): Promise<void> {
     if (!isExtensionOpenedTab()) {
-        sendResponse({ status: 'not_extension_tab' } as never);
+        sendResponse({ status: 'not_extension_tab' });
         return;
     }
 
