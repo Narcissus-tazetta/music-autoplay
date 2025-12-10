@@ -32,11 +32,17 @@ function createSocketWithFallback(): { socket: Socket; url: string } {
 
 const { socket } = createSocketWithFallback();
 
+interface FindYoutubeTabsResponse {
+    status: 'ok';
+    tabIds: number[];
+}
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.type === 'find_youtube_tabs') {
         chrome.tabs.query({ url: '*://www.youtube.com/watch*' }, tabs => {
             const tabIds = tabs.map(tab => tab.id).filter((id): id is number => id !== undefined);
-            sendResponse({ status: 'ok', tabIds } as never);
+            const response: FindYoutubeTabsResponse = { status: 'ok', tabIds };
+            sendResponse(response);
         });
         return true;
     }
