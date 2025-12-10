@@ -67,7 +67,7 @@ export const UrlListSection: FC<Props> = memo(
                                 <button
                                     aria-label={`delete-${i}`}
                                     onClick={e => handleDelete(e, i)}
-                                    className='ml-3 w-8 h-8 rounded-lg bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-sm transition-colors flex-shrink-0'
+                                    className='ml-3 w-8 h-8 rounded-lg bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-sm transition-colors shrink-0'
                                 >
                                     <Trash2 size={16} />
                                 </button>
