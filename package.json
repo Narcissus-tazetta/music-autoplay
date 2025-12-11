@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "react-router build && bun run scripts/fix-react-dom-server.ts",
+    "build": "react-router build && if [ \"$NODE_ENV\" = \"production\" ]; then bun run scripts/fix-react-dom-server.ts; fi",
     "build:extension": "vite build --config youtube-auto-play/vite.config.ts && node youtube-auto-play/scripts/copy-manifest.js",
     "dev": "bun run --watch src/server/server.ts",
     "lint": "oxlint --fix && dprint fmt",
