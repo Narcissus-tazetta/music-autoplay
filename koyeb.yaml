@@ -21,6 +21,14 @@ services:
       # Logging
       LOG_LEVEL: info
       MORGAN_FORMAT: tiny
+      # Required secrets for application
+      YOUTUBE_API_KEY: ${secrets.YOUTUBE_API_KEY}
+      ADMIN_SECRET: ${secrets.ADMIN_SECRET}
+      ADMIN_PASSWORD: ${secrets.ADMIN_PASSWORD}
+      ADMIN_USER: ${secrets.ADMIN_USER}
+      SESSION_SECRET: ${secrets.SESSION_SECRET}
+      GOOGLE_CLIENT_ID: ${secrets.GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${secrets.GOOGLE_CLIENT_SECRET}
     routes:
       - path: /
         port: 3000
