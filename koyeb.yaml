@@ -1,0 +1,44 @@
+# Koyeb deployment configuration
+# Deploy using: koyeb service create --git https://github.com/Narcissus-tazetta/music-autoplay --git-branch main --koyeb-file koyeb.yaml
+
+services:
+  - name: music-autoplay
+    docker:
+      image: music-autoplay
+    ports:
+      - port: 3000
+        protocol: http
+    env:
+      # Core runtime configuration
+      NODE_ENV: production
+      PORT: "3000"
+      # URLs and security
+      CLIENT_URL: https://music-autoplay.koyeb.app
+      CORS_ORIGINS: https://music-autoplay.koyeb.app
+      ALLOW_EXTENSION_ORIGINS: "false"
+      # Socket.io configuration
+      SOCKET_PATH: /api/socket.io
+      # Logging
+      LOG_LEVEL: info
+      MORGAN_FORMAT: tiny
+      # Required secrets for application
+      YOUTUBE_API_KEY: ${secrets.YOUTUBE_API_KEY}
+      ADMIN_SECRET: ${secrets.ADMIN_SECRET}
+      ADMIN_PASSWORD: ${secrets.ADMIN_PASSWORD}
+      ADMIN_USER: ${secrets.ADMIN_USER}
+      SESSION_SECRET: ${secrets.SESSION_SECRET}
+      GOOGLE_CLIENT_ID: ${secrets.GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${secrets.GOOGLE_CLIENT_SECRET}
+    routes:
+      - path: /
+        port: 3000
+    healthChecks:
+      routes:
+        - path: /
+          port: 3000
+          timeoutSeconds: 5
+          initialDelaySeconds: 10
+    scalability:
+      minInstances: 1
+      maxInstances: 2
+      targetConcurrentRequests: 100

@@ -5,11 +5,16 @@ WORKDIR /app
 # Copy manifest files first to leverage Docker cache
 COPY package.json bun.lock ./
 
-# Install dependencies in builder stage
+# Install dependencies with frozen lockfile
 RUN bun install --frozen-lockfile
 
-# Copy the rest of the source
-COPY . .
+# Copy only source files needed for build
+COPY src ./src
+COPY public ./public
+COPY scripts ./scripts
+COPY tsconfig.json vite.config.ts react-router.config.ts components.json ./
+
+# Build the application
 ENV NODE_ENV=production
 RUN bun run build
 
@@ -39,8 +44,8 @@ USER 10001
 # Production env
 ENV NODE_ENV=production
 
-# The app uses a port set via environment (PORT). Default in code is 3000,
-# but render.yaml uses 10000; EXPOSE for documentation only.
-EXPOSE 10000
+# The app uses a port set via environment (PORT).
+# Default in code is 3000, but Koyeb/Render may override via env.
+EXPOSE 3000
 
 CMD ["bun", "run", "start"]
