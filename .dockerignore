@@ -14,8 +14,6 @@
 node_modules
 
 # Build artifacts (preserve maps for debugging)
-build/client/assets/**/*.map
-build/server/**/*.map
 dist
 
 # Documentation
