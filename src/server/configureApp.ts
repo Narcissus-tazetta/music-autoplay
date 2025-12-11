@@ -317,12 +317,15 @@ export async function configureApp(
             logger.debug('Configured Vite SSR loader');
         } else {
             const builtPath = path.join(process.cwd(), 'build', 'server', 'index.js');
-            const built = (await import(builtPath)) as ServerBuild;
+            const built = (await import(/* @vite-ignore */ builtPath)) as ServerBuild;
             buildValue = built;
             logger.debug('Loaded production build');
         }
     } catch (error: unknown) {
-        logger.error('Failed to configure build value', { error });
+        const errorDetail = error instanceof Error
+            ? { message: error.message, stack: error.stack }
+            : { error };
+        logger.error('Failed to configure build value', errorDetail);
         throw new Error('Build configuration failed', { cause: error });
     }
     logger.info('App middleware configuration completed successfully');

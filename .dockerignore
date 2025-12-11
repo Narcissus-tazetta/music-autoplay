@@ -1,20 +1,50 @@
+# Version control & CI/CD
 .git
+.gitignore
 .github
+.gitattributes
+
+# Development tools
 .vscode
 .husky
+.idea
+.DS_Store
+
+# Node modules (explicitly excluded, will be installed fresh)
 node_modules
-build
+
+# Build artifacts (preserve maps for debugging)
+build/client/assets/**/*.map
+build/server/**/*.map
 dist
+
+# Documentation
 *.md
+
+# Test files
 tests
 docs
 .eslint-report.json
 playwright.config.ts
+knip.config.ts
 *.test.ts
 *.test.js
+
+# Secrets and environment
 .env
 .env.*
+secrets/
 *.pem
 *.key
 *.crt
-secrets/
+
+# Temporary files
+temp/
+tmp*
+logs/
+*.log
+
+# Optional directories
+youtube-auto-play/
+test-results/
+.vite/
