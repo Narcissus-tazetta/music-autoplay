@@ -3,7 +3,7 @@ services:
     name: music-autoplay
     runtime: docker
     env: docker
-    region: oregon
+    region: singapore
     plan: starter
     healthCheckPath: /
     envVars:

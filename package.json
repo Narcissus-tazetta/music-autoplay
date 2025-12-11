@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "react-router build",
+    "build": "react-router build && node scripts/postbuild.js",
     "build:extension": "vite build --config youtube-auto-play/vite.config.ts && node youtube-auto-play/scripts/copy-manifest.js",
     "dev": "bun run --watch src/server/server.ts",
     "lint": "oxlint --fix && dprint fmt",

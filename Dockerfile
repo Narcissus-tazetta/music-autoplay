@@ -3,7 +3,7 @@ FROM oven/bun:1 AS builder
 WORKDIR /app
 
 # Copy manifest files first to leverage Docker cache
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 
 # Install dependencies in builder stage
 RUN bun install --frozen-lockfile

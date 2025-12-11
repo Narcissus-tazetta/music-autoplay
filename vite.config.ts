@@ -4,11 +4,7 @@ import { defineConfig } from 'vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
-    build: {
-        rollupOptions: {},
-    },
     optimizeDeps: {
-        force: false,
         include: ['socket.io-client', 'framer-motion', 'zustand'],
     },
     plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
