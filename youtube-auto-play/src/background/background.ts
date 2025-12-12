@@ -17,7 +17,7 @@ const SOCKET_OPTIONS = {
 
 const SOCKET_URLS = {
     local: 'http://localhost:3000',
-    production: 'https://music-autoplay.onrender.com',
+    production: 'https://music-auto-play.onrender.com',
 } as const;
 
 function createSocketWithFallback(): { socket: Socket; url: string } {

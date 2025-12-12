@@ -12,7 +12,7 @@ const sessionStorage = createCookieSessionStorage({
         sameSite: 'lax',
         secrets: [SERVER_ENV.SESSION_SECRET],
         ...(isProduction
-            ? { domain: 'music-autoplay.onrender.com', secure: true }
+            ? { domain: 'music-auto-play.onrender.com', secure: true }
             : {}),
     },
 });
@@ -35,6 +35,6 @@ export const loginSession = createCookieSessionStorage<{
         sameSite: 'lax',
         secrets: [SERVER_ENV.SESSION_SECRET],
         secure: isProduction,
-        ...(isProduction ? { domain: 'music-autoplay.onrender.com' } : {}),
+        ...(isProduction ? { domain: 'music-auto-play.onrender.com' } : {}),
     },
 });
