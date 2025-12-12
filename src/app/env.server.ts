@@ -12,7 +12,7 @@ const isTest = NODE_ENV === 'test';
 
 const clientUrlDefault = process.env.CLIENT_URL
     ?? (NODE_ENV === 'production'
-        ? 'https://music-autoplay.onrender.com'
+        ? 'https://music-auto-play.onrender.com'
         : 'http://localhost:3000');
 
 const toNumber = (v: unknown) => {

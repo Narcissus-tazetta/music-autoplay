@@ -1,0 +1,161 @@
+dservices:
+  - type: web
+    name: music-auto-play
+    env: docker
+    repo: https://github.com/Narcissus-tazetta/music-autoplay
+    branch: main
+    dockerfilePath: Dockerfile
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: CLIENT_URL
+        value: https://music-auto-play.onrender.com
+      - key: CORS_ORIGINS
+        value: https://music-auto-play.onrender.com
+      - key: ALLOW_EXTENSION_ORIGINS
+        value: "false"
+      - key: SOCKET_PATH
+        value: /api/socket.io
+      - key: LOG_LEVEL
+        value: info
+      - key: MORGAN_FORMAT
+        value: tiny
+      # Required secrets. Mark these in the Render dashboard (or set via the CLI) – DO NOT put actual values in this repo.
+      - key: YOUTUBE_API_KEY
+        secure: true
+        value: ""
+      - key: ADMIN_SECRET
+        secure: true
+        value: ""
+      - key: SESSION_SECRET
+        secure: true
+        value: ""
+      - key: ADMIN_PASSWORD
+        secure: true
+        value: ""
+      - key: ADMIN_USER
+        secure: true
+        value: ""
+      - key: GOOGLE_CLIENT_ID
+        secure: true
+        value: ""
+      - key: GOOGLE_CLIENT_SECRET
+        secure: true
+        value: ""
+    healthCheckPath: /
+    instances: 1
+    regions:
+      - oregon
+
+# Optional managed Postgres (Create via Render Dashboard).
+databases:
+  - name: music-autoplay-db
+    databaseName: music_autoplay
+    user: music_autoplay
+# Render deployment configuration for music-autoplay
+# Deploy with: render services create -f render.yaml (or push to repo if you have auto-deploy enabled)
+
+services:
+  - type: web
+    name: music-autoplay
+    env: docker
+    repo: https://github.com/Narcissus-tazetta/music-autoplay
+    branch: main
+    dockerfilePath: Dockerfile
+    plan: free
+    buildCommand: ""
+    startCommand: "bun run start"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: CLIENT_URL
+        value: https://music-auto-play.onrender.com
+      - key: CORS_ORIGINS
+        value: https://music-auto-play.onrender.com
+      - key: ALLOW_EXTENSION_ORIGINS
+        value: "false"
+      - key: SOCKET_PATH
+        value: /api/socket.io
+      - key: LOG_LEVEL
+        value: info
+      - key: MORGAN_FORMAT
+        value: tiny
+      # Required secrets – set these in Render Dashboard or using render CLI as secure env vars
+      - key: YOUTUBE_API_KEY
+        secure: true
+        value: ""
+      - key: ADMIN_SECRET
+        secure: true
+        value: ""
+      - key: SESSION_SECRET
+        secure: true
+        value: ""
+      - key: ADMIN_PASSWORD
+        secure: true
+        value: ""
+      - key: ADMIN_USER
+        secure: true
+        value: ""
+      - key: GOOGLE_CLIENT_ID
+        secure: true
+        value: ""
+      - key: GOOGLE_CLIENT_SECRET
+        secure: true
+        value: ""
+    healthCheckPath: /
+    instances: 1
+    regions:
+      - oregon
+
+# Notes:
+#  - Add or edit secret values using the Render dashboard or render CLI (do not commit actual secret values here).
+#  - If you prefer to use the build service, or to build from a specific Dockerfile target, set `dockerfilePath` or `buildCommand` accordingly.
+services:
+  - type: web
+    name: music-autoplay
+    runtime: docker
+    env: docker
+    region: oregon
+    plan: starter
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ADMIN_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: CLIENT_URL
+        value: https://music-auto-play.onrender.com
+      - key: LOG_LEVEL
+        value: info
+      - key: CORS_ORIGINS
+        value: https://music-auto-play.onrender.com
+      - key: ALLOW_EXTENSION_ORIGINS
+        value: false
+      - key: SOCKET_PATH
+        value: /api/socket.io
+      - key: MORGAN_FORMAT
+        value: tiny
+      - key: DATABASE_URL
+        fromDatabase:
+          name: music-autoplay-db
+          property: connectionString
+
+databases:
+  - name: music-autoplay-db
+    databaseName: music_autoplay
+    user: music_autoplay

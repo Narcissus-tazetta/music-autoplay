@@ -148,11 +148,21 @@ export async function configureApp(
     } else {
         app.use(
             '/assets',
-            express.static('build/client/assets', { immutable: true, maxAge: '1y' }),
+            express.static('build/client/assets', {
+                immutable: true,
+                maxAge: '0',
+            }),
         );
     }
 
-    app.use(express.static('build/client', { maxAge: '1h' }));
+    app.use(
+        express.static('build/client', {
+            maxAge: '0',
+            setHeaders: (res, filePath) => {
+                if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+            },
+        }),
+    );
 
     const config = getConfig();
     try {

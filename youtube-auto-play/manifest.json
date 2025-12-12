@@ -33,7 +33,7 @@
   "host_permissions": [
     "http://localhost:3000/*",
     "http://127.0.0.1:3000/*",
-    "https://music-autoplay.onrender.com/*",
+    "https://music-auto-play.onrender.com/*",
     "https://www.youtube.com/*",
     "http://www.youtube.com/*"
   ],
