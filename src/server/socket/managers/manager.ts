@@ -12,6 +12,8 @@ export interface ManagerConfig {
     debounceMs: number;
     graceMs: number;
     inactivityMs: number;
+    inactivityMsPlaying?: number;
+    inactivityMsPaused?: number;
 }
 
 interface QueuedUpdate {
@@ -116,7 +118,7 @@ export class SocketManager {
             }
 
             this.timerManager.clear('graceClose');
-            this.scheduleInactivityTimer(source, traceId);
+            this.scheduleInactivityTimer(status, source, traceId);
 
             if (isRemoteStatusEqual(this.remoteStatus, status)) return;
 
@@ -185,11 +187,16 @@ export class SocketManager {
         logger.info(`${statusString} state=${status.type}`);
     }
 
-    private scheduleInactivityTimer(source: string, traceId: string): void {
+    private scheduleInactivityTimer(status: RemoteStatus, source: string, traceId: string): void {
         this.timerManager.clear('inactivity');
-        if (!this.config.inactivityMs || this.config.inactivityMs <= 0) return;
+        let inactivityMs = this.config.inactivityMs;
+        if (status.type === 'playing' && typeof this.config.inactivityMsPlaying === 'number')
+            inactivityMs = this.config.inactivityMsPlaying;
+        else if (status.type === 'paused' && typeof this.config.inactivityMsPaused === 'number')
+            inactivityMs = this.config.inactivityMsPaused;
+        if (!inactivityMs || inactivityMs <= 0) return;
 
-        this.timerManager.start('inactivity', this.config.inactivityMs, () => {
+        this.timerManager.start('inactivity', inactivityMs, () => {
             try {
                 this.applyStatusChange(
                     { type: 'closed' },

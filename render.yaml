@@ -14,7 +14,7 @@ dservices:
       - key: CLIENT_URL
         value: https://music-auto-play.onrender.com
       - key: CORS_ORIGINS
-        value: https://music-auto-play.onrender.com
+        value: https://music-auto-play.onrender.com,chrome-extension://flhmplnalnjjbmmjdcdehcoeiihnloja
       - key: ALLOW_EXTENSION_ORIGINS
         value: "false"
       - key: SOCKET_PATH
@@ -76,7 +76,7 @@ services:
       - key: CLIENT_URL
         value: https://music-auto-play.onrender.com
       - key: CORS_ORIGINS
-        value: https://music-auto-play.onrender.com
+        value: https://music-auto-play.onrender.com,chrome-extension://flhmplnalnjjbmmjdcdehcoeiihnloja
       - key: ALLOW_EXTENSION_ORIGINS
         value: "false"
       - key: SOCKET_PATH
@@ -143,7 +143,7 @@ services:
       - key: LOG_LEVEL
         value: info
       - key: CORS_ORIGINS
-        value: https://music-auto-play.onrender.com
+        value: https://music-auto-play.onrender.com,chrome-extension://flhmplnalnjjbmmjdcdehcoeiihnloja
       - key: ALLOW_EXTENSION_ORIGINS
         value: false
       - key: SOCKET_PATH

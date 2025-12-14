@@ -18,6 +18,8 @@ export interface RuntimeOptions {
     debounceMs: number;
     graceMs: number;
     inactivityMs: number;
+    inactivityMsPlaying?: number;
+    inactivityMsPaused?: number;
 }
 
 export interface InitSocketServerResult {

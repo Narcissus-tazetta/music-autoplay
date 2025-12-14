@@ -31,6 +31,12 @@ export function setupExtensionEventHandlers(
                 socketId: socket.id,
                 timestamp: new Date().toISOString(),
             });
+            try {
+                const current = manager.getCurrent();
+                manager.update(current, 'extension_heartbeat');
+            } catch (error) {
+                log.warn('extension_heartbeat: failed to update manager', { error });
+            }
         },
         log,
         socketContext,
@@ -76,18 +82,6 @@ export function setupExtensionEventHandlers(
             const stateRaw = payload['state'] as string | undefined;
             const url = typeof payload['url'] === 'string' ? payload['url'] : undefined;
             const isAdvertisement = payload['isAdvertisement'] === true;
-
-            // Extension側で広告中とマークされたイベントは完全に無視
-            if (isAdvertisement) {
-                log.debug(
-                    'youtube_video_state: ignoring event marked as advertisement by extension',
-                    {
-                        state: stateRaw,
-                        url,
-                    },
-                );
-                return;
-            }
 
             if (stateRaw === 'window_close') {
                 const status: RemoteStatus = { type: 'closed' };
@@ -252,6 +246,7 @@ export function setupExtensionEventHandlers(
 
                 const remoteStatus: RemoteStatus = match
                     ? {
+                        isAdvertisement: state === 'playing' ? isAdvertisement : undefined,
                         isExternalVideo,
                         musicId: undefined,
                         musicTitle: match.title ?? '',
@@ -260,6 +255,7 @@ export function setupExtensionEventHandlers(
                     }
                     : (state === 'playing'
                         ? {
+                            isAdvertisement,
                             musicId: undefined,
                             musicTitle: '',
                             type: 'playing',
@@ -274,6 +270,7 @@ export function setupExtensionEventHandlers(
                     manager.update(remoteStatus, 'extension');
                     log.info('youtube_video_state processed', {
                         connectionId,
+                        isAdvertisement: state === 'playing' ? isAdvertisement : undefined,
                         isExternalVideo,
                         matched: !!match,
                         socketId: socket.id,

@@ -184,7 +184,7 @@ function openNewTab(url: string): void {
     });
 }
 
-function waitForVideoEnd(playingTab: TabInfo, nextUrl: string): void {
+export function waitForVideoEnd(playingTab: TabInfo, nextUrl: string): void {
     if (!playingTab.id) return;
     if (playingTab.url && isPlaylistUrl(playingTab.url)) return;
 
