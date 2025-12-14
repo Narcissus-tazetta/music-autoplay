@@ -118,14 +118,14 @@ export class ConfigService {
             remoteStatusDebounceMs: this.getNumber('REMOTE_STATUS_DEBOUNCE_MS', 0) ?? 0,
             remoteStatusGraceMs: this.getNumber('REMOTE_STATUS_GRACE_MS', 0) ?? 0,
             remoteStatusInactivityMs: this.getNumber('REMOTE_STATUS_INACTIVITY_MS', 0) ?? 0,
-            remoteStatusInactivityMsPlaying: this.getNumber(
-                'REMOTE_STATUS_INACTIVITY_MS_PLAYING',
-                this.getNumber('REMOTE_STATUS_INACTIVITY_MS', 0) ?? 0,
-            ) ?? 0,
-            remoteStatusInactivityMsPaused: this.getNumber(
-                'REMOTE_STATUS_INACTIVITY_MS_PAUSED',
-                this.getNumber('REMOTE_STATUS_INACTIVITY_MS', 0) ?? 0,
-            ) ?? 0,
+            remoteStatusInactivityMsPlaying:
+                this.getNumber('REMOTE_STATUS_INACTIVITY_MS_PLAYING')
+                ?? this.getNumber('REMOTE_STATUS_INACTIVITY_MS')
+                ?? 0,
+            remoteStatusInactivityMsPaused:
+                this.getNumber('REMOTE_STATUS_INACTIVITY_MS_PAUSED')
+                ?? this.getNumber('REMOTE_STATUS_INACTIVITY_MS')
+                ?? 0,
             windowCloseDebounce: this.getNumber('WINDOW_CLOSE_DEBOUNCE_MS', 500) ?? 500,
         };
     }
