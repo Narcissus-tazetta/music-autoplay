@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouTube自動再生",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "YouTubeの動画が終了したら自動で次の動画を再生する拡張機能",
   "permissions": ["storage", "tabs", "alarms", "idle", "scripting", "sidePanel"],
   "commands": {

@@ -10,7 +10,8 @@
     "prepare": "husky",
     "start": "cross-env NODE_ENV=production bun run src/server/server.ts",
     "test:critical": "bun test tests/critical",
-    "test:unit": "bun test tests/unit"
+    "test:unit": "bun test tests/unit",
+    "tsc": "tsc --noEmit"
   },
   "commitlint": {
     "extends": [
@@ -88,7 +89,7 @@
     "immer": "^10.2.0",
     "jiti": "^2.6.1",
     "jsdom": "^27.3.0",
-    "knip": "^5.73.3",
+    "knip": "^5.73.4",
     "lint-staged": "^16.2.7",
     "morgan": "^1.10.1",
     "oxlint": "^1.32.0",

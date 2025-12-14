@@ -27,7 +27,7 @@ enum VideoState {
     WAITING_FOR_NEXT = 'waiting_for_next',
 }
 
-class AdDetector {
+export class AdDetector {
     private observer: MutationObserver | null = null;
     private isAdCurrently: boolean = false;
     private adCheckInterval: number | null = null;

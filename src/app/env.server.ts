@@ -108,6 +108,22 @@ const serverEnvSchema = z
                 .nonnegative()
                 .default(1000 * 60 * 10),
         ),
+        REMOTE_STATUS_INACTIVITY_MS_PLAYING: z.preprocess(
+            v => toNumber(v),
+            z
+                .number()
+                .int()
+                .nonnegative()
+                .default(1000 * 60 * 5),
+        ),
+        REMOTE_STATUS_INACTIVITY_MS_PAUSED: z.preprocess(
+            v => toNumber(v),
+            z
+                .number()
+                .int()
+                .nonnegative()
+                .default(1000 * 60 * 30),
+        ),
         SESSION_SECRET: isTest
             ? z.string().default('test-session-secret-at-least-32-chars')
             : z.string().min(1, 'SESSION_SECRET is required'),

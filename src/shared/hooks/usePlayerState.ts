@@ -25,6 +25,7 @@ export function useInterpolatedTime({
     const [localCurrentTime, setLocalCurrentTime] = useState(0);
     const [isEffectivelyPaused, setIsEffectivelyPaused] = useState(false);
     const animationFrameRef = useRef<number | null>(null);
+    const intervalRef = useRef<number | null>(null);
     const lastUpdateTimestampRef = useRef<number>(0);
     const baseTimeRef = useRef(0);
     const localCurrentTimeRef = useRef(0);
@@ -121,33 +122,77 @@ export function useInterpolatedTime({
     }, [status]);
 
     useEffect(() => {
-        if (!status || status.type === 'closed') {
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-                animationFrameRef.current = null;
-            }
-            return;
-        }
-
-        const animate = (): void => {
+        const computeCurrentTime = (): number => {
             const now = Date.now();
             const elapsed = (now - lastUpdateTimestampRef.current) / 1000;
-            const isPlayingNow = status.type === 'playing' && !effectivePausedRef.current;
+            const isPlayingNow = status?.type === 'playing' && !effectivePausedRef.current;
             const newTime = isPlayingNow
                 ? baseTimeRef.current + elapsed
                 : baseTimeRef.current;
-            const clampedTime = duration != undefined ? Math.min(newTime, duration) : newTime;
-            setLocalCurrentTime(clampedTime);
-            animationFrameRef.current = requestAnimationFrame(animate);
+            return duration != undefined ? Math.min(newTime, duration) : newTime;
         };
 
-        animationFrameRef.current = requestAnimationFrame(animate);
-
-        return () => {
+        const stopAllTimers = () => {
             if (animationFrameRef.current) {
                 cancelAnimationFrame(animationFrameRef.current);
                 animationFrameRef.current = null;
             }
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
+        };
+
+        const startRAFLoop = () => {
+            stopAllTimers();
+            const animate = (): void => {
+                setLocalCurrentTime(computeCurrentTime());
+                animationFrameRef.current = requestAnimationFrame(animate);
+            };
+            animationFrameRef.current = requestAnimationFrame(animate);
+        };
+
+        const startIntervalLoop = () => {
+            stopAllTimers();
+            setLocalCurrentTime(computeCurrentTime());
+            intervalRef.current = window.setInterval(() => {
+                setLocalCurrentTime(computeCurrentTime());
+            }, 1000);
+        };
+
+        const syncAndStartLoop = () => {
+            if (document.visibilityState === 'visible') {
+                if (status?.type === 'playing') {
+                    const now = Date.now();
+                    const elapsed = (now - lastUpdateTimestampRef.current) / 1000;
+                    const syncedTime = baseTimeRef.current + elapsed;
+                    const clampedTime = duration != undefined ? Math.min(syncedTime, duration) : syncedTime;
+                    setLocalCurrentTime(clampedTime);
+                    baseTimeRef.current = clampedTime;
+                    lastUpdateTimestampRef.current = now;
+                }
+                startRAFLoop();
+            } else {
+                startIntervalLoop();
+            }
+        };
+
+        if (!status || status.type === 'closed') {
+            stopAllTimers();
+            return;
+        }
+
+        syncAndStartLoop();
+
+        const handleVisibilityChange = () => {
+            syncAndStartLoop();
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            stopAllTimers();
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, [status, duration]);
 

@@ -86,7 +86,7 @@ function AudioPlayerInner({
     return (
         <motion.div
             aria-live='polite'
-            className='bg-gray-100 dark:bg-gray-900/10 rounded-lg p-3 sm:p-4 flex flex-row items-center gap-3 sm:gap-4 max-w-full shadow-sm'
+            className='bg-gray-100 dark:bg-gray-900/10 rounded-lg p-3 sm:p-4 flex flex-row items-center gap-3 sm:gap-4 w-full min-w-[280px] sm:min-w-[400px] max-w-2xl shadow-sm'
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: visibility === 'visible' ? 1 : 0, y: 0 }}
             exit={{ opacity: 0, y: -10 }}

@@ -13,6 +13,8 @@ export interface RuntimeOptions {
     debounceMs: number;
     graceMs: number;
     inactivityMs: number;
+    inactivityMsPlaying?: number;
+    inactivityMsPaused?: number;
 }
 
 export class SocketRuntime {
@@ -56,6 +58,8 @@ export class SocketRuntime {
                     debounceMs: this.opts.debounceMs,
                     graceMs: this.opts.graceMs,
                     inactivityMs: this.opts.inactivityMs,
+                    inactivityMsPlaying: this.opts.inactivityMsPlaying ?? this.opts.inactivityMs,
+                    inactivityMsPaused: this.opts.inactivityMsPaused ?? this.opts.inactivityMs,
                 },
             );
         }

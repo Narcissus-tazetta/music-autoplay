@@ -38,6 +38,8 @@ export class SocketServerInstance {
     private remoteStatusDebounceMs: number;
     private remoteStatusGraceMs: number;
     private remoteStatusInactivityMs: number;
+    private remoteStatusInactivityMsPlaying: number;
+    private remoteStatusInactivityMsPaused: number;
     private timerManager = new TimerManager();
     private windowCloseManager: InstanceType<typeof WindowCloseManager>;
     private manager?: SocketManager;
@@ -93,6 +95,8 @@ export class SocketServerInstance {
         this.remoteStatusDebounceMs = components.socketConfig.remoteStatusDebounceMs;
         this.remoteStatusGraceMs = components.socketConfig.remoteStatusGraceMs;
         this.remoteStatusInactivityMs = components.socketConfig.remoteStatusInactivityMs;
+        this.remoteStatusInactivityMsPlaying = components.socketConfig.remoteStatusInactivityMsPlaying;
+        this.remoteStatusInactivityMsPaused = components.socketConfig.remoteStatusInactivityMsPaused;
         try {
             container.register('socketServer', () => this);
         } catch (error) {
@@ -118,6 +122,8 @@ export class SocketServerInstance {
                 debounceMs: this.remoteStatusDebounceMs,
                 graceMs: this.remoteStatusGraceMs,
                 inactivityMs: this.remoteStatusInactivityMs,
+                inactivityMsPlaying: this.remoteStatusInactivityMsPlaying,
+                inactivityMsPaused: this.remoteStatusInactivityMsPaused,
             },
             youtubeService: this.youtubeService,
         });

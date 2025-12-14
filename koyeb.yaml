@@ -14,7 +14,7 @@ services:
       PORT: "3000"
       # URLs and security
       CLIENT_URL: https://music-auto-play.onrender.com
-      CORS_ORIGINS: https://music-auto-play.onrender.com
+      CORS_ORIGINS: https://music-auto-play.onrender.com,chrome-extension://flhmplnalnjjbmmjdcdehcoeiihnloja
       ALLOW_EXTENSION_ORIGINS: "false"
       # Socket.io configuration
       SOCKET_PATH: /api/socket.io
