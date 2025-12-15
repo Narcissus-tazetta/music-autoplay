@@ -52,6 +52,15 @@ export function setupSocketEvents(socket: SocketInstance): void {
 
         handleNoNextVideo(data.tabId);
     });
+
+    socket.on('open_first_url', (...args: unknown[]) => {
+        const data = args[0] as { firstUrl?: string };
+        if (!data || typeof data.firstUrl !== 'string') return;
+
+        chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+            if (tabs[0]) chrome.tabs.update(tabs[0].id, { url: data.firstUrl });
+        });
+    });
 }
 
 function isValidVideoData(data: unknown): data is VideoData {

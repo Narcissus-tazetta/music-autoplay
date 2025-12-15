@@ -33,9 +33,11 @@ export type MessageType =
     | 'ad_skip_to_next'
     | 'get_ad_state'
     | 'progress_update'
+    | 'batch_progress_update'
     | 'next_video_navigate'
     | 'no_next_video'
-    | 'add_external_music';
+    | 'add_external_music'
+    | 'mark_extension_navigating';
 
 export interface ChromeStorageData {
     extensionMasterEnabled?: boolean;
@@ -125,6 +127,16 @@ export interface ProgressUpdatePayload extends ChromeMessage {
     musicTitle?: string;
     tabId?: string | number;
     progressPercent?: number;
+}
+
+export interface BatchProgressUpdateMessage extends ChromeMessage {
+    type: 'batch_progress_update';
+    updates: ProgressUpdatePayload[];
+}
+
+export interface MarkExtensionNavigatingMessage extends ChromeMessage {
+    type: 'mark_extension_navigating';
+    url: string;
 }
 
 export interface ChromeMessageResponse {

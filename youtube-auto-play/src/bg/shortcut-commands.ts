@@ -1,11 +1,11 @@
 import { EXTENSION_NAMESPACE, TIMING, YOUTUBE_WATCH_URL_PATTERN } from '../constants';
 import { addExtensionTab } from './tab-manager';
-import type { ExtensionGlobal, TabInfo } from './types';
+import type { ExtensionGlobal, SocketInstance, TabInfo } from './types';
 import { findPlayingTab, sendTabMessage } from './utils';
 
 const YOUTUBE_BASE_URL_PATTERN = '*://www.youtube.com/*';
 
-export function setupShortcutCommands(): void {
+export function setupShortcutCommands(socket: SocketInstance): void {
     chrome.commands.onCommand.addListener((command: string) => {
         const g = (globalThis as unknown as Record<string, ExtensionGlobal>)[EXTENSION_NAMESPACE];
         if (!g?.isExtensionEnabled?.()) return;
@@ -15,7 +15,7 @@ export function setupShortcutCommands(): void {
                 handlePauseYouTube();
                 break;
             case 'open-first-url':
-                handleOpenFirstUrl();
+                handleOpenFirstUrl(socket);
                 break;
         }
     });
@@ -34,11 +34,25 @@ async function handlePauseYouTube(): Promise<void> {
     });
 }
 
-function handleOpenFirstUrl(): void {
-    chrome.storage.local.get(['urlList'], result => {
-        const urls = result.urlList || [];
-        if (urls.length === 0 || !urls[0].url) return;
-        openYouTubeUrlWithWait(urls[0].url);
+function handleOpenFirstUrl(socket: SocketInstance): void {
+    // Request first URL from server
+    if (!socket.connected) {
+        console.warn('[handleOpenFirstUrl] Socket not connected, falling back to local storage');
+        chrome.storage.local.get(['urlList'], result => {
+            const urls = result.urlList || [];
+            if (urls.length === 0 || !urls[0].url) return;
+            openYouTubeUrlWithWait(urls[0].url);
+        });
+        return;
+    }
+
+    socket.emit('request_first_url', (response: unknown) => {
+        if (!response || typeof response !== 'object') {
+            console.warn('[handleOpenFirstUrl] Invalid response from server');
+            return;
+        }
+        const { firstUrl } = response as { firstUrl?: string };
+        if (typeof firstUrl === 'string') openYouTubeUrlWithWait(firstUrl);
     });
 }
 

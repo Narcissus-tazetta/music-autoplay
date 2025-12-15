@@ -161,8 +161,14 @@ export function useInterpolatedTime({
         };
 
         const syncAndStartLoop = () => {
+            stopAllTimers();
+
+            if (!status || status.type === 'closed') return;
+
+            const isPlayingNow = status.type === 'playing' && !effectivePausedRef.current;
+
             if (document.visibilityState === 'visible') {
-                if (status?.type === 'playing') {
+                if (isPlayingNow) {
                     const now = Date.now();
                     const elapsed = (now - lastUpdateTimestampRef.current) / 1000;
                     const syncedTime = baseTimeRef.current + elapsed;
@@ -170,10 +176,13 @@ export function useInterpolatedTime({
                     setLocalCurrentTime(clampedTime);
                     baseTimeRef.current = clampedTime;
                     lastUpdateTimestampRef.current = now;
+                    startRAFLoop();
+                } else {
+                    setLocalCurrentTime(baseTimeRef.current);
                 }
-                startRAFLoop();
             } else {
-                startIntervalLoop();
+                if (isPlayingNow) startIntervalLoop();
+                else setLocalCurrentTime(baseTimeRef.current);
             }
         };
 

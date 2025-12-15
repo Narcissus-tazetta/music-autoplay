@@ -970,6 +970,19 @@ export function setupExtensionEventHandlers(
 
     registerSocketEventSafely(
         extensionSocketOn,
+        'progress_update_batch',
+        payload => {
+            if (!isRecord(payload)) return;
+            const updates = payload['updates'];
+            if (!Array.isArray(updates)) return;
+            for (const entry of updates) handleProgressUpdate(entry, 'progress_update_batch');
+        },
+        log,
+        socketContext,
+    );
+
+    registerSocketEventSafely(
+        extensionSocketOn,
         'video_progress',
         payload => handleProgressUpdate(payload, 'video_progress'),
         log,
@@ -991,6 +1004,37 @@ export function setupExtensionEventHandlers(
         log,
         socketContext,
     );
+
+    // Handle request_first_url with callback support
+    socket.on('request_first_url', async (callback?: (response: unknown) => void) => {
+        try {
+            const musicList = repository.list();
+            if (musicList.length === 0) {
+                log.debug('request_first_url: no music in repository', { connectionId, socketId: socket.id });
+                if (typeof callback === 'function') callback({ firstUrl: null });
+                return;
+            }
+
+            const firstMusic = musicList[0];
+            const { watchUrl } = await import('@/shared/utils/youtube');
+            const firstUrl = watchUrl(firstMusic.id);
+
+            log.info('request_first_url: returning first URL', {
+                connectionId,
+                firstUrl,
+                socketId: socket.id,
+                videoId: firstMusic.id,
+            });
+
+            if (typeof callback === 'function') callback({ firstUrl });
+        } catch (error) {
+            log.warn('request_first_url: failed to process', {
+                error,
+                socketId: socket.id,
+            });
+            if (typeof callback === 'function') callback({ firstUrl: null, error: String(error) });
+        }
+    });
 
     registerSocketEventSafely(
         extensionSocketOn,

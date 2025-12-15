@@ -23,6 +23,16 @@ const SOCKET_URLS = {
 
 const CONNECTION_TIMEOUT_MS = 5000;
 const PRIMARY_RECONNECT_INTERVAL_MS = 30000;
+const RESTORE_PRIMARY_ALARM = 'restore_primary';
+
+type AlarmLike = { name?: string };
+type AlarmsApiLike = {
+    clear?: (name: string, cb?: () => void) => void;
+    create?: (name: string, info: { periodInMinutes?: number }) => void;
+    onAlarm?: { addListener: (cb: (alarm: AlarmLike) => void) => void };
+};
+
+const alarmsApi = (globalThis as unknown as { chrome?: { alarms?: AlarmsApiLike } }).chrome?.alarms;
 
 interface SocketConnection {
     socket: Socket;
@@ -140,38 +150,43 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     setupMessageHandler(socket);
     setupSocketEvents(socket);
     setupMasterToggleHandler();
-    setupShortcutCommands();
+    setupShortcutCommands(socket);
 
-    // Periodically attempt to reconnect to primary if currently on fallback
-    setInterval(async () => {
-        if (currentConnection && !currentConnection.isPrimary && currentConnection.socket.connected) {
-            log('info', 'Attempting to restore primary connection', { current: currentConnection.url });
-
-            const primarySocket = await tryConnect(SOCKET_URLS.production, true);
-            if (primarySocket) {
-                log('info', 'Successfully restored primary connection, switching from fallback', {
-                    from: currentConnection.url,
-                    to: SOCKET_URLS.production,
-                });
-
-                // Clean up old fallback connection
-                const oldSocket = currentConnection.socket;
-                oldSocket.disconnect();
-                oldSocket.close();
-
-                // Update to primary
-                currentConnection = { socket: primarySocket, url: SOCKET_URLS.production, isPrimary: true };
-                socket = primarySocket;
-
-                // Re-setup handlers with new socket
-                setupMessageHandler(socket);
-                setupSocketEvents(socket);
-
-                log('info', 'Primary connection restored and handlers re-registered successfully.');
-            }
-        }
-    }, PRIMARY_RECONNECT_INTERVAL_MS);
+    if (alarmsApi) {
+        alarmsApi.clear(RESTORE_PRIMARY_ALARM, () => {
+            alarmsApi.create(RESTORE_PRIMARY_ALARM, {
+                periodInMinutes: PRIMARY_RECONNECT_INTERVAL_MS / 60000,
+            });
+        });
+    }
 })();
+
+alarmsApi?.onAlarm.addListener(async (alarm: AlarmLike) => {
+    if (alarm.name !== RESTORE_PRIMARY_ALARM) return;
+    if (currentConnection && !currentConnection.isPrimary && currentConnection.socket.connected) {
+        log('info', 'Attempting to restore primary connection', { current: currentConnection.url });
+
+        const primarySocket = await tryConnect(SOCKET_URLS.production, true);
+        if (primarySocket) {
+            log('info', 'Successfully restored primary connection, switching from fallback', {
+                from: currentConnection.url,
+                to: SOCKET_URLS.production,
+            });
+
+            const oldSocket = currentConnection.socket;
+            oldSocket.disconnect();
+            oldSocket.close();
+
+            currentConnection = { socket: primarySocket, url: SOCKET_URLS.production, isPrimary: true };
+            socket = primarySocket;
+
+            setupMessageHandler(socket);
+            setupSocketEvents(socket);
+
+            log('info', 'Primary connection restored and handlers re-registered successfully.');
+        }
+    }
+});
 
 const KEEP_ALIVE_INTERVAL = 30_000;
 const KEEP_ALIVE_ALARM_INTERVAL = 0.5;

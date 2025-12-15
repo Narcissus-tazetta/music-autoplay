@@ -57,6 +57,9 @@ export function handleVideoEnded(currentUrl: string, tabId: number, socket: Sock
 export function navigateToNextVideo(nextUrl: string, tabId: number): void {
     addExtensionTab(tabId);
 
+    // Mark this navigation as extension-controlled to prevent YouTube's auto-play from interfering
+    sendTabMessage(tabId, { type: 'mark_extension_navigating' });
+
     chrome.tabs.update(tabId, { url: nextUrl }, () => {
         if (hasChromeError()) console.error('[Background] Failed to navigate to next video', chrome.runtime.lastError);
     });

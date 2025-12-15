@@ -1,5 +1,5 @@
 import { TIMING, YOUTUBE_WATCH_URL_PATTERN } from '../constants';
-import type { ChromeMessage, ChromeMessageResponse, ProgressUpdatePayload } from '../types';
+import type { BatchProgressUpdateMessage, ChromeMessage, ChromeMessageResponse, ProgressUpdatePayload } from '../types';
 import type { MessageSender, SocketInstance } from './types';
 import { sendTabMessage } from './utils';
 import { handleVideoEnded, handleYouTubeVideoState } from './youtube-state';
@@ -132,6 +132,16 @@ export function setupMessageHandler(socket: SocketInstance): void {
                 return false;
             }
 
+            if (msg.type === 'batch_progress_update') {
+                if (Array.isArray(msg.updates)) {
+                    handleBatchProgressUpdate(
+                        msg as { type: 'batch_progress_update'; updates: ProgressUpdatePayload[] },
+                        socket,
+                    );
+                }
+                return false;
+            }
+
             return false;
         },
     );
@@ -208,6 +218,34 @@ function handleProgressUpdate(message: ProgressUpdatePayload, socket: SocketInst
         socket.emit('progress_update', payload);
     } catch (error) {
         console.error('[Background] Failed to emit progress_update', error);
+    }
+}
+
+function handleBatchProgressUpdate(
+    message: BatchProgressUpdateMessage,
+    socket: SocketInstance,
+): void {
+    if (!socket.connected || !Array.isArray(message.updates)) return;
+
+    try {
+        socket.emit('progress_update_batch', {
+            updates: message.updates.map(update => ({
+                url: update.url,
+                videoId: update.videoId,
+                currentTime: update.currentTime,
+                duration: update.duration,
+                playbackRate: update.playbackRate,
+                isBuffering: update.isBuffering,
+                visibilityState: update.visibilityState,
+                timestamp: update.timestamp ?? Date.now(),
+                isAdvertisement: update.isAdvertisement,
+                musicTitle: update.musicTitle,
+                tabId: update.tabId,
+                progressPercent: update.progressPercent,
+            })),
+        });
+    } catch (error) {
+        console.error('[Background] Failed to emit batched progress_update', error);
     }
 }
 
