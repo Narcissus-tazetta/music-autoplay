@@ -1,6 +1,17 @@
 import { EXTENSION_NAMESPACE, TIMING } from '../constants';
 import type { ExtensionGlobal } from './types';
 
+const WEEKEND_ALARM = 'weekend_check';
+
+type AlarmLike = { name?: string };
+type AlarmsApiLike = {
+    clear?: (name: string, cb?: () => void) => void;
+    create?: (name: string, info: { periodInMinutes?: number }) => void;
+    onAlarm?: { addListener: (cb: (alarm: AlarmLike) => void) => void };
+};
+
+const alarms = (globalThis as unknown as { chrome?: { alarms?: AlarmsApiLike } }).chrome?.alarms;
+
 let extensionMasterEnabled = true;
 
 function isWeekend(): boolean {
@@ -60,7 +71,15 @@ function handleMasterToggle(enabled: boolean, isManualChange = false): void {
     });
 }
 
-setInterval(() => {
+alarms?.clear?.(WEEKEND_ALARM, () => {
+    alarms.create?.(WEEKEND_ALARM, {
+        periodInMinutes: TIMING.WEEKEND_CHECK_INTERVAL / 60000,
+    });
+});
+
+alarms?.onAlarm?.addListener((alarm: AlarmLike) => {
+    if (alarm.name !== WEEKEND_ALARM) return;
+
     if (isWeekend() && extensionMasterEnabled) {
         extensionMasterEnabled = false;
         chrome.storage.local.set({ extensionMasterEnabled: false }, () => {
@@ -82,8 +101,7 @@ setInterval(() => {
             }
         });
     }
-}, TIMING.WEEKEND_CHECK_INTERVAL);
-
+});
 export function setupMasterToggleHandler(): void {
     chrome.runtime.onMessage.addListener(
         (message: { type: string; enabled?: boolean }, _sender, sendResponse) => {

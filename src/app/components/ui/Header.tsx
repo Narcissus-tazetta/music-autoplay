@@ -126,19 +126,6 @@ const HeaderInner = ({ userName }: HeaderProps) => {
                                 <AdminStatus />
                             </div>
                         )}
-                        <div className='mt-4'>
-                            <Dialog open={isAdminDialogOpen} onOpenChange={setIsAdminDialogOpen}>
-                                <Dialog.Trigger asChild>
-                                    <Button variant='outline' className='w-full'>
-                                        <KeyRoundIcon className='mr-2 h-4 w-4' />
-                                        {isAdmin ? '管理者ログアウト' : '管理者ログイン'}
-                                    </Button>
-                                </Dialog.Trigger>
-                                <Dialog.Content>
-                                    <AdminLoginModalContent onClose={() => setIsAdminDialogOpen(false)} />
-                                </Dialog.Content>
-                            </Dialog>
-                        </div>
                         <Settings />
                         <Sheet.Footer className='flex-col gap-2'>
                             <span className='text-xs'>

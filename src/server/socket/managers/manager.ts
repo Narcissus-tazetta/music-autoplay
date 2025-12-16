@@ -30,6 +30,7 @@ export class SocketManager {
     private updateQueue: QueuedUpdate[] = [];
     private isProcessing = false;
     private sequenceNumber = 0;
+    private lastTraceId: string = '';
 
     constructor(
         private emit: EmitFn,
@@ -163,6 +164,7 @@ export class SocketManager {
 
         if (status.type === 'playing') status.lastProgressUpdate = this.remoteStatusUpdatedAt;
 
+        this.lastTraceId = traceId;
         const enrichedStatus = {
             ...status,
             _meta: {
@@ -185,6 +187,47 @@ export class SocketManager {
             traceId,
         });
         logger.info(`${statusString} state=${status.type}`);
+    }
+
+    getSnapshot(): RemoteStatus & { _meta: { sequenceNumber: number; serverTimestamp: number; traceId: string } } {
+        const status = this.remoteStatus;
+        const now = Date.now();
+        const seq = this.sequenceNumber;
+        const traceId = this.lastTraceId || '';
+        const eventTimestamp = this.remoteStatusUpdatedAt || now;
+        if (status.type === 'playing') {
+            const currentTime = typeof status.currentTime === 'number' ? status.currentTime : 0;
+            const lastProgress = typeof status.lastProgressUpdate === 'number'
+                ? status.lastProgressUpdate
+                : eventTimestamp;
+            const deltaMs = Math.max(0, now - lastProgress);
+            const rate = typeof status.playbackRate === 'number' ? status.playbackRate : 1;
+            let predicted = currentTime + (deltaMs / 1000) * rate;
+            if (typeof status.duration === 'number' && status.duration > 0)
+                predicted = Math.min(predicted, status.duration);
+            const snapshot: RemoteStatus = {
+                ...status,
+                currentTime: predicted,
+                lastProgressUpdate: now,
+            };
+            return {
+                ...snapshot,
+                _meta: {
+                    sequenceNumber: seq,
+                    serverTimestamp: eventTimestamp,
+                    traceId,
+                },
+            };
+        }
+
+        return {
+            ...status,
+            _meta: {
+                sequenceNumber: seq,
+                serverTimestamp: eventTimestamp,
+                traceId,
+            },
+        };
     }
 
     private scheduleInactivityTimer(status: RemoteStatus, source: string, traceId: string): void {

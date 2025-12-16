@@ -75,7 +75,15 @@ export function useYouTubeControls(urls: UrlItem[]): UseYouTubeControlsReturn {
     }, []);
 
     const openUrl = useCallback((url: string) => {
-        chrome.tabs.create({ url });
+        const YOUTUBE_URL_PATTERN = '*://www.youtube.com/*';
+
+        chrome.tabs.query({ url: YOUTUBE_URL_PATTERN }, tabs => {
+            const ytIds = tabs.map(t => t.id).filter((id): id is number => id !== undefined);
+            const createTab = () => chrome.tabs.create({ url });
+
+            if (ytIds.length > 0) chrome.tabs.remove(ytIds, createTab);
+            else createTab();
+        });
     }, []);
 
     return { handleControl, openFirstUrl, openUrl };

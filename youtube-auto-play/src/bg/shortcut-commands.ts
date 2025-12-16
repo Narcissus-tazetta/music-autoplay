@@ -1,11 +1,11 @@
-import { EXTENSION_NAMESPACE, TIMING, YOUTUBE_WATCH_URL_PATTERN } from '../constants';
+import { EXTENSION_NAMESPACE, MESSAGE_TYPES, TIMING, YOUTUBE_WATCH_URL_PATTERN } from '../constants';
 import { addExtensionTab } from './tab-manager';
-import type { ExtensionGlobal, TabInfo } from './types';
+import type { ExtensionGlobal, SocketInstance, TabInfo } from './types';
 import { findPlayingTab, sendTabMessage } from './utils';
 
 const YOUTUBE_BASE_URL_PATTERN = '*://www.youtube.com/*';
 
-export function setupShortcutCommands(): void {
+export function setupShortcutCommands(socket: SocketInstance): void {
     chrome.commands.onCommand.addListener((command: string) => {
         const g = (globalThis as unknown as Record<string, ExtensionGlobal>)[EXTENSION_NAMESPACE];
         if (!g?.isExtensionEnabled?.()) return;
@@ -15,10 +15,48 @@ export function setupShortcutCommands(): void {
                 handlePauseYouTube();
                 break;
             case 'open-first-url':
-                handleOpenFirstUrl();
+                handleOpenFirstUrl(socket);
+                break;
+            case 'toggle-popup-hidden-ui':
+                handleTogglePopupHiddenUI();
                 break;
         }
     });
+}
+
+function handleTogglePopupHiddenUI(): void {
+    try {
+        if ((chrome as any).action && typeof (chrome as any).action.openPopup === 'function') {
+            try {
+                const p = (chrome as any).action.openPopup();
+                if (p && typeof p.then === 'function') p.catch(() => {});
+            } catch {}
+            setTimeout(() => {
+                try {
+                    chrome.runtime.sendMessage({ type: MESSAGE_TYPES.TOGGLE_HIDDEN_UI } as any);
+                } catch {}
+            }, 150);
+            return;
+        }
+
+        if ((chrome as any).sidePanel && typeof (chrome as any).sidePanel.open === 'function') {
+            try {
+                const p = (chrome as any).sidePanel.open();
+                if (p && typeof p.then === 'function') p.catch(() => {});
+            } catch {}
+            setTimeout(() => {
+                try {
+                    chrome.runtime.sendMessage({ type: MESSAGE_TYPES.TOGGLE_HIDDEN_UI } as any);
+                } catch {}
+            }, 150);
+            return;
+        }
+        chrome.runtime.sendMessage({ type: MESSAGE_TYPES.TOGGLE_HIDDEN_UI } as any);
+    } catch {
+        try {
+            chrome.runtime.sendMessage({ type: MESSAGE_TYPES.TOGGLE_HIDDEN_UI } as any);
+        } catch {}
+    }
 }
 
 async function handlePauseYouTube(): Promise<void> {
@@ -34,12 +72,52 @@ async function handlePauseYouTube(): Promise<void> {
     });
 }
 
-function handleOpenFirstUrl(): void {
-    chrome.storage.local.get(['urlList'], result => {
-        const urls = result.urlList || [];
-        if (urls.length === 0 || !urls[0].url) return;
-        openYouTubeUrlWithWait(urls[0].url);
-    });
+function handleOpenFirstUrl(socket: SocketInstance): void {
+    // Request first URL from server, but fallback to local storage after timeout
+    console.info('[handleOpenFirstUrl] Invoked');
+
+    const fallbackToLocal = () => {
+        chrome.storage.local.get(['urlList'], result => {
+            const urls = result.urlList || [];
+            if (urls.length === 0 || !urls[0].url) return;
+            openYouTubeUrlWithWait(urls[0].url);
+        });
+    };
+
+    if (!socket.connected) {
+        console.warn('[handleOpenFirstUrl] Socket not connected, falling back to local storage');
+        fallbackToLocal();
+        return;
+    }
+
+    let responded = false;
+    const timer = setTimeout(() => {
+        if (!responded) {
+            console.warn('[handleOpenFirstUrl] Server did not respond in time, falling back to local storage');
+            fallbackToLocal();
+        }
+    }, 2000);
+
+    try {
+        socket.emit('request_first_url', (response: unknown) => {
+            responded = true;
+            clearTimeout(timer);
+
+            if (!response || typeof response !== 'object') {
+                console.warn('[handleOpenFirstUrl] Invalid response from server, falling back to local storage');
+                fallbackToLocal();
+                return;
+            }
+
+            const { firstUrl } = response as { firstUrl?: string };
+            if (typeof firstUrl === 'string') openYouTubeUrlWithWait(firstUrl);
+            else fallbackToLocal();
+        });
+    } catch (err) {
+        clearTimeout(timer);
+        console.error('[handleOpenFirstUrl] Error while requesting first URL from server', err);
+        fallbackToLocal();
+    }
 }
 
 function openYouTubeUrlWithWait(targetUrl: string): void {
