@@ -4,7 +4,9 @@ const QUICK_RETRY_CONFIG = { maxRetries: 3, delay: 500 } as const;
 const PAGE_CHANGE_DELAY = 100;
 const URL_CHECK_INTERVAL = 2000;
 const AD_CHECK_INTERVAL = 1500;
+const AD_CHECK_INTERVAL_HIDDEN = 1500;
 const VIDEO_CHECK_INTERVAL = 1000;
+const VIDEO_CHECK_INTERVAL_HIDDEN = 1000;
 const SEND_PROGRESS_INTERVAL_MS = 1000;
 const PROGRESS_SEND_MIN_DELTA_SEC = 2;
 const VIDEO_END_THRESHOLD = 0.5;
@@ -60,6 +62,10 @@ export class AdDetector {
     private lastBufferingState: boolean = false;
     private isInForeground: boolean = true;
     private progressBuffer: ProgressUpdatePayload[] = [];
+    private consecutiveStalls: number = 0;
+    private imminentEndSent: boolean = false;
+    private videoEndSent: boolean = false;
+    private lastVideoId: string = '';
     private readonly validTransitions: Record<VideoState, VideoState[]> = {
         [VideoState.PLAYING]: [VideoState.PAUSED, VideoState.SEEKING, VideoState.WAITING, VideoState.ENDED],
         [VideoState.PAUSED]: [VideoState.PLAYING, VideoState.SEEKING, VideoState.ENDED],
@@ -71,16 +77,7 @@ export class AdDetector {
     start(): void {
         this.setupObserver();
         this.setupVisibilityHandler();
-        if (!document.hidden) {
-            this.videoCheckInterval = window.setInterval(
-                () => this.checkVideoAndSendProgress(),
-                VIDEO_CHECK_INTERVAL,
-            );
-            this.adCheckInterval = window.setInterval(
-                () => this.checkAndNotifyAdState(),
-                AD_CHECK_INTERVAL,
-            );
-        }
+        this.setIntervals();
         this.setupHeartbeat();
     }
 
@@ -88,27 +85,32 @@ export class AdDetector {
         document.addEventListener('visibilitychange', () => {
             const wasInForeground = this.isInForeground;
             this.isInForeground = !document.hidden;
-
-            if (wasInForeground && !this.isInForeground) {
-                if (this.videoCheckInterval !== null) {
-                    clearInterval(this.videoCheckInterval);
-                    this.videoCheckInterval = null;
-                }
-                if (this.adCheckInterval !== null) {
-                    clearInterval(this.adCheckInterval);
-                    this.adCheckInterval = null;
-                }
-            } else if (!wasInForeground && this.isInForeground) {
-                this.videoCheckInterval = window.setInterval(
-                    () => this.checkVideoAndSendProgress(),
-                    VIDEO_CHECK_INTERVAL,
-                );
-                this.adCheckInterval = window.setInterval(
-                    () => this.checkAndNotifyAdState(),
-                    AD_CHECK_INTERVAL,
-                );
-            }
+            if (wasInForeground === this.isInForeground) return;
+            this.setIntervals();
         });
+    }
+
+    private setIntervals(): void {
+        if (this.videoCheckInterval !== null) {
+            clearInterval(this.videoCheckInterval);
+            this.videoCheckInterval = null;
+        }
+        if (this.adCheckInterval !== null) {
+            clearInterval(this.adCheckInterval);
+            this.adCheckInterval = null;
+        }
+
+        const videoInterval = this.isInForeground ? VIDEO_CHECK_INTERVAL : VIDEO_CHECK_INTERVAL_HIDDEN;
+        const adInterval = this.isInForeground ? AD_CHECK_INTERVAL : AD_CHECK_INTERVAL_HIDDEN;
+
+        this.videoCheckInterval = window.setInterval(
+            () => this.checkVideoAndSendProgress(),
+            videoInterval,
+        );
+        this.adCheckInterval = window.setInterval(
+            () => this.checkAndNotifyAdState(),
+            adInterval,
+        );
     }
 
     private setupHeartbeat(): void {
@@ -130,6 +132,7 @@ export class AdDetector {
                             isAdvertisement: this.isAdCurrently,
                             musicTitle: getYouTubeVideoInfo()?.title,
                             progressPercent: Number(((currentTime / duration) * 100).toFixed(2)),
+                            consecutiveStalls: this.consecutiveStalls,
                         });
                     }
                 } catch (error) {
@@ -186,6 +189,29 @@ export class AdDetector {
         const { currentTime, duration } = this.videoElement;
         if (!this.isValidTimeValue(currentTime) || !this.isValidTimeValue(duration)) return;
 
+        const videoId = extractYouTubeIdFromUrl(location.href) ?? '';
+        if (videoId !== this.lastVideoId) {
+            this.lastVideoId = videoId;
+            this.imminentEndSent = false;
+            this.videoEndSent = false;
+        }
+
+        const remaining = duration - currentTime;
+        const isConfirmed = remaining <= 0.05 || this.videoElement.ended;
+
+        if (!this.videoEndSent && isConfirmed && !this.isAdCurrently) {
+            this.videoEndSent = true;
+            try {
+                chrome.runtime.sendMessage({
+                    type: 'video_ended',
+                    url: location.href,
+                    tabId: undefined,
+                });
+            } catch (error) {
+                console.warn('[AdDetector] video_ended send failed:', error);
+            }
+        }
+
         let targetState = this.videoState;
 
         if (this.videoElement.paused) targetState = VideoState.PAUSED;
@@ -197,43 +223,55 @@ export class AdDetector {
         if (targetState !== this.videoState) this.setVideoState(targetState);
 
         const now = Date.now();
-        const timeSinceLastSend = now - this.lastProgressSentTs;
-        const timeDelta = Math.abs(currentTime - this.lastSentCurrentTime);
-        const isBuffering = (this.videoElement?.readyState ?? 0) < 3;
+        const elapsed = now - this.lastProgressSentTs;
+        const delta = Math.abs(currentTime - this.lastSentCurrentTime);
+        const buffering = (this.videoElement?.readyState ?? 0) < 3;
         const stateChanged = this.videoState !== this.lastState;
-        const adStateChanged = this.isAdCurrently !== this.lastIsAd;
-        const bufferingChanged = isBuffering !== this.lastBufferingState;
-        const isNearEnd = this.isNearVideoEnd();
+        const adChanged = this.isAdCurrently !== this.lastIsAd;
+        const bufferingChanged = buffering !== this.lastBufferingState;
+        const nearEnd = this.isNearVideoEnd();
 
-        const shouldSend = timeSinceLastSend >= SEND_PROGRESS_INTERVAL_MS
-            || timeDelta >= PROGRESS_SEND_MIN_DELTA_SEC
+        if (targetState === VideoState.PLAYING && !buffering) {
+            const progress = currentTime - this.lastSentCurrentTime;
+            if (progress < 0.01 && elapsed >= SEND_PROGRESS_INTERVAL_MS) this.consecutiveStalls++;
+            else if (progress >= 0.5) this.consecutiveStalls = 0;
+        } else {
+            this.consecutiveStalls = 0;
+        }
+
+        const shouldSend = elapsed >= SEND_PROGRESS_INTERVAL_MS
+            || delta >= PROGRESS_SEND_MIN_DELTA_SEC
             || stateChanged
-            || adStateChanged
+            || adChanged
             || bufferingChanged
-            || isNearEnd;
+            || nearEnd;
 
         if (shouldSend) {
-            const payload: ProgressUpdatePayload = {
+            const remaining = duration - currentTime;
+            const isImminent = remaining <= 0.5 && remaining > 0.05;
+
+            this.addToProgressBuffer({
+                consecutiveStalls: this.consecutiveStalls,
+                currentTime,
+                duration,
+                imminentEnd: isImminent || undefined,
+                isAdvertisement: this.isAdCurrently,
+                isBuffering: buffering,
+                musicTitle: getYouTubeVideoInfo()?.title,
+                playbackRate: this.videoElement?.playbackRate || 1,
+                progressPercent: Number(((currentTime / duration) * 100).toFixed(2)),
+                timestamp: now,
                 type: 'progress_update',
                 url: location.href,
                 videoId: extractYouTubeIdFromUrl(location.href) ?? undefined,
-                currentTime,
-                duration,
-                playbackRate: this.videoElement?.playbackRate || 1,
-                isBuffering,
                 visibilityState: document.visibilityState,
-                timestamp: now,
-                isAdvertisement: this.isAdCurrently,
-                musicTitle: getYouTubeVideoInfo()?.title,
-                progressPercent: Number(((currentTime / duration) * 100).toFixed(2)),
-            };
+            });
 
-            this.addToProgressBuffer(payload);
             this.lastProgressSentTs = now;
             this.lastSentCurrentTime = currentTime;
             this.lastState = this.videoState;
             this.lastIsAd = this.isAdCurrently;
-            this.lastBufferingState = isBuffering;
+            this.lastBufferingState = buffering;
         }
     }
 

@@ -1,5 +1,6 @@
 import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
 import { isRecord } from '@/shared/utils/typeGuards';
+import { extractYoutubeId } from '@/shared/utils/youtube';
 import type { Socket } from 'socket.io';
 import type { AppLogger } from '../../logger';
 import type { MusicEventEmitter } from '../../music/emitter/musicEventEmitter';
@@ -21,6 +22,16 @@ export function setupExtensionEventHandlers(
 ) {
     const extensionSocketOn = extractSocketOn(socket);
     const socketContext = { socketId: socket.id };
+
+    const authoritativeVideoState = new Map<
+        string,
+        {
+            state: 'playing' | 'paused';
+            receivedAt: number;
+            currentTime?: number;
+            duration?: number;
+        }
+    >();
 
     registerSocketEventSafely(
         extensionSocketOn,
@@ -176,6 +187,13 @@ export function setupExtensionEventHandlers(
                 // 広告保護ロジックは不要（Extension側でisAdvertisementフラグを付与）
 
                 const state = stateRaw === 'playing' ? 'playing' : 'paused';
+                const incomingCurrentTime = typeof payload['currentTime'] === 'number'
+                    ? payload['currentTime']
+                    : undefined;
+                const incomingDuration = typeof payload['duration'] === 'number'
+                    ? payload['duration']
+                    : undefined;
+
                 let match: { url: string; title?: string } | null = null;
                 let isExternalVideo = false;
                 let externalVideoId: string | undefined;
@@ -252,6 +270,8 @@ export function setupExtensionEventHandlers(
                         musicTitle: match.title ?? '',
                         type: state,
                         videoId: externalVideoId,
+                        currentTime: state === 'paused' ? incomingCurrentTime : undefined,
+                        duration: state === 'paused' ? incomingDuration : undefined,
                     }
                     : (state === 'playing'
                         ? {
@@ -264,7 +284,21 @@ export function setupExtensionEventHandlers(
                             musicId: undefined,
                             musicTitle: undefined,
                             type: 'paused',
+                            currentTime: incomingCurrentTime,
+                            duration: incomingDuration,
                         });
+
+                if (url) {
+                    const videoId = extractYoutubeId(url);
+                    if (videoId) {
+                        authoritativeVideoState.set(videoId, {
+                            state,
+                            receivedAt: Date.now(),
+                            currentTime: incomingCurrentTime,
+                            duration: incomingDuration,
+                        });
+                    }
+                }
 
                 try {
                     manager.update(remoteStatus, 'extension');
@@ -669,6 +703,9 @@ export function setupExtensionEventHandlers(
         socketContext,
     );
 
+    const videoEndDebounce = new Map<string, number>();
+    const VIDEO_END_DEBOUNCE_MS = 500;
+
     registerSocketEventSafely(
         extensionSocketOn,
         'video_ended',
@@ -700,39 +737,46 @@ export function setupExtensionEventHandlers(
                     return;
                 }
 
-                if (repository.has(videoId)) {
-                    const removeResult = repository.remove(videoId);
-                    if (removeResult.ok) {
-                        const emitResult = emitter.emitMusicRemoved(videoId);
-                        if (!emitResult.ok) {
-                            log.warn('video_ended: failed to emit musicRemoved', {
-                                error: emitResult.error,
-                                videoId,
-                            });
-                        }
+                const now = Date.now();
+                const lastProcessed = videoEndDebounce.get(videoId);
+                if (lastProcessed && now - lastProcessed < VIDEO_END_DEBOUNCE_MS) {
+                    log.debug('video_ended: debounced duplicate', { videoId, elapsed: now - lastProcessed });
+                    return;
+                }
+                videoEndDebounce.set(videoId, now);
+                setTimeout(() => videoEndDebounce.delete(videoId), VIDEO_END_DEBOUNCE_MS * 2);
 
-                        const urlListEmitResult = emitter.emitUrlList(
-                            repository.buildCompatList(),
-                        );
-                        if (!urlListEmitResult.ok) {
-                            log.warn('video_ended: failed to emit url_list', {
-                                error: urlListEmitResult.error,
-                            });
-                        }
-
-                        const persistResult = repository.persistRemove(videoId);
-                        if (!persistResult.ok) {
-                            log.warn('video_ended: failed to persist removal', {
-                                error: persistResult.error,
-                                videoId,
-                            });
-                        }
-                    } else {
-                        log.warn('video_ended: failed to remove music', {
-                            error: removeResult.error,
+                const removeResult = repository.remove(videoId);
+                if (removeResult.ok) {
+                    const emitResult = emitter.emitMusicRemoved(videoId);
+                    if (!emitResult.ok) {
+                        log.warn('video_ended: failed to emit musicRemoved', {
+                            error: emitResult.error,
                             videoId,
                         });
                     }
+
+                    const urlListEmitResult = emitter.emitUrlList(
+                        repository.buildCompatList(),
+                    );
+                    if (!urlListEmitResult.ok) {
+                        log.warn('video_ended: failed to emit url_list', {
+                            error: urlListEmitResult.error,
+                        });
+                    }
+
+                    const persistResult = repository.persistRemove(videoId);
+                    if (!persistResult.ok) {
+                        log.warn('video_ended: failed to persist removal', {
+                            error: persistResult.error,
+                            videoId,
+                        });
+                    }
+                } else {
+                    log.warn('video_ended: failed to remove music', {
+                        error: removeResult.error,
+                        videoId,
+                    });
                 }
 
                 const musicList = repository.list();
@@ -811,6 +855,8 @@ export function setupExtensionEventHandlers(
             ? payload['currentTime']
             : undefined;
         const duration = typeof payload['duration'] === 'number' ? payload['duration'] : undefined;
+
+        if (import.meta.env.DEV) console.debug(`[handleProgressUpdate] START`, { url, currentTime, eventName });
         const playbackRate = typeof payload['playbackRate'] === 'number' ? payload['playbackRate'] : 1;
         const isBuffering = typeof payload['isBuffering'] === 'boolean'
             ? payload['isBuffering']
@@ -826,6 +872,12 @@ export function setupExtensionEventHandlers(
             : undefined;
         const incomingMusicTitle = typeof payload['musicTitle'] === 'string'
             ? payload['musicTitle']
+            : undefined;
+        const consecutiveStallsFromExtension = typeof payload['consecutiveStalls'] === 'number'
+            ? payload['consecutiveStalls']
+            : undefined;
+        const clientLatencyMs = typeof payload['clientLatencyMs'] === 'number'
+            ? payload['clientLatencyMs']
             : undefined;
 
         if (
@@ -843,14 +895,64 @@ export function setupExtensionEventHandlers(
             return;
         }
 
-        try {
-            const { extractYoutubeId } = await import('@/shared/utils/youtube');
-            const videoId = extractYoutubeId(url);
+        const videoId = extractYoutubeId(url);
 
-            if (!videoId) {
-                log.debug(`${eventName}: invalid YouTube URL`, { url });
+        if (!videoId) {
+            log.debug(`${eventName}: invalid YouTube URL`, { url });
+            return;
+        }
+
+        try {
+            let state = progressState.get(videoId);
+            const isFirstUpdate = !state;
+            if (!state) {
+                state = {
+                    consecutiveStalls: 0,
+                    lastAdDecisionAt: 0,
+                    lastTime: 0,
+                    lastTimestamp: 0,
+                };
+                progressState.set(videoId, state);
+            }
+
+            if (!isFirstUpdate && timestamp < state.lastTimestamp) {
+                log.debug(`${eventName}: out-of-order progress ignored`, {
+                    lastTimestamp: state.lastTimestamp,
+                    timestamp,
+                    videoId,
+                });
                 return;
             }
+
+            const prevTimestamp = state.lastTimestamp;
+            const prevTime = state.lastTime;
+            const deltaWall = timestamp - prevTimestamp;
+            const deltaPlayback = currentTime - prevTime;
+            const backwardDelta = deltaPlayback;
+            const seekDetected = Math.abs(backwardDelta) > 5;
+
+            if (!isFirstUpdate && timestamp === prevTimestamp && backwardDelta < 0) {
+                log.debug(`${eventName}: regressive progress ignored`, {
+                    lastTime: prevTime,
+                    currentTime,
+                    timestamp,
+                    videoId,
+                });
+                return;
+            }
+
+            if (!isFirstUpdate && timestamp > prevTimestamp && backwardDelta < -0.5 && !seekDetected) {
+                log.debug(`${eventName}: regressive progress ignored`, {
+                    lastTime: prevTime,
+                    currentTime,
+                    timestamp,
+                    videoId,
+                });
+                return;
+            }
+
+            state.lastTimestamp = timestamp;
+            state.lastTime = currentTime;
 
             const music = repository.get(videoId);
             const progressPercent = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0;
@@ -860,31 +962,16 @@ export function setupExtensionEventHandlers(
             const minDelta = SERVER_ENV.PROGRESS_MIN_DELTA_SEC;
             const stallCount = SERVER_ENV.PROGRESS_STALL_COUNT;
             const cooldown = SERVER_ENV.PROGRESS_COOLDOWN_MS;
-
-            let state = progressState.get(videoId);
-            if (!state) {
-                state = {
-                    consecutiveStalls: 0,
-                    lastAdDecisionAt: 0,
-                    lastTime: currentTime,
-                    lastTimestamp: timestamp,
-                };
-                progressState.set(videoId, state);
-            }
-
-            const deltaWall = timestamp - state.lastTimestamp;
-            const deltaPlayback = currentTime - state.lastTime;
             const expectedDelta = (deltaWall / 1000) * playbackRate;
 
             const currentStatus = manager.getCurrent();
             let isAdvertisement: boolean | undefined = currentStatus.type === 'playing'
                 ? currentStatus.isAdvertisement
                 : undefined;
-            let consecutiveStalls = state.consecutiveStalls;
-
-            // Extension側から明示的に広告状態が送られてきた場合、それを優先
+            let consecutiveStalls = consecutiveStallsFromExtension !== undefined
+                ? consecutiveStallsFromExtension
+                : state.consecutiveStalls;
             if (isAdvertisementFromExtension !== undefined) isAdvertisement = isAdvertisementFromExtension;
-            // Extension側からの情報がない場合、現在のステータスを維持
             else if (
                 currentStatus.type === 'playing'
                 && currentStatus.isAdvertisement === true
@@ -892,55 +979,70 @@ export function setupExtensionEventHandlers(
                 isAdvertisement = true;
             }
 
-            if (isBuffering || visibilityState === 'hidden') consecutiveStalls = 0;
-            else if (isAdvertisement === true) consecutiveStalls = 0;
-            else if (deltaWall > stallThreshold) {
-                const seekDetected = Math.abs(deltaPlayback) > 5;
+            if (consecutiveStallsFromExtension === undefined) {
+                if (isBuffering || visibilityState === 'hidden') consecutiveStalls = 0;
+                else if (isAdvertisement === true) consecutiveStalls = 0;
+                else if (deltaWall > stallThreshold) {
+                    if (!seekDetected && deltaPlayback < expectedDelta - minDelta) {
+                        consecutiveStalls += 1;
 
-                if (!seekDetected && deltaPlayback < expectedDelta - minDelta) {
-                    consecutiveStalls += 1;
+                        const cooldownElapsed = timestamp - state.lastAdDecisionAt > cooldown;
 
-                    const cooldownElapsed = timestamp - state.lastAdDecisionAt > cooldown;
-
-                    if (consecutiveStalls >= stallCount && cooldownElapsed) {
-                        isAdvertisement = true;
-                        state.lastAdDecisionAt = timestamp;
-                        log.info(`${eventName}: advertisement detected`, {
-                            consecutiveStalls,
-                            deltaPlayback,
-                            deltaWall,
-                            expectedDelta,
-                            videoId,
-                        });
+                        if (consecutiveStalls >= stallCount && cooldownElapsed) {
+                            isAdvertisement = true;
+                            state.lastAdDecisionAt = timestamp;
+                            log.info(`${eventName}: advertisement detected`, {
+                                consecutiveStalls,
+                                deltaPlayback,
+                                deltaWall,
+                                expectedDelta,
+                                videoId,
+                            });
+                        }
+                    } else {
+                        consecutiveStalls = 0;
+                        if (seekDetected) isAdvertisement = false;
                     }
-                } else {
-                    consecutiveStalls = 0;
-                    if (seekDetected) isAdvertisement = false;
                 }
             }
 
-            state.lastTime = currentTime;
-            state.lastTimestamp = timestamp;
             state.consecutiveStalls = consecutiveStalls;
 
-            const statusUpdate: RemoteStatus = {
-                consecutiveStalls,
-                currentTime,
-                duration,
-                isAdvertisement,
-                isExternalVideo: !music,
-                lastProgressUpdate: timestamp,
-                musicId: videoId,
-                musicTitle: incomingMusicTitle || music?.title || '',
-                progressPercent,
-                type: 'playing',
-                videoId: videoId,
-            };
+            const authoritative = authoritativeVideoState.get(videoId);
+            const shouldRespectAuthoritativePause = authoritative?.state === 'paused' && !seekDetected;
 
-            manager.update(statusUpdate, eventName);
+            if (shouldRespectAuthoritativePause) {
+                const pausedUpdate: RemoteStatus = {
+                    currentTime,
+                    duration,
+                    musicId: videoId,
+                    musicTitle: incomingMusicTitle || music?.title || '',
+                    playbackRate,
+                    type: 'paused',
+                };
+                manager.update(pausedUpdate, eventName);
+            } else {
+                const statusUpdate: RemoteStatus = {
+                    consecutiveStalls,
+                    currentTime,
+                    duration,
+                    isAdvertisement,
+                    isExternalVideo: !music,
+                    lastProgressUpdate: timestamp,
+                    musicId: videoId,
+                    musicTitle: incomingMusicTitle || music?.title || '',
+                    progressPercent,
+                    playbackRate,
+                    isBuffering,
+                    type: 'playing',
+                    videoId: videoId,
+                };
+                manager.update(statusUpdate, eventName);
+            }
 
-            if (Math.abs(deltaPlayback) > 0.1 || consecutiveStalls > 0) {
+            if (Math.abs(deltaPlayback) > 0.1 || consecutiveStalls > 0 || clientLatencyMs !== undefined) {
                 log.debug(`${eventName}: processed`, {
+                    clientLatencyMs,
                     consecutiveStalls,
                     currentTime: currentTime.toFixed(2),
                     deltaPlayback: deltaPlayback.toFixed(2),

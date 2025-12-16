@@ -1,11 +1,6 @@
 import type { RemoteStatus } from '@/shared/stores/musicStore';
 import { useEffect, useRef, useState } from 'react';
 
-const SEEK_THRESHOLD = 5;
-const MIN_TIMESTAMP_ADVANCE_MS = 250;
-const EFFECTIVE_PAUSE_THRESHOLD = 1;
-const EFFECTIVE_PAUSE_DELTA = 0.1;
-
 interface UseInterpolatedTimeParams {
     status: RemoteStatus | null;
     duration?: number;
@@ -13,199 +8,152 @@ interface UseInterpolatedTimeParams {
     isAdvertisement?: boolean;
 }
 
+interface Anchor {
+    time: number;
+    perf: number;
+    rate: number;
+    buffering: boolean;
+}
+
 export function useInterpolatedTime({
     status,
     duration,
     videoId,
-    isAdvertisement,
 }: UseInterpolatedTimeParams): {
     currentTime: number;
     isEffectivelyPaused: boolean;
 } {
-    const [localCurrentTime, setLocalCurrentTime] = useState(0);
+    const initialTime = (() => {
+        if ((status?.type === 'playing' || status?.type === 'paused') && typeof status.currentTime === 'number')
+            return status.currentTime;
+        if (status?.type === 'paused' && typeof status.duration === 'number') return status.duration;
+
+        if (status?.type === 'playing' && typeof status.lastProgressUpdate === 'number') {
+            const deltaMs = Math.max(0, Date.now() - status.lastProgressUpdate);
+            const rate = typeof status.playbackRate === 'number' ? status.playbackRate : 1;
+            let predicted = (deltaMs / 1000) * rate;
+            if (typeof status.duration === 'number' && status.duration > 0)
+                predicted = Math.min(predicted, status.duration);
+            return predicted;
+        }
+
+        return 0;
+    })();
+    const [displayTime, setDisplayTime] = useState(initialTime);
     const [isEffectivelyPaused, setIsEffectivelyPaused] = useState(false);
-    const animationFrameRef = useRef<number | null>(null);
-    const intervalRef = useRef<number | null>(null);
-    const lastUpdateTimestampRef = useRef<number>(0);
-    const baseTimeRef = useRef(0);
-    const localCurrentTimeRef = useRef(0);
-    const lastStatusCurrentTimeRef = useRef<number>(0);
-    const zeroProgressCountRef = useRef<number>(0);
-    const effectivePausedRef = useRef<boolean>(false);
+    const rafRef = useRef<number | null>(null);
+    const anchorRef = useRef<Anchor | null>(null);
     const lastVideoIdRef = useRef<string>('');
-    const lastIsAdvertisementRef = useRef<boolean | undefined>(undefined);
+    const isPausedRef = useRef(false);
+    const delayMsRef = useRef(0);
+    const lastTimeRef = useRef(0);
 
     useEffect(() => {
-        localCurrentTimeRef.current = localCurrentTime;
-    }, [localCurrentTime]);
-
-    useEffect(() => {
-        const videoIdChanged = videoId && videoId !== lastVideoIdRef.current;
-        const adJustEnded = lastIsAdvertisementRef.current === true && isAdvertisement === false;
-
-        if (videoIdChanged || adJustEnded) {
-            if (videoIdChanged) lastVideoIdRef.current = videoId;
-            if (adJustEnded) {
-                console.debug(
-                    '[useInterpolatedTime] advertisement ended, resetting state',
-                    {
-                        newIsAdvertisement: isAdvertisement,
-                        oldIsAdvertisement: lastIsAdvertisementRef.current,
-                    },
-                );
-            }
-            if (isAdvertisement !== lastIsAdvertisementRef.current) lastIsAdvertisementRef.current = isAdvertisement;
-
-            setLocalCurrentTime(0);
-            baseTimeRef.current = 0;
-            lastUpdateTimestampRef.current = 0;
-            lastStatusCurrentTimeRef.current = 0;
-            zeroProgressCountRef.current = 0;
-            effectivePausedRef.current = false;
+        if (videoId && videoId !== lastVideoIdRef.current) {
+            lastVideoIdRef.current = videoId;
+            anchorRef.current = null;
+            delayMsRef.current = 0;
+            lastTimeRef.current = 0;
+            setDisplayTime(0);
             setIsEffectivelyPaused(false);
-        } else if (isAdvertisement !== lastIsAdvertisementRef.current) {
-            lastIsAdvertisementRef.current = isAdvertisement;
+            isPausedRef.current = false;
         }
-    }, [videoId, isAdvertisement]);
+    }, [videoId]);
 
     useEffect(() => {
-        if (status?.type === 'playing' && typeof status.currentTime === 'number') {
-            const newTimestamp = status.lastProgressUpdate || Date.now();
-            const timeDiff = Math.abs(
-                status.currentTime - localCurrentTimeRef.current,
-            );
-            const seekDetected = timeDiff >= SEEK_THRESHOLD || lastUpdateTimestampRef.current === 0;
-
-            const delta = Math.abs(
-                status.currentTime - lastStatusCurrentTimeRef.current,
-            );
-            if (
-                delta < EFFECTIVE_PAUSE_DELTA
-                && lastStatusCurrentTimeRef.current > 0
-            ) {
-                zeroProgressCountRef.current += 1;
-                if (zeroProgressCountRef.current >= EFFECTIVE_PAUSE_THRESHOLD) {
-                    if (!effectivePausedRef.current) {
-                        effectivePausedRef.current = true;
-                        setIsEffectivelyPaused(true);
-                    }
-                }
-            } else {
-                zeroProgressCountRef.current = 0;
-                if (effectivePausedRef.current) {
-                    effectivePausedRef.current = false;
-                    setIsEffectivelyPaused(false);
-                }
-            }
-            lastStatusCurrentTimeRef.current = status.currentTime;
-
-            if (seekDetected) {
-                setLocalCurrentTime(status.currentTime);
-                baseTimeRef.current = status.currentTime;
-                lastUpdateTimestampRef.current = newTimestamp;
-            } else {
-                const timestampDelta = newTimestamp - lastUpdateTimestampRef.current;
-                if (timestampDelta >= MIN_TIMESTAMP_ADVANCE_MS) {
-                    lastUpdateTimestampRef.current = newTimestamp;
-                    baseTimeRef.current = status.currentTime;
-                }
-            }
-        } else if (status?.type === 'paused') {
-            baseTimeRef.current = localCurrentTimeRef.current;
-            lastUpdateTimestampRef.current = Date.now();
-            if (effectivePausedRef.current) {
-                effectivePausedRef.current = false;
-                setIsEffectivelyPaused(false);
-            }
-            zeroProgressCountRef.current = 0;
-        }
-    }, [status]);
-
-    useEffect(() => {
-        const computeCurrentTime = (): number => {
-            const now = Date.now();
-            const elapsed = (now - lastUpdateTimestampRef.current) / 1000;
-            const isPlayingNow = status?.type === 'playing' && !effectivePausedRef.current;
-            const newTime = isPlayingNow
-                ? baseTimeRef.current + elapsed
-                : baseTimeRef.current;
-            return duration != undefined ? Math.min(newTime, duration) : newTime;
-        };
-
-        const stopAllTimers = () => {
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-                animationFrameRef.current = null;
-            }
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = null;
-            }
-        };
-
-        const startRAFLoop = () => {
-            stopAllTimers();
-            const animate = (): void => {
-                setLocalCurrentTime(computeCurrentTime());
-                animationFrameRef.current = requestAnimationFrame(animate);
-            };
-            animationFrameRef.current = requestAnimationFrame(animate);
-        };
-
-        const startIntervalLoop = () => {
-            stopAllTimers();
-            setLocalCurrentTime(computeCurrentTime());
-            intervalRef.current = window.setInterval(() => {
-                setLocalCurrentTime(computeCurrentTime());
-            }, 1000);
-        };
-
-        const syncAndStartLoop = () => {
-            stopAllTimers();
-
-            if (!status || status.type === 'closed') return;
-
-            const isPlayingNow = status.type === 'playing' && !effectivePausedRef.current;
-
-            if (document.visibilityState === 'visible') {
-                if (isPlayingNow) {
-                    const now = Date.now();
-                    const elapsed = (now - lastUpdateTimestampRef.current) / 1000;
-                    const syncedTime = baseTimeRef.current + elapsed;
-                    const clampedTime = duration != undefined ? Math.min(syncedTime, duration) : syncedTime;
-                    setLocalCurrentTime(clampedTime);
-                    baseTimeRef.current = clampedTime;
-                    lastUpdateTimestampRef.current = now;
-                    startRAFLoop();
-                } else {
-                    setLocalCurrentTime(baseTimeRef.current);
-                }
-            } else {
-                if (isPlayingNow) startIntervalLoop();
-                else setLocalCurrentTime(baseTimeRef.current);
-            }
-        };
-
         if (!status || status.type === 'closed') {
-            stopAllTimers();
+            anchorRef.current = null;
+            isPausedRef.current = false;
+            setIsEffectivelyPaused(false);
+            if (rafRef.current) {
+                cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
+            }
             return;
         }
 
-        syncAndStartLoop();
+        if (status.type === 'paused') {
+            isPausedRef.current = true;
+            if (typeof status.currentTime === 'number') {
+                anchorRef.current = {
+                    buffering: false,
+                    perf: performance.now(),
+                    rate: 0,
+                    time: status.currentTime,
+                };
+                lastTimeRef.current = status.currentTime;
+                setDisplayTime(status.currentTime);
+            }
+            setIsEffectivelyPaused(true);
+            return;
+        }
 
-        const handleVisibilityChange = () => {
-            syncAndStartLoop();
-        };
+        if (status.type === 'playing' && typeof status.currentTime === 'number') {
+            const wasPaused = isPausedRef.current;
+            isPausedRef.current = false;
+            const rate = status.playbackRate ?? 1;
+            const buffering = status.isBuffering ?? false;
+            const stalled = status.consecutiveStalls ? status.consecutiveStalls > 0 : false;
 
-        document.addEventListener('visibilitychange', handleVisibilityChange);
+            anchorRef.current = {
+                buffering,
+                perf: performance.now(),
+                rate: buffering || stalled ? 0 : rate,
+                time: status.currentTime,
+            };
+            lastTimeRef.current = status.currentTime;
+            setDisplayTime(status.currentTime);
+            setIsEffectivelyPaused(buffering || stalled);
 
-        return () => {
-            stopAllTimers();
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
+            if (wasPaused && !rafRef.current) {
+                const animate = () => {
+                    if (isPausedRef.current) {
+                        rafRef.current = null;
+                        return;
+                    }
+                    rafRef.current = requestAnimationFrame(animate);
+                    const anchor = anchorRef.current;
+                    if (!anchor) return;
+                    const elapsed = (performance.now() - anchor.perf) / 1000;
+                    let time = anchor.time + elapsed * anchor.rate;
+                    if (duration) time = Math.min(time, duration);
+                    setDisplayTime(time);
+                };
+                rafRef.current = requestAnimationFrame(animate);
+            }
+        }
     }, [status, duration]);
 
-    return { currentTime: localCurrentTime, isEffectivelyPaused };
+    useEffect(() => {
+        const animate = () => {
+            if (isPausedRef.current) {
+                rafRef.current = null;
+                return;
+            }
+
+            rafRef.current = requestAnimationFrame(animate);
+
+            const anchor = anchorRef.current;
+            if (!anchor) return;
+
+            const elapsed = (performance.now() - anchor.perf) / 1000;
+            let time = anchor.time + elapsed * anchor.rate;
+            if (duration) time = Math.min(time, duration);
+
+            setDisplayTime(time);
+        };
+
+        if (!isPausedRef.current) rafRef.current = requestAnimationFrame(animate);
+
+        return () => {
+            if (rafRef.current) {
+                cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
+            }
+        };
+    }, [duration]);
+
+    return { currentTime: displayTime, isEffectivelyPaused };
 }
 
 type VisibilityState = 'visible' | 'hiding' | 'hidden';

@@ -1,7 +1,7 @@
-import { TIMING, YOUTUBE_WATCH_URL_PATTERN } from '../constants';
+import { MESSAGE_TYPES, TIMING, YOUTUBE_WATCH_URL_PATTERN } from '../constants';
 import type { BatchProgressUpdateMessage, ChromeMessage, ChromeMessageResponse, ProgressUpdatePayload } from '../types';
 import type { MessageSender, SocketInstance } from './types';
-import { sendTabMessage } from './utils';
+
 import { handleVideoEnded, handleYouTubeVideoState } from './youtube-state';
 
 interface MoveVideoMessage {
@@ -12,11 +12,6 @@ interface MoveVideoMessage {
 interface DeleteUrlMessage {
     type: 'delete_url';
     url: string;
-}
-
-interface ManualAutoPlayMessage {
-    type: 'set_manual_autoplay';
-    enabled: boolean;
 }
 
 type MessageResponse = { status: 'ok' } | { status: 'error'; error: string };
@@ -42,6 +37,12 @@ function getChromeErrorMessage(): string {
 
 /* eslint-disable no-console */
 export function setupMessageHandler(socket: SocketInstance): void {
+    // Flush any buffered progress updates when socket connects
+    try {
+        socket.on('connect', () => {
+            flushProgressBuffer(socket);
+        });
+    } catch {}
     chrome.runtime.onMessage.addListener(
         (
             message: ChromeMessage,
@@ -72,6 +73,24 @@ export function setupMessageHandler(socket: SocketInstance): void {
                 if (!socket.connected) socket.connect();
                 return false;
             }
+
+            if (msg.type === MESSAGE_TYPES.REQUEST_URL_LIST) {
+                try {
+                    if (socket.connected) socket.emit('request_url_list', () => {});
+                    else {
+                        (socket as any).once('connect', () => {
+                            try {
+                                socket.emit('request_url_list');
+                            } catch {}
+                        });
+                        try {
+                            socket.connect();
+                        } catch {}
+                    }
+                } catch {}
+                return false;
+            }
+
             if (msg.type === 'show_video_end_alert') {
                 handleVideoEndAlert();
                 return false;
@@ -82,18 +101,6 @@ export function setupMessageHandler(socket: SocketInstance): void {
                     handleDeleteUrl({ type: msg.type, url: msg.url }, socket, sendResponse);
                     return true;
                 }
-            }
-
-            if (msg.type === 'set_manual_autoplay') {
-                if (msg.enabled !== undefined && typeof msg.enabled === 'boolean') {
-                    handleManualAutoPlay({ type: msg.type, enabled: msg.enabled }, sendResponse);
-                    return true;
-                }
-            }
-
-            if (msg.type === 'deadline_activated') {
-                handleDeadlineActivated(sendResponse);
-                return true;
             }
 
             if (msg.type === 'add_external_music') {
@@ -197,9 +204,17 @@ function handleAdSkipToNext(
 }
 
 function handleProgressUpdate(message: ProgressUpdatePayload, socket: SocketInstance): void {
-    if (!socket.connected) return;
+    if (!socket.connected) {
+        bufferProgress(message);
+        try {
+            socket.connect();
+        } catch {}
+        return;
+    }
 
     try {
+        const receivedAt = Date.now();
+        const clientLatencyMs = receivedAt - message.timestamp;
         const payload = {
             url: message.url,
             videoId: message.videoId,
@@ -208,11 +223,13 @@ function handleProgressUpdate(message: ProgressUpdatePayload, socket: SocketInst
             playbackRate: message.playbackRate,
             isBuffering: message.isBuffering,
             visibilityState: message.visibilityState,
-            timestamp: message.timestamp ?? Date.now(),
+            timestamp: message.timestamp ?? receivedAt,
             isAdvertisement: message.isAdvertisement,
             musicTitle: message.musicTitle,
             tabId: message.tabId,
             progressPercent: message.progressPercent,
+            consecutiveStalls: message.consecutiveStalls,
+            clientLatencyMs,
         } as Record<string, unknown>;
 
         socket.emit('progress_update', payload);
@@ -225,27 +242,80 @@ function handleBatchProgressUpdate(
     message: BatchProgressUpdateMessage,
     socket: SocketInstance,
 ): void {
-    if (!socket.connected || !Array.isArray(message.updates)) return;
+    if (!Array.isArray(message.updates)) return;
+    if (!socket.connected) {
+        message.updates.forEach(u => bufferProgress(u));
+        try {
+            socket.connect();
+        } catch {}
+        return;
+    }
 
     try {
+        const receivedAt = Date.now();
         socket.emit('progress_update_batch', {
-            updates: message.updates.map(update => ({
-                url: update.url,
-                videoId: update.videoId,
-                currentTime: update.currentTime,
-                duration: update.duration,
-                playbackRate: update.playbackRate,
-                isBuffering: update.isBuffering,
-                visibilityState: update.visibilityState,
-                timestamp: update.timestamp ?? Date.now(),
-                isAdvertisement: update.isAdvertisement,
-                musicTitle: update.musicTitle,
-                tabId: update.tabId,
-                progressPercent: update.progressPercent,
-            })),
+            updates: message.updates.map(update => {
+                const clientLatencyMs = receivedAt - update.timestamp;
+                return {
+                    url: update.url,
+                    videoId: update.videoId,
+                    currentTime: update.currentTime,
+                    duration: update.duration,
+                    playbackRate: update.playbackRate,
+                    isBuffering: update.isBuffering,
+                    visibilityState: update.visibilityState,
+                    timestamp: update.timestamp ?? receivedAt,
+                    isAdvertisement: update.isAdvertisement,
+                    musicTitle: update.musicTitle,
+                    tabId: update.tabId,
+                    progressPercent: update.progressPercent,
+                    consecutiveStalls: update.consecutiveStalls,
+                    clientLatencyMs,
+                };
+            }),
         });
     } catch (error) {
         console.error('[Background] Failed to emit batched progress_update', error);
+    }
+}
+
+const PROGRESS_BUFFER: ProgressUpdatePayload[] = [];
+const MAX_PROGRESS_BUFFER = 300;
+
+function bufferProgress(msg: ProgressUpdatePayload): void {
+    if (PROGRESS_BUFFER.length >= MAX_PROGRESS_BUFFER) PROGRESS_BUFFER.shift();
+    PROGRESS_BUFFER.push(msg);
+}
+
+function flushProgressBuffer(socket: SocketInstance): void {
+    if (!socket.connected || PROGRESS_BUFFER.length === 0) return;
+    const updates = PROGRESS_BUFFER.splice(0, PROGRESS_BUFFER.length);
+    try {
+        const receivedAt = Date.now();
+        socket.emit('progress_update_batch', {
+            updates: updates.map(u => {
+                const clientLatencyMs = receivedAt - u.timestamp;
+                return {
+                    url: u.url,
+                    videoId: u.videoId,
+                    currentTime: u.currentTime,
+                    duration: u.duration,
+                    playbackRate: u.playbackRate,
+                    isBuffering: u.isBuffering,
+                    visibilityState: u.visibilityState,
+                    timestamp: u.timestamp ?? receivedAt,
+                    isAdvertisement: u.isAdvertisement,
+                    musicTitle: u.musicTitle,
+                    tabId: u.tabId,
+                    progressPercent: u.progressPercent,
+                    consecutiveStalls: u.consecutiveStalls,
+                    clientLatencyMs,
+                };
+            }),
+        });
+    } catch (error) {
+        console.error('[Background] Failed to flush progress buffer', error);
+        PROGRESS_BUFFER.unshift(...updates);
     }
 }
 
@@ -294,37 +364,6 @@ function handleDeleteUrl(
     }
 }
 
-function handleManualAutoPlay(
-    message: ManualAutoPlayMessage,
-    sendResponse: (response: MessageResponse) => void,
-): void {
-    chrome.storage.local.set({ manualAutoPlayEnabled: message.enabled }, () => {
-        if (hasChromeError()) {
-            console.error('[Background] Failed to set manual autoplay', chrome.runtime.lastError);
-            safeSendResponse(sendResponse, { status: 'error', error: getChromeErrorMessage() });
-            return;
-        }
-        safeSendResponse(sendResponse, { status: 'ok' });
-    });
-}
-
-async function handleDeadlineActivated(
-    sendResponse: (response: MessageResponse) => void,
-): Promise<void> {
-    chrome.tabs.query({ url: YOUTUBE_WATCH_URL_PATTERN }, async tabs => {
-        if (hasChromeError()) {
-            console.error('[Background] Failed to query tabs', chrome.runtime.lastError);
-            safeSendResponse(sendResponse, { status: 'error', error: getChromeErrorMessage() });
-            return;
-        }
-
-        const tasks = tabs
-            .filter((t): t is { id: number } => t.id !== undefined)
-            .map(t => sendTabMessage(t.id, { type: 'pause_video' }));
-        await Promise.all(tasks);
-        safeSendResponse(sendResponse, { status: 'ok' });
-    });
-}
 /* eslint-enable no-console */
 
 function handleAddExternalMusic(

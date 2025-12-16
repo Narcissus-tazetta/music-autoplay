@@ -52,7 +52,7 @@ export const UrlListSection: FC<Props> = memo(
                     <List size={20} />
                     {UI_TEXT.URL_LIST_TITLE}
                 </h2>
-                <ul className='max-h-44 overflow-y-auto border border-blue-200 bg-white rounded-lg shadow-sm p-1'>
+                <ul className='max-h-72 overflow-y-auto border border-blue-200 bg-white rounded-lg shadow-sm p-1'>
                     {urls.length === 0 ? <li className='p-3 text-sm text-gray-500'>{UI_TEXT.NO_URLS_MESSAGE}</li> : (
                         urls.map((u, i) => (
                             <li
@@ -63,7 +63,7 @@ export const UrlListSection: FC<Props> = memo(
                                 onKeyDown={e => handleKeyDown(e, u.url)}
                                 className='flex items-start justify-between p-2 text-sm text-gray-800 border-b border-gray-100 cursor-pointer hover:bg-blue-50 rounded transition-colors'
                             >
-                                <span className='break-words pr-3'>{u.title || u.url}</span>
+                                <span className='wrap-break-word pr-3'>{u.title || u.url}</span>
                                 <button
                                     aria-label={`delete-${i}`}
                                     onClick={e => handleDelete(e, i)}

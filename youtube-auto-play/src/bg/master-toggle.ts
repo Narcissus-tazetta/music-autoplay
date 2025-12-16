@@ -71,13 +71,13 @@ function handleMasterToggle(enabled: boolean, isManualChange = false): void {
     });
 }
 
-alarms?.clear(WEEKEND_ALARM, () => {
-    alarms.create(WEEKEND_ALARM, {
+alarms?.clear?.(WEEKEND_ALARM, () => {
+    alarms.create?.(WEEKEND_ALARM, {
         periodInMinutes: TIMING.WEEKEND_CHECK_INTERVAL / 60000,
     });
 });
 
-alarms?.onAlarm.addListener((alarm: AlarmLike) => {
+alarms?.onAlarm?.addListener((alarm: AlarmLike) => {
     if (alarm.name !== WEEKEND_ALARM) return;
 
     if (isWeekend() && extensionMasterEnabled) {
@@ -102,7 +102,6 @@ alarms?.onAlarm.addListener((alarm: AlarmLike) => {
         });
     }
 });
-
 export function setupMasterToggleHandler(): void {
     chrome.runtime.onMessage.addListener(
         (message: { type: string; enabled?: boolean }, _sender, sendResponse) => {

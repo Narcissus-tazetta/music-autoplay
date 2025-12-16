@@ -189,10 +189,14 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
 function StatusBadgeInner({ status, music, mode }: StatusBadgeProps) {
     const settings = useSettingsStore();
     const resolvedMode = mode ?? settings.ytStatusMode;
+    const enrichedStatus = status?.type === 'paused' && !('currentTime' in status)
+            && typeof (status as any).lastProgressUpdate === 'number'
+        ? status
+        : status;
 
-    if (resolvedMode === 'player') return <AudioPlayer status={status} music={music} />;
+    if (resolvedMode === 'player') return <AudioPlayer key='player-mode' status={enrichedStatus} music={music} />;
 
-    return <StatusBadgeCompact status={status} music={music} />;
+    return <StatusBadgeCompact key='compact-mode' status={status} music={music} />;
 }
 
 export const StatusBadge = memo(StatusBadgeInner);

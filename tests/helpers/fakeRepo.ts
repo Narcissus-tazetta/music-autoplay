@@ -9,6 +9,9 @@ export function createFakeRepo<T extends { id?: string; url?: string } = { id?: 
         has(id: string) {
             return items.some(i => (i as any).id === id || (i as any).url === id);
         },
+        get(id: string) {
+            return items.find(i => (i as any).id === id || (i as any).url === id);
+        },
         remove(id: string) {
             const idx = items.findIndex(i => (i as any).id === id || (i as any).url === id);
             if (idx === -1) return { ok: false };

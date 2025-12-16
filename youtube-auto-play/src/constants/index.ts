@@ -9,8 +9,7 @@ export const VIDEO_RETRY_CONFIG = {
 } as const;
 
 export const STORAGE_KEYS = {
-    MANUAL_AUTOPLAY_ENABLED: 'manualAutoPlayEnabled',
-    DEADLINE_ENABLED: 'deadlineEnabled',
+    EXTENSION_MODE: 'extensionMode',
     URL_LIST: 'urlList',
     LATEST_URL: 'latestUrl',
     MANUALLY_DISABLED: 'manuallyDisabled',
@@ -19,25 +18,28 @@ export const STORAGE_KEYS = {
 
 export const MESSAGE_TYPES = {
     EXTENSION_MASTER_TOGGLE: 'extension_master_toggle',
-    SET_MANUAL_AUTOPLAY: 'set_manual_autoplay',
-    SET_DEADLINE: 'set_deadline',
     FIND_YOUTUBE_TABS: 'find_youtube_tabs',
     GET_CURRENT_URL: 'get_current_url',
     DELETE_URL: 'delete_url',
     YT_PLAY: 'yt_play',
     YT_PAUSE: 'yt_pause',
     RECONNECT_SOCKET: 'reconnect_socket',
+    REQUEST_URL_LIST: 'request_url_list',
     URL_LIST: 'url_list',
     SOCKET_ERROR: 'socket_error',
     SOCKET_DISCONNECTED: 'socket_disconnected',
     YOUTUBE_VIDEO_STATE: 'youtube_video_state',
+    TOGGLE_HIDDEN_UI: 'toggle_hidden_ui',
 } as const;
 
 export const UI_TEXT = {
     EXTENSION_STATUS_ON: 'ON',
     EXTENSION_STATUS_OFF: 'OFF',
-    AUTO_TAB_LABEL: 'Auto Tab',
-    DEADLINE_LABEL: 'Deadline',
+
+    MODE_LABEL: 'Mode',
+    MODE_AUTO: 'Auto',
+    MODE_LOCAL: 'Local',
+    MODE_PRODUCTION: 'Prod',
     NO_URLS_MESSAGE: 'URLがありません',
     PREV_BUTTON: '前の動画',
     NEXT_BUTTON: '次の動画',
@@ -67,6 +69,10 @@ export const SHORTCUTS = [
     {
         key: 'Cmd+Shift+L',
         description: 'URLリストの先頭を開く',
+    },
+    {
+        key: 'Cmd+Shift+P',
+        description: '開発モードの切り替え',
     },
 ] as const;
 

@@ -4,6 +4,8 @@ import type { Socket } from 'socket.io-client';
 import { create } from 'zustand';
 import { getSocket } from '../../app/utils/socketClient';
 
+const SEEK_THRESHOLD = 5;
+
 export type RemoteStatus =
     | {
         type: 'playing';
@@ -18,6 +20,8 @@ export type RemoteStatus =
         progressPercent?: number;
         lastProgressUpdate?: number;
         consecutiveStalls?: number;
+        playbackRate?: number;
+        isBuffering?: boolean;
     }
     | {
         type: 'paused';
@@ -26,6 +30,7 @@ export type RemoteStatus =
         isTransitioning?: boolean;
         currentTime?: number;
         duration?: number;
+        playbackRate?: number;
     }
     | {
         type: 'closed';
@@ -45,8 +50,17 @@ interface MusicStore {
     musics: Music[];
     socket?: Socket<S2C, C2S> | null;
     remoteStatus: RemoteStatus | null;
+    lastAuthoritativePause?: {
+        time: number;
+        serverTimestamp: number;
+        sequenceNumber: number;
+        traceId: string;
+        createdAt: number;
+    } | null;
     lastSequenceNumber: number;
     lastServerTimestamp: number;
+    lastTraceId: string;
+    lastEventReceivedAt: number;
     error?: string;
     resetError?: () => void;
     setMusics?: (musics: Music[]) => void;
@@ -67,18 +81,26 @@ export const useMusicStore = create<MusicStore>(set => {
 
         if (meta) {
             set(state => {
-                const isStale = meta.sequenceNumber <= state.lastSequenceNumber;
-                const isTooOld = meta.serverTimestamp < state.lastServerTimestamp - 5000;
+                const lastServerTimestamp = state.lastServerTimestamp;
+                const sequenceBehind = meta.sequenceNumber < state.lastSequenceNumber;
+                const hasSameSequence = meta.sequenceNumber === state.lastSequenceNumber;
+                const incomingServerTimestamp = meta.serverTimestamp;
+                const hasNewTimestamp = incomingServerTimestamp > lastServerTimestamp;
+                const isDuplicateByTraceId = hasSameSequence && meta.traceId && meta.traceId === state.lastTraceId;
+                const isStale = sequenceBehind || (hasSameSequence && !hasNewTimestamp) || isDuplicateByTraceId;
+                const isTooOld = incomingServerTimestamp < lastServerTimestamp - 5000;
 
                 if (isStale || isTooOld) {
                     if (import.meta.env.DEV) {
-                        console.warn('[musicStore] ignoring stale update', {
+                        const log = isDuplicateByTraceId ? console.info : console.warn;
+                        log('[musicStore] ignoring stale update', {
                             currentSeq: state.lastSequenceNumber,
                             currentTimestamp: state.lastServerTimestamp,
                             incomingSeq: meta.sequenceNumber,
                             incomingTimestamp: meta.serverTimestamp,
                             isStale,
                             isTooOld,
+                            isDuplicateByTraceId,
                             traceId: meta.traceId,
                         });
                     }
@@ -96,10 +118,123 @@ export const useMusicStore = create<MusicStore>(set => {
                     });
                 }
 
+                const PAUSE_TTL_MS = 60_000;
+                const PAUSE_ACCEPT_WINDOW_MS = 5_000;
+                const PAUSE_EPSILON_S = 0.5;
+
+                // record authoritative pause
+                if (statusWithoutMeta.type === 'paused') {
+                    if (typeof statusWithoutMeta.currentTime === 'number') {
+                        return {
+                            lastSequenceNumber: meta.sequenceNumber,
+                            lastServerTimestamp: meta.serverTimestamp,
+                            lastTraceId: meta.traceId,
+                            lastEventReceivedAt: Date.now(),
+                            remoteStatus: statusWithoutMeta,
+                            lastAuthoritativePause: {
+                                time: statusWithoutMeta.currentTime,
+                                serverTimestamp: meta.serverTimestamp,
+                                sequenceNumber: meta.sequenceNumber,
+                                traceId: meta.traceId,
+                                createdAt: Date.now(),
+                            },
+                        };
+                    }
+
+                    // paused but no explicit currentTime: fall back to previous known currentTime if available
+                    const fallbackTime = (state.remoteStatus
+                            && (state.remoteStatus.type === 'playing' || state.remoteStatus.type === 'paused')
+                            && typeof (state.remoteStatus as any).currentTime === 'number')
+                        ? (state.remoteStatus as any).currentTime
+                        : undefined;
+
+                    return {
+                        lastSequenceNumber: meta.sequenceNumber,
+                        lastServerTimestamp: meta.serverTimestamp,
+                        lastTraceId: meta.traceId,
+                        lastEventReceivedAt: Date.now(),
+                        remoteStatus: {
+                            ...statusWithoutMeta,
+                            currentTime: fallbackTime,
+                        },
+                    };
+                }
+
+                // if recent authoritative pause exists, suppress transient playing updates that are within epsilon and time window
+                const now = Date.now();
+                if (
+                    statusWithoutMeta.type === 'playing'
+                    && state.lastAuthoritativePause
+                    && now - state.lastAuthoritativePause.createdAt <= PAUSE_TTL_MS
+                ) {
+                    const pause = state.lastAuthoritativePause;
+                    const incomingTime = typeof statusWithoutMeta.currentTime === 'number'
+                        ? statusWithoutMeta.currentTime
+                        : NaN;
+                    const withinEpsilon = !isNaN(incomingTime)
+                        && Math.abs(incomingTime - pause.time) <= PAUSE_EPSILON_S;
+                    const withinWindow = meta.serverTimestamp <= pause.serverTimestamp + PAUSE_ACCEPT_WINDOW_MS;
+
+                    if (withinEpsilon && withinWindow) {
+                        if (import.meta.env.DEV) {
+                            console.info(
+                                '[musicStore] suppressing transient playing update due to recent authoritative pause',
+                                {
+                                    pause,
+                                    incoming: {
+                                        sequenceNumber: meta.sequenceNumber,
+                                        serverTimestamp: meta.serverTimestamp,
+                                        currentTime: incomingTime,
+                                    },
+                                },
+                            );
+                        }
+                        return {};
+                    }
+                    // if incoming playing is clearly ahead, clear pause
+                    if (!isNaN(incomingTime) && incomingTime > pause.time + SEEK_THRESHOLD) {
+                        // clear pause and accept
+                        return {
+                            lastSequenceNumber: meta.sequenceNumber,
+                            lastServerTimestamp: meta.serverTimestamp,
+                            lastTraceId: meta.traceId,
+                            remoteStatus: statusWithoutMeta,
+                            lastAuthoritativePause: null,
+                        };
+                    }
+                }
+
+                const nextStatus: RemoteStatus = { ...statusWithoutMeta };
+                if (nextStatus.type === 'playing' && state.remoteStatus?.type === 'playing') {
+                    const incomingTime = typeof nextStatus.currentTime === 'number' ? nextStatus.currentTime : NaN;
+                    const prevTime = typeof state.remoteStatus.currentTime === 'number'
+                        ? state.remoteStatus.currentTime
+                        : NaN;
+                    const incomingId = nextStatus.musicId ?? nextStatus.videoId;
+                    const prevId = state.remoteStatus.musicId ?? state.remoteStatus.videoId;
+
+                    if (
+                        typeof incomingId === 'string'
+                        && incomingId.length > 0
+                        && incomingId === prevId
+                        && Number.isFinite(incomingTime)
+                        && Number.isFinite(prevTime)
+                    ) {
+                        const delta = incomingTime - prevTime;
+                        if (delta < -0.5 && Math.abs(delta) < SEEK_THRESHOLD) {
+                            nextStatus.currentTime = prevTime;
+                            if (typeof nextStatus.duration === 'number' && nextStatus.duration > 0)
+                                nextStatus.progressPercent = Math.min((prevTime / nextStatus.duration) * 100, 100);
+                        }
+                    }
+                }
+
                 return {
                     lastSequenceNumber: meta.sequenceNumber,
                     lastServerTimestamp: meta.serverTimestamp,
-                    remoteStatus: statusWithoutMeta,
+                    lastTraceId: meta.traceId,
+                    lastEventReceivedAt: Date.now(),
+                    remoteStatus: nextStatus,
                 };
             });
         } else {
@@ -111,10 +246,22 @@ export const useMusicStore = create<MusicStore>(set => {
                     statusWithoutMeta,
                 );
             }
-
-            set({
-                remoteStatus: statusWithoutMeta,
-            });
+            if (statusWithoutMeta.type === 'paused' && typeof statusWithoutMeta.currentTime === 'number') {
+                set(prev => ({
+                    remoteStatus: statusWithoutMeta,
+                    lastAuthoritativePause: {
+                        time: statusWithoutMeta.currentTime as number,
+                        serverTimestamp: Date.now(),
+                        sequenceNumber: prev.lastSequenceNumber,
+                        traceId: '',
+                        createdAt: Date.now(),
+                    },
+                }));
+            } else {
+                set({
+                    remoteStatus: statusWithoutMeta,
+                });
+            }
         }
     };
 
@@ -127,6 +274,8 @@ export const useMusicStore = create<MusicStore>(set => {
         connectSocket() {
             if (socket) return;
             socket = getSocket();
+
+            let statusPollInterval: ReturnType<typeof setInterval> | null = null;
 
             const attemptGetAllMusics = (s: Socket<S2C, C2S>, maxAttempts = 3) => {
                 let attempt = 0;
@@ -164,6 +313,11 @@ export const useMusicStore = create<MusicStore>(set => {
                 let attempt = 0;
                 const tryOnce = () => {
                     attempt++;
+                    {
+                        const state = useMusicStore.getState();
+                        const timeSinceLastEvent = Date.now() - state.lastEventReceivedAt;
+                        if (timeSinceLastEvent < 2000) return;
+                    }
                     let called = false;
                     const timeout = setTimeout(() => {
                         if (called) return;
@@ -180,7 +334,20 @@ export const useMusicStore = create<MusicStore>(set => {
                             called = true;
                             clearTimeout(timeout);
                             if (import.meta.env.DEV) console.info('[musicStore] getRemoteStatus response:', status);
-                            if (status && typeof status === 'object' && 'type' in status) set({ remoteStatus: status });
+                            if (status && typeof status === 'object' && 'type' in status) {
+                                const state = useMusicStore.getState();
+                                const timeSinceLastEvent = Date.now() - state.lastEventReceivedAt;
+                                if (timeSinceLastEvent < 2000) {
+                                    if (import.meta.env.DEV) {
+                                        console.info(
+                                            '[musicStore] skipping poll response, recent event received',
+                                            { timeSinceLastEvent },
+                                        );
+                                    }
+                                    return;
+                                }
+                                handleRemoteStatusUpdate(status as RemoteStatusWithMeta);
+                            }
                         });
                     } catch {
                         if (attempt < maxAttempts) {
@@ -215,6 +382,12 @@ export const useMusicStore = create<MusicStore>(set => {
                 })
                 .on('remoteStatusUpdated', (incomingState: RemoteStatusWithMeta) => {
                     handleRemoteStatusUpdate(incomingState);
+                })
+                .on('disconnect', () => {
+                    if (statusPollInterval) {
+                        clearInterval(statusPollInterval);
+                        statusPollInterval = null;
+                    }
                 });
 
             const socketAny = socket as unknown;
@@ -249,7 +422,9 @@ export const useMusicStore = create<MusicStore>(set => {
 
             socket.connect();
 
-            set({ socket });
+            statusPollInterval = setInterval(() => {
+                if (socket && socket.connected) attemptGetRemoteStatus(socket as Socket<S2C, C2S>, 1);
+            }, 5000);
         },
         error: undefined,
         hydrateFromLocalStorage() {
@@ -272,6 +447,8 @@ export const useMusicStore = create<MusicStore>(set => {
         },
         lastSequenceNumber: 0,
         lastServerTimestamp: 0,
+        lastTraceId: '',
+        lastEventReceivedAt: 0,
         musics: [],
         remoteStatus: null,
         remoteStatusUpdated(incomingState: RemoteStatusWithMeta) {

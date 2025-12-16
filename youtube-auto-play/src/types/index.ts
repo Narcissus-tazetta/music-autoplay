@@ -3,16 +3,17 @@ export interface UrlItem {
     title?: string;
 }
 
+export type ExtensionMode = 'auto' | 'local' | 'production';
+
 export type MessageType =
     | 'extension_master_toggle'
-    | 'set_manual_autoplay'
-    | 'set_deadline'
     | 'find_youtube_tabs'
     | 'get_current_url'
     | 'delete_url'
     | 'yt_play'
     | 'yt_pause'
     | 'reconnect_socket'
+    | 'request_url_list'
     | 'url_list'
     | 'socket_error'
     | 'socket_disconnected'
@@ -20,7 +21,6 @@ export type MessageType =
     | 'move_prev_video'
     | 'move_next_video'
     | 'show_video_end_alert'
-    | 'deadline_activated'
     | 'get_video_state'
     | 'get_video_info'
     | 'wait_for_end'
@@ -41,9 +41,8 @@ export type MessageType =
 
 export interface ChromeStorageData {
     extensionMasterEnabled?: boolean;
-    manualAutoPlayEnabled?: boolean;
     autoPlayEnabled?: boolean;
-    deadlineEnabled?: boolean;
+    extensionMode?: ExtensionMode;
     urlList?: UrlItem[];
     latestUrl?: string;
     manuallyDisabled?: boolean;
@@ -62,16 +61,6 @@ export interface ChromeMessage {
 
 export interface ExtensionMasterToggleMessage extends ChromeMessage {
     type: 'extension_master_toggle';
-    enabled: boolean;
-}
-
-export interface SetManualAutoplayMessage extends ChromeMessage {
-    type: 'set_manual_autoplay';
-    enabled: boolean;
-}
-
-export interface SetDeadlineMessage extends ChromeMessage {
-    type: 'set_deadline';
     enabled: boolean;
 }
 
@@ -125,8 +114,10 @@ export interface ProgressUpdatePayload extends ChromeMessage {
     timestamp: number;
     isAdvertisement?: boolean;
     musicTitle?: string;
+    imminentEnd?: boolean;
     tabId?: string | number;
     progressPercent?: number;
+    consecutiveStalls?: number;
 }
 
 export interface BatchProgressUpdateMessage extends ChromeMessage {

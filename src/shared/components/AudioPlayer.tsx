@@ -1,6 +1,7 @@
 import { cn } from '@/app/utils/cn';
 import { useInterpolatedTime, useThumbnail, useVisibilityTimer } from '@/shared/hooks/usePlayerState';
 import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
+import { useSettingsStore } from '@/shared/stores/settingsStore';
 import { formatSecondsToTime } from '@/shared/utils/format';
 import { watchUrl } from '@/shared/utils/youtube';
 import { motion } from 'framer-motion';
@@ -17,10 +18,10 @@ const ProgressBar = memo(({ percent, color }: { percent: number; color: string }
     <div className='relative w-full h-1 sm:h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full overflow-hidden'>
         <div
             className={cn(
-                'absolute left-0 top-0 h-full rounded-full transition-transform duration-100 ease-linear origin-left will-change-transform',
+                'absolute left-0 top-0 h-full rounded-full transition-colors duration-150',
                 color,
             )}
-            style={{ transform: `scaleX(${percent / 100})` }}
+            style={{ width: `${percent}%` }}
             role='progressbar'
             aria-valuenow={Math.round(percent)}
             aria-valuemin={0}
@@ -40,7 +41,7 @@ const StaticInfo = memo((
                     videoId={videoId}
                     title={title}
                     href={href}
-                    className='text-gray-800 dark:text-gray-100 font-medium hover:underline line-clamp-1 sm:line-clamp-2 text-sm sm:line-clamp-2 sm:text-base'
+                    className='text-gray-800 dark:text-gray-100 font-medium hover:underline line-clamp-1 sm:line-clamp-2 text-sm sm:text-base'
                 />
             )
             : (
@@ -55,6 +56,9 @@ function AudioPlayerInner({
     status,
     music,
 }: AudioPlayerProps): ReactElement | null {
+    const settings = useSettingsStore();
+    const ytStatusVisible = settings.ytStatusVisible;
+
     const videoId = (status?.type === 'playing' && (status.musicId || status.videoId))
         || (status?.type === 'paused' && status.musicId)
         || music?.id
@@ -99,7 +103,7 @@ function AudioPlayerInner({
     const isAdvertisement = status?.type === 'playing' && status.isAdvertisement === true;
     const isExternalVideo = status?.type === 'playing' && status.isExternalVideo === true;
     const isPaused = status?.type === 'paused';
-    const pausedIndicator = isPaused || (isEffectivelyPaused && !isAdvertisement);
+    const pausedIndicator = isPaused || isEffectivelyPaused;
 
     const progressBarColor = useMemo(
         () =>
@@ -121,7 +125,7 @@ function AudioPlayerInner({
         return { current, total, color };
     }, [duration, isAdvertisement, pausedIndicator, localCurrentTime]);
 
-    if (!status || visibility === 'hidden') return null;
+    if (!status || !ytStatusVisible || visibility === 'hidden') return null;
 
     const progressPercent = duration != undefined && duration > 0
         ? Math.min((localCurrentTime / duration) * 100, 100)
@@ -132,7 +136,7 @@ function AudioPlayerInner({
     return (
         <motion.div
             aria-live='polite'
-            className='bg-gray-100 dark:bg-gray-900/10 rounded-lg p-3 sm:p-4 flex flex-row items-center gap-3 sm:gap-4 w-full min-w-[280px] sm:min-w-[400px] max-w-2xl shadow-sm'
+            className='bg-gray-100 dark:bg-gray-900/10 rounded-lg p-3 sm:p-4 flex flex-row items-center gap-3 sm:gap-4 w-full min-w-70 sm:min-w-100 max-w-2xl shadow-sm'
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: visibility === 'visible' ? 1 : 0, y: 0 }}
             exit={{ opacity: 0, y: -10 }}

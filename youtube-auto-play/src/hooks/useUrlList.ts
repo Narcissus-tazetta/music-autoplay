@@ -36,10 +36,32 @@ export function useUrlList(): UseUrlListReturn {
 
         loadUrls();
         chrome.runtime.onMessage.addListener(messageListener);
-        sendChromeMessage({ type: 'reconnect_socket' });
+
+        const storageListener = (
+            changes: { [key: string]: { oldValue?: unknown; newValue?: unknown } },
+            areaName: string,
+        ) => {
+            if (areaName === 'local' && changes.urlList) {
+                const newVal = changes.urlList.newValue;
+                console.info('[useUrlList] storage.onChanged urlList', {
+                    newLength: Array.isArray(newVal) ? (newVal as any).length : undefined,
+                });
+                if (Array.isArray(newVal)) setUrls(newVal as UrlItem[]);
+            }
+        };
+        const storageApi = chrome.storage as unknown as {
+            onChanged?: { addListener: (cb: any) => void; removeListener?: (cb: any) => void };
+        };
+        storageApi.onChanged?.addListener(storageListener);
 
         return () => {
             chrome.runtime.onMessage.removeListener(messageListener);
+            try {
+                const storageApi = chrome.storage as unknown as {
+                    onChanged?: { addListener: (cb: any) => void; removeListener?: (cb: any) => void };
+                };
+                storageApi.onChanged?.removeListener?.(storageListener as any);
+            } catch {}
         };
     }, []);
 

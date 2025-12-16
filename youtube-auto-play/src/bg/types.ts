@@ -30,10 +30,8 @@ export interface VideoStateMessage {
 export interface StorageResult {
     urlList?: VideoData[];
     latestUrl?: string;
-    manualAutoPlayEnabled?: boolean;
     autoPlayEnabled?: boolean;
     extensionMasterEnabled?: boolean;
-    deadlineEnabled?: boolean;
     manuallyDisabled?: boolean;
 }
 

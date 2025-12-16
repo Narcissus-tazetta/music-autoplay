@@ -39,7 +39,7 @@ export function registerSocketHandlers(
     let getRemoteStatusHandler;
     if (deps.manager) {
         getRemoteStatusHandler = createGetRemoteStatusHandler(
-            deps.manager.getCurrent(),
+            () => deps.manager!.getSnapshot(),
         );
     } else {
         const maybeRemote = (deps as unknown as Record<string, unknown>)[

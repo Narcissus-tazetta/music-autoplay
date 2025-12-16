@@ -148,6 +148,25 @@ describe('SocketManager', () => {
             expect(traceIds.length).toBeGreaterThanOrEqual(1);
             if (traceIds.length > 1) expect(new Set(traceIds).size).toBe(traceIds.length);
         });
+
+        test('getSnapshot returns enriched status with _meta and lastProgressUpdate', () => {
+            manager.update(
+                {
+                    currentTime: 12,
+                    musicId: 'snap',
+                    musicTitle: 'Snap Test',
+                    type: 'playing',
+                },
+                'test',
+            );
+
+            const snap = (manager as any).getSnapshot();
+            expect(snap._meta).toBeDefined();
+            expect(typeof snap._meta.sequenceNumber).toBe('number');
+            expect(typeof snap._meta.serverTimestamp).toBe('number');
+            expect(snap.lastProgressUpdate).toBeDefined();
+            expect(snap.lastProgressUpdate).toBe(snap._meta.serverTimestamp);
+        });
     });
 
     describe('timestamp handling', () => {

@@ -1,12 +1,58 @@
-import { EXTENSION_NAMESPACE, TIMING, YOUTUBE_WATCH_URL_PATTERN } from '../constants';
-import { addExtensionTab } from './tab-manager';
-import type { ExtensionGlobal, SocketInstance, TabInfo, VideoData } from './types';
-import { findPlayingTab, isPlaylistUrl, sendTabMessage } from './utils';
+import type { SocketInstance, TabInfo, VideoData } from './types';
 import { handleNoNextVideo, navigateToNextVideo } from './youtube-state';
 
-const YOUTUBE_BASE_URL_PATTERN = '*://www.youtube.com/*';
+// Minimal helper used by waitForVideoEnd to open a tab and save latestUrl
+function _openTabAndSaveLatest(url: string): void {
+    try {
+        chrome.tabs.create({ url }, () => {
+            try {
+                chrome.storage.local.set({ latestUrl: url }, () => {});
+            } catch {}
+        });
+    } catch {
+        // ignore
+    }
+}
 
-export function setupSocketEvents(socket: SocketInstance): void {
+export function waitForVideoEnd(playingTab: TabInfo, nextUrl: string): void {
+    if (!playingTab?.id) return;
+
+    let handled = false;
+
+    const cleanup = () => {
+        try {
+            chrome.tabs.onRemoved.removeListener(onTabRemoved);
+        } catch {}
+        try {
+            chrome.runtime.onMessage.removeListener(onEnded);
+        } catch {}
+    };
+
+    const onTabRemoved = (closedTabId: number) => {
+        if (closedTabId === playingTab.id && !handled) {
+            handled = true;
+            cleanup();
+            _openTabAndSaveLatest(nextUrl);
+        }
+    };
+
+    const onEnded = (msg: { type?: string }, sender: { tab?: TabInfo }) => {
+        if (msg?.type === 'video_ended' && sender?.tab?.id === playingTab.id && !handled) {
+            handled = true;
+            cleanup();
+            _openTabAndSaveLatest(nextUrl);
+        }
+    };
+
+    try {
+        chrome.tabs.onRemoved.addListener(onTabRemoved);
+    } catch {}
+    try {
+        chrome.runtime.onMessage.addListener(onEnded);
+    } catch {}
+}
+
+export function setupSocketEvents(socket: SocketInstance, getCurrentSocket?: () => SocketInstance | undefined): void {
     socket.on('connect', () => {});
 
     socket.on('disconnect', (...args: unknown[]) => {
@@ -35,6 +81,9 @@ export function setupSocketEvents(socket: SocketInstance): void {
     socket.on('url_list', (...args: unknown[]) => {
         const list = args[0] as VideoData[];
         if (!Array.isArray(list) || !list.every(isValidVideoData)) return;
+
+        // Ignore url_list events from sockets that are no longer the actively tracked socket
+        if (typeof getCurrentSocket === 'function' && getCurrentSocket() !== socket) return;
 
         handleUrlList(list);
     });
@@ -83,12 +132,10 @@ function notifyPopup(message: Record<string, unknown> & { type: string }): void 
     }
 }
 
-function handleUrlList(list: VideoData[]): void {
+export function handleUrlList(list: VideoData[]): void {
     chrome.storage.local.get(
-        ['latestUrl', 'manualAutoPlayEnabled', 'autoPlayEnabled', 'urlList'],
-        result => {
-            const prevList = Array.isArray(result.urlList) ? result.urlList : [];
-
+        ['latestUrl', 'urlList'],
+        () => {
             chrome.storage.local.set({ urlList: list }, () => {
                 if (chrome.runtime.lastError) {
                     console.error('[handleUrlList] Failed to save urlList', chrome.runtime.lastError);
@@ -106,159 +153,10 @@ function handleUrlList(list: VideoData[]): void {
                     });
                 }
 
-                const shouldAutoPlay = result.manualAutoPlayEnabled
-                    && result.autoPlayEnabled
-                    && prevList.length === 0
-                    && (!result.latestUrl || result.latestUrl === 'ended');
-
-                if (shouldAutoPlay && list.length > 0) {
-                    const g = (globalThis as unknown as Record<string, ExtensionGlobal>)[EXTENSION_NAMESPACE];
-                    if (g?.isExtensionEnabled?.()) checkAndOpenUrl(list[0].url);
-                }
+                // Auto-open behavior has been removed for Auto Tab feature
 
                 notifyPopup({ type: 'url_list', urls: list });
             });
         },
     );
-}
-
-function checkAndOpenUrl(firstUrl: string): void {
-    chrome.tabs.query({ url: YOUTUBE_WATCH_URL_PATTERN }, async (tabs: TabInfo[]) => {
-        if (chrome.runtime.lastError) {
-            console.error('[checkAndOpenUrl] Failed to query tabs', chrome.runtime.lastError);
-            return;
-        }
-
-        if (tabs.length === 0) {
-            openNewTab(firstUrl);
-            return;
-        }
-
-        const playingTab = await findPlayingTab(tabs);
-        if (playingTab) waitForVideoEnd(playingTab, firstUrl);
-        else openNewTab(firstUrl);
-    });
-}
-
-let isTabCreationInProgress = false;
-
-function openNewTab(url: string): void {
-    if (isTabCreationInProgress) return;
-    isTabCreationInProgress = true;
-
-    const resetFlag = () => {
-        isTabCreationInProgress = false;
-    };
-
-    chrome.tabs.query({ url: YOUTUBE_BASE_URL_PATTERN }, (ytabs: TabInfo[]) => {
-        if (chrome.runtime.lastError) {
-            resetFlag();
-            return;
-        }
-
-        const ytIds = ytabs.map(t => t.id).filter((id): id is number => id !== undefined);
-
-        const createTab = () => {
-            chrome.tabs.create({ url }, (tab: TabInfo) => {
-                if (chrome.runtime.lastError) {
-                    resetFlag();
-                    return;
-                }
-
-                if (tab.id) {
-                    addExtensionTab(tab.id);
-                    setTimeout(() => {
-                        sendTabMessage(tab.id!, { type: 'mark_extension_opened' });
-                    }, TIMING.TAB_CREATION_DELAY);
-                }
-                chrome.storage.local.set({ latestUrl: url }, () => {
-                    if (chrome.runtime.lastError)
-                        console.error('[openNewTab] Failed to save latestUrl', chrome.runtime.lastError);
-                });
-                resetFlag();
-            });
-        };
-
-        if (ytIds.length > 0) {
-            chrome.tabs.remove(ytIds, () => {
-                if (chrome.runtime.lastError) {
-                    resetFlag();
-                    return;
-                }
-                createTab();
-            });
-        } else {
-            createTab();
-        }
-    });
-}
-
-export function waitForVideoEnd(playingTab: TabInfo, nextUrl: string): void {
-    if (!playingTab.id) return;
-    if (playingTab.url && isPlaylistUrl(playingTab.url)) return;
-
-    let handled = false;
-    const playingTabId = playingTab.id;
-    const WAIT_TIMEOUT = 10 * 60 * 1000;
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-    const cleanup = () => {
-        if (timeoutId !== null) {
-            clearTimeout(timeoutId);
-            timeoutId = null;
-        }
-        chrome.tabs.onRemoved.removeListener(onTabRemoved);
-        chrome.runtime.onMessage.removeListener(onEnded);
-    };
-
-    timeoutId = setTimeout(() => {
-        if (!handled) {
-            handled = true;
-            cleanup();
-        }
-    }, WAIT_TIMEOUT);
-
-    const onTabRemoved = (closedTabId: number) => {
-        if (closedTabId === playingTabId && !handled) {
-            handled = true;
-            cleanup();
-            if (!(playingTab.url && isPlaylistUrl(playingTab.url))) {
-                pauseOtherTabs(playingTabId);
-                openNewTab(nextUrl);
-            }
-        }
-    };
-
-    const onEnded = (msg: { type: string }, sender: { tab?: TabInfo }) => {
-        if (msg.type === 'video_ended' && sender.tab?.id === playingTabId && !handled) {
-            handled = true;
-            cleanup();
-            if (!(sender.tab?.url && isPlaylistUrl(sender.tab.url))) {
-                pauseOtherTabs(playingTabId);
-                openNewTab(nextUrl);
-            }
-        }
-    };
-
-    chrome.tabs.onRemoved.addListener(onTabRemoved);
-    chrome.runtime.onMessage.addListener(onEnded);
-
-    sendTabMessage(playingTabId, { type: 'wait_for_end' });
-}
-
-async function pauseOtherTabs(excludeTabId: number): Promise<void> {
-    chrome.tabs.query({ url: YOUTUBE_WATCH_URL_PATTERN }, (tabs: TabInfo[]) => {
-        if (chrome.runtime.lastError) {
-            console.error('[pauseOtherTabs] Failed to query tabs', chrome.runtime.lastError);
-            return;
-        }
-
-        const tasks = tabs
-            .filter(t => t.id !== undefined && t.id !== excludeTabId)
-            .map(t => sendTabMessage(t.id, { type: 'force_pause' }));
-
-        void Promise.all(tasks).catch(err => {
-            console.error('[pauseOtherTabs] Error while forcing pause on other tabs', err);
-        });
-    });
 }
