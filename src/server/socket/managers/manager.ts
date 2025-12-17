@@ -197,7 +197,8 @@ export class SocketManager {
         const eventTimestamp = this.remoteStatusUpdatedAt || now;
         if (status.type === 'playing') {
             const currentTime = typeof status.currentTime === 'number' ? status.currentTime : 0;
-            const lastProgress = typeof status.lastProgressUpdate === 'number'
+            const hadLastProgress = typeof status.lastProgressUpdate === 'number';
+            const lastProgress = hadLastProgress
                 ? status.lastProgressUpdate
                 : eventTimestamp;
             const deltaMs = Math.max(0, now - lastProgress);
@@ -208,7 +209,7 @@ export class SocketManager {
             const snapshot: RemoteStatus = {
                 ...status,
                 currentTime: predicted,
-                lastProgressUpdate: now,
+                lastProgressUpdate: hadLastProgress ? eventTimestamp : now,
             };
             return {
                 ...snapshot,
