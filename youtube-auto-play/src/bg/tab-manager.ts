@@ -11,10 +11,16 @@ export function isExtensionOpenedTab(tabId: number): boolean {
 
 export function addExtensionTab(tabId: number): void {
     extensionOpenedTabs.add(tabId);
+    try {
+        console.info('[tab-manager] addExtensionTab', { tabId });
+    } catch {}
 }
 
 export function removeExtensionTab(tabId: number): void {
     extensionOpenedTabs.delete(tabId);
+    try {
+        console.info('[tab-manager] removeExtensionTab', { tabId });
+    } catch {}
 }
 
 export function getTabUrl(tabId: number): string | undefined {
@@ -40,6 +46,9 @@ export function handleTabUpdated(
     if (tab.url.includes(YOUTUBE_WATCH_PATTERN)) addExtensionTab(tabId);
     else if (isExtensionOpenedTab(tabId)) {
         const previousUrl = getTabUrl(tabId);
+        try {
+            console.info('[tab-manager] handleTabUpdated removing tracked tab', { tabId, previousUrl });
+        } catch {}
         if (socket?.connected && previousUrl)
             socket.emit('youtube_video_state', { state: 'window_close', url: previousUrl });
         removeExtensionTab(tabId);
@@ -56,6 +65,9 @@ export function handleTabRemoved(
     if (extensionOpenedTabs.has(tabId)) {
         const previousUrl = getTabUrl(tabId);
         extensionOpenedTabs.delete(tabId);
+        try {
+            console.info('[tab-manager] handleTabRemoved for tracked tab', { tabId, previousUrl });
+        } catch {}
         if (socket.connected) {
             if (previousUrl) socket.emit('youtube_video_state', { state: 'window_close', url: previousUrl });
             socket.emit('tab_closed', { tabId });

@@ -263,27 +263,33 @@ export function setupExtensionEventHandlers(
                 }
 
                 const remoteStatus: RemoteStatus = match
-                    ? {
-                        isAdvertisement: state === 'playing' ? isAdvertisement : undefined,
-                        isExternalVideo,
-                        musicId: undefined,
-                        musicTitle: match.title ?? '',
-                        type: state,
-                        videoId: externalVideoId,
-                        currentTime: state === 'paused' ? incomingCurrentTime : undefined,
-                        duration: state === 'paused' ? incomingDuration : undefined,
-                    }
+                    ? (state === 'playing'
+                        ? {
+                            isAdvertisement,
+                            isExternalVideo,
+                            musicId: undefined,
+                            musicTitle: match.title ?? '',
+                            type: 'playing' as const,
+                            videoId: externalVideoId,
+                        }
+                        : {
+                            musicId: undefined,
+                            musicTitle: undefined,
+                            type: 'paused' as const,
+                            currentTime: incomingCurrentTime,
+                            duration: incomingDuration,
+                        })
                     : (state === 'playing'
                         ? {
                             isAdvertisement,
                             musicId: undefined,
                             musicTitle: '',
-                            type: 'playing',
+                            type: 'playing' as const,
                         }
                         : {
                             musicId: undefined,
                             musicTitle: undefined,
-                            type: 'paused',
+                            type: 'paused' as const,
                             currentTime: incomingCurrentTime,
                             duration: incomingDuration,
                         });
@@ -746,6 +752,14 @@ export function setupExtensionEventHandlers(
                 videoEndDebounce.set(videoId, now);
                 setTimeout(() => videoEndDebounce.delete(videoId), VIDEO_END_DEBOUNCE_MS * 2);
 
+                log.info('video_ended: received', {
+                    connectionId,
+                    socketId: socket.id,
+                    tabId,
+                    videoId,
+                    repositoryLength: repository.list().length,
+                });
+
                 const removeResult = repository.remove(videoId);
                 if (removeResult.ok) {
                     const emitResult = emitter.emitMusicRemoved(videoId);
@@ -1016,7 +1030,7 @@ export function setupExtensionEventHandlers(
                     currentTime,
                     duration,
                     musicId: videoId,
-                    musicTitle: incomingMusicTitle || music?.title || '',
+                    musicTitle: music?.title,
                     playbackRate,
                     type: 'paused',
                 };

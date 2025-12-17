@@ -354,6 +354,30 @@ export class AdDetector {
                 }
             } else if (wasAd && !this.isAdCurrently) {
                 if (this.videoState === VideoState.WAITING) this.setVideoState(VideoState.ENDED);
+                const isExtensionControlled = isExtensionNavigating() || isExtensionOpenedTab();
+                if (isExtensionControlled) {
+                    disableYouTubeAutoplay();
+                    setTimeout(() => disableYouTubeAutoplay(), 100);
+                    setTimeout(() => disableYouTubeAutoplay(), 500);
+                }
+                const currentTime = this.videoElement?.currentTime ?? 0;
+                const duration = this.videoElement?.duration ?? 0;
+                if (!this.videoEndSent && duration > 0 && (duration - currentTime) < 5) {
+                    this.videoEndSent = true;
+                    try {
+                        chrome.runtime.sendMessage({
+                            type: 'youtube_video_state',
+                            url: location.href,
+                            state: 'ended',
+                            currentTime,
+                            duration,
+                            timestamp: Date.now(),
+                            isAdvertisement: false,
+                        });
+                    } catch (error) {
+                        console.warn('[AdDetector] youtube_video_state ended send failed after ad:', error);
+                    }
+                }
             }
         }
     }
@@ -518,8 +542,18 @@ function disableYouTubeAutoplay(): void {
 
 function detectPageChange(): void {
     if (location.href.includes('youtube.com/watch')) {
-        // If extension is navigating, clear the flag after a delay to allow proper video initialization
-        if (isExtensionNavigating()) setTimeout(clearExtensionNavigatingFlag, 3000);
+        const isExtensionControlled = isExtensionNavigating() || isExtensionOpenedTab();
+        if (isExtensionControlled) {
+            disableYouTubeAutoplay();
+            setTimeout(() => disableYouTubeAutoplay(), 100);
+            setTimeout(() => disableYouTubeAutoplay(), 500);
+            setTimeout(() => disableYouTubeAutoplay(), 1000);
+            setTimeout(() => disableYouTubeAutoplay(), 2000);
+            setTimeout(() => {
+                disableYouTubeAutoplay();
+                if (isExtensionNavigating()) clearExtensionNavigatingFlag();
+            }, 3000);
+        }
         attachVideoListeners();
     }
 }
@@ -652,9 +686,13 @@ function attachVideoListeners(): void {
                 duration: video.duration,
             });
 
+            disableYouTubeAutoplay();
+            setTimeout(() => disableYouTubeAutoplay(), 100);
+            setTimeout(() => disableYouTubeAutoplay(), 500);
+            setTimeout(() => disableYouTubeAutoplay(), 1000);
+
             if (isAdPlaying) return;
 
-            disableYouTubeAutoplay();
             transitionTracker.onVideoEnded(isAdPlaying);
             notifyState('ended');
             handleSignificantEvent('ended');
@@ -790,7 +828,17 @@ async function handleWaitForEnd(): Promise<void> {
 
     const handler = () => {
         try {
-            chrome.runtime.sendMessage({ type: 'video_ended' }, () => {
+            const currentTime = video.currentTime ?? 0;
+            const duration = video.duration ?? 0;
+            chrome.runtime.sendMessage({
+                type: 'youtube_video_state',
+                url: location.href,
+                state: 'ended',
+                currentTime,
+                duration,
+                timestamp: Date.now(),
+                isAdvertisement: false,
+            }, () => {
                 if (chrome.runtime.lastError) return;
             });
         } catch {
