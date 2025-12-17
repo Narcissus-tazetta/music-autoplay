@@ -194,6 +194,12 @@ export function setupExtensionEventHandlers(
                     ? payload['duration']
                     : undefined;
 
+                log.debug(`youtube_video_state: received ${state}`, {
+                    currentTime: incomingCurrentTime,
+                    duration: incomingDuration,
+                    url,
+                });
+
                 let match: { url: string; title?: string } | null = null;
                 let isExternalVideo = false;
                 let externalVideoId: string | undefined;
@@ -216,13 +222,13 @@ export function setupExtensionEventHandlers(
                         }
                     }
 
-                    if (!match && state === 'playing') {
+                    if (!match) {
                         const videoId = extractYoutubeId(url);
                         if (videoId) {
                             isExternalVideo = true;
                             externalVideoId = videoId;
                             try {
-                                log.debug('Fetching external video details', { url, videoId });
+                                log.debug('Fetching external video details', { state, url, videoId });
                                 const result = await youtubeService.getVideoDetails(
                                     videoId,
                                     1,
@@ -235,12 +241,14 @@ export function setupExtensionEventHandlers(
                                         url,
                                     };
                                     log.info('External video title fetched', {
+                                        state,
                                         title: result.value.title,
                                         videoId,
                                     });
                                 } else {
                                     log.warn('Failed to fetch external video details', {
                                         error: result.error,
+                                        state,
                                         videoId,
                                     });
                                     match = {
@@ -251,6 +259,7 @@ export function setupExtensionEventHandlers(
                             } catch (error) {
                                 log.warn('Exception while fetching external video details', {
                                     error: error,
+                                    state,
                                     videoId,
                                 });
                                 match = {
@@ -260,6 +269,14 @@ export function setupExtensionEventHandlers(
                             }
                         }
                     }
+
+                    log.debug('youtube_video_state: match result', {
+                        hasMatch: !!match,
+                        matchTitle: match?.title,
+                        state,
+                        url,
+                        videoId: externalVideoId,
+                    });
                 }
 
                 const remoteStatus: RemoteStatus = match
@@ -274,7 +291,8 @@ export function setupExtensionEventHandlers(
                         }
                         : {
                             musicId: undefined,
-                            musicTitle: undefined,
+                            musicTitle: match.title ?? '',
+                            videoId: externalVideoId,
                             type: 'paused' as const,
                             currentTime: incomingCurrentTime,
                             duration: incomingDuration,
@@ -293,6 +311,8 @@ export function setupExtensionEventHandlers(
                             currentTime: incomingCurrentTime,
                             duration: incomingDuration,
                         });
+                    }
+                }
 
                 if (url) {
                     const videoId = extractYoutubeId(url);
@@ -302,6 +322,10 @@ export function setupExtensionEventHandlers(
                             receivedAt: Date.now(),
                             currentTime: incomingCurrentTime,
                             duration: incomingDuration,
+                        });
+                        log.debug(`youtube_video_state: set authoritative ${state}`, {
+                            currentTime: incomingCurrentTime,
+                            videoId,
                         });
                     }
                 }
@@ -1023,9 +1047,23 @@ export function setupExtensionEventHandlers(
             state.consecutiveStalls = consecutiveStalls;
 
             const authoritative = authoritativeVideoState.get(videoId);
-            const shouldRespectAuthoritativePause = authoritative?.state === 'paused' && !seekDetected;
+            const AUTHORITATIVE_TTL_MS = 30000; // 30秒以内の authoritative pause のみ尊重
+            const AUTHORITATIVE_GRACE_MS = 2000; // pause直後2秒は無条件で尊重
+            const authoritativeAge = authoritative ? (Date.now() - authoritative.receivedAt) : Infinity;
+            const isAuthoritativeRecent = authoritativeAge < AUTHORITATIVE_TTL_MS;
+            const isInGracePeriod = authoritativeAge < AUTHORITATIVE_GRACE_MS;
+            const shouldRespectAuthoritativePause = authoritative?.state === 'paused'
+                && isAuthoritativeRecent
+                && !seekDetected
+                && (isInGracePeriod || Math.abs(deltaPlayback) < 0.1); // grace期間中は無条件、それ以降は currentTime が動いていない場合のみ
 
             if (shouldRespectAuthoritativePause) {
+                log.debug(`${eventName}: respecting authoritative pause`, {
+                    authoritativeAge,
+                    currentTime: currentTime.toFixed(2),
+                    deltaPlayback: deltaPlayback.toFixed(3),
+                    videoId,
+                });
                 const pausedUpdate: RemoteStatus = {
                     currentTime,
                     duration,
@@ -1036,6 +1074,12 @@ export function setupExtensionEventHandlers(
                 };
                 manager.update(pausedUpdate, eventName);
             } else {
+                if (authoritative?.state === 'paused' && !isAuthoritativeRecent) {
+                    log.debug(`${eventName}: ignoring stale authoritative pause`, {
+                        authoritativeAge,
+                        videoId,
+                    });
+                }
                 const statusUpdate: RemoteStatus = {
                     consecutiveStalls,
                     currentTime,

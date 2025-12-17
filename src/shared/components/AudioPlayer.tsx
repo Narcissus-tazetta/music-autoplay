@@ -60,7 +60,7 @@ function AudioPlayerInner({
     const ytStatusVisible = settings.ytStatusVisible;
 
     const videoId = (status?.type === 'playing' && (status.musicId || status.videoId))
-        || (status?.type === 'paused' && status.musicId)
+        || (status?.type === 'paused' && (status.musicId || status.videoId))
         || music?.id
         || '';
 

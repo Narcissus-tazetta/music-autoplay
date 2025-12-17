@@ -111,76 +111,6 @@ export class AdDetector {
             () => this.checkAndNotifyAdState(),
             adInterval,
         );
-        this.adCheckInterval = window.setInterval(
-            () => this.checkAndNotifyAdState(),
-            adInterval,
-        );
-    }
-
-    private setupHeartbeat(): void {
-        this.heartbeatInterval = window.setInterval(() => {
-            if (document.hidden && this.videoElement) {
-                try {
-                    const { currentTime, duration } = this.videoElement;
-                    if (this.isValidTimeValue(currentTime) && this.isValidTimeValue(duration)) {
-                        chrome.runtime.sendMessage({
-                            type: 'progress_update',
-                            url: location.href,
-                            videoId: extractYouTubeIdFromUrl(location.href),
-                            currentTime,
-                            duration,
-                            playbackRate: this.videoElement?.playbackRate || 1,
-                            isBuffering: (this.videoElement?.readyState ?? 0) < 3,
-                            visibilityState: document.visibilityState,
-                            timestamp: Date.now(),
-                            isAdvertisement: this.isAdCurrently,
-                            musicTitle: getYouTubeVideoInfo()?.title,
-                            progressPercent: Number(((currentTime / duration) * 100).toFixed(2)),
-                            consecutiveStalls: this.consecutiveStalls,
-                        });
-                    }
-                } catch (error) {
-                    console.warn('[AdDetector] Failed to send heartbeat', error);
-                }
-            }
-        }, 30000);
-
-        this.batchInterval = window.setInterval(() => {
-            if (this.progressBuffer.length > 0) {
-                const bufferedUpdates = this.progressBuffer.splice(0);
-                try {
-                    chrome.runtime.sendMessage({
-                        type: 'batch_progress_update' as const,
-                        updates: bufferedUpdates,
-                    });
-                } catch (error) {
-                    console.warn('[AdDetector] Failed to send batched progress', error);
-                    this.progressBuffer.unshift(...bufferedUpdates);
-                }
-            }
-        }, 100);
-    }
-
-    private addToProgressBuffer(payload: ProgressUpdatePayload): void {
-        this.progressBuffer.push(payload);
-    }
-
-    private transitionState(newState: VideoState): boolean {
-        const validNextStates = this.validTransitions[this.videoState];
-        if (!validNextStates.includes(newState)) {
-            console.warn('[AdDetector] Invalid state transition', {
-                current: this.videoState,
-                attempted: newState,
-                validTransitions: validNextStates,
-            });
-            return false;
-        }
-        this.videoState = newState;
-        return true;
-    }
-
-    private setVideoState(newState: VideoState): void {
-        if (newState !== this.videoState) this.transitionState(newState);
     }
 
     private setupHeartbeat(): void {
@@ -709,6 +639,7 @@ function attachVideoListeners(): void {
                     url: location.href,
                     state,
                     currentTime,
+                    duration,
                     timestamp: Date.now(),
                     isAdvertisement: isAd,
                 });
