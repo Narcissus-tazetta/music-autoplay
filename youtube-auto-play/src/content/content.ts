@@ -639,6 +639,7 @@ function attachVideoListeners(): void {
                     url: location.href,
                     state,
                     currentTime,
+                    duration,
                     timestamp: Date.now(),
                     isAdvertisement: isAd,
                 });

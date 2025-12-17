@@ -27,6 +27,7 @@ export type RemoteStatus =
         type: 'paused';
         musicTitle?: string;
         musicId?: string;
+        videoId?: string;
         isTransitioning?: boolean;
         currentTime?: number;
         duration?: number;
@@ -115,6 +116,14 @@ export const useMusicStore = create<MusicStore>(set => {
                         serverTimestamp: meta.serverTimestamp,
                         traceId: meta.traceId,
                         type: statusWithoutMeta.type,
+                        currentTime: (statusWithoutMeta as any).currentTime,
+                        duration: (statusWithoutMeta as any).duration,
+                        sourcePreview: statusWithoutMeta.type === 'playing'
+                            ? {
+                                playbackRate: (statusWithoutMeta as any).playbackRate,
+                                progressPercent: (statusWithoutMeta as any).progressPercent,
+                            }
+                            : undefined,
                     });
                 }
 
