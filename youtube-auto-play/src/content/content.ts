@@ -111,6 +111,76 @@ export class AdDetector {
             () => this.checkAndNotifyAdState(),
             adInterval,
         );
+        this.adCheckInterval = window.setInterval(
+            () => this.checkAndNotifyAdState(),
+            adInterval,
+        );
+    }
+
+    private setupHeartbeat(): void {
+        this.heartbeatInterval = window.setInterval(() => {
+            if (document.hidden && this.videoElement) {
+                try {
+                    const { currentTime, duration } = this.videoElement;
+                    if (this.isValidTimeValue(currentTime) && this.isValidTimeValue(duration)) {
+                        chrome.runtime.sendMessage({
+                            type: 'progress_update',
+                            url: location.href,
+                            videoId: extractYouTubeIdFromUrl(location.href),
+                            currentTime,
+                            duration,
+                            playbackRate: this.videoElement?.playbackRate || 1,
+                            isBuffering: (this.videoElement?.readyState ?? 0) < 3,
+                            visibilityState: document.visibilityState,
+                            timestamp: Date.now(),
+                            isAdvertisement: this.isAdCurrently,
+                            musicTitle: getYouTubeVideoInfo()?.title,
+                            progressPercent: Number(((currentTime / duration) * 100).toFixed(2)),
+                            consecutiveStalls: this.consecutiveStalls,
+                        });
+                    }
+                } catch (error) {
+                    console.warn('[AdDetector] Failed to send heartbeat', error);
+                }
+            }
+        }, 30000);
+
+        this.batchInterval = window.setInterval(() => {
+            if (this.progressBuffer.length > 0) {
+                const bufferedUpdates = this.progressBuffer.splice(0);
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'batch_progress_update' as const,
+                        updates: bufferedUpdates,
+                    });
+                } catch (error) {
+                    console.warn('[AdDetector] Failed to send batched progress', error);
+                    this.progressBuffer.unshift(...bufferedUpdates);
+                }
+            }
+        }, 100);
+    }
+
+    private addToProgressBuffer(payload: ProgressUpdatePayload): void {
+        this.progressBuffer.push(payload);
+    }
+
+    private transitionState(newState: VideoState): boolean {
+        const validNextStates = this.validTransitions[this.videoState];
+        if (!validNextStates.includes(newState)) {
+            console.warn('[AdDetector] Invalid state transition', {
+                current: this.videoState,
+                attempted: newState,
+                validTransitions: validNextStates,
+            });
+            return false;
+        }
+        this.videoState = newState;
+        return true;
+    }
+
+    private setVideoState(newState: VideoState): void {
+        if (newState !== this.videoState) this.transitionState(newState);
     }
 
     private setupHeartbeat(): void {
@@ -354,6 +424,30 @@ export class AdDetector {
                 }
             } else if (wasAd && !this.isAdCurrently) {
                 if (this.videoState === VideoState.WAITING) this.setVideoState(VideoState.ENDED);
+                const isExtensionControlled = isExtensionNavigating() || isExtensionOpenedTab();
+                if (isExtensionControlled) {
+                    disableYouTubeAutoplay();
+                    setTimeout(() => disableYouTubeAutoplay(), 100);
+                    setTimeout(() => disableYouTubeAutoplay(), 500);
+                }
+                const currentTime = this.videoElement?.currentTime ?? 0;
+                const duration = this.videoElement?.duration ?? 0;
+                if (!this.videoEndSent && duration > 0 && (duration - currentTime) < 5) {
+                    this.videoEndSent = true;
+                    try {
+                        chrome.runtime.sendMessage({
+                            type: 'youtube_video_state',
+                            url: location.href,
+                            state: 'ended',
+                            currentTime,
+                            duration,
+                            timestamp: Date.now(),
+                            isAdvertisement: false,
+                        });
+                    } catch (error) {
+                        console.warn('[AdDetector] youtube_video_state ended send failed after ad:', error);
+                    }
+                }
             }
         }
     }
@@ -518,8 +612,18 @@ function disableYouTubeAutoplay(): void {
 
 function detectPageChange(): void {
     if (location.href.includes('youtube.com/watch')) {
-        // If extension is navigating, clear the flag after a delay to allow proper video initialization
-        if (isExtensionNavigating()) setTimeout(clearExtensionNavigatingFlag, 3000);
+        const isExtensionControlled = isExtensionNavigating() || isExtensionOpenedTab();
+        if (isExtensionControlled) {
+            disableYouTubeAutoplay();
+            setTimeout(() => disableYouTubeAutoplay(), 100);
+            setTimeout(() => disableYouTubeAutoplay(), 500);
+            setTimeout(() => disableYouTubeAutoplay(), 1000);
+            setTimeout(() => disableYouTubeAutoplay(), 2000);
+            setTimeout(() => {
+                disableYouTubeAutoplay();
+                if (isExtensionNavigating()) clearExtensionNavigatingFlag();
+            }, 3000);
+        }
         attachVideoListeners();
     }
 }
@@ -652,9 +756,13 @@ function attachVideoListeners(): void {
                 duration: video.duration,
             });
 
+            disableYouTubeAutoplay();
+            setTimeout(() => disableYouTubeAutoplay(), 100);
+            setTimeout(() => disableYouTubeAutoplay(), 500);
+            setTimeout(() => disableYouTubeAutoplay(), 1000);
+
             if (isAdPlaying) return;
 
-            disableYouTubeAutoplay();
             transitionTracker.onVideoEnded(isAdPlaying);
             notifyState('ended');
             handleSignificantEvent('ended');
@@ -790,7 +898,17 @@ async function handleWaitForEnd(): Promise<void> {
 
     const handler = () => {
         try {
-            chrome.runtime.sendMessage({ type: 'video_ended' }, () => {
+            const currentTime = video.currentTime ?? 0;
+            const duration = video.duration ?? 0;
+            chrome.runtime.sendMessage({
+                type: 'youtube_video_state',
+                url: location.href,
+                state: 'ended',
+                currentTime,
+                duration,
+                timestamp: Date.now(),
+                isAdvertisement: false,
+            }, () => {
                 if (chrome.runtime.lastError) return;
             });
         } catch {

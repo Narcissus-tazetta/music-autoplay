@@ -207,7 +207,7 @@ async function initConnectionFromMode(): Promise<void> {
     chrome.tabs.onRemoved.addListener(tabRemovedListener);
 
     setupMessageHandler(socket);
-    setupSocketEvents(socket);
+    setupSocketEvents(socket, () => currentConnection?.socket);
     if (isFirstInit) setupMasterToggleHandler();
     setupShortcutCommands(socket);
 

@@ -17,6 +17,8 @@ function _openTabAndSaveLatest(url: string): void {
 export function waitForVideoEnd(playingTab: TabInfo, nextUrl: string): void {
     if (!playingTab?.id) return;
 
+    console.info('[socket-events] waitForVideoEnd registered', { tabId: playingTab.id, nextUrl });
+
     let handled = false;
 
     const cleanup = () => {
@@ -30,6 +32,7 @@ export function waitForVideoEnd(playingTab: TabInfo, nextUrl: string): void {
 
     const onTabRemoved = (closedTabId: number) => {
         if (closedTabId === playingTab.id && !handled) {
+            console.info('[socket-events] waitForVideoEnd detected tab removed', { closedTabId, nextUrl });
             handled = true;
             cleanup();
             _openTabAndSaveLatest(nextUrl);
@@ -38,6 +41,10 @@ export function waitForVideoEnd(playingTab: TabInfo, nextUrl: string): void {
 
     const onEnded = (msg: { type?: string }, sender: { tab?: TabInfo }) => {
         if (msg?.type === 'video_ended' && sender?.tab?.id === playingTab.id && !handled) {
+            console.info('[socket-events] waitForVideoEnd received video_ended', {
+                senderTabId: sender?.tab?.id,
+                nextUrl,
+            });
             handled = true;
             cleanup();
             _openTabAndSaveLatest(nextUrl);
@@ -82,8 +89,14 @@ export function setupSocketEvents(socket: SocketInstance, getCurrentSocket?: () 
         const list = args[0] as VideoData[];
         if (!Array.isArray(list) || !list.every(isValidVideoData)) return;
 
+        const isActive = typeof getCurrentSocket === 'function' ? getCurrentSocket() === socket : 'no_getCurrent';
+        console.info('[socket-events] url_list received', { length: list.length, isActive });
+
         // Ignore url_list events from sockets that are no longer the actively tracked socket
-        if (typeof getCurrentSocket === 'function' && getCurrentSocket() !== socket) return;
+        if (isActive !== true) {
+            console.info('[socket-events] url_list ignored (inactive socket)');
+            return;
+        }
 
         handleUrlList(list);
     });
@@ -92,6 +105,7 @@ export function setupSocketEvents(socket: SocketInstance, getCurrentSocket?: () 
         const data = args[0] as { nextUrl: string; tabId: number };
         if (!data || typeof data.nextUrl !== 'string' || typeof data.tabId !== 'number') return;
 
+        console.info('[socket-events] next_video_navigate received', { nextUrl: data.nextUrl, tabId: data.tabId });
         navigateToNextVideo(data.nextUrl, data.tabId);
     });
 
@@ -99,6 +113,7 @@ export function setupSocketEvents(socket: SocketInstance, getCurrentSocket?: () 
         const data = args[0] as { tabId: number };
         if (!data || typeof data.tabId !== 'number') return;
 
+        console.info('[socket-events] no_next_video received', { tabId: data.tabId });
         handleNoNextVideo(data.tabId);
     });
 
@@ -137,6 +152,7 @@ export function handleUrlList(list: VideoData[]): void {
         ['latestUrl', 'urlList'],
         () => {
             chrome.storage.local.set({ urlList: list }, () => {
+                console.info('[socket-events] handleUrlList saving urlList', { newLength: list.length });
                 if (chrome.runtime.lastError) {
                     console.error('[handleUrlList] Failed to save urlList', chrome.runtime.lastError);
                     return;
@@ -156,6 +172,7 @@ export function handleUrlList(list: VideoData[]): void {
                 // Auto-open behavior has been removed for Auto Tab feature
 
                 notifyPopup({ type: 'url_list', urls: list });
+                console.info('[socket-events] handleUrlList processed', { newLength: list.length });
             });
         },
     );

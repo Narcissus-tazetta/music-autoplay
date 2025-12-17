@@ -55,6 +55,10 @@ export function handleVideoEnded(currentUrl: string, tabId: number, socket: Sock
 }
 
 export function navigateToNextVideo(nextUrl: string, tabId: number): void {
+    try {
+        console.info('[Background] navigateToNextVideo requested', { nextUrl, tabId });
+    } catch {}
+
     addExtensionTab(tabId);
 
     // Mark this navigation as extension-controlled to prevent YouTube's auto-play from interfering
@@ -62,10 +66,20 @@ export function navigateToNextVideo(nextUrl: string, tabId: number): void {
 
     chrome.tabs.update(tabId, { url: nextUrl }, () => {
         if (hasChromeError()) console.error('[Background] Failed to navigate to next video', chrome.runtime.lastError);
+        else {
+            try {
+                console.info('[Background] navigateToNextVideo succeeded', { nextUrl, tabId });
+            } catch {}
+        }
     });
 
     chrome.storage.local.set({ latestUrl: nextUrl }, () => {
         if (hasChromeError()) console.error('[Background] Failed to save latestUrl', chrome.runtime.lastError);
+        else {
+            try {
+                console.info('[Background] latestUrl saved on navigate', { nextUrl });
+            } catch {}
+        }
     });
 }
 
