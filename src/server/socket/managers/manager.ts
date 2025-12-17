@@ -198,8 +198,8 @@ export class SocketManager {
         if (status.type === 'playing') {
             const currentTime = typeof status.currentTime === 'number' ? status.currentTime : 0;
             const hadLastProgress = typeof status.lastProgressUpdate === 'number';
-            const lastProgress = hadLastProgress
-                ? status.lastProgressUpdate
+            const lastProgress: number = hadLastProgress
+                ? (status.lastProgressUpdate as number)
                 : eventTimestamp;
             const deltaMs = Math.max(0, now - lastProgress);
             const rate = typeof status.playbackRate === 'number' ? status.playbackRate : 1;
