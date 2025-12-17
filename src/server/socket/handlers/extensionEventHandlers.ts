@@ -311,6 +311,8 @@ export function setupExtensionEventHandlers(
                             currentTime: incomingCurrentTime,
                             duration: incomingDuration,
                         });
+                    }
+                }
 
                 if (url) {
                     const videoId = extractYoutubeId(url);

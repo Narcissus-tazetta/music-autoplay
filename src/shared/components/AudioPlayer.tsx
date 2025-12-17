@@ -65,7 +65,6 @@ function AudioPlayerInner({
         || '';
 
     const title = (status?.type === 'playing' && status.musicTitle)
-        || (status?.type === 'paused' && status.musicTitle)
         || music?.title
         || '';
 
