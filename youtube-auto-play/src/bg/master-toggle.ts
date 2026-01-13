@@ -14,31 +14,59 @@ const alarms = (globalThis as unknown as { chrome?: { alarms?: AlarmsApiLike } }
 
 let extensionMasterEnabled = true;
 
+function getStorageLocal(): any | null {
+    try {
+        const local = (globalThis as any)?.chrome?.storage?.local;
+        if (local && typeof local.get === 'function' && typeof local.set === 'function') return local;
+        return null;
+    } catch {
+        return null;
+    }
+}
+
 function isWeekend(): boolean {
     const now = new Date();
     const dayOfWeek = now.getDay();
     return dayOfWeek === 0 || dayOfWeek === 6;
 }
 
-chrome.storage.local.get(['extensionMasterEnabled'], result => {
-    if (chrome.runtime.lastError) {
-        console.error('[init] Failed to get extensionMasterEnabled', chrome.runtime.lastError);
+function initMasterToggleState(): void {
+    const local = getStorageLocal();
+    if (!local) {
         extensionMasterEnabled = !isWeekend();
         return;
     }
 
-    extensionMasterEnabled = result.extensionMasterEnabled !== undefined ? result.extensionMasterEnabled : !isWeekend();
-    if (result.extensionMasterEnabled === undefined) {
-        chrome.storage.local.set({ extensionMasterEnabled }, () => {
-            if (chrome.runtime.lastError) {
+    local.get(['extensionMasterEnabled'], (result: any) => {
+        try {
+            if ((globalThis as any)?.chrome?.runtime?.lastError) {
                 console.error(
-                    '[init] Failed to save initial extensionMasterEnabled',
-                    chrome.runtime.lastError,
+                    '[init] Failed to get extensionMasterEnabled',
+                    (globalThis as any).chrome.runtime.lastError,
                 );
+                extensionMasterEnabled = !isWeekend();
+                return;
             }
-        });
-    }
-});
+
+            extensionMasterEnabled = result?.extensionMasterEnabled !== undefined
+                ? Boolean(result.extensionMasterEnabled)
+                : !isWeekend();
+
+            if (result?.extensionMasterEnabled === undefined) {
+                local.set({ extensionMasterEnabled }, () => {
+                    if ((globalThis as any)?.chrome?.runtime?.lastError) {
+                        console.error(
+                            '[init] Failed to save initial extensionMasterEnabled',
+                            (globalThis as any).chrome.runtime.lastError,
+                        );
+                    }
+                });
+            }
+        } catch {
+            extensionMasterEnabled = !isWeekend();
+        }
+    });
+}
 
 export function isExtensionEnabled(): boolean {
     return extensionMasterEnabled;
@@ -52,20 +80,22 @@ export function isExtensionEnabled(): boolean {
 function handleMasterToggle(enabled: boolean, isManualChange = false): void {
     extensionMasterEnabled = enabled;
     if (isManualChange) {
-        chrome.storage.local.set({ manuallyDisabled: !enabled }, () => {
-            if (chrome.runtime.lastError) {
+        const local = getStorageLocal();
+        local?.set?.({ manuallyDisabled: !enabled }, () => {
+            if ((globalThis as any)?.chrome?.runtime?.lastError) {
                 console.error(
                     '[handleMasterToggle] Failed to save manuallyDisabled',
-                    chrome.runtime.lastError,
+                    (globalThis as any).chrome.runtime.lastError,
                 );
             }
         });
     }
-    chrome.storage.local.set({ extensionMasterEnabled: enabled }, () => {
-        if (chrome.runtime.lastError) {
+    const local = getStorageLocal();
+    local?.set?.({ extensionMasterEnabled: enabled }, () => {
+        if ((globalThis as any)?.chrome?.runtime?.lastError) {
             console.error(
                 '[handleMasterToggle] Failed to save extensionMasterEnabled',
-                chrome.runtime.lastError,
+                (globalThis as any).chrome.runtime.lastError,
             );
         }
     });
@@ -82,27 +112,42 @@ alarms?.onAlarm?.addListener((alarm: AlarmLike) => {
 
     if (isWeekend() && extensionMasterEnabled) {
         extensionMasterEnabled = false;
-        chrome.storage.local.set({ extensionMasterEnabled: false }, () => {
-            if (chrome.runtime.lastError)
-                console.error('[weekendCheck] Failed to disable extension', chrome.runtime.lastError);
+        const local = getStorageLocal();
+        local?.set?.({ extensionMasterEnabled: false }, () => {
+            if ((globalThis as any)?.chrome?.runtime?.lastError) {
+                console.error(
+                    '[weekendCheck] Failed to disable extension',
+                    (globalThis as any).chrome.runtime.lastError,
+                );
+            }
         });
     } else if (!isWeekend() && !extensionMasterEnabled) {
-        chrome.storage.local.get(['manuallyDisabled'], result => {
-            if (chrome.runtime.lastError) {
-                console.error('[weekendCheck] Failed to get manuallyDisabled', chrome.runtime.lastError);
+        const local = getStorageLocal();
+        if (!local) return;
+        local.get(['manuallyDisabled'], (result: any) => {
+            if ((globalThis as any)?.chrome?.runtime?.lastError) {
+                console.error(
+                    '[weekendCheck] Failed to get manuallyDisabled',
+                    (globalThis as any).chrome.runtime.lastError,
+                );
                 return;
             }
-            if (!result.manuallyDisabled) {
+            if (!result?.manuallyDisabled) {
                 extensionMasterEnabled = true;
-                chrome.storage.local.set({ extensionMasterEnabled: true }, () => {
-                    if (chrome.runtime.lastError)
-                        console.error('[weekendCheck] Failed to enable extension', chrome.runtime.lastError);
+                local.set({ extensionMasterEnabled: true }, () => {
+                    if ((globalThis as any)?.chrome?.runtime?.lastError) {
+                        console.error(
+                            '[weekendCheck] Failed to enable extension',
+                            (globalThis as any).chrome.runtime.lastError,
+                        );
+                    }
                 });
             }
         });
     }
 });
 export function setupMasterToggleHandler(): void {
+    initMasterToggleState();
     chrome.runtime.onMessage.addListener(
         (message: { type: string; enabled?: boolean }, _sender, sendResponse) => {
             if (message.type === 'extension_master_toggle' && typeof message.enabled === 'boolean') {

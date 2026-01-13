@@ -15,7 +15,7 @@ const developers = [
     {
         github: 'https://github.com/narcissus-tazetta',
         name: 'Narcissus-tazetta',
-        slack: 'https://n-highschool.slack.com/archives/D088N1A4WET',
+        slack: 'https://n-highschool.slack.com/team/U04VDPX7ZHV',
     },
     {
         github: 'https://github.com/alinco8',

@@ -1,5 +1,6 @@
-export const YOUTUBE_URL_PATTERN = '*://www.youtube.com/*';
-export const YOUTUBE_WATCH_URL_PATTERN = '*://www.youtube.com/watch*';
+export const YOUTUBE_URL_PATTERN = '*://*.youtube.com/*';
+export const YOUTUBE_WATCH_URL_PATTERN = '*://*.youtube.com/watch*';
+export const YOUTUBE_SHORT_URL_PATTERN = '*://youtu.be/*';
 export const YOUTUBE_VIDEO_ID_REGEX = /[?&]v=([\w-]{11})/;
 
 export const VIDEO_RETRY_CONFIG = {

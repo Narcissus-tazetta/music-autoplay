@@ -28,6 +28,7 @@ export function setupExtensionEventHandlers(
         {
             state: 'playing' | 'paused';
             receivedAt: number;
+            seq?: number;
             currentTime?: number;
             duration?: number;
         }
@@ -93,6 +94,13 @@ export function setupExtensionEventHandlers(
             const stateRaw = payload['state'] as string | undefined;
             const url = typeof payload['url'] === 'string' ? payload['url'] : undefined;
             const isAdvertisement = payload['isAdvertisement'] === true;
+            const incomingSeq = typeof payload['seq'] === 'number' ? payload['seq'] : undefined;
+            const incomingCurrentTime = typeof payload['currentTime'] === 'number'
+                ? payload['currentTime']
+                : undefined;
+            const incomingDuration = typeof payload['duration'] === 'number'
+                ? payload['duration']
+                : undefined;
 
             if (stateRaw === 'window_close') {
                 const status: RemoteStatus = { type: 'closed' };
@@ -137,8 +145,8 @@ export function setupExtensionEventHandlers(
 
             if (stateRaw === 'ended') {
                 if (url) {
-                    const { extractYoutubeId } = await import('@/shared/utils/youtube');
                     const videoId = extractYoutubeId(url);
+                    const music = videoId ? repository.get(videoId) : undefined;
                     if (videoId && repository.has(videoId)) {
                         const removeResult = repository.remove(videoId);
                         if (removeResult.ok) {
@@ -179,6 +187,26 @@ export function setupExtensionEventHandlers(
                             });
                         }
                     }
+
+                    // Avoid leaving remoteStatus stuck in 'playing' if video_ended is missed.
+                    if (videoId) {
+                        try {
+                            manager.update(
+                                {
+                                    type: 'paused',
+                                    isTransitioning: true,
+                                    currentTime: incomingCurrentTime,
+                                    duration: incomingDuration,
+                                    musicId: music ? videoId : undefined,
+                                    musicTitle: music?.title,
+                                    videoId: videoId,
+                                },
+                                'youtube_video_state:ended',
+                            );
+                        } catch (error) {
+                            log.warn('failed to update remote status (ended -> paused)', { error });
+                        }
+                    }
                 }
                 return;
             }
@@ -187,12 +215,6 @@ export function setupExtensionEventHandlers(
                 // 広告保護ロジックは不要（Extension側でisAdvertisementフラグを付与）
 
                 const state = stateRaw === 'playing' ? 'playing' : 'paused';
-                const incomingCurrentTime = typeof payload['currentTime'] === 'number'
-                    ? payload['currentTime']
-                    : undefined;
-                const incomingDuration = typeof payload['duration'] === 'number'
-                    ? payload['duration']
-                    : undefined;
 
                 log.debug(`youtube_video_state: received ${state}`, {
                     currentTime: incomingCurrentTime,
@@ -318,12 +340,14 @@ export function setupExtensionEventHandlers(
                         authoritativeVideoState.set(videoId, {
                             state,
                             receivedAt: Date.now(),
+                            seq: incomingSeq,
                             currentTime: incomingCurrentTime,
                             duration: incomingDuration,
                         });
                         log.debug(`youtube_video_state: set authoritative ${state}`, {
                             currentTime: incomingCurrentTime,
                             videoId,
+                            seq: incomingSeq,
                         });
                     }
                 }
@@ -915,6 +939,7 @@ export function setupExtensionEventHandlers(
         const clientLatencyMs = typeof payload['clientLatencyMs'] === 'number'
             ? payload['clientLatencyMs']
             : undefined;
+        const incomingSeq = typeof payload['seq'] === 'number' ? payload['seq'] : undefined;
 
         if (
             !url
@@ -1050,10 +1075,17 @@ export function setupExtensionEventHandlers(
             const authoritativeAge = authoritative ? (Date.now() - authoritative.receivedAt) : Infinity;
             const isAuthoritativeRecent = authoritativeAge < AUTHORITATIVE_TTL_MS;
             const isInGracePeriod = authoritativeAge < AUTHORITATIVE_GRACE_MS;
+            const hasSeqInfo = typeof incomingSeq === 'number' && typeof authoritative?.seq === 'number';
+            const isSameOrBeforeAuthoritativeSeq = hasSeqInfo && incomingSeq <= (authoritative?.seq as number);
             const shouldRespectAuthoritativePause = authoritative?.state === 'paused'
                 && isAuthoritativeRecent
                 && !seekDetected
-                && (isInGracePeriod || Math.abs(deltaPlayback) < 0.1); // grace期間中は無条件、それ以降は currentTime が動いていない場合のみ
+                && (
+                    // If seq is available, never let older/same-session progress override paused.
+                    isSameOrBeforeAuthoritativeSeq
+                    // Fallback to legacy heuristic when seq is unavailable.
+                    || (!hasSeqInfo && (isInGracePeriod || Math.abs(deltaPlayback) < 0.1))
+                );
 
             if (shouldRespectAuthoritativePause) {
                 log.debug(`${eventName}: respecting authoritative pause`, {
@@ -1061,6 +1093,8 @@ export function setupExtensionEventHandlers(
                     currentTime: currentTime.toFixed(2),
                     deltaPlayback: deltaPlayback.toFixed(3),
                     videoId,
+                    seq: incomingSeq,
+                    authoritativeSeq: authoritative?.seq,
                 });
                 const pausedUpdate: RemoteStatus = {
                     currentTime,
@@ -1072,6 +1106,33 @@ export function setupExtensionEventHandlers(
                 };
                 manager.update(pausedUpdate, eventName);
             } else {
+                const shouldPreservePausedDueToZeroProgress = eventName === 'progress_update_batch'
+                    && authoritative?.state === 'paused'
+                    && !seekDetected
+                    && Math.abs(deltaPlayback) < 0.1;
+
+                if (shouldPreservePausedDueToZeroProgress) {
+                    log.debug(`${eventName}: preserving paused due to zero progress`, {
+                        authoritativeAge,
+                        currentTime: currentTime.toFixed(2),
+                        deltaPlayback: deltaPlayback.toFixed(3),
+                        videoId,
+                        seq: incomingSeq,
+                        authoritativeSeq: authoritative?.seq,
+                    });
+
+                    const pausedUpdate: RemoteStatus = {
+                        currentTime,
+                        duration,
+                        musicId: videoId,
+                        musicTitle: incomingMusicTitle || music?.title,
+                        playbackRate,
+                        type: 'paused',
+                    };
+                    manager.update(pausedUpdate, eventName);
+                    return;
+                }
+
                 if (authoritative?.state === 'paused' && !isAuthoritativeRecent) {
                     log.debug(`${eventName}: ignoring stale authoritative pause`, {
                         authoritativeAge,

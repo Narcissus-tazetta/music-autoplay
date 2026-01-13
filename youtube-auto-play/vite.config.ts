@@ -7,13 +7,15 @@ const rootDir = resolve(__dirname);
 
 export default defineConfig({
     root: rootDir,
+    base: './',
     plugins: [tailwindcss(), react()],
     build: {
         rollupOptions: {
             input: {
                 popup: resolve(rootDir, 'src/popup/index.html'),
-                background: resolve(rootDir, 'src/background/background.ts'),
+                background: resolve(rootDir, 'src/background/sw.ts'),
                 content: resolve(rootDir, 'src/content/content.ts'),
+                offscreen: resolve(rootDir, 'src/offscreen/index.html'),
             },
             output: {
                 entryFileNames: '[name].js',

@@ -257,6 +257,29 @@ describe('StateReconciler', () => {
                 expect(result.status.type).toBe('playing');
             }
         });
+
+        test('should detect zero progress for progress_update_batch source', () => {
+            const baseStatus: RemoteStatus = {
+                currentTime: 10,
+                musicId: 'test1',
+                musicTitle: 'Test Song',
+                type: 'playing',
+            };
+
+            reconciler.reconcile({ type: 'closed' }, baseStatus, 'extension');
+
+            let lastResult;
+            for (let i = 0; i < 3; i++) {
+                lastResult = reconciler.reconcile(
+                    baseStatus,
+                    { ...baseStatus, currentTime: 10.01 },
+                    'progress_update_batch',
+                );
+            }
+
+            expect(lastResult?.status.type).toBe('paused');
+            expect(lastResult?.reason).toBe('zero_progress');
+        });
     });
 
     describe('state reset', () => {

@@ -1,27 +1,53 @@
-import { EXTENSION_NAMESPACE, MESSAGE_TYPES, TIMING, YOUTUBE_WATCH_URL_PATTERN } from '../constants';
-import { addExtensionTab } from './tab-manager';
+import {
+    EXTENSION_NAMESPACE,
+    MESSAGE_TYPES,
+    TIMING,
+    YOUTUBE_SHORT_URL_PATTERN,
+    YOUTUBE_URL_PATTERN,
+} from '../constants';
+import {
+    addExtensionTab,
+    getActiveExtensionTabId,
+    getActivePlaybackTabId,
+    getLastOpenedByExtensionTabId,
+    setLastOpenedByExtensionTabId,
+} from './tab-manager';
 import type { ExtensionGlobal, SocketInstance, TabInfo } from './types';
 import { findPlayingTab, sendTabMessage } from './utils';
 
-const YOUTUBE_BASE_URL_PATTERN = '*://www.youtube.com/*';
+let currentSocket: SocketInstance | null = null;
+let commandListener: ((command: string) => void) | null = null;
+
+const PAUSE_COMMAND_DEBOUNCE_MS = 300;
+let lastPauseCommandAt = 0;
+let pauseCommandInFlight = false;
 
 export function setupShortcutCommands(socket: SocketInstance): void {
-    chrome.commands.onCommand.addListener((command: string) => {
+    currentSocket = socket;
+    if (commandListener) return;
+
+    commandListener = (command: string) => {
         const g = (globalThis as unknown as Record<string, ExtensionGlobal>)[EXTENSION_NAMESPACE];
         if (!g?.isExtensionEnabled?.()) return;
 
-        switch (command) {
-            case 'pause-youtube':
-                handlePauseYouTube();
-                break;
-            case 'open-first-url':
-                handleOpenFirstUrl(socket);
-                break;
-            case 'toggle-popup-hidden-ui':
-                handleTogglePopupHiddenUI();
-                break;
-        }
-    });
+        handleShortcutCommand(command, currentSocket);
+    };
+
+    chrome.commands.onCommand.addListener(commandListener);
+}
+
+export function handleShortcutCommand(command: string, socket: SocketInstance | null): void {
+    switch (command) {
+        case 'pause-youtube':
+            void handlePauseYouTube();
+            break;
+        case 'open-first-url':
+            handleOpenFirstUrl(socket);
+            break;
+        case 'toggle-popup-hidden-ui':
+            handleTogglePopupHiddenUI();
+            break;
+    }
 }
 
 function handleTogglePopupHiddenUI(): void {
@@ -60,20 +86,100 @@ function handleTogglePopupHiddenUI(): void {
 }
 
 async function handlePauseYouTube(): Promise<void> {
-    chrome.tabs.query({ url: YOUTUBE_WATCH_URL_PATTERN }, (tabs: TabInfo[]) => {
-        if (!Array.isArray(tabs) || tabs.length === 0) return;
-        void Promise.all(
-            tabs
-                .filter(t => t?.id !== undefined)
-                .map(tab => sendTabMessage(tab.id, { type: 'toggle_play_pause' })),
-        ).catch(err => {
-            console.error('[handlePauseYouTube] Failed to toggle play/pause on tabs', err);
+    const now = Date.now();
+    if (now - lastPauseCommandAt < PAUSE_COMMAND_DEBOUNCE_MS) return;
+    lastPauseCommandAt = now;
+    if (pauseCommandInFlight) return;
+    pauseCommandInFlight = true;
+
+    try {
+        const targetTabId = await resolvePauseTargetTabId();
+        if (typeof targetTabId === 'number') {
+            try {
+                await sendTogglePlayPauseWithDebug(targetTabId, 'resolved_target');
+            } catch (err) {
+                console.error('[handlePauseYouTube] Failed to toggle play/pause on target tab', err);
+            }
+            return;
+        }
+
+        const tabs = await new Promise<TabInfo[]>(resolve => {
+            chrome.tabs.query({ url: YOUTUBE_URL_PATTERN }, resolve);
         });
+        if (!Array.isArray(tabs) || tabs.length === 0) return;
+
+        const playingTab = await findPlayingTab(tabs);
+        const target = playingTab ?? tabs.find(t => t?.id !== undefined);
+        if (!target?.id) return;
+
+        try {
+            await sendTogglePlayPauseWithDebug(target.id, 'fallback_playing_or_first');
+        } catch (err) {
+            console.error('[handlePauseYouTube] Failed to toggle play/pause', err);
+        }
+    } finally {
+        pauseCommandInFlight = false;
+    }
+}
+
+function sendTogglePlayPauseWithDebug(tabId: number, reason: string): Promise<void> {
+    return new Promise(resolve => {
+        try {
+            chrome.tabs.sendMessage(tabId, { type: 'toggle_play_pause' } as any, response => {
+                const err = chrome.runtime.lastError?.message;
+                if (err) console.warn('[pause-youtube] toggle_play_pause failed', { tabId, reason, err });
+                else console.info('[pause-youtube] toggle_play_pause ok', { tabId, reason, response });
+                resolve();
+            });
+        } catch (e) {
+            console.error('[pause-youtube] toggle_play_pause threw', { tabId, reason, e });
+            resolve();
+        }
     });
 }
 
-function handleOpenFirstUrl(socket: SocketInstance): void {
-    // Request first URL from server, but fallback to local storage after timeout
+async function resolvePauseTargetTabId(): Promise<number | null> {
+    try {
+        const audibleTabs = await new Promise<TabInfo[]>(resolve => {
+            chrome.tabs.query({ url: YOUTUBE_URL_PATTERN, audible: true, currentWindow: true } as any, resolve);
+        });
+        const t = audibleTabs?.find(tab => typeof tab?.id === 'number');
+        if (t?.id) return t.id;
+    } catch {
+        // ignore
+    }
+
+    const activePlayback = getActivePlaybackTabId();
+    if (typeof activePlayback === 'number') return activePlayback;
+
+    const lastOpened = getLastOpenedByExtensionTabId();
+    if (typeof lastOpened === 'number') return lastOpened;
+
+    const activeExt = getActiveExtensionTabId();
+    if (typeof activeExt === 'number') return activeExt;
+
+    try {
+        const tabs = await new Promise<TabInfo[]>(resolve => {
+            chrome.tabs.query({ url: YOUTUBE_URL_PATTERN }, resolve);
+        });
+        if (!Array.isArray(tabs) || tabs.length === 0) return null;
+        const playingTab = await findPlayingTab(tabs);
+        const target = playingTab ?? tabs.find(t => typeof t?.id === 'number');
+        return typeof target?.id === 'number' ? target.id : null;
+    } catch {
+        try {
+            const shortTabs = await new Promise<TabInfo[]>(resolve => {
+                chrome.tabs.query({ url: YOUTUBE_SHORT_URL_PATTERN }, resolve);
+            });
+            const t = shortTabs?.find(tab => typeof tab?.id === 'number');
+            return typeof t?.id === 'number' ? t.id : null;
+        } catch {
+            return null;
+        }
+    }
+}
+
+function handleOpenFirstUrl(socket: SocketInstance | null): void {
     console.info('[handleOpenFirstUrl] Invoked');
 
     const fallbackToLocal = () => {
@@ -84,7 +190,7 @@ function handleOpenFirstUrl(socket: SocketInstance): void {
         });
     };
 
-    if (!socket.connected) {
+    if (!socket?.connected) {
         console.warn('[handleOpenFirstUrl] Socket not connected, falling back to local storage');
         fallbackToLocal();
         return;
@@ -121,11 +227,11 @@ function handleOpenFirstUrl(socket: SocketInstance): void {
 }
 
 function openYouTubeUrlWithWait(targetUrl: string): void {
-    chrome.tabs.query({ url: YOUTUBE_BASE_URL_PATTERN }, (ytabs: TabInfo[]) => {
+    chrome.tabs.query({ url: YOUTUBE_URL_PATTERN }, (ytabs: TabInfo[]) => {
         const ytIds = ytabs.map(t => t.id);
 
         const openWithWait = () => {
-            chrome.tabs.query({ url: YOUTUBE_WATCH_URL_PATTERN }, async (tabs: TabInfo[]) => {
+            chrome.tabs.query({ url: YOUTUBE_URL_PATTERN }, async (tabs: TabInfo[]) => {
                 if (tabs.length === 0) return createExtensionTab(targetUrl);
                 const playingTab = await findPlayingTab(tabs);
                 if (playingTab) waitForVideoEnd(playingTab, targetUrl);
@@ -154,6 +260,7 @@ function createExtensionTab(url: string): void {
 
         if (tab.id) {
             addExtensionTab(tab.id);
+            setLastOpenedByExtensionTabId(tab.id);
             setTimeout(() => {
                 sendTabMessage(tab.id!, { type: 'mark_extension_opened' });
             }, TIMING.MARK_EXTENSION_DELAY);
@@ -177,8 +284,11 @@ function waitForVideoEnd(playingTab: TabInfo, targetUrl: string): void {
         }
     };
 
-    const onEnded = (msg: { type: string }, sender: { tab?: TabInfo }) => {
-        if (msg.type === 'video_ended' && sender.tab?.id === playingTab.id && !handled) {
+    const onEnded = (msg: { type: string; __senderTabId?: number }, sender: { tab?: TabInfo }) => {
+        const senderTabId = typeof sender?.tab?.id === 'number'
+            ? sender.tab.id
+            : (typeof msg?.__senderTabId === 'number' ? msg.__senderTabId : undefined);
+        if (msg.type === 'video_ended' && senderTabId === playingTab.id && !handled) {
             handled = true;
             cleanup();
             createExtensionTab(targetUrl);

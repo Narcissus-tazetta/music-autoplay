@@ -13,7 +13,7 @@ const SOCKET_OPTIONS = {
     reconnectionDelayMax: 30000,
     timeout: 10000,
     transports: ['websocket', 'polling'] as ('websocket' | 'polling')[],
-    path: '/socket.io',
+    path: '/api/socket.io',
     autoConnect: false,
 } as const;
 
@@ -216,12 +216,9 @@ async function initConnectionFromMode(): Promise<void> {
             log('info', 'Requested getAllMusics after connection', { response });
             try {
                 if (Array.isArray(response)) {
-                    // Normalize response items to include `url` if possible (some servers return id/title)
                     const rawList = response as any[];
                     const normalized = rawList.map(item => {
-                        // If already has url, use it
                         if (item && typeof item.url === 'string' && item.url.length > 0) return item;
-                        // If has id, build youtube watch url
                         if (item && typeof item.id === 'string')
                             return { ...item, url: `https://www.youtube.com/watch?v=${item.id}` };
                         return item;
@@ -296,7 +293,7 @@ interface FindYoutubeTabsResponse {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.type === 'find_youtube_tabs') {
-        chrome.tabs.query({ url: '*://www.youtube.com/watch*' }, tabs => {
+        chrome.tabs.query({ url: '*://*.youtube.com/*' }, tabs => {
             const tabIds = tabs.map(tab => tab.id).filter((id): id is number => id !== undefined);
             const response: FindYoutubeTabsResponse = { status: 'ok', tabIds };
             sendResponse(response);
@@ -328,7 +325,6 @@ if (typeof chrome !== 'undefined' && chrome.storage) {
     storageApi.onChanged?.addListener((changes, areaName) => {
         if (areaName === 'local' && changes.extensionMode) {
             const newMode = changes.extensionMode.newValue as ExtensionMode;
-            // Debounce rapid mode changes to avoid flapping connections
             _pendingMode = newMode;
             if (_modeChangeTimer) clearTimeout(_modeChangeTimer as any);
             _modeChangeTimer = setTimeout(() => {
@@ -416,8 +412,6 @@ interface ChromeExtendedRuntime {
     };
 }
 
-// Use the global chrome available in service worker/global scope instead of `window.chrome`.
-// In MV3 service workers, `window` is undefined so previous checks could skip sidePanel setup.
 const chromeApi = (globalThis as unknown as { chrome?: ChromeExtendedRuntime }).chrome as
     | ChromeExtendedRuntime
     | undefined;
@@ -454,14 +448,12 @@ function emitExtensionHeartbeatIfConnected(): void {
     }
 }
 
-// Attempt to set sidePanel behavior on install/startup and immediately on load.
 chromeApi?.runtime?.onStartup?.addListener(() => {});
 
 chromeApi?.runtime?.onInstalled?.addListener(() => {
     ensureSidePanelBehavior();
 });
 
-// Try once now so that if the service worker is already active we still set the behavior.
 ensureSidePanelBehavior();
 
 self.addEventListener('activate', reconnectSocketIfNeeded);

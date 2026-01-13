@@ -1,5 +1,11 @@
 import { EXTENSION_NAMESPACE } from '../constants';
-import { addExtensionTab, isExtensionOpenedTab } from './tab-manager';
+import {
+    addExtensionTab,
+    isActivePlaybackTab,
+    isExtensionOpenedTab,
+    setActiveExtensionTab,
+    setActivePlaybackTab,
+} from './tab-manager';
 import type { ExtensionGlobal, MessageSender, SocketInstance } from './types';
 import { isPlaylistUrl, sendTabMessage } from './utils';
 
@@ -7,6 +13,12 @@ interface YouTubeVideoStateMessage {
     type: 'youtube_video_state';
     state: string;
     url: string;
+    currentTime?: number;
+    duration?: number;
+    timestamp?: number;
+    isAdvertisement?: boolean;
+    seq?: number;
+    openedByExtension?: boolean;
 }
 
 export function handleYouTubeVideoState(
@@ -15,9 +27,15 @@ export function handleYouTubeVideoState(
     socket: SocketInstance,
 ): void {
     const g = (globalThis as unknown as Record<string, ExtensionGlobal>)[EXTENSION_NAMESPACE];
-    const tabId = sender?.tab?.id;
+    const tabId = typeof sender?.tab?.id === 'number'
+        ? sender.tab.id
+        : (typeof (message as any).__senderTabId === 'number' ? (message as any).__senderTabId : undefined);
 
-    if (!g?.isExtensionEnabled?.() || !sender?.tab || !isExtensionOpenedTab(sender.tab.id)) {
+    if (message.openedByExtension === true && typeof tabId === 'number') addExtensionTab(tabId);
+
+    const isAllowedTab = typeof tabId === 'number' && (isExtensionOpenedTab(tabId) || isActivePlaybackTab(tabId));
+
+    if (!g?.isExtensionEnabled?.() || !isAllowedTab) {
         console.info('[Background] handleYouTubeVideoState ignored', {
             state: message.state,
             url: message.url,
@@ -33,9 +51,24 @@ export function handleYouTubeVideoState(
         tabId,
     });
 
-    if (socket.connected) socket.emit('youtube_video_state', { state: message.state, url: message.url });
+    if (typeof tabId === 'number') {
+        setActivePlaybackTab(tabId);
+        setActiveExtensionTab(tabId);
+    }
 
-    if (message.state === 'ended') handleVideoEnded(message.url, sender.tab.id, socket);
+    if (socket.connected) {
+        socket.emit('youtube_video_state', {
+            state: message.state,
+            url: message.url,
+            currentTime: message.currentTime,
+            duration: message.duration,
+            timestamp: message.timestamp,
+            isAdvertisement: message.isAdvertisement,
+            seq: message.seq,
+        });
+    }
+
+    if (message.state === 'ended' && typeof tabId === 'number') handleVideoEnded(message.url, tabId, socket);
 }
 
 function hasChromeError(): boolean {
@@ -51,6 +84,31 @@ export function handleVideoEnded(currentUrl: string, tabId: number, socket: Sock
         socketConnected: socket.connected,
     });
 
+    if (!socket.connected) {
+        chrome.storage.local.get(['urlList'], result => {
+            const list = Array.isArray(result?.urlList) ? result.urlList : [];
+            const idx = list.findIndex((v: any) => typeof v?.url === 'string' && v.url === currentUrl);
+            const next = idx >= 0 && idx + 1 < list.length ? list[idx + 1]?.url : undefined;
+
+            if (typeof next === 'string') {
+                console.warn('[Background] handleVideoEnded fallback navigating (socket disconnected)', {
+                    currentUrl,
+                    next,
+                    tabId,
+                });
+                navigateToNextVideo(next, tabId);
+                return;
+            }
+
+            console.warn('[Background] handleVideoEnded fallback: no next video in local list', {
+                currentUrl,
+                tabId,
+            });
+            handleNoNextVideo(tabId);
+        });
+        return;
+    }
+
     if (socket.connected) socket.emit('video_ended', { url: currentUrl, tabId });
 }
 
@@ -60,8 +118,6 @@ export function navigateToNextVideo(nextUrl: string, tabId: number): void {
     } catch {}
 
     addExtensionTab(tabId);
-
-    // Mark this navigation as extension-controlled to prevent YouTube's auto-play from interfering
     sendTabMessage(tabId, { type: 'mark_extension_navigating' });
 
     chrome.tabs.update(tabId, { url: nextUrl }, () => {

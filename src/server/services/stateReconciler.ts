@@ -41,6 +41,10 @@ export class StateReconciler {
     ): ReconciliationResult {
         const now = Date.now();
 
+        const isProgressSource = source === 'progress_update'
+            || source === 'progress_update_batch'
+            || source === 'video_progress';
+
         if (incomingStatus.type === 'closed') {
             this.reset();
             return { shouldEmit: true, status: incomingStatus };
@@ -56,7 +60,7 @@ export class StateReconciler {
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (incomingStatus.type === 'playing') {
             const withinGracePeriod = now - this.state.lastPausedAt < this.config.pausedGracePeriodMs;
-            if (withinGracePeriod && source === 'progress_update') {
+            if (withinGracePeriod && isProgressSource) {
                 logger.debug(
                     'stateReconciler: ignoring progress_update within grace period',
                     {
@@ -75,7 +79,7 @@ export class StateReconciler {
             const deltaPlayback = Math.abs(currentTime - this.state.lastCurrentTime);
 
             if (
-                source === 'progress_update'
+                isProgressSource
                 && this.state.lastCurrentTime > 0
                 && deltaPlayback < this.config.zeroProgressDelta
             ) {
@@ -114,7 +118,7 @@ export class StateReconciler {
                     };
                 }
             } else if (
-                source !== 'progress_update'
+                !isProgressSource
                 || deltaPlayback >= this.config.zeroProgressDelta
             ) {
                 this.state.consecutiveZeroProgress = 0;

@@ -31,24 +31,39 @@ const ProgressBar = memo(({ percent, color }: { percent: number; color: string }
 ));
 
 const StaticInfo = memo((
-    { title, href, videoId, music }: { title: string; href?: string; videoId: string; music?: Music },
+    {
+        label,
+        title,
+        href,
+        videoId,
+        music,
+    }: {
+        label: string;
+        title: string;
+        href?: string;
+        videoId: string;
+        music?: Music;
+    },
 ) => (
-    <div className='text-sm sm:text-base font-medium text-gray-800 dark:text-gray-100'>
-        {videoId && title
-            ? (
-                <MusicTitleWithHover
-                    music={music}
-                    videoId={videoId}
-                    title={title}
-                    href={href}
-                    className='text-gray-800 dark:text-gray-100 font-medium hover:underline line-clamp-1 sm:line-clamp-2 text-sm sm:text-base'
-                />
-            )
-            : (
-                <span className='line-clamp-1 sm:line-clamp-2'>
-                    {title || '再生中'}
-                </span>
-            )}
+    <div className='text-sm sm:text-base font-medium text-gray-800 dark:text-gray-100 min-w-0'>
+        <span className='inline-flex items-center gap-2 min-w-0'>
+            <span className='whitespace-nowrap'>{label}{title ? ':' : ''}</span>
+            {title
+                ? (
+                    videoId
+                        ? (
+                            <MusicTitleWithHover
+                                music={music}
+                                videoId={videoId}
+                                title={title}
+                                href={href}
+                                className='text-gray-800 dark:text-gray-100 font-medium hover:underline line-clamp-1 sm:line-clamp-2 text-sm sm:text-base min-w-0'
+                            />
+                        )
+                        : <span className='line-clamp-1 sm:line-clamp-2 min-w-0'>{title}</span>
+                )
+                : null}
+        </span>
     </div>
 ));
 
@@ -64,7 +79,7 @@ function AudioPlayerInner({
         || music?.id
         || '';
 
-    const title = (status?.type === 'playing' && status.musicTitle)
+    const rawTitle = ((status?.type === 'playing' || status?.type === 'paused') && status.musicTitle)
         || music?.title
         || '';
 
@@ -103,6 +118,8 @@ function AudioPlayerInner({
     const isExternalVideo = status?.type === 'playing' && status.isExternalVideo === true;
     const isPaused = status?.type === 'paused';
     const pausedIndicator = isPaused || isEffectivelyPaused;
+
+    const label = isAdvertisement ? '広告再生中' : pausedIndicator ? '停止中' : '再生中';
 
     const progressBarColor = useMemo(
         () =>
@@ -150,7 +167,7 @@ function AudioPlayerInner({
                 {!thumbnail.loaded && <div className='absolute inset-0 bg-gray-300 dark:bg-gray-700 animate-pulse' />}
                 <img
                     src={thumbnail.src}
-                    alt={`${title} のサムネイル`}
+                    alt={`${rawTitle} のサムネイル`}
                     className={cn(
                         'w-full h-full object-cover transition-opacity duration-200',
                         thumbnail.loaded ? 'opacity-100' : 'opacity-0',
@@ -161,7 +178,7 @@ function AudioPlayerInner({
                 />
             </a>
             <div className='flex-1 min-w-0 flex flex-col gap-1.5 sm:gap-2'>
-                <StaticInfo title={title} href={href} videoId={videoId} music={music} />
+                <StaticInfo label={label} title={rawTitle} href={href} videoId={videoId} music={music} />
 
                 <div className='w-full'>
                     <ProgressBar percent={progressPercent} color={progressBarColor} />

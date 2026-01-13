@@ -92,6 +92,11 @@ export interface YouTubeVideoStateMessage extends ChromeMessage {
     state: YouTubeVideoState;
     currentTime?: number;
     timestamp?: number;
+    duration?: number;
+    isAdvertisement?: boolean;
+    videoId?: string;
+    seq?: number;
+    openedByExtension?: boolean;
 }
 
 export interface AdStateChangedMessage extends ChromeMessage {
@@ -118,6 +123,8 @@ export interface ProgressUpdatePayload extends ChromeMessage {
     tabId?: string | number;
     progressPercent?: number;
     consecutiveStalls?: number;
+    seq?: number;
+    openedByExtension?: boolean;
 }
 
 export interface BatchProgressUpdateMessage extends ChromeMessage {
