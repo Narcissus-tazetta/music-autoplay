@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { YOUTUBE_URL_PATTERN } from '../constants';
 import type { ControlName, UrlItem } from '../types';
 import { findYouTubeTabs, sendChromeMessage, sendTabMessage } from '../utils/chrome';
 import { extractYouTubeId } from '../utils/youtube';
@@ -63,8 +64,6 @@ export function useYouTubeControls(urls: UrlItem[]): UseYouTubeControlsReturn {
         if (urlList.length === 0) return;
 
         const firstUrl = urlList[0].url;
-        const YOUTUBE_URL_PATTERN = '*://www.youtube.com/*';
-
         chrome.tabs.query({ url: YOUTUBE_URL_PATTERN }, ytabs => {
             const ytIds = ytabs.map(t => t.id).filter((id): id is number => id !== undefined);
             const createTab = () => chrome.tabs.create({ url: firstUrl });
@@ -75,8 +74,6 @@ export function useYouTubeControls(urls: UrlItem[]): UseYouTubeControlsReturn {
     }, []);
 
     const openUrl = useCallback((url: string) => {
-        const YOUTUBE_URL_PATTERN = '*://www.youtube.com/*';
-
         chrome.tabs.query({ url: YOUTUBE_URL_PATTERN }, tabs => {
             const ytIds = tabs.map(t => t.id).filter((id): id is number => id !== undefined);
             const createTab = () => chrome.tabs.create({ url });

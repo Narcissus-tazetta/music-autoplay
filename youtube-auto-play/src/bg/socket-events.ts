@@ -1,7 +1,6 @@
 import type { SocketInstance, TabInfo, VideoData } from './types';
 import { handleNoNextVideo, navigateToNextVideo } from './youtube-state';
 
-// Minimal helper used by waitForVideoEnd to open a tab and save latestUrl
 function _openTabAndSaveLatest(url: string): void {
     try {
         chrome.tabs.create({ url }, () => {
@@ -39,10 +38,13 @@ export function waitForVideoEnd(playingTab: TabInfo, nextUrl: string): void {
         }
     };
 
-    const onEnded = (msg: { type?: string }, sender: { tab?: TabInfo }) => {
-        if (msg?.type === 'video_ended' && sender?.tab?.id === playingTab.id && !handled) {
+    const onEnded = (msg: { type?: string; __senderTabId?: number }, sender: { tab?: TabInfo }) => {
+        const senderTabId = typeof sender?.tab?.id === 'number'
+            ? sender.tab.id
+            : (typeof msg?.__senderTabId === 'number' ? msg.__senderTabId : undefined);
+        if (msg?.type === 'video_ended' && senderTabId === playingTab.id && !handled) {
             console.info('[socket-events] waitForVideoEnd received video_ended', {
-                senderTabId: sender?.tab?.id,
+                senderTabId,
                 nextUrl,
             });
             handled = true;
@@ -60,7 +62,15 @@ export function waitForVideoEnd(playingTab: TabInfo, nextUrl: string): void {
 }
 
 export function setupSocketEvents(socket: SocketInstance, getCurrentSocket?: () => SocketInstance | undefined): void {
-    socket.on('connect', () => {});
+    socket.on('connect', () => {
+        try {
+            const isActive = typeof getCurrentSocket === 'function' ? getCurrentSocket() === socket : true;
+            console.info('[socket-events] socket connected', { isActive });
+            if (isActive) socket.emit('request_url_list', () => {});
+        } catch {
+            // ignore
+        }
+    });
 
     socket.on('disconnect', (...args: unknown[]) => {
         const reason = args[0] as string;
@@ -91,8 +101,6 @@ export function setupSocketEvents(socket: SocketInstance, getCurrentSocket?: () 
 
         const isActive = typeof getCurrentSocket === 'function' ? getCurrentSocket() === socket : 'no_getCurrent';
         console.info('[socket-events] url_list received', { length: list.length, isActive });
-
-        // Ignore url_list events from sockets that are no longer the actively tracked socket
         if (isActive !== true) {
             console.info('[socket-events] url_list ignored (inactive socket)');
             return;
@@ -143,7 +151,7 @@ function notifyPopup(message: Record<string, unknown> & { type: string }): void 
             if (chrome.runtime.lastError) return;
         });
     } catch {
-        // popupが開かれていない場合は無視
+        // ignore
     }
 }
 
@@ -168,8 +176,6 @@ export function handleUrlList(list: VideoData[]): void {
                         }
                     });
                 }
-
-                // Auto-open behavior has been removed for Auto Tab feature
 
                 notifyPopup({ type: 'url_list', urls: list });
                 console.info('[socket-events] handleUrlList processed', { newLength: list.length });

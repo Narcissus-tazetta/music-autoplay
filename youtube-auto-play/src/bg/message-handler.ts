@@ -1,7 +1,8 @@
-import { MESSAGE_TYPES, TIMING, YOUTUBE_WATCH_URL_PATTERN } from '../constants';
+import { MESSAGE_TYPES, TIMING, YOUTUBE_URL_PATTERN } from '../constants';
 import type { BatchProgressUpdateMessage, ChromeMessage, ChromeMessageResponse, ProgressUpdatePayload } from '../types';
 import type { MessageSender, SocketInstance } from './types';
 
+import { addExtensionTab, isExtensionOpenedTab, setActiveExtensionTab, setActivePlaybackTab } from './tab-manager';
 import { handleVideoEnded, handleYouTubeVideoState } from './youtube-state';
 
 interface MoveVideoMessage {
@@ -23,7 +24,7 @@ function safeSendResponse(
     try {
         sendResponse(response);
     } catch {
-        // sendResponseがすでに呼ばれた場合は無視
+        // ignore
     }
 }
 
@@ -37,7 +38,6 @@ function getChromeErrorMessage(): string {
 
 /* eslint-disable no-console */
 export function setupMessageHandler(socket: SocketInstance): void {
-    // Flush any buffered progress updates when socket connects
     try {
         socket.on('connect', () => {
             flushProgressBuffer(socket);
@@ -50,6 +50,15 @@ export function setupMessageHandler(socket: SocketInstance): void {
             sendResponse: (response: MessageResponse) => void,
         ) => {
             const msg = message;
+            const senderTabId = typeof sender?.tab?.id === 'number'
+                ? sender.tab.id
+                : (typeof (msg as any).__senderTabId === 'number' ? (msg as any).__senderTabId : undefined);
+            const senderWithTab = typeof senderTabId === 'number'
+                ? ({
+                    ...sender,
+                    tab: { ...sender?.tab, id: senderTabId },
+                } as MessageSender)
+                : sender;
 
             if (msg.type === 'move_prev_video' || msg.type === 'move_next_video') {
                 if (msg.url && typeof msg.url === 'string') {
@@ -61,8 +70,23 @@ export function setupMessageHandler(socket: SocketInstance): void {
             if (msg.type === 'youtube_video_state') {
                 if (msg.state && msg.url && typeof msg.state === 'string' && typeof msg.url === 'string') {
                     handleYouTubeVideoState(
-                        { type: msg.type, state: msg.state, url: msg.url },
-                        sender,
+                        {
+                            type: msg.type,
+                            state: msg.state,
+                            url: msg.url,
+                            currentTime: typeof (msg as any).currentTime === 'number'
+                                ? (msg as any).currentTime
+                                : undefined,
+                            duration: typeof (msg as any).duration === 'number'
+                                ? (msg as any).duration
+                                : undefined,
+                            timestamp: typeof (msg as any).timestamp === 'number'
+                                ? (msg as any).timestamp
+                                : undefined,
+                            isAdvertisement: (msg as any).isAdvertisement === true,
+                            seq: typeof (msg as any).seq === 'number' ? (msg as any).seq : undefined,
+                        },
+                        senderWithTab,
                         socket,
                     );
                 }
@@ -119,10 +143,10 @@ export function setupMessageHandler(socket: SocketInstance): void {
             if (msg.type === 'ad_skip_to_next') {
                 console.info('[Background] ad_skip_to_next received', {
                     url: msg.url,
-                    tabId: sender?.tab?.id,
+                    tabId: senderTabId,
                 });
                 if (msg.url && typeof msg.url === 'string')
-                    handleAdSkipToNext({ type: msg.type, url: msg.url }, sender as MessageSender, socket);
+                    handleAdSkipToNext({ type: msg.type, url: msg.url }, senderWithTab as MessageSender, socket);
                 return false;
             }
 
@@ -134,6 +158,10 @@ export function setupMessageHandler(socket: SocketInstance): void {
                     && typeof msg.duration === 'number'
                     && typeof msg.timestamp === 'number'
                 ) {
+                    if (typeof senderTabId === 'number') setActivePlaybackTab(senderTabId);
+                    if (msg.openedByExtension === true && typeof senderTabId === 'number') addExtensionTab(senderTabId);
+                    if (typeof senderTabId === 'number' && isExtensionOpenedTab(senderTabId))
+                        setActiveExtensionTab(senderTabId);
                     handleProgressUpdate(msg as ProgressUpdatePayload, socket);
                 }
                 return false;
@@ -141,6 +169,10 @@ export function setupMessageHandler(socket: SocketInstance): void {
 
             if (msg.type === 'batch_progress_update') {
                 if (Array.isArray(msg.updates)) {
+                    if (typeof senderTabId === 'number') setActivePlaybackTab(senderTabId);
+                    if (msg.openedByExtension === true && typeof senderTabId === 'number') addExtensionTab(senderTabId);
+                    if (typeof senderTabId === 'number' && isExtensionOpenedTab(senderTabId))
+                        setActiveExtensionTab(senderTabId);
                     handleBatchProgressUpdate(
                         msg as { type: 'batch_progress_update'; updates: ProgressUpdatePayload[] },
                         socket,
@@ -230,6 +262,7 @@ function handleProgressUpdate(message: ProgressUpdatePayload, socket: SocketInst
             progressPercent: message.progressPercent,
             consecutiveStalls: message.consecutiveStalls,
             clientLatencyMs,
+            seq: (message as any).seq,
         } as Record<string, unknown>;
 
         socket.emit('progress_update', payload);
@@ -271,6 +304,7 @@ function handleBatchProgressUpdate(
                     progressPercent: update.progressPercent,
                     consecutiveStalls: update.consecutiveStalls,
                     clientLatencyMs,
+                    seq: (update as any).seq,
                 };
             }),
         });
@@ -310,6 +344,7 @@ function flushProgressBuffer(socket: SocketInstance): void {
                     progressPercent: u.progressPercent,
                     consecutiveStalls: u.consecutiveStalls,
                     clientLatencyMs,
+                    seq: (u as any).seq,
                 };
             }),
         });
@@ -370,7 +405,7 @@ function handleAddExternalMusic(
     socket: SocketInstance,
     sendResponse: (response: MessageResponse) => void,
 ): void {
-    chrome.tabs.query({ active: true, url: YOUTUBE_WATCH_URL_PATTERN }, tabs => {
+    chrome.tabs.query({ active: true, url: YOUTUBE_URL_PATTERN }, tabs => {
         if (hasChromeError()) {
             console.error('[Background] Failed to query active tab', chrome.runtime.lastError);
             safeSendResponse(sendResponse, { status: 'error', error: getChromeErrorMessage() });
