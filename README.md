@@ -24,6 +24,10 @@
 - `ADMIN_SECRET` : 管理用シークレット（任意）
 - `SESSION_SECRET` : セッション署名に使う秘密鍵
 - `DATABASE_URL` : PostgreSQL 等の接続文字列（このプロジェクトで使う場合）
+- `PERSISTENCE_PROVIDER` : 永続化先の選択（`file` | `pg` | `mongo`、未指定は `file`）
+- `MONGODB_URI` : MongoDB 接続文字列（`PERSISTENCE_PROVIDER=mongo` のとき必須）
+- `MONGODB_DB_NAME` : MongoDB DB名（未指定は `musicReq`）
+- `MONGODB_COLLECTION` : MongoDB コレクション名（未指定は `musicRequests`）
 
 （注意）これらの値はデプロイ先のシークレット管理に登録してください。ローカル開発ではリポジトリ直下に `.env` を作成して設定できますが、秘密情報を公開リポジトリに置かないでください。
 

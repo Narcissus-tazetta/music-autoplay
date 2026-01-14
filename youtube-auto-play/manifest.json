@@ -40,8 +40,6 @@
   "host_permissions": [
     "http://localhost:3000/*",
     "https://music-auto-play.onrender.com/*",
-    "https://*.youtube.com/*",
-    "http://*.youtube.com/*",
     "https://youtu.be/*",
     "http://youtu.be/*"
   ],
@@ -51,8 +49,6 @@
   "content_scripts": [
     {
       "matches": [
-        "https://*.youtube.com/*",
-        "http://*.youtube.com/*",
         "https://youtu.be/*",
         "http://youtu.be/*"
       ],

@@ -10,7 +10,6 @@ import { container } from './di/container';
 import logger from './logger';
 import type { MusicService } from './music/musicService';
 import { createMusicService } from './music/musicServiceFactory';
-import { defaultFileStore } from './persistence';
 import type { Store } from './persistence';
 import type { RateLimiter } from './services/rateLimiter';
 import { RateLimiterManager } from './services/rateLimiterManager';
@@ -75,7 +74,7 @@ export class SocketServerInstance {
 
     constructor(
         youtubeService?: YouTubeService,
-        fileStore: Store = defaultFileStore,
+        fileStore?: Store,
     ) {
         const components = createSocketServerBuilder()
             .withYouTubeService(youtubeService)

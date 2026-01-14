@@ -23,6 +23,11 @@ export function setupExtensionEventHandlers(
     const extensionSocketOn = extractSocketOn(socket);
     const socketContext = { socketId: socket.id };
 
+    // Hard rule: once paused, do not allow progress/ad events to flip to playing.
+    // This flag is updated synchronously on youtube_video_state receipt to avoid races
+    // where async work delays manager.update(paused).
+    let pausedLockActive = false;
+
     const authoritativeVideoState = new Map<
         string,
         {
@@ -101,6 +106,13 @@ export function setupExtensionEventHandlers(
             const incomingDuration = typeof payload['duration'] === 'number'
                 ? payload['duration']
                 : undefined;
+
+            // Update paused lock immediately to prevent progress/ad handlers from flipping state
+            // before we finish any async work in this handler.
+            if (stateRaw === 'playing') pausedLockActive = false;
+            else if (stateRaw === 'paused' || stateRaw === 'transitioning' || stateRaw === 'ended')
+                pausedLockActive = true;
+            else if (stateRaw === 'window_close') pausedLockActive = false;
 
             if (stateRaw === 'window_close') {
                 const status: RemoteStatus = { type: 'closed' };
@@ -692,6 +704,18 @@ export function setupExtensionEventHandlers(
                     videoId,
                 });
 
+                // Hard rule: once paused, do not transition to playing from ad events.
+                // Only youtube_video_state(state=playing) is allowed to resume.
+                if (isPausedLocked()) {
+                    log.debug('ad_state_changed: ignored due to paused lock', {
+                        connectionId,
+                        isAd,
+                        socketId: socket.id,
+                        videoId,
+                    });
+                    return;
+                }
+
                 if (isAd) {
                     const currentStatus = manager.getCurrent();
                     const music = repository.get(videoId);
@@ -904,6 +928,34 @@ export function setupExtensionEventHandlers(
         }
     >();
 
+    const isPausedLocked = (): boolean => pausedLockActive || manager.getCurrent().type === 'paused';
+
+    const pickLatestProgressUpdate = (updates: unknown[]): unknown | null => {
+        let best: unknown | null = null;
+        let bestTimestamp = -Infinity;
+        let bestSeq = -Infinity;
+
+        for (const u of updates) {
+            if (!isRecord(u)) continue;
+            const ts = typeof u['timestamp'] === 'number' ? u['timestamp'] : -Infinity;
+            const seq = typeof u['seq'] === 'number' ? u['seq'] : -Infinity;
+
+            if (ts > bestTimestamp) {
+                best = u;
+                bestTimestamp = ts;
+                bestSeq = seq;
+                continue;
+            }
+
+            if (ts === bestTimestamp && seq > bestSeq) {
+                best = u;
+                bestSeq = seq;
+            }
+        }
+
+        return best;
+    };
+
     const handleProgressUpdate = async (payload: unknown, eventName: string) => {
         if (!isRecord(payload)) {
             log.debug(`${eventName}: invalid payload`, { payload });
@@ -960,6 +1012,18 @@ export function setupExtensionEventHandlers(
 
         if (!videoId) {
             log.debug(`${eventName}: invalid YouTube URL`, { url });
+            return;
+        }
+
+        // Hard rule: once paused, do not transition to playing from progress events.
+        // Only youtube_video_state(state=playing) is allowed to resume.
+        if (isPausedLocked()) {
+            log.debug(`${eventName}: ignored due to paused lock`, {
+                currentTime,
+                duration,
+                timestamp,
+                videoId,
+            });
             return;
         }
 
@@ -1194,7 +1258,9 @@ export function setupExtensionEventHandlers(
             if (!isRecord(payload)) return;
             const updates = payload['updates'];
             if (!Array.isArray(updates)) return;
-            for (const entry of updates) handleProgressUpdate(entry, 'progress_update_batch');
+            // Reconnect batches can be large; only process the latest update to avoid transient state churn.
+            const latest = pickLatestProgressUpdate(updates);
+            if (latest) handleProgressUpdate(latest, 'progress_update_batch');
         },
         log,
         socketContext,

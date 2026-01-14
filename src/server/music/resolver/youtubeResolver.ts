@@ -51,7 +51,7 @@ export class YouTubeResolver {
                 return err({
                     code: 'VALIDATION_FAILED',
                     message: '動画メタデータの検証に失敗しました',
-                    meta: { errors: parsed.error.errors },
+                    meta: { errors: parsed.error.issues },
                 });
             }
             return ok(parsed.data);

@@ -2,7 +2,7 @@ import { getMessage } from '@/shared/constants/messages';
 import { AddMusicSchema } from '@/shared/schemas/music';
 import type { SubmissionResult } from '@conform-to/dom';
 import { useForm } from '@conform-to/react';
-import { parseWithZod } from '@conform-to/zod';
+import { parseWithZod } from '@conform-to/zod/v4';
 import { useEffect, useRef, useState } from 'react';
 import { useFetcher } from 'react-router';
 

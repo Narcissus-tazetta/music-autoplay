@@ -53,7 +53,7 @@ type CallbackFunction = (response: ReplyOptions) => void;
 function formatZodErrors(error: ZodError): Record<string, string[]> {
     const fieldErrors: Record<string, string[]> = {};
 
-    for (const issue of error.errors) {
+    for (const issue of error.issues) {
         const path = issue.path.join('.');
         const field = path || 'root';
 

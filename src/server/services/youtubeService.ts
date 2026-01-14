@@ -214,7 +214,7 @@ export class YouTubeService {
                         // cast signal to the expected type; googleapis currently accepts AbortSignal-like objects
                         const result = await this.youtube.videos.list(
                             { id: [id], part: ['snippet', 'contentDetails'] },
-                            { signal: controller.signal as unknown },
+                            { signal: controller.signal as AbortSignal },
                         );
                         return result;
                     } finally {
