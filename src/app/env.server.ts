@@ -45,6 +45,13 @@ const serverEnvSchema = z
         CLIENT_URL: z.string().url().default(clientUrlDefault),
         CORS_ORIGINS: z.string().optional(),
         DATABASE_URL: z.string().optional(),
+        MONGODB_URI: z.string().optional(),
+        MONGODB_DB_NAME: z.string().optional().default('musicReq'),
+        MONGODB_COLLECTION: z.string().optional().default('musicRequests'),
+        PERSISTENCE_PROVIDER: z
+            .enum(['file', 'pg', 'mongo'])
+            .optional()
+            .default('file'),
         GOOGLE_CLIENT_ID: isTest
             ? z.string().default('test-google-client-id')
             : z.string().min(1, 'GOOGLE_CLIENT_ID is required'),
@@ -162,6 +169,10 @@ export const SERVER_ENV = (() => {
         CLIENT_URL: process.env.CLIENT_URL,
         CORS_ORIGINS: process.env.CORS_ORIGINS,
         DATABASE_URL: process.env.DATABASE_URL,
+        MONGODB_URI: process.env.MONGODB_URI,
+        MONGODB_DB_NAME: process.env.MONGODB_DB_NAME,
+        MONGODB_COLLECTION: process.env.MONGODB_COLLECTION,
+        PERSISTENCE_PROVIDER: process.env.PERSISTENCE_PROVIDER,
         GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
         GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
         LOG_LEVEL: process.env.LOG_LEVEL,

@@ -76,9 +76,9 @@ export async function initSocketServer(
     );
     const windowCloseManager = new WindowCloseManager(windowCloseDebounce);
 
-    const { defaultFileStore } = await import('../../persistence');
     const yt = effectiveYoutube ?? new YouTubeService();
-    const fsToUse = effectiveFileStore ?? defaultFileStore;
+    if (!effectiveFileStore) throw new Error('fileStore is required (register it in DI or pass it via deps)');
+    const fsToUse = effectiveFileStore;
 
     const runtime = new SocketRuntime(
         () => io,
@@ -105,7 +105,7 @@ export async function initSocketServer(
     const handler = makeConnectionHandler({
         adminHash: effectiveAdminHash ?? '',
         createManager: () => runtime.createManager(),
-        fileStore: effectiveFileStore ?? fsToUse,
+        fileStore: fsToUse,
         getIo: () => io,
         getManager: () => runtime.getManager(),
         getMusicService: () => runtime.getMusicService(),

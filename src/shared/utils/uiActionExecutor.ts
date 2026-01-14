@@ -6,9 +6,9 @@ const tryShowToast = (level: string, message: string): void => {
     try {
         const winResult = getWindowExtensions();
         if (winResult?.success) {
-            const app = winResult.data.__app__;
-            if (app?.showToast) {
-                app.showToast({ level, message });
+            const showToast = winResult.data.__app__?.showToast;
+            if (typeof showToast === 'function') {
+                showToast({ level: level as any, message });
                 return;
             }
         }
@@ -22,10 +22,12 @@ const tryShowToast = (level: string, message: string): void => {
 const tryRedirect = (to: string): void => {
     try {
         const winResult = getWindowExtensions();
-        const app = winResult?.success ? winResult.data.__app__ : undefined;
-        if (app?.navigate) {
-            app.navigate(to);
-            return;
+        if (winResult?.success) {
+            const navigate = winResult.data.__app__?.navigate;
+            if (typeof navigate === 'function') {
+                navigate(to);
+                return;
+            }
         }
     } catch {
         // Window extensions not available, fallback to location.href

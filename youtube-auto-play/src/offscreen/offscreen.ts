@@ -12,6 +12,7 @@ const SOCKET_OPTIONS = {
 } as const;
 
 const SOCKET_URL = 'http://localhost:3000' as const;
+// Change the above URL if your backend server runs on a different address or port.
 
 const CONNECTION_TIMEOUT_MS = 5000;
 
