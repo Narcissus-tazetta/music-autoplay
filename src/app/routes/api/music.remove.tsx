@@ -6,7 +6,7 @@ import type { ServerContext } from '@/shared/types/server';
 import { safeExecuteAsync } from '@/shared/utils/errors';
 import { err as makeErr } from '@/shared/utils/errors/result-handlers';
 import { respondWithResult } from '@/shared/utils/httpResponse';
-import { parseWithZod } from '@conform-to/zod';
+import { parseWithZod } from '@conform-to/zod/v4';
 import { createHash } from 'node:crypto';
 import type { ActionFunctionArgs } from 'react-router';
 import { SERVER_ENV } from '../../env.server';

@@ -32,7 +32,7 @@ export function createFakeRepo<T extends { id?: string; url?: string } = { id?: 
             return { ok: true };
         },
         buildCompatList() {
-            return items.map(m => ({ ...(m as any), url: (m as any).url }));
+            return items.map(m => Object.assign({}, m as any, { url: (m as any).url }));
         },
     } as const;
 }

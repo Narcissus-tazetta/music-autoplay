@@ -174,7 +174,4 @@ export class FileStore implements Store {
         }
     }
 }
-
-export const defaultFileStore = new FileStore();
-
 export default FileStore;

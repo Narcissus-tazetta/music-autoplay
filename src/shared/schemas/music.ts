@@ -10,7 +10,7 @@ export const AddMusicSchema = z.object({
     requesterHash: z.string().optional(),
     requesterName: z.string().optional(),
     url: z
-        .string({ required_error: 'URLを入力してください' })
+        .string({ message: 'URLを入力してください' })
         .min(1, 'URLを入力してください')
         .url('有効なURLを入力してください')
         .refine(u => /(?:youtube\.com\/watch\?v=|youtu\.be\/)/.test(u), {

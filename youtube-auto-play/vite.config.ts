@@ -8,6 +8,7 @@ const rootDir = resolve(__dirname);
 export default defineConfig({
     root: rootDir,
     base: './',
+    // @ts-ignore - bun cached type definition mismatch with vite 6.x
     plugins: [tailwindcss(), react()],
     build: {
         rollupOptions: {

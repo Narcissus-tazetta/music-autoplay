@@ -9,7 +9,8 @@ declare global {
 import { getConfigService } from './config/configService';
 import { container } from './di/container';
 import logger from './logger';
-import FileStore from './persistence';
+import type { Store } from './persistence';
+import { FileStore, MongoHybridStore, MongoStore, PgHybridStore, PgStore } from './persistence';
 import CacheService from './services/cacheService';
 import ErrorService from './services/errorService';
 import MetricsManager from './services/metricsManager';
@@ -23,7 +24,7 @@ export interface Metrics {
 
 export interface BootstrapResult {
     appShutdownHandlers: (() => Promise<void> | void)[];
-    fileStore: InstanceType<typeof FileStore>;
+    fileStore: Store;
     socketServer: InstanceType<typeof SocketServerInstance>;
     metricsManager: MetricsManager;
 }
@@ -33,11 +34,46 @@ export async function bootstrap(): Promise<BootstrapResult> {
     const errorService = new ErrorService();
     const cacheService = new CacheService();
 
-    const [youtubeService, fileStore, metricsManager] = await Promise.all([
-        Promise.resolve(new YouTubeService(undefined, configService, cacheService)),
-        Promise.resolve(new FileStore()),
-        Promise.resolve(new MetricsManager()),
-    ]);
+    const persistenceProvider = (configService.getString(
+        'PERSISTENCE_PROVIDER',
+        'file',
+    ) ?? 'file') as 'file' | 'pg' | 'mongo';
+
+    let fileStore: Store;
+    let closeDb: (() => Promise<void>) | undefined;
+
+    if (persistenceProvider === 'mongo') {
+        const uri = configService.getString('MONGODB_URI');
+        if (!uri) throw new Error('PERSISTENCE_PROVIDER=mongo requires MONGODB_URI');
+        const dbName = configService.getString('MONGODB_DB_NAME', 'musicReq') ?? 'musicReq';
+        const collectionName = configService.getString('MONGODB_COLLECTION', 'musicRequests')
+            ?? 'musicRequests';
+
+        const mongo = new MongoStore({ uri, collectionName, dbName });
+        await mongo.initialize();
+        const initial = await mongo.loadAll();
+        fileStore = new MongoHybridStore(mongo, initial);
+        closeDb = () => mongo.close();
+
+        logger.info('persistence provider: mongo', {
+            dbName,
+            collectionName,
+        });
+    } else if (persistenceProvider === 'pg') {
+        const pg = new PgStore();
+        await pg.initialize();
+        const initial = await pg.loadAll();
+        fileStore = new PgHybridStore(pg, initial);
+        closeDb = () => pg.close();
+
+        logger.info('persistence provider: pg');
+    } else {
+        fileStore = new FileStore();
+        logger.info('persistence provider: file');
+    }
+
+    const youtubeService = new YouTubeService(undefined, configService, cacheService);
+    const metricsManager = new MetricsManager();
 
     const socketServer = new SocketServerInstance(youtubeService, fileStore);
 
@@ -53,16 +89,28 @@ export async function bootstrap(): Promise<BootstrapResult> {
     const appShutdownHandlers: (() => Promise<void> | void)[] = [];
     appShutdownHandlers.push(async () => {
         try {
-            await fileStore.flush();
-            logger.info('filestore flushed');
+            if (typeof fileStore.flush === 'function') {
+                await fileStore.flush();
+                logger.info('filestore flushed');
+            }
+            if (closeDb) {
+                await closeDb();
+                logger.info('persistence backend closed');
+            }
         } catch (error) {
             logger.warn('fileStore.flush failed, attempting sync close', {
                 error: error,
             });
             try {
-                fileStore.closeSync();
+                if (typeof fileStore.closeSync === 'function') fileStore.closeSync();
             } catch (error) {
                 logger.warn('fileStore.closeSync failed', { error: error });
+            }
+
+            try {
+                if (closeDb) await closeDb();
+            } catch (error) {
+                logger.warn('persistence backend close failed', { error });
             }
         }
     });

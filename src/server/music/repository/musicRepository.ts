@@ -55,7 +55,7 @@ export class MusicRepository {
 
     buildCompatList(): (Music & { url: string })[] {
         try {
-            return this.list().map(m => ({ ...m, url: watchUrl(m.id) }));
+            return this.list().map(m => Object.assign({}, m, { url: watchUrl(m.id) }));
         } catch (error: unknown) {
             logger.debug('MusicRepository.buildCompatList failed', { error });
             return [];

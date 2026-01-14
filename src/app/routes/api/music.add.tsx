@@ -4,7 +4,7 @@ import { getMessage } from '@/shared/constants/messages';
 import { AddMusicSchema } from '@/shared/schemas/music';
 import type { ServerContext } from '@/shared/types/server';
 import { safeExecuteAsync } from '@/shared/utils/errors';
-import { parseWithZod } from '@conform-to/zod';
+import { parseWithZod } from '@conform-to/zod/v4';
 import { createHash, hash } from 'node:crypto';
 import type { ActionFunctionArgs } from 'react-router';
 import { loginSession } from '../../sessions.server';

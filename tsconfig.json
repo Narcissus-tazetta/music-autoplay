@@ -16,7 +16,8 @@
     "paths": {
       "~/*": ["./src/app/*"],
       "@/*": ["./src/*"],
-      "@shadcn/ui/*": ["./src/app/components/ui/shadcn/*"]
+      "@shadcn/ui/*": ["./src/app/components/ui/shadcn/*"],
+      "@conform-to/zod": ["./node_modules/@conform-to/zod/dist/v3"]
     },
     "esModuleInterop": true,
     "verbatimModuleSyntax": true,

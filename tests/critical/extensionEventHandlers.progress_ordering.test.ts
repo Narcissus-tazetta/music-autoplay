@@ -259,4 +259,143 @@ describe('progress ordering', () => {
             (Date as any).now = realDateNow;
         }
     });
+
+    test('paused lock: progress batch cannot flip to playing until youtube_video_state:playing', async () => {
+        const socket = createFakeSocket();
+        const repo = createFakeRepo([{ id: 'dQw4w9WgXcQ', url: 'https://youtu.be/dQw4w9WgXcQ' }]);
+        const emitter = createFakeEmitter();
+        const updates: any[] = [];
+        let current: any = { type: 'closed' };
+        const manager: any = {
+            update: (s: any) => {
+                current = s;
+                updates.push(s);
+            },
+            getCurrent: () => current,
+        };
+        const youtubeService: any = {};
+        const log: any = { debug() {}, info() {}, warn() {} };
+
+        (socket as any).id = 'test-socket-id';
+
+        setupExtensionEventHandlers(
+            socket as any,
+            log,
+            'conn',
+            new Map(),
+            manager,
+            repo as any,
+            emitter as any,
+            youtubeService,
+        );
+
+        const base = Date.now();
+
+        socket.trigger('youtube_video_state', {
+            state: 'paused',
+            url: 'https://youtu.be/dQw4w9WgXcQ',
+            currentTime: 10,
+            duration: 100,
+            timestamp: base,
+            seq: 1,
+        });
+
+        // Reconnect-like batch that would normally produce a playing update.
+        socket.trigger('progress_update_batch', {
+            updates: [
+                {
+                    url: 'https://youtu.be/dQw4w9WgXcQ',
+                    currentTime: 50,
+                    duration: 100,
+                    playbackRate: 1,
+                    timestamp: base + 10_000,
+                    visibilityState: 'visible',
+                    isBuffering: false,
+                    seq: 2,
+                },
+            ],
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        expect(updates.some(u => u.type === 'playing')).toBe(false);
+        expect(current.type).toBe('paused');
+
+        // Explicit playing from youtube_video_state is allowed to resume.
+        socket.trigger('youtube_video_state', {
+            state: 'playing',
+            url: 'https://youtu.be/dQw4w9WgXcQ',
+            currentTime: 50,
+            duration: 100,
+            timestamp: base + 10_001,
+            seq: 3,
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        expect(current.type).toBe('playing');
+    });
+
+    test('progress_update_batch processes only the latest update', async () => {
+        const socket = createFakeSocket();
+        const repo = createFakeRepo([{ id: 'dQw4w9WgXcQ', url: 'https://youtu.be/dQw4w9WgXcQ' }]);
+        const emitter = createFakeEmitter();
+        const updates: any[] = [];
+        let current: any = { type: 'closed' };
+        const manager: any = {
+            update: (s: any) => {
+                current = s;
+                updates.push(s);
+            },
+            getCurrent: () => current,
+        };
+        const youtubeService: any = {};
+        const log: any = { debug() {}, info() {}, warn() {} };
+
+        (socket as any).id = 'test-socket-id';
+
+        setupExtensionEventHandlers(
+            socket as any,
+            log,
+            'conn',
+            new Map(),
+            manager,
+            repo as any,
+            emitter as any,
+            youtubeService,
+        );
+
+        const base = Date.now();
+        socket.trigger('progress_update_batch', {
+            updates: [
+                {
+                    url: 'https://youtu.be/dQw4w9WgXcQ',
+                    currentTime: 10,
+                    duration: 100,
+                    playbackRate: 1,
+                    timestamp: base + 1000,
+                    visibilityState: 'visible',
+                    isBuffering: false,
+                    seq: 1,
+                },
+                {
+                    url: 'https://youtu.be/dQw4w9WgXcQ',
+                    currentTime: 12,
+                    duration: 100,
+                    playbackRate: 1,
+                    timestamp: base + 2000,
+                    visibilityState: 'visible',
+                    isBuffering: false,
+                    seq: 2,
+                },
+            ],
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        expect(updates.length).toBe(1);
+        expect(updates[0].type).toBe('playing');
+        expect(updates[0].currentTime).toBe(12);
+        expect(updates[0].lastProgressUpdate).toBe(base + 2000);
+    });
 });
