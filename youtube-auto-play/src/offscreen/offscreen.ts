@@ -13,7 +13,8 @@ const SOCKET_OPTIONS = {
 
 const SOCKET_URL = 'http://localhost:3000' as const;
 // Change the above URL if your backend server runs on a different address or port.
-
+// https://music-auto-play.onrender.com/
+// http://localhost:3000/
 const CONNECTION_TIMEOUT_MS = 5000;
 
 interface SocketConnection {
@@ -27,6 +28,8 @@ let lastHeartbeatAtMs = 0;
 
 let initInFlight: Promise<void> | null = null;
 let silentAudioStarted = false;
+let silentAudioStartInFlight: Promise<void> | null = null;
+let lastReadySocketId: string | null = null;
 
 const chromeAny = (globalThis as any).chrome as any;
 
@@ -88,37 +91,48 @@ async function tryConnect(url: string, _isPrimary: boolean): Promise<Socket | nu
     });
 }
 
-function ensureSilentAudioKeepAlive(): void {
+async function ensureSilentAudioKeepAlive(): Promise<void> {
     if (silentAudioStarted) return;
-    silentAudioStarted = true;
+    if (silentAudioStartInFlight) return await silentAudioStartInFlight;
 
-    try {
-        const audio = document.createElement('audio');
-        audio.autoplay = true;
-        audio.loop = true;
-        audio.muted = true;
-        audio.volume = 0;
+    silentAudioStartInFlight = (async () => {
+        // Consider “started” as: we attempted to start playback.
+        // (In an offscreen document created with AUDIO_PLAYBACK reason, this should generally succeed.)
         try {
-            audio.setAttribute('playsinline', '');
+            const audio = document.createElement('audio');
+            audio.autoplay = true;
+            audio.loop = true;
+            audio.muted = true;
+            audio.volume = 0;
+            try {
+                audio.setAttribute('playsinline', '');
+            } catch {
+                // ignore
+            }
+            audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=';
+
+            document.body.appendChild(audio);
+            silentAudioStarted = true;
+
+            const p = audio.play();
+            if (p && typeof (p as any).catch === 'function') {
+                await (p as any).catch(() => {
+                    // ignore
+                });
+            }
         } catch {
             // ignore
+            silentAudioStarted = true;
         }
-        audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=';
+    })().finally(() => {
+        silentAudioStartInFlight = null;
+    });
 
-        document.body.appendChild(audio);
-        const p = audio.play();
-        if (p && typeof (p as any).catch === 'function') {
-            (p as any).catch(() => {
-                // ignore
-            });
-        }
-    } catch {
-        // ignore
-    }
+    return await silentAudioStartInFlight;
 }
 
 async function initLocalSocket(): Promise<void> {
-    ensureSilentAudioKeepAlive();
+    await ensureSilentAudioKeepAlive();
 
     console.log('[Offscreen] initLocalSocket', {
         url: SOCKET_URL,
@@ -150,6 +164,7 @@ async function initLocalSocket(): Promise<void> {
         } catch {}
         notifySw({ type: 'socket_status', connected: true, url: currentConnection.url });
         notifySw({ type: 'socket_event', event: 'connect', args: [] });
+        notifyOffscreenReadyIfNeeded(socket);
     }
 
     if (!socket.connected) {
@@ -177,6 +192,27 @@ function notifySw(message: Record<string, unknown> & { type: string }): void {
     }
 }
 
+function notifyOffscreenReadyIfNeeded(sock: Socket): void {
+    try {
+        if (!silentAudioStarted) return;
+        if (!sock.connected) return;
+
+        const sockId = typeof sock.id === 'string' && sock.id.length > 0 ? sock.id : null;
+        if (sockId && lastReadySocketId === sockId) return;
+        if (sockId) lastReadySocketId = sockId;
+
+        notifySw({
+            type: 'OFFSCREEN_READY',
+            atMs: Date.now(),
+            url: currentConnection?.url ?? '',
+            socketId: sockId ?? undefined,
+            audioStarted: true,
+        });
+    } catch {
+        // ignore
+    }
+}
+
 function bindSocketForwarders(sock: Socket): void {
     try {
         sock.on('connect', () => {
@@ -186,6 +222,7 @@ function bindSocketForwarders(sock: Socket): void {
             });
             notifySw({ type: 'socket_status', connected: true, url: currentConnection?.url ?? '' });
             notifySw({ type: 'socket_event', event: 'connect', args: [] });
+            notifyOffscreenReadyIfNeeded(sock);
         });
     } catch {}
 

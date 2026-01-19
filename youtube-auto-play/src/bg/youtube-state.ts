@@ -1,6 +1,7 @@
 import { EXTENSION_NAMESPACE } from '../constants';
 import {
     addExtensionTab,
+    getActivePlaybackTabId,
     isActivePlaybackTab,
     isExtensionOpenedTab,
     setActiveExtensionTab,
@@ -33,14 +34,48 @@ export function handleYouTubeVideoState(
 
     if (message.openedByExtension === true && typeof tabId === 'number') addExtensionTab(tabId);
 
-    const isAllowedTab = typeof tabId === 'number' && (isExtensionOpenedTab(tabId) || isActivePlaybackTab(tabId));
-
-    if (!g?.isExtensionEnabled?.() || !isAllowedTab) {
+    const extensionEnabled = !!g?.isExtensionEnabled?.();
+    if (!extensionEnabled) {
         console.info('[Background] handleYouTubeVideoState ignored', {
             state: message.state,
             url: message.url,
             tabId,
-            reason: !g.isExtensionEnabled?.() ? 'extension_disabled' : 'not_extension_tab',
+            reason: 'extension_disabled',
+        });
+        return;
+    }
+
+    const isKnownTab = typeof tabId === 'number' && (isExtensionOpenedTab(tabId) || isActivePlaybackTab(tabId));
+    let shouldProcess = isKnownTab;
+
+    // Strong signals that should never be dropped:
+    // - playing: always accept and promote the tab to active playback
+    // - paused: accept if it's already active OR we don't have an active playback tab yet
+    if (typeof tabId === 'number') {
+        if (message.state === 'playing') {
+            setActivePlaybackTab(tabId);
+            shouldProcess = true;
+            console.info('[Background] handleYouTubeVideoState promoted tab to activePlaybackTab', {
+                tabId,
+                state: message.state,
+                url: message.url,
+                reason: 'playing',
+            });
+        } else if (message.state === 'paused') {
+            const activeId = getActivePlaybackTabId();
+            if (activeId === null || activeId === tabId || isKnownTab) {
+                if (activeId === null) setActivePlaybackTab(tabId);
+                shouldProcess = true;
+            }
+        }
+    }
+
+    if (!shouldProcess) {
+        console.info('[Background] handleYouTubeVideoState ignored', {
+            state: message.state,
+            url: message.url,
+            tabId,
+            reason: 'not_extension_tab',
         });
         return;
     }

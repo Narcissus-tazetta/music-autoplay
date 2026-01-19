@@ -10,6 +10,42 @@ import type { SocketManager } from '../managers/manager';
 import { registerSocketEventSafely } from '../utils/eventRegistration';
 import { extractSocketOn } from '../utils/socketHelpers';
 
+type ProgressSnapshot = {
+    timestamp: number;
+    seq?: number;
+    currentTime: number;
+    duration: number;
+    progressPercent?: number;
+    playbackRate?: number;
+    isBuffering?: boolean;
+    consecutiveStalls?: number;
+    isAdvertisement?: boolean;
+    musicTitle?: string;
+    clientLatencyMs?: number;
+};
+
+const shouldReplaceProgressSnapshot = (prev: ProgressSnapshot | undefined, next: ProgressSnapshot): boolean => {
+    if (!prev) return true;
+    if (next.timestamp > prev.timestamp) return true;
+    if (next.timestamp < prev.timestamp) return false;
+
+    const prevSeq = typeof prev.seq === 'number' ? prev.seq : -Infinity;
+    const nextSeq = typeof next.seq === 'number' ? next.seq : -Infinity;
+    return nextSeq > prevSeq;
+};
+
+const isSameVideoOrUnknown = (
+    current: RemoteStatus,
+    videoId: string,
+): boolean => {
+    if (current.type !== 'playing' && current.type !== 'paused') return false;
+
+    // Backward-compatible: some callers/tests return a minimal currentStatus without IDs.
+    if (!current.musicId && !current.videoId) return true;
+
+    return current.musicId === videoId || current.videoId === videoId;
+};
+
 export function setupExtensionEventHandlers(
     socket: Socket,
     log: AppLogger,
@@ -23,10 +59,24 @@ export function setupExtensionEventHandlers(
     const extensionSocketOn = extractSocketOn(socket);
     const socketContext = { socketId: socket.id };
 
-    // Hard rule: once paused, do not allow progress/ad events to flip to playing.
-    // This flag is updated synchronously on youtube_video_state receipt to avoid races
-    // where async work delays manager.update(paused).
-    let pausedLockActive = false;
+    socket.on('disconnect', reason => {
+        try {
+            const current = manager.getCurrent();
+            if (current.type === 'closed') return;
+            manager.update({ type: 'closed' }, 'extension_disconnect');
+            log.info('extension socket disconnected: scheduled remote closed', {
+                connectionId,
+                reason,
+                socketId: socket.id,
+            });
+        } catch (error) {
+            log.warn('extension disconnect handler failed', {
+                connectionId,
+                error: error,
+                socketId: socket.id,
+            });
+        }
+    });
 
     const authoritativeVideoState = new Map<
         string,
@@ -38,6 +88,9 @@ export function setupExtensionEventHandlers(
             duration?: number;
         }
     >();
+
+    const lastProgressSnapshotByVideoId = new Map<string, ProgressSnapshot>();
+    const lastAdSnapshotByVideoId = new Map<string, { isAdvertisement: boolean; adTimestamp?: number }>();
 
     registerSocketEventSafely(
         extensionSocketOn,
@@ -106,13 +159,6 @@ export function setupExtensionEventHandlers(
             const incomingDuration = typeof payload['duration'] === 'number'
                 ? payload['duration']
                 : undefined;
-
-            // Update paused lock immediately to prevent progress/ad handlers from flipping state
-            // before we finish any async work in this handler.
-            if (stateRaw === 'playing') pausedLockActive = false;
-            else if (stateRaw === 'paused' || stateRaw === 'transitioning' || stateRaw === 'ended')
-                pausedLockActive = true;
-            else if (stateRaw === 'window_close') pausedLockActive = false;
 
             if (stateRaw === 'window_close') {
                 const status: RemoteStatus = { type: 'closed' };
@@ -239,7 +285,7 @@ export function setupExtensionEventHandlers(
                 let externalVideoId: string | undefined;
 
                 if (url) {
-                    const { watchUrl, extractYoutubeId } = await import('@/shared/utils/youtube');
+                    const { watchUrl } = await import('@/shared/utils/youtube');
 
                     for (const m of musicDB.values()) {
                         try {
@@ -313,38 +359,53 @@ export function setupExtensionEventHandlers(
                     });
                 }
 
-                const remoteStatus: RemoteStatus = match
-                    ? (state === 'playing'
-                        ? {
-                            isAdvertisement,
-                            isExternalVideo,
-                            musicId: undefined,
-                            musicTitle: match.title ?? '',
-                            type: 'playing' as const,
-                            videoId: externalVideoId,
-                        }
-                        : {
-                            musicId: undefined,
-                            musicTitle: match.title ?? '',
-                            videoId: externalVideoId,
-                            type: 'paused' as const,
-                            currentTime: incomingCurrentTime,
-                            duration: incomingDuration,
-                        })
-                    : (state === 'playing'
-                        ? {
-                            isAdvertisement,
-                            musicId: undefined,
-                            musicTitle: '',
-                            type: 'playing' as const,
-                        }
-                        : {
-                            musicId: undefined,
-                            musicTitle: undefined,
-                            type: 'paused' as const,
-                            currentTime: incomingCurrentTime,
-                            duration: incomingDuration,
-                        });
+                const resolvedVideoId = url
+                    ? (extractYoutubeId(url) ?? undefined)
+                    : undefined;
+                const progressSnapshot = resolvedVideoId
+                    ? lastProgressSnapshotByVideoId.get(resolvedVideoId)
+                    : undefined;
+                const adSnapshot = resolvedVideoId
+                    ? lastAdSnapshotByVideoId.get(resolvedVideoId)
+                    : undefined;
+
+                const mergedTitle = (match?.title && match.title.length > 0)
+                    ? match.title
+                    : (progressSnapshot?.musicTitle && progressSnapshot.musicTitle.length > 0)
+                    ? progressSnapshot.musicTitle
+                    : (resolvedVideoId ? `動画ID: ${resolvedVideoId}` : '');
+
+                const mergedCurrentTime = incomingCurrentTime
+                    ?? progressSnapshot?.currentTime;
+                const mergedDuration = incomingDuration
+                    ?? progressSnapshot?.duration;
+
+                const remoteStatus: RemoteStatus = state === 'playing'
+                    ? {
+                        type: 'playing',
+                        musicId: resolvedVideoId,
+                        videoId: resolvedVideoId,
+                        musicTitle: mergedTitle,
+                        isExternalVideo,
+                        isAdvertisement: adSnapshot?.isAdvertisement ?? isAdvertisement,
+                        adTimestamp: adSnapshot?.adTimestamp,
+                        currentTime: mergedCurrentTime,
+                        duration: mergedDuration,
+                        progressPercent: progressSnapshot?.progressPercent,
+                        lastProgressUpdate: progressSnapshot?.timestamp,
+                        consecutiveStalls: progressSnapshot?.consecutiveStalls,
+                        playbackRate: progressSnapshot?.playbackRate,
+                        isBuffering: progressSnapshot?.isBuffering,
+                    }
+                    : {
+                        type: 'paused',
+                        musicId: resolvedVideoId,
+                        videoId: resolvedVideoId,
+                        musicTitle: mergedTitle || undefined,
+                        currentTime: mergedCurrentTime,
+                        duration: mergedDuration,
+                        playbackRate: progressSnapshot?.playbackRate,
+                    };
 
                 if (url) {
                     const videoId = extractYoutubeId(url);
@@ -651,6 +712,8 @@ export function setupExtensionEventHandlers(
             });
 
             try {
+                const current = manager.getCurrent();
+                if (current.type !== 'closed') manager.update({ type: 'closed' }, 'tab_closed');
                 log.debug('tab_closed: cleanup completed', {
                     socketId: socket.id,
                     tabId,
@@ -704,68 +767,25 @@ export function setupExtensionEventHandlers(
                     videoId,
                 });
 
-                // Hard rule: once paused, do not transition to playing from ad events.
-                // Only youtube_video_state(state=playing) is allowed to resume.
-                if (isPausedLocked()) {
-                    log.debug('ad_state_changed: ignored due to paused lock', {
-                        connectionId,
-                        isAd,
-                        socketId: socket.id,
-                        videoId,
-                    });
-                    return;
-                }
+                lastAdSnapshotByVideoId.set(videoId, {
+                    isAdvertisement: isAd,
+                    adTimestamp: isAd ? timestamp : undefined,
+                });
 
-                if (isAd) {
-                    const currentStatus = manager.getCurrent();
-                    const music = repository.get(videoId);
-                    const adStatus: RemoteStatus = music
-                        ? {
-                            adTimestamp: timestamp,
-                            currentTime: currentStatus.type === 'playing'
-                                ? currentStatus.currentTime
-                                : undefined,
-                            duration: currentStatus.type === 'playing'
-                                ? currentStatus.duration
-                                : undefined,
-                            isAdvertisement: true,
-                            musicId: videoId,
-                            musicTitle: music.title,
-                            progressPercent: currentStatus.type === 'playing'
-                                ? currentStatus.progressPercent
-                                : undefined,
-                            type: 'playing',
-                        }
-                        : {
-                            adTimestamp: timestamp,
-                            currentTime: currentStatus.type === 'playing'
-                                ? currentStatus.currentTime
-                                : undefined,
-                            duration: currentStatus.type === 'playing'
-                                ? currentStatus.duration
-                                : undefined,
-                            isAdvertisement: true,
-                            musicId: undefined,
-                            musicTitle: '',
-                            progressPercent: currentStatus.type === 'playing'
-                                ? currentStatus.progressPercent
-                                : undefined,
-                            type: 'playing',
-                        };
-                    manager.update(adStatus, 'ad_started');
-                } else {
-                    const music = repository.get(videoId);
-                    if (music) {
-                        const contentStatus: RemoteStatus = {
-                            adTimestamp: undefined,
-                            isAdvertisement: false,
-                            musicId: videoId,
-                            musicTitle: music.title,
-                            type: 'playing',
-                        };
-                        manager.update(contentStatus, 'ad_ended');
-                    }
-                }
+                const currentStatus = manager.getCurrent();
+                if (currentStatus.type !== 'playing') return;
+                if (!isSameVideoOrUnknown(currentStatus, videoId)) return;
+
+                manager.update(
+                    {
+                        ...currentStatus,
+                        isAdvertisement: isAd,
+                        adTimestamp: isAd ? timestamp : undefined,
+                        musicId: currentStatus.musicId ?? videoId,
+                        videoId: currentStatus.videoId ?? videoId,
+                    },
+                    isAd ? 'ad_started' : 'ad_ended',
+                );
             } catch (error) {
                 log.warn('ad_state_changed: failed to process', {
                     error: error,
@@ -928,8 +948,6 @@ export function setupExtensionEventHandlers(
         }
     >();
 
-    const isPausedLocked = (): boolean => pausedLockActive || manager.getCurrent().type === 'paused';
-
     const pickLatestProgressUpdate = (updates: unknown[]): unknown | null => {
         let best: unknown | null = null;
         let bestTimestamp = -Infinity;
@@ -1012,18 +1030,6 @@ export function setupExtensionEventHandlers(
 
         if (!videoId) {
             log.debug(`${eventName}: invalid YouTube URL`, { url });
-            return;
-        }
-
-        // Hard rule: once paused, do not transition to playing from progress events.
-        // Only youtube_video_state(state=playing) is allowed to resume.
-        if (isPausedLocked()) {
-            log.debug(`${eventName}: ignored due to paused lock`, {
-                currentTime,
-                duration,
-                timestamp,
-                videoId,
-            });
             return;
         }
 
@@ -1133,93 +1139,50 @@ export function setupExtensionEventHandlers(
 
             state.consecutiveStalls = consecutiveStalls;
 
+            // Cache the latest snapshot regardless of whether we update remoteStatus.
+            const progressSnapshot: ProgressSnapshot = {
+                clientLatencyMs,
+                consecutiveStalls,
+                currentTime,
+                duration,
+                isAdvertisement,
+                isBuffering,
+                musicTitle: incomingMusicTitle,
+                playbackRate,
+                progressPercent,
+                seq: incomingSeq,
+                timestamp,
+            };
+            if (shouldReplaceProgressSnapshot(lastProgressSnapshotByVideoId.get(videoId), progressSnapshot))
+                lastProgressSnapshotByVideoId.set(videoId, progressSnapshot);
+
+            // Never infer type='playing' from progress. Only update metadata if we're already
+            // in playing state for the same (or unknown) video.
+            if (currentStatus.type !== 'playing') return;
+            if (!isSameVideoOrUnknown(currentStatus, videoId)) return;
+
             const authoritative = authoritativeVideoState.get(videoId);
-            const AUTHORITATIVE_TTL_MS = 30000; // 30秒以内の authoritative pause のみ尊重
-            const AUTHORITATIVE_GRACE_MS = 2000; // pause直後2秒は無条件で尊重
-            const authoritativeAge = authoritative ? (Date.now() - authoritative.receivedAt) : Infinity;
-            const isAuthoritativeRecent = authoritativeAge < AUTHORITATIVE_TTL_MS;
-            const isInGracePeriod = authoritativeAge < AUTHORITATIVE_GRACE_MS;
-            const hasSeqInfo = typeof incomingSeq === 'number' && typeof authoritative?.seq === 'number';
-            const isSameOrBeforeAuthoritativeSeq = hasSeqInfo && incomingSeq <= (authoritative?.seq as number);
-            const shouldRespectAuthoritativePause = authoritative?.state === 'paused'
-                && isAuthoritativeRecent
-                && !seekDetected
-                && (
-                    // If seq is available, never let older/same-session progress override paused.
-                    isSameOrBeforeAuthoritativeSeq
-                    // Fallback to legacy heuristic when seq is unavailable.
-                    || (!hasSeqInfo && (isInGracePeriod || Math.abs(deltaPlayback) < 0.1))
-                );
+            if (authoritative?.state === 'paused') return;
 
-            if (shouldRespectAuthoritativePause) {
-                log.debug(`${eventName}: respecting authoritative pause`, {
-                    authoritativeAge,
-                    currentTime: currentTime.toFixed(2),
-                    deltaPlayback: deltaPlayback.toFixed(3),
-                    videoId,
-                    seq: incomingSeq,
-                    authoritativeSeq: authoritative?.seq,
-                });
-                const pausedUpdate: RemoteStatus = {
-                    currentTime,
-                    duration,
-                    musicId: videoId,
-                    musicTitle: music?.title,
-                    playbackRate,
-                    type: 'paused',
-                };
-                manager.update(pausedUpdate, eventName);
-            } else {
-                const shouldPreservePausedDueToZeroProgress = eventName === 'progress_update_batch'
-                    && authoritative?.state === 'paused'
-                    && !seekDetected
-                    && Math.abs(deltaPlayback) < 0.1;
-
-                if (shouldPreservePausedDueToZeroProgress) {
-                    log.debug(`${eventName}: preserving paused due to zero progress`, {
-                        authoritativeAge,
-                        currentTime: currentTime.toFixed(2),
-                        deltaPlayback: deltaPlayback.toFixed(3),
-                        videoId,
-                        seq: incomingSeq,
-                        authoritativeSeq: authoritative?.seq,
-                    });
-
-                    const pausedUpdate: RemoteStatus = {
-                        currentTime,
-                        duration,
-                        musicId: videoId,
-                        musicTitle: incomingMusicTitle || music?.title,
-                        playbackRate,
-                        type: 'paused',
-                    };
-                    manager.update(pausedUpdate, eventName);
-                    return;
-                }
-
-                if (authoritative?.state === 'paused' && !isAuthoritativeRecent) {
-                    log.debug(`${eventName}: ignoring stale authoritative pause`, {
-                        authoritativeAge,
-                        videoId,
-                    });
-                }
-                const statusUpdate: RemoteStatus = {
-                    consecutiveStalls,
-                    currentTime,
-                    duration,
-                    isAdvertisement,
-                    isExternalVideo: !music,
-                    lastProgressUpdate: timestamp,
-                    musicId: videoId,
-                    musicTitle: incomingMusicTitle || music?.title || '',
-                    progressPercent,
-                    playbackRate,
-                    isBuffering,
-                    type: 'playing',
-                    videoId: videoId,
-                };
-                manager.update(statusUpdate, eventName);
-            }
+            const updated: RemoteStatus = {
+                ...currentStatus,
+                consecutiveStalls,
+                currentTime,
+                duration,
+                isAdvertisement,
+                lastProgressUpdate: timestamp,
+                musicId: currentStatus.musicId ?? videoId,
+                videoId: currentStatus.videoId ?? videoId,
+                musicTitle: (incomingMusicTitle && incomingMusicTitle.length > 0)
+                    ? incomingMusicTitle
+                    : (currentStatus.musicTitle || music?.title || ''),
+                progressPercent,
+                playbackRate,
+                isBuffering,
+                isExternalVideo: currentStatus.isExternalVideo ?? !music,
+                type: 'playing',
+            };
+            manager.update(updated, eventName);
 
             if (Math.abs(deltaPlayback) > 0.1 || consecutiveStalls > 0 || clientLatencyMs !== undefined) {
                 log.debug(`${eventName}: processed`, {

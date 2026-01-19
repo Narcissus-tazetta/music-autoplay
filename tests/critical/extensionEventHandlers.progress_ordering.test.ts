@@ -10,7 +10,14 @@ describe('progress ordering', () => {
         const repo = createFakeRepo([{ id: 'dQw4w9WgXcQ', url: 'https://youtu.be/dQw4w9WgXcQ' }]);
         const emitter = createFakeEmitter();
         const updates: any[] = [];
-        const manager: any = { update: (s: any) => updates.push(s), getCurrent: () => ({ type: 'closed' }) };
+        let current: any = { type: 'closed' };
+        const manager: any = {
+            update: (s: any) => {
+                current = s;
+                updates.push(s);
+            },
+            getCurrent: () => current,
+        };
         const youtubeService: any = {};
         const log: any = { debug() {}, info() {}, warn() {} };
 
@@ -28,6 +35,12 @@ describe('progress ordering', () => {
         );
 
         const base = Date.now();
+        socket.trigger('youtube_video_state', {
+            state: 'playing',
+            url: 'https://youtu.be/dQw4w9WgXcQ',
+            timestamp: base,
+            seq: 1,
+        });
         const p = (currentTime: number, timestamp: number) => ({
             url: 'https://youtu.be/dQw4w9WgXcQ',
             currentTime,
@@ -44,10 +57,13 @@ describe('progress ordering', () => {
 
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        expect(updates.length).toBe(2);
-        expect(updates[0].currentTime).toBe(10);
-        expect(updates[1].currentTime).toBe(12);
-        expect(updates[1].lastProgressUpdate).toBe(base + 2000);
+        const progressUpdates = updates.filter(
+            u => u.type === 'playing' && typeof u.lastProgressUpdate === 'number',
+        );
+        expect(progressUpdates.length).toBe(2);
+        expect(progressUpdates[0].currentTime).toBe(10);
+        expect(progressUpdates[1].currentTime).toBe(12);
+        expect(progressUpdates[1].lastProgressUpdate).toBe(base + 2000);
     });
 
     test('ignores regressive progress updates with same timestamp', async () => {
@@ -55,7 +71,14 @@ describe('progress ordering', () => {
         const repo = createFakeRepo([{ id: 'dQw4w9WgXcQ', url: 'https://youtu.be/dQw4w9WgXcQ' }]);
         const emitter = createFakeEmitter();
         const updates: any[] = [];
-        const manager: any = { update: (s: any) => updates.push(s), getCurrent: () => ({ type: 'closed' }) };
+        let current: any = { type: 'closed' };
+        const manager: any = {
+            update: (s: any) => {
+                current = s;
+                updates.push(s);
+            },
+            getCurrent: () => current,
+        };
         const youtubeService: any = {};
         const log: any = { debug() {}, info() {}, warn() {} };
 
@@ -73,6 +96,12 @@ describe('progress ordering', () => {
         );
 
         const ts = Date.now();
+        socket.trigger('youtube_video_state', {
+            state: 'playing',
+            url: 'https://youtu.be/dQw4w9WgXcQ',
+            timestamp: ts,
+            seq: 1,
+        });
         const p = (currentTime: number) => ({
             url: 'https://youtu.be/dQw4w9WgXcQ',
             currentTime,
@@ -88,8 +117,11 @@ describe('progress ordering', () => {
 
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        expect(updates.length).toBe(1);
-        expect(updates[0].currentTime).toBe(10);
+        const progressUpdates = updates.filter(
+            u => u.type === 'playing' && typeof u.lastProgressUpdate === 'number',
+        );
+        expect(progressUpdates.length).toBe(1);
+        expect(progressUpdates[0].currentTime).toBe(10);
     });
 
     test('does not override authoritative paused with older/equal seq progress', async () => {
@@ -97,7 +129,14 @@ describe('progress ordering', () => {
         const repo = createFakeRepo([{ id: 'dQw4w9WgXcQ', url: 'https://youtu.be/dQw4w9WgXcQ' }]);
         const emitter = createFakeEmitter();
         const updates: any[] = [];
-        const manager: any = { update: (s: any) => updates.push(s), getCurrent: () => ({ type: 'closed' }) };
+        let current: any = { type: 'closed' };
+        const manager: any = {
+            update: (s: any) => {
+                current = s;
+                updates.push(s);
+            },
+            getCurrent: () => current,
+        };
         const youtubeService: any = {};
         const log: any = { debug() {}, info() {}, warn() {} };
 
@@ -148,17 +187,24 @@ describe('progress ordering', () => {
 
         await new Promise(resolve => setTimeout(resolve, 50));
 
-        // Last update must remain paused (no forced playing override)
-        expect(updates.length).toBeGreaterThan(0);
+        // progress must not flip status to playing; youtube_video_state is authoritative
+        expect(updates.length).toBe(1);
         expect(updates[updates.length - 1].type).toBe('paused');
     });
 
-    test('keeps paused after authoritative TTL when batch has zero progress, and resumes on youtube_video_state:playing', async () => {
+    test('keeps paused even if progress arrives, and resumes only on youtube_video_state:playing', async () => {
         const socket = createFakeSocket();
         const repo = createFakeRepo([{ id: 'dQw4w9WgXcQ', url: 'https://youtu.be/dQw4w9WgXcQ' }]);
         const emitter = createFakeEmitter();
         const updates: any[] = [];
-        const manager: any = { update: (s: any) => updates.push(s), getCurrent: () => ({ type: 'closed' }) };
+        let current: any = { type: 'closed' };
+        const manager: any = {
+            update: (s: any) => {
+                current = s;
+                updates.push(s);
+            },
+            getCurrent: () => current,
+        };
         const youtubeService: any = {};
         const log: any = { debug() {}, info() {}, warn() {} };
 
@@ -205,10 +251,7 @@ describe('progress ordering', () => {
                 ],
             });
 
-            // Advance beyond authoritative TTL (30s)
-            now += 31_000;
-
-            // Zero progress batch should NOT flip to playing even after TTL
+            // Progress arriving while paused should NOT flip to playing
             socket.trigger('progress_update_batch', {
                 updates: [
                     {
@@ -260,7 +303,7 @@ describe('progress ordering', () => {
         }
     });
 
-    test('paused lock: progress batch cannot flip to playing until youtube_video_state:playing', async () => {
+    test('does not infer playing from progress_update_batch when closed', async () => {
         const socket = createFakeSocket();
         const repo = createFakeRepo([{ id: 'dQw4w9WgXcQ', url: 'https://youtu.be/dQw4w9WgXcQ' }]);
         const emitter = createFakeEmitter();
@@ -290,50 +333,24 @@ describe('progress ordering', () => {
         );
 
         const base = Date.now();
-
-        socket.trigger('youtube_video_state', {
-            state: 'paused',
-            url: 'https://youtu.be/dQw4w9WgXcQ',
-            currentTime: 10,
-            duration: 100,
-            timestamp: base,
-            seq: 1,
-        });
-
-        // Reconnect-like batch that would normally produce a playing update.
         socket.trigger('progress_update_batch', {
             updates: [
                 {
                     url: 'https://youtu.be/dQw4w9WgXcQ',
-                    currentTime: 50,
+                    currentTime: 1,
                     duration: 100,
                     playbackRate: 1,
-                    timestamp: base + 10_000,
+                    timestamp: base + 1000,
                     visibilityState: 'visible',
                     isBuffering: false,
-                    seq: 2,
                 },
             ],
         });
 
         await new Promise(resolve => setTimeout(resolve, 50));
 
-        expect(updates.some(u => u.type === 'playing')).toBe(false);
-        expect(current.type).toBe('paused');
-
-        // Explicit playing from youtube_video_state is allowed to resume.
-        socket.trigger('youtube_video_state', {
-            state: 'playing',
-            url: 'https://youtu.be/dQw4w9WgXcQ',
-            currentTime: 50,
-            duration: 100,
-            timestamp: base + 10_001,
-            seq: 3,
-        });
-
-        await new Promise(resolve => setTimeout(resolve, 50));
-
-        expect(current.type).toBe('playing');
+        expect(updates.length).toBe(0);
+        expect(current.type).toBe('closed');
     });
 
     test('progress_update_batch processes only the latest update', async () => {
@@ -366,6 +383,12 @@ describe('progress ordering', () => {
         );
 
         const base = Date.now();
+        socket.trigger('youtube_video_state', {
+            state: 'playing',
+            url: 'https://youtu.be/dQw4w9WgXcQ',
+            timestamp: base,
+            seq: 1,
+        });
         socket.trigger('progress_update_batch', {
             updates: [
                 {
@@ -393,9 +416,12 @@ describe('progress ordering', () => {
 
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        expect(updates.length).toBe(1);
-        expect(updates[0].type).toBe('playing');
-        expect(updates[0].currentTime).toBe(12);
-        expect(updates[0].lastProgressUpdate).toBe(base + 2000);
+        const progressUpdates = updates.filter(
+            u => u.type === 'playing' && typeof u.lastProgressUpdate === 'number',
+        );
+        expect(progressUpdates.length).toBe(1);
+        expect(progressUpdates[0].type).toBe('playing');
+        expect(progressUpdates[0].currentTime).toBe(12);
+        expect(progressUpdates[0].lastProgressUpdate).toBe(base + 2000);
     });
 });

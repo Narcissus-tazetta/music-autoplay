@@ -780,6 +780,14 @@ function attachVideoListeners(): void {
             }
         };
 
+        // Emit an initial snapshot. For non-extension-opened tabs, background may ignore
+        // youtube_video_state until it has seen at least one progress_update (which marks
+        // the tab as active playback). So we send progress first and delay the state.
+        handleSignificantEvent('init');
+        const initialState = video.paused ? 'paused' : 'playing';
+        if (isExtensionOpenedTab()) notifyState(initialState);
+        else window.setTimeout(() => notifyState(initialState), 200);
+
         video.addEventListener('ended', () => {
             const isAdPlaying = adDetector.getCurrentAdState();
 

@@ -118,7 +118,8 @@ export class SocketManager {
                 return;
             }
 
-            this.timerManager.clear('graceClose');
+            // Cancel any pending grace-close when new non-closed status arrives.
+            this.timerManager.clear('pendingClose');
             this.scheduleInactivityTimer(status, source, traceId);
 
             if (isRemoteStatusEqual(this.remoteStatus, status)) return;

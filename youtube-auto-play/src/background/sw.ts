@@ -43,6 +43,30 @@ type SocketHandler = (...args: unknown[]) => void;
 const socketHandlers = new Map<string, Set<SocketHandler>>();
 let socketConnected = false;
 
+let offscreenReady = false;
+let offscreenReadyAtMs = 0;
+let offscreenReadySocketId: string | undefined;
+
+type QueuedOffscreenMessage = {
+    message: any;
+    opts?: { expectResponse?: boolean };
+    queuedAtMs: number;
+    resolve?: (value: any) => void;
+    reject?: (reason?: any) => void;
+};
+
+const queuedNonAckByEvent = new Map<string, QueuedOffscreenMessage>();
+const queuedAckMessages: QueuedOffscreenMessage[] = [];
+let flushQueueInFlight: Promise<void> | null = null;
+
+function markOffscreenNotReady(reason: string): void {
+    if (!offscreenReady) return;
+    offscreenReady = false;
+    offscreenReadyAtMs = 0;
+    offscreenReadySocketId = undefined;
+    console.log('[SW] offscreen marked not ready', { reason });
+}
+
 function dispatchSocketEvent(event: string, args: unknown[]): void {
     if (event === 'connect') socketConnected = true;
     if (event === 'disconnect') socketConnected = false;
@@ -163,7 +187,7 @@ async function sleep(ms: number): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function sendToOffscreen(message: any, opts?: { expectResponse?: boolean }): Promise<any> {
+async function sendToOffscreenRaw(message: any, opts?: { expectResponse?: boolean }): Promise<any> {
     const maxAttempts = 5;
     const delayMs = 200;
 
@@ -205,6 +229,98 @@ async function sendToOffscreen(message: any, opts?: { expectResponse?: boolean }
     return await attemptSend(0);
 }
 
+async function kickOffscreenConnection(): Promise<void> {
+    try {
+        await ensureOffscreen();
+    } catch {
+        // ignore
+    }
+
+    try {
+        await sendToOffscreenRaw({
+            type: 'socket_connect',
+            __fromSwInternal: true,
+        } as any);
+    } catch {
+        // ignore
+    }
+}
+
+function enqueueUntilOffscreenReady(message: any, opts?: { expectResponse?: boolean }): Promise<any> {
+    void kickOffscreenConnection();
+
+    const queuedAtMs = Date.now();
+
+    if (message?.type === 'socket_emit' && message?.expectAck !== true) {
+        const event = typeof message?.event === 'string' ? message.event : '__unknown__';
+        queuedNonAckByEvent.set(event, { message, opts, queuedAtMs });
+        return Promise.resolve(undefined);
+    }
+
+    // Ack / expectResponse: keep ordering but cap memory.
+    const MAX_ACK_QUEUE = 50;
+    if (queuedAckMessages.length >= MAX_ACK_QUEUE) {
+        const dropped = queuedAckMessages.shift();
+        try {
+            dropped?.reject?.(new Error('dropped queued offscreen message (queue full)'));
+        } catch {
+            // ignore
+        }
+    }
+
+    return new Promise((resolve, reject) => {
+        queuedAckMessages.push({ message, opts, queuedAtMs, resolve, reject });
+    });
+}
+
+async function flushOffscreenQueueIfReady(): Promise<void> {
+    if (!offscreenReady) return;
+    if (flushQueueInFlight) return await flushQueueInFlight;
+
+    flushQueueInFlight = (async () => {
+        // Flush non-ack (latest per event). Order is not required here.
+        const nonAckEntries = Array.from(queuedNonAckByEvent.values());
+        queuedNonAckByEvent.clear();
+        await Promise.all(
+            nonAckEntries.map(async entry => {
+                try {
+                    await sendToOffscreenRaw(entry.message, entry.opts);
+                } catch {
+                    // ignore
+                }
+            }),
+        );
+
+        // Flush ack (preserve order) without `await` in a loop.
+        const ackEntries = queuedAckMessages.splice(0, queuedAckMessages.length);
+        await ackEntries.reduce<Promise<void>>((p, entry) => {
+            return p.then(async () => {
+                try {
+                    const resp = await sendToOffscreenRaw(entry.message, entry.opts);
+                    entry.resolve?.(resp);
+                } catch (err) {
+                    entry.reject?.(err);
+                }
+            });
+        }, Promise.resolve());
+    })().finally(() => {
+        flushQueueInFlight = null;
+    });
+
+    return await flushQueueInFlight;
+}
+
+async function sendToOffscreen(message: any, opts?: { expectResponse?: boolean }): Promise<any> {
+    // Gate socket emits until Offscreen has confirmed:
+    // 1) silent audio keepalive is started
+    // 2) socket is connected
+    // then it sends OFFSCREEN_READY.
+    if (message?.type === 'socket_emit' && offscreenReady !== true)
+        return await enqueueUntilOffscreenReady(message, opts);
+
+    return await sendToOffscreenRaw(message, opts);
+}
+
 async function hasOffscreenDocument(): Promise<boolean> {
     try {
         if (!chromeApi.offscreen?.hasDocument) return false;
@@ -213,6 +329,7 @@ async function hasOffscreenDocument(): Promise<boolean> {
         if (cachedHasOffscreen && now - cachedHasOffscreen.atMs < 2000) return cachedHasOffscreen.value;
         const value = await chromeApi.offscreen.hasDocument();
         cachedHasOffscreen = { value, atMs: now };
+        if (!value) markOffscreenNotReady('hasDocument:false');
         return value;
     } catch {
         return false;
@@ -261,6 +378,7 @@ async function ensureOffscreen(): Promise<void> {
                         'Use an offscreen document with silent audio to keep a stable socket connection for YouTube playback status updates.',
                 });
                 cachedHasOffscreen = { value: true, atMs: Date.now() };
+                markOffscreenNotReady('offscreen created');
                 console.log('[SW] Offscreen document created successfully', { url });
                 return;
             } catch (err) {
@@ -293,6 +411,7 @@ chromeAny.runtime?.onInstalled?.addListener?.(() => {
         () => console.log('[SW] Offscreen ensured on install'),
         err => console.error('[SW] Failed to ensure offscreen on install', err),
     );
+    void kickOffscreenConnection();
 
     try {
         chromeAny.alarms?.create?.(ENSURE_OFFSCREEN_ALARM, { periodInMinutes: 1 });
@@ -307,6 +426,7 @@ chromeAny.runtime?.onStartup?.addListener?.(() => {
         () => console.log('[SW] Offscreen ensured on startup'),
         err => console.error('[SW] Failed to ensure offscreen on startup', err),
     );
+    void kickOffscreenConnection();
 });
 
 // Offscreen -> SW: socket events/status dispatch
@@ -314,8 +434,23 @@ chrome.runtime.onMessage.addListener((message: any) => {
     if (!message || typeof message !== 'object') return false;
     if (message.__fromOffscreenInternal !== true) return false;
 
+    if (message.type === 'OFFSCREEN_READY') {
+        offscreenReady = true;
+        offscreenReadyAtMs = typeof message.atMs === 'number' ? message.atMs : Date.now();
+        offscreenReadySocketId = typeof message.socketId === 'string' ? message.socketId : undefined;
+        console.log('[SW] OFFSCREEN_READY received', {
+            atMs: offscreenReadyAtMs,
+            socketId: offscreenReadySocketId,
+            url: typeof message.url === 'string' ? message.url : undefined,
+            audioStarted: message.audioStarted === true,
+        });
+        void flushOffscreenQueueIfReady();
+        return false;
+    }
+
     if (message.type === 'socket_status' && typeof message.connected === 'boolean') {
         socketConnected = message.connected;
+        if (!socketConnected) markOffscreenNotReady('socket disconnected');
         dispatchSocketEvent(message.connected ? 'connect' : 'disconnect', []);
         return false;
     }
