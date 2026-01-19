@@ -607,19 +607,6 @@ async function handleShortcutFallback(command: string): Promise<void> {
             });
             return;
         }
-
-        if (command === 'toggle-popup-hidden-ui') {
-            try {
-                (chrome as any).sidePanel?.open?.();
-            } catch {
-                // ignore
-            }
-            try {
-                chrome.runtime.sendMessage({ type: 'toggle_hidden_ui' } as any);
-            } catch {
-                // ignore
-            }
-        }
     } catch (err) {
         console.error('[SW] Shortcut fallback failed', err);
     }

@@ -1,10 +1,4 @@
-import {
-    EXTENSION_NAMESPACE,
-    MESSAGE_TYPES,
-    TIMING,
-    YOUTUBE_SHORT_URL_PATTERN,
-    YOUTUBE_URL_PATTERN,
-} from '../constants';
+import { EXTENSION_NAMESPACE, TIMING, YOUTUBE_SHORT_URL_PATTERN, YOUTUBE_URL_PATTERN } from '../constants';
 import {
     addExtensionTab,
     getActiveExtensionTabId,
@@ -44,44 +38,6 @@ export function handleShortcutCommand(command: string, socket: SocketInstance | 
         case 'open-first-url':
             handleOpenFirstUrl(socket);
             break;
-        case 'toggle-popup-hidden-ui':
-            handleTogglePopupHiddenUI();
-            break;
-    }
-}
-
-function handleTogglePopupHiddenUI(): void {
-    try {
-        if ((chrome as any).action && typeof (chrome as any).action.openPopup === 'function') {
-            try {
-                const p = (chrome as any).action.openPopup();
-                if (p && typeof p.then === 'function') p.catch(() => {});
-            } catch {}
-            setTimeout(() => {
-                try {
-                    chrome.runtime.sendMessage({ type: MESSAGE_TYPES.TOGGLE_HIDDEN_UI } as any);
-                } catch {}
-            }, 150);
-            return;
-        }
-
-        if ((chrome as any).sidePanel && typeof (chrome as any).sidePanel.open === 'function') {
-            try {
-                const p = (chrome as any).sidePanel.open();
-                if (p && typeof p.then === 'function') p.catch(() => {});
-            } catch {}
-            setTimeout(() => {
-                try {
-                    chrome.runtime.sendMessage({ type: MESSAGE_TYPES.TOGGLE_HIDDEN_UI } as any);
-                } catch {}
-            }, 150);
-            return;
-        }
-        chrome.runtime.sendMessage({ type: MESSAGE_TYPES.TOGGLE_HIDDEN_UI } as any);
-    } catch {
-        try {
-            chrome.runtime.sendMessage({ type: MESSAGE_TYPES.TOGGLE_HIDDEN_UI } as any);
-        } catch {}
     }
 }
 

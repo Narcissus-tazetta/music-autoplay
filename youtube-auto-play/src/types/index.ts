@@ -3,8 +3,6 @@ export interface UrlItem {
     title?: string;
 }
 
-export type ExtensionMode = 'auto' | 'local' | 'production';
-
 export type MessageType =
     | 'extension_master_toggle'
     | 'find_youtube_tabs'
@@ -42,7 +40,6 @@ export type MessageType =
 export interface ChromeStorageData {
     extensionMasterEnabled?: boolean;
     autoPlayEnabled?: boolean;
-    extensionMode?: ExtensionMode;
     urlList?: UrlItem[];
     latestUrl?: string;
     manuallyDisabled?: boolean;

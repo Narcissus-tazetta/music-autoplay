@@ -10,7 +10,6 @@ export const VIDEO_RETRY_CONFIG = {
 } as const;
 
 export const STORAGE_KEYS = {
-    EXTENSION_MODE: 'extensionMode',
     URL_LIST: 'urlList',
     LATEST_URL: 'latestUrl',
     MANUALLY_DISABLED: 'manuallyDisabled',
@@ -30,17 +29,11 @@ export const MESSAGE_TYPES = {
     SOCKET_ERROR: 'socket_error',
     SOCKET_DISCONNECTED: 'socket_disconnected',
     YOUTUBE_VIDEO_STATE: 'youtube_video_state',
-    TOGGLE_HIDDEN_UI: 'toggle_hidden_ui',
 } as const;
 
 export const UI_TEXT = {
     EXTENSION_STATUS_ON: 'ON',
     EXTENSION_STATUS_OFF: 'OFF',
-
-    MODE_LABEL: 'Mode',
-    MODE_AUTO: 'Auto',
-    MODE_LOCAL: 'Local',
-    MODE_PRODUCTION: 'Prod',
     NO_URLS_MESSAGE: 'URLがありません',
     PREV_BUTTON: '前の動画',
     NEXT_BUTTON: '次の動画',
@@ -70,10 +63,6 @@ export const SHORTCUTS = [
     {
         key: 'Cmd+Shift+L',
         description: 'URLリストの先頭を開く',
-    },
-    {
-        key: 'Cmd+Shift+P',
-        description: '開発モードの切り替え',
     },
 ] as const;
 

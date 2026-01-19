@@ -3,7 +3,7 @@
   "name": "YouTube自動再生",
   "version": "1.3.3",
   "description": "YouTubeの動画が終了したら自動で次の動画を再生する拡張機能",
-  "permissions": ["storage", "tabs", "alarms", "idle", "scripting", "sidePanel", "offscreen"],
+  "permissions": ["storage", "tabs", "alarms", "sidePanel", "offscreen"],
   "commands": {
     "pause-youtube": {
       "suggested_key": {
@@ -18,13 +18,6 @@
         "mac": "Command+Shift+L"
       },
       "description": "URLリストの先頭を開く"
-    },
-    "toggle-popup-hidden-ui": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+P",
-        "mac": "Command+Shift+P"
-      },
-      "description": "Toggle hidden UI in popup"
     }
   },
   "side_panel": {
@@ -38,7 +31,6 @@
     "default_title": "YouTube自動再生"
   },
   "host_permissions": [
-    "http://localhost:3000/*",
     "https://music-auto-play.onrender.com/*",
     "https://www.youtube.com/*",
     "http://www.youtube.com/*",
