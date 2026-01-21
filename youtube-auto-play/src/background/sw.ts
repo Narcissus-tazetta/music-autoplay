@@ -651,5 +651,13 @@ chrome.runtime.onMessage.addListener((message: ChromeMessage & Record<string, un
         return true;
     }
 
+    if ((message as any).type === 'disconnect_socket') {
+        void sendToOffscreen({ type: 'socket_disconnect', __fromSwInternal: true }).then(
+            () => sendResponse({ status: 'ok' }),
+            err => sendResponse({ status: 'error', error: err instanceof Error ? err.message : String(err) }),
+        );
+        return true;
+    }
+
     return false;
 });

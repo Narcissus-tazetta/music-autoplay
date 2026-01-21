@@ -10,6 +10,9 @@ const VIDEO_CHECK_INTERVAL_HIDDEN = 1000;
 const SEND_PROGRESS_INTERVAL_MS = 1000;
 const PROGRESS_SEND_MIN_DELTA_SEC = 2;
 const VIDEO_END_THRESHOLD = 0.5;
+const BATCH_INTERVAL_MS = 500; // ms: how often to flush batched progress updates
+const PROGRESS_BUFFER_MAX = 500; // max number of progress updates to keep in buffer
+
 const NEAR_END_THRESHOLD = 4;
 
 let reloadScheduledForInvalidatedContext = false;
@@ -211,7 +214,7 @@ export class AdDetector {
                     this.progressBuffer.unshift(...bufferedUpdates);
                 }
             }
-        }, 100);
+        }, BATCH_INTERVAL_MS);
     }
 
     private handleInvalidatedContext(): void {
@@ -227,6 +230,12 @@ export class AdDetector {
 
     private addToProgressBuffer(payload: ProgressUpdatePayload): void {
         this.progressBuffer.push(payload);
+        if (this.progressBuffer.length > PROGRESS_BUFFER_MAX) {
+            const overflow = this.progressBuffer.length - PROGRESS_BUFFER_MAX;
+            // drop the oldest entries to bound memory usage and avoid unbounded growth
+            this.progressBuffer.splice(0, overflow);
+            if (isContentDebugEnabled()) console.debug('[AdDetector] progressBuffer overflow, dropped', overflow);
+        }
     }
 
     private transitionState(newState: VideoState): boolean {
@@ -386,6 +395,16 @@ export class AdDetector {
             return;
         }
 
+        // Some test environments (or older DOM implementations) may not provide MutationObserver.
+        // Guard against that to avoid ReferenceError in test runners and fallback to a no-op observer.
+        if (typeof MutationObserver === 'undefined') {
+            if (isContentDebugEnabled())
+                console.warn('[AdDetector] MutationObserver not available; skipping observer setup');
+            // Still run an initial ad state check to bootstrap state
+            setTimeout(() => this.checkAndNotifyAdState(), 0);
+            return;
+        }
+
         this.observer = new MutationObserver(mutations => {
             for (const mutation of mutations) {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
@@ -534,6 +553,16 @@ export class AdDetector {
         if (this.batchInterval !== null) {
             clearInterval(this.batchInterval);
             this.batchInterval = null;
+        }
+        try {
+            if (this.lastVideoId) this.seqByVideoId.delete(this.lastVideoId);
+        } catch {
+            // ignore
+        }
+        try {
+            if (hasRuntimeSendMessage()) chrome.runtime.sendMessage({ type: 'disconnect_socket' as const });
+        } catch {
+            // ignore
         }
 
         this.player = null;

@@ -313,6 +313,28 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
         return true;
     }
 
+    if (message.type === 'socket_disconnect') {
+        try {
+            if (currentConnection?.socket) {
+                try {
+                    currentConnection.socket.disconnect();
+                } catch {}
+                try {
+                    (currentConnection.socket as any).close?.();
+                } catch {}
+                currentConnection = null;
+            }
+            try {
+                sendResponse({ status: 'ok' } as any);
+            } catch {}
+        } catch (err) {
+            try {
+                sendResponse({ status: 'error', error: err instanceof Error ? err.message : String(err) } as any);
+            } catch {}
+        }
+        return true;
+    }
+
     if (message.type === 'socket_emit' && typeof message.event === 'string') {
         const event = message.event as string;
         const args: unknown[] = Array.isArray(message.args) ? message.args : [];

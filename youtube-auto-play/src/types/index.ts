@@ -11,6 +11,7 @@ export type MessageType =
     | 'yt_play'
     | 'yt_pause'
     | 'reconnect_socket'
+    | 'disconnect_socket'
     | 'request_url_list'
     | 'url_list'
     | 'socket_error'
