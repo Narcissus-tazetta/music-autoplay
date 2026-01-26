@@ -109,6 +109,23 @@ export class SocketServerInstance {
         logger.info('SocketServerInstance.init completed');
     }
 
+    getIoForBroker(): IOServer | null {
+        return this.io ?? null;
+    }
+
+    getRuntimeForBroker(): SocketRuntime | undefined {
+        return this.runtime;
+    }
+
+    getOrCreateManagerForBroker(): SocketManager | undefined {
+        if (!this.runtime) return undefined;
+        return this.runtime.getManager() ?? this.runtime.createManager();
+    }
+
+    getMusicServiceForBroker(): MusicService {
+        return this.getMusicService();
+    }
+
     private async initializeSocket(server: HttpServer): Promise<void> {
         logger.info('initializeSocket starting');
         const { initSocketServer } = await import('./socket/core/factory');

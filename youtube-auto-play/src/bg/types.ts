@@ -33,6 +33,7 @@ export interface StorageResult {
     autoPlayEnabled?: boolean;
     extensionMasterEnabled?: boolean;
     manuallyDisabled?: boolean;
+    extensionFeatureFlags?: unknown;
 }
 
 export interface ExtensionGlobal {

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouTube自動再生",
-  "version": "1.3.3",
+  "version": "1.4.0",
   "description": "YouTubeの動画が終了したら自動で次の動画を再生する拡張機能",
   "permissions": ["storage", "tabs", "alarms", "sidePanel", "offscreen"],
   "commands": {
@@ -31,7 +31,7 @@
     "default_title": "YouTube自動再生"
   },
   "host_permissions": [
-    "https://music-auto-play.onrender.com/*",
+    "http://localhost:3000/*",
     "https://www.youtube.com/*",
     "http://www.youtube.com/*",
     "https://*.youtube.com/*",

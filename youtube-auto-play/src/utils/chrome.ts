@@ -1,4 +1,4 @@
-import type { ChromeMessage, ChromeMessageResponse, ChromeStorageData } from '../types';
+import type { ChromeMessage, ChromeMessageResponse, ChromeStorageData, ExtensionFeatureFlags } from '../types';
 
 interface ChromeTabResult {
     id?: number;
@@ -43,6 +43,30 @@ export function setChromeStorage(data: Partial<ChromeStorageData>): Promise<void
             resolve();
         });
     });
+}
+
+const DEFAULT_FEATURE_FLAGS: Required<ExtensionFeatureFlags> = {
+    brokerShadow: false,
+    brokerActive: false,
+    eventDrivenOffscreen: true,
+    strictContentTimers: false,
+};
+
+export async function getExtensionFeatureFlags(): Promise<Required<ExtensionFeatureFlags>> {
+    const { extensionFeatureFlags } = await getChromeStorage(['extensionFeatureFlags']);
+    return {
+        ...DEFAULT_FEATURE_FLAGS,
+        ...extensionFeatureFlags,
+    };
+}
+
+export async function setExtensionFeatureFlags(
+    patch: Partial<ExtensionFeatureFlags>,
+): Promise<Required<ExtensionFeatureFlags>> {
+    const current = await getExtensionFeatureFlags();
+    const next: Required<ExtensionFeatureFlags> = { ...current, ...patch };
+    await setChromeStorage({ extensionFeatureFlags: next });
+    return next;
 }
 
 export function sendTabMessage(

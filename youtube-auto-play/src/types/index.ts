@@ -3,6 +3,17 @@ export interface UrlItem {
     title?: string;
 }
 
+export interface ExtensionFeatureFlags {
+    /** 新経路を並走させて差分だけ観測する（制御は旧経路のまま） */
+    brokerShadow?: boolean;
+    /** 新経路を制御にも使う（段階移行の終盤でONにする想定） */
+    brokerActive?: boolean;
+    /** offscreen を必要時のみ作成する（常時作成トライをやめる） */
+    eventDrivenOffscreen?: boolean;
+    /** content script のタイマーを再生状態に連動させて抑制する */
+    strictContentTimers?: boolean;
+}
+
 export type MessageType =
     | 'extension_master_toggle'
     | 'find_youtube_tabs'
@@ -36,7 +47,18 @@ export type MessageType =
     | 'next_video_navigate'
     | 'no_next_video'
     | 'add_external_music'
-    | 'mark_extension_navigating';
+    | 'mark_extension_navigating'
+    | 'leader_candidate'
+    | 'leader_socket_connect'
+    | 'leader_socket_disconnect'
+    | 'leader_socket_emit'
+    | 'leader_socket_event'
+    | 'leader_socket_status'
+    | 'leader_socket_ack'
+    | 'leader_broker_connect'
+    | 'leader_broker_disconnect'
+    | 'leader_broker_event'
+    | 'leader_broker_status';
 
 export interface ChromeStorageData {
     extensionMasterEnabled?: boolean;
@@ -44,6 +66,7 @@ export interface ChromeStorageData {
     urlList?: UrlItem[];
     latestUrl?: string;
     manuallyDisabled?: boolean;
+    extensionFeatureFlags?: ExtensionFeatureFlags;
 }
 
 export interface ChromeMessage {

@@ -6,6 +6,7 @@ import { createRequestHandler } from '@react-router/express';
 import express from 'express';
 import { bootstrap } from './bootstrap';
 import configureApp, { type ConfigureAppResult } from './configureApp';
+import { createExtensionBroker } from './extension/broker';
 import { createAdminAuthenticator } from './middleware/adminAuth';
 import { createAdminRateLimiter } from './middleware/adminRateLimiter';
 import { getConfig, safeNumber } from './utils/configUtils';
@@ -48,6 +49,9 @@ server.on('error', err => {
 });
 
 await socketServer.init(server);
+
+const extensionBroker = createExtensionBroker(socketServer);
+extensionBroker.attachToIo(socketServer.getIoForBroker());
 
 const viteDevServer = config.nodeEnv === 'production'
     ? null
@@ -240,6 +244,49 @@ app.get('/api/socket-info', (req, res) => {
                 : JSON.stringify(error));
         res.status(500).json({ error: safe, ok: false });
     }
+});
+
+app.get('/api/extension/events', (req, res) => {
+    try {
+        extensionBroker.handleSse(req, res);
+    } catch (error: unknown) {
+        logger.error('Error in /api/extension/events endpoint', { error });
+        res.status(500).json({ error: 'Internal server error', ok: false });
+    }
+});
+
+app.get('/api/extension/snapshot', (_req, res) => {
+    try {
+        const snapshot = extensionBroker.getSnapshot();
+        res.json({ ok: true, snapshot });
+    } catch (error: unknown) {
+        logger.error('Error in /api/extension/snapshot endpoint', { error });
+        res.status(500).json({ error: 'Internal server error', ok: false });
+    }
+});
+
+app.post('/api/extension/event', express.json(), (req, res) => {
+    const run = async (): Promise<void> => {
+        const limiter = socketServer.getHttpRateLimiter();
+        const keyRaw = req.ip || req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown';
+        const key = Array.isArray(keyRaw) ? keyRaw[0] : String(keyRaw);
+        if (limiter && !limiter.tryConsume(key)) {
+            res.status(429).json({ ok: false, error: 'rate limit exceeded' });
+            return;
+        }
+
+        const body = req.body as { event?: unknown; payload?: unknown; expectAck?: unknown };
+        const event = typeof body?.event === 'string' ? body.event : '';
+        const payload = body?.payload;
+        const expectAck = body?.expectAck === true;
+        const result = await extensionBroker.handleEvent(event, payload, expectAck);
+        res.json({ ok: true, result });
+    };
+
+    run().catch((error: unknown) => {
+        logger.error('Error in /api/extension/event endpoint', { error });
+        res.status(500).json({ error: 'Internal server error', ok: false });
+    });
 });
 
 app.post('/api/admin/login', express.json(), (req, res) => {

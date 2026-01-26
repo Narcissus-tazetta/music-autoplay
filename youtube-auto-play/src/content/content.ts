@@ -1,4 +1,4 @@
-import type { ChromeMessage, ChromeMessageResponse, ProgressUpdatePayload } from '../types';
+import type { ChromeMessage, ChromeMessageResponse, ExtensionFeatureFlags, ProgressUpdatePayload } from '../types';
 const RETRY_CONFIG = { maxRetries: 5, delay: 1000 } as const;
 const QUICK_RETRY_CONFIG = { maxRetries: 3, delay: 500 } as const;
 const PAGE_CHANGE_DELAY = 100;
@@ -14,6 +14,112 @@ const BATCH_INTERVAL_MS = 500; // ms: how often to flush batched progress update
 const PROGRESS_BUFFER_MAX = 500; // max number of progress updates to keep in buffer
 
 const NEAR_END_THRESHOLD = 4;
+
+const BROKER_URL = 'http://localhost:3000' as const;
+const BROKER_EVENTS_URL = `${BROKER_URL}/api/extension/events` as const;
+
+let leaderEventSource: EventSource | null = null;
+let leaderBrokerConnected = false;
+
+type RequiredFeatureFlags = Required<Pick<ExtensionFeatureFlags, 'strictContentTimers'>>;
+const DEFAULT_FEATURE_FLAGS: RequiredFeatureFlags = {
+    strictContentTimers: false,
+};
+
+async function getFeatureFlags(): Promise<RequiredFeatureFlags> {
+    return await new Promise(resolve => {
+        try {
+            chrome.storage.local.get(['extensionFeatureFlags'], (result: any) => {
+                const raw = result?.extensionFeatureFlags;
+                resolve({
+                    ...DEFAULT_FEATURE_FLAGS,
+                    ...(raw && typeof raw === 'object' ? raw : {}),
+                });
+            });
+        } catch {
+            resolve(DEFAULT_FEATURE_FLAGS);
+        }
+    });
+}
+
+function sendLeaderMessageToSw(payload: ChromeMessage & Record<string, unknown>): void {
+    try {
+        chrome.runtime.sendMessage({ ...payload, __fromLeaderInternal: true }, () => {
+            if (chrome.runtime.lastError) return;
+        });
+    } catch {
+        // ignore
+    }
+}
+
+function handleBrokerEvent(ev: MessageEvent): void {
+    const eventName = ev.type;
+    if (!eventName || eventName === 'message') return;
+    let payload: unknown = null;
+    try {
+        payload = ev.data ? JSON.parse(ev.data) : null;
+    } catch {
+        payload = ev.data;
+    }
+    sendLeaderMessageToSw({
+        type: 'leader_broker_event',
+        event: eventName,
+        args: [payload],
+    });
+}
+
+function connectLeaderBroker(): void {
+    if (leaderEventSource) return;
+    const url = new URL(BROKER_EVENTS_URL);
+    try {
+        const tabId = (globalThis as any)?.chrome?.runtime?.id ?? 'unknown';
+        url.searchParams.set('tabId', String(tabId));
+    } catch {
+        // ignore
+    }
+
+    leaderEventSource = new EventSource(url.toString());
+    leaderEventSource.addEventListener('open', () => {
+        leaderBrokerConnected = true;
+        sendLeaderMessageToSw({ type: 'leader_broker_status', connected: true });
+    });
+    leaderEventSource.addEventListener('error', () => {
+        leaderBrokerConnected = false;
+        sendLeaderMessageToSw({ type: 'leader_broker_status', connected: false });
+    });
+
+    const events = [
+        'broker_ready',
+        'url_list',
+        'next_video_navigate',
+        'no_next_video',
+        'open_first_url',
+        'remote_status',
+        'musicAdded',
+        'musicRemoved',
+        'addMusic',
+        'deleteMusic',
+    ];
+    for (const name of events) leaderEventSource.addEventListener(name, handleBrokerEvent as EventListener);
+}
+
+function disconnectLeaderBroker(): void {
+    if (!leaderEventSource) return;
+    try {
+        leaderEventSource.close();
+    } catch {
+        // ignore
+    }
+    leaderEventSource = null;
+    if (leaderBrokerConnected) {
+        leaderBrokerConnected = false;
+        sendLeaderMessageToSw({ type: 'leader_broker_status', connected: false });
+    }
+}
+
+function announceLeaderCandidate(): void {
+    sendLeaderMessageToSw({ type: 'leader_candidate', url: location.href });
+}
 
 let reloadScheduledForInvalidatedContext = false;
 
@@ -105,6 +211,8 @@ export class AdDetector {
     private videoEndSent: boolean = false;
     private lastVideoId: string = '';
     private readonly seqByVideoId = new Map<string, number>();
+    private strictContentTimers: boolean = false;
+    private started: boolean = false;
     private readonly validTransitions: Record<VideoState, VideoState[]> = {
         [VideoState.PLAYING]: [VideoState.PAUSED, VideoState.SEEKING, VideoState.WAITING, VideoState.ENDED],
         [VideoState.PAUSED]: [VideoState.PLAYING, VideoState.SEEKING, VideoState.ENDED],
@@ -114,10 +222,21 @@ export class AdDetector {
     };
 
     start(): void {
+        if (this.started) return;
+        this.started = true;
         this.setupObserver();
         this.setupVisibilityHandler();
-        this.setIntervals();
-        this.setupHeartbeat();
+        this.updateTimersForState('start');
+    }
+
+    setStrictContentTimers(enabled: boolean): void {
+        this.strictContentTimers = enabled;
+        if (this.started) this.updateTimersForState('flag_changed');
+    }
+
+    markPaused(): void {
+        this.setVideoState(VideoState.PAUSED);
+        this.updateTimersForState('paused');
     }
 
     private setupVisibilityHandler(): void {
@@ -125,8 +244,42 @@ export class AdDetector {
             const wasInForeground = this.isInForeground;
             this.isInForeground = !document.hidden;
             if (wasInForeground === this.isInForeground) return;
-            this.setIntervals();
+            this.updateTimersForState('visibility');
         });
+    }
+
+    private clearTimingIntervals(): void {
+        if (this.videoCheckInterval !== null) {
+            clearInterval(this.videoCheckInterval);
+            this.videoCheckInterval = null;
+        }
+        if (this.adCheckInterval !== null) {
+            clearInterval(this.adCheckInterval);
+            this.adCheckInterval = null;
+        }
+        if (this.heartbeatInterval !== null) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+        }
+        if (this.batchInterval !== null) {
+            clearInterval(this.batchInterval);
+            this.batchInterval = null;
+        }
+    }
+
+    private updateTimersForState(source: string): void {
+        try {
+            if (this.strictContentTimers && this.videoState !== VideoState.PLAYING) {
+                this.clearTimingIntervals();
+                if (isContentDebugEnabled()) console.debug('[AdDetector] timers paused (strict)', { source });
+                return;
+            }
+
+            this.setIntervals();
+            this.setupHeartbeat();
+        } catch {
+            // ignore
+        }
     }
 
     private setIntervals(): void {
@@ -138,6 +291,8 @@ export class AdDetector {
             clearInterval(this.adCheckInterval);
             this.adCheckInterval = null;
         }
+
+        if (this.strictContentTimers && this.videoState !== VideoState.PLAYING) return;
 
         const videoInterval = this.isInForeground ? VIDEO_CHECK_INTERVAL : VIDEO_CHECK_INTERVAL_HIDDEN;
         const adInterval = this.isInForeground ? AD_CHECK_INTERVAL : AD_CHECK_INTERVAL_HIDDEN;
@@ -153,6 +308,17 @@ export class AdDetector {
     }
 
     private setupHeartbeat(): void {
+        if (this.heartbeatInterval !== null) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+        }
+        if (this.batchInterval !== null) {
+            clearInterval(this.batchInterval);
+            this.batchInterval = null;
+        }
+
+        if (this.strictContentTimers && this.videoState !== VideoState.PLAYING) return;
+
         this.heartbeatInterval = window.setInterval(() => {
             if (document.hidden && this.videoElement) {
                 try {
@@ -378,6 +544,7 @@ export class AdDetector {
 
     markMainVideoEnded(): void {
         this.setVideoState(VideoState.ENDED);
+        this.updateTimersForState('ended');
     }
 
     markProgressSent(now: number): void {
@@ -386,6 +553,7 @@ export class AdDetector {
 
     resetToPlaying(): void {
         this.setVideoState(VideoState.PLAYING);
+        this.updateTimersForState('playing');
     }
 
     private setupObserver(): void {
@@ -530,30 +698,13 @@ export class AdDetector {
     }
 
     stop(): void {
+        this.started = false;
         if (this.observer) {
             this.observer.disconnect();
             this.observer = null;
         }
 
-        if (this.adCheckInterval !== null) {
-            clearInterval(this.adCheckInterval);
-            this.adCheckInterval = null;
-        }
-
-        if (this.videoCheckInterval !== null) {
-            clearInterval(this.videoCheckInterval);
-            this.videoCheckInterval = null;
-        }
-
-        if (this.heartbeatInterval !== null) {
-            clearInterval(this.heartbeatInterval);
-            this.heartbeatInterval = null;
-        }
-
-        if (this.batchInterval !== null) {
-            clearInterval(this.batchInterval);
-            this.batchInterval = null;
-        }
+        this.clearTimingIntervals();
         try {
             if (this.lastVideoId) this.seqByVideoId.delete(this.lastVideoId);
         } catch {
@@ -582,6 +733,19 @@ export class AdDetector {
     bumpSeq(videoId: string): number {
         const next = this.getSeq(videoId) + 1;
         this.seqByVideoId.set(videoId, next);
+        // cap size to avoid unbounded growth
+        try {
+            const MAX_SEQ_BY_VIDEO_ID = 1000;
+            if (this.seqByVideoId.size > MAX_SEQ_BY_VIDEO_ID) {
+                // remove oldest entry
+                const firstKey = this.seqByVideoId.keys().next().value as string | undefined;
+                if (typeof firstKey === 'string') {
+                    try {
+                        this.seqByVideoId.delete(firstKey);
+                    } catch {}
+                }
+            }
+        } catch {}
         return next;
     }
 }
@@ -856,6 +1020,7 @@ function attachVideoListeners(): void {
             const isAdPlaying = adDetector.getCurrentAdState();
             debugLog('[Content] video pause event', { isAdPlaying, currentTime: video.currentTime });
             if (transitionTracker.shouldIgnorePause(isAdPlaying)) return;
+            adDetector.markPaused();
             notifyState('paused');
             handleSignificantEvent('pause');
         });
@@ -1001,6 +1166,28 @@ async function handleForcePause(): Promise<void> {
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     const { type } = message;
 
+    if (message?.__fromSwInternal === true) {
+        if (type === 'leader_broker_connect') {
+            try {
+                connectLeaderBroker();
+                sendResponse({ status: 'ok' });
+            } catch (err) {
+                sendResponse({ status: 'error', error: err instanceof Error ? err.message : String(err) });
+            }
+            return true;
+        }
+
+        if (type === 'leader_broker_disconnect') {
+            try {
+                disconnectLeaderBroker();
+                sendResponse({ status: 'ok' });
+            } catch (err) {
+                sendResponse({ status: 'error', error: err instanceof Error ? err.message : String(err) });
+            }
+            return true;
+        }
+    }
+
     if (
         type === 'yt_play'
         || type === 'yt_pause'
@@ -1096,5 +1283,13 @@ if (windowWithFlag && !windowWithFlag._ytContentScriptInjected) {
     }, URL_CHECK_INTERVAL);
 
     detectPageChange();
-    adDetector.start();
+    void getFeatureFlags().then(flags => {
+        try {
+            adDetector.setStrictContentTimers(flags.strictContentTimers);
+        } catch {
+            // ignore
+        }
+        adDetector.start();
+    });
+    announceLeaderCandidate();
 }
