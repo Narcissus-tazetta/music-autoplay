@@ -39,6 +39,13 @@ export class WindowCloseManager {
         this.timers.clear(originOrSocketId);
         this.lastEventAt.delete(originOrSocketId);
     }
+
+    getStats(): { lastEventCount: number; timerCount: number } {
+        return {
+            lastEventCount: this.lastEventAt.size,
+            timerCount: this.timers.getSize(),
+        };
+    }
 }
 
 export default WindowCloseManager;

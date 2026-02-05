@@ -11,7 +11,8 @@ const SOCKET_OPTIONS = {
     autoConnect: false,
 } as const;
 
-const SOCKET_URL = 'https://music-auto-play.onrender.com' as const;
+// const SOCKET_URL = 'https://music-auto-play.onrender.com' as const;
+const SOCKET_URL = 'http://localhost:3000' as const;
 const CONNECTION_TIMEOUT_MS = 30000;
 
 interface SocketConnection {

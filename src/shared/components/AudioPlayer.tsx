@@ -5,7 +5,8 @@ import { useSettingsStore } from '@/shared/stores/settingsStore';
 import { formatSecondsToTime } from '@/shared/utils/format';
 import { watchUrl } from '@/shared/utils/youtube';
 import { motion } from 'framer-motion';
-import { memo, useMemo } from 'react';
+import { ChevronDown } from 'lucide-react';
+import { memo, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 import { MusicTitleWithHover } from './MusicTitleWithHover';
 
@@ -44,28 +45,52 @@ const StaticInfo = memo((
         videoId: string;
         music?: Music;
     },
-) => (
-    <div className='text-sm sm:text-base font-medium text-gray-800 dark:text-gray-100 min-w-0'>
-        <span className='inline-flex items-center gap-2 min-w-0'>
-            <span className='whitespace-nowrap'>{label}{title ? ':' : ''}</span>
-            {title
-                ? (
-                    videoId
-                        ? (
-                            <MusicTitleWithHover
-                                music={music}
-                                videoId={videoId}
-                                title={title}
-                                href={href}
-                                className='text-gray-800 dark:text-gray-100 font-medium hover:underline line-clamp-1 sm:line-clamp-2 text-sm sm:text-base min-w-0'
+) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const titleClass = cn(
+        'text-gray-800 dark:text-gray-100 font-medium text-sm sm:text-base min-w-0 flex-1',
+        isExpanded ? 'whitespace-normal wrap-break-word' : 'truncate',
+    );
+
+    return (
+        <div className='text-sm sm:text-base font-medium text-gray-800 dark:text-gray-100 flex flex-col gap-1 min-w-0'>
+            <div className='flex items-center gap-1 w-full'>
+                <span className='whitespace-nowrap mr-1'>{label}{title ? ':' : ''}</span>
+                {title && (
+                    <div className='flex-1 min-w-0 flex items-center gap-1'>
+                        {videoId
+                            ? (
+                                <MusicTitleWithHover
+                                    music={music}
+                                    videoId={videoId}
+                                    title={title}
+                                    href={href}
+                                    className={titleClass}
+                                    singleLine={!isExpanded}
+                                />
+                            )
+                            : <span className={titleClass} title={title} aria-label={title}>{title}</span>}
+
+                        <button
+                            aria-expanded={isExpanded}
+                            aria-label={isExpanded ? 'タイトルを折りたたむ' : 'タイトルを展開する'}
+                            onClick={() => setIsExpanded(v => !v)}
+                            className='h-5 w-5 p-0 rounded hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center shrink-0'
+                            type='button'
+                        >
+                            <ChevronDown
+                                className={cn(
+                                    'h-4 w-4 text-gray-600 dark:text-gray-300 transition-transform',
+                                    isExpanded && 'rotate-180',
+                                )}
                             />
-                        )
-                        : <span className='line-clamp-1 sm:line-clamp-2 min-w-0'>{title}</span>
-                )
-                : null}
-        </span>
-    </div>
-));
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+});
 
 function AudioPlayerInner({
     status,

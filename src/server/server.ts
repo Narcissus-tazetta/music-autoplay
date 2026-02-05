@@ -8,6 +8,7 @@ import { bootstrap } from './bootstrap';
 import configureApp, { type ConfigureAppResult } from './configureApp';
 import { createAdminAuthenticator } from './middleware/adminAuth';
 import { createAdminRateLimiter } from './middleware/adminRateLimiter';
+import { RateLimiterManager } from './services/rateLimiterManager';
 import { getConfig, safeNumber } from './utils/configUtils';
 
 const app = express();
@@ -375,6 +376,76 @@ app.get('/api/admin/status', (req, res) => {
     };
 
     void handleStatus();
+});
+
+const isDiagnosticsEnabled = () => config.getString('DIAG_MEM_ENABLED') === 'true';
+const requireAdminSecret = () => {
+    const raw = config.getString('DIAG_MEM_REQUIRE_ADMIN_SECRET');
+    return raw !== 'false';
+};
+
+async function isAdminSession(req: express.Request): Promise<boolean> {
+    const cookieHeader = req.headers.cookie ?? '';
+    const session = await loginSession.getSession(cookieHeader);
+    return session.get('admin') === true;
+}
+
+app.get('/api/admin/diag/memory', (req, res) => {
+    const handleDiag = async (): Promise<void> => {
+        try {
+            if (!isDiagnosticsEnabled()) {
+                res.status(404).json({ ok: false, error: 'disabled' });
+                return;
+            }
+            const isAdmin = await isAdminSession(req);
+            if (!isAdmin) {
+                res.status(401).json({ ok: false, error: 'unauthorized' });
+                return;
+            }
+
+            if (requireAdminSecret()) {
+                const headerSecret = req.headers['x-admin-secret'];
+                const adminSecret = config.getString('ADMIN_SECRET');
+                if (
+                    typeof headerSecret !== 'string'
+                    || headerSecret.length === 0
+                    || headerSecret !== adminSecret
+                ) {
+                    res.status(403).json({ ok: false, error: 'forbidden' });
+                    return;
+                }
+            }
+
+            const mem = process.memoryUsage();
+            const socketDiagnostics = socketServer.getDiagnostics();
+            const rateLimiterStats = RateLimiterManager.getInstance().getStats();
+
+            res.json({
+                ok: true,
+                data: {
+                    memory: {
+                        rss: mem.rss,
+                        heapUsed: mem.heapUsed,
+                        heapTotal: mem.heapTotal,
+                        external: mem.external,
+                        arrayBuffers: mem.arrayBuffers,
+                    },
+                    process: {
+                        uptimeSec: Math.round(process.uptime()),
+                        pid: process.pid,
+                    },
+                    socket: socketDiagnostics,
+                    rateLimiters: rateLimiterStats,
+                    timestamp: new Date().toISOString(),
+                },
+            });
+        } catch (error: unknown) {
+            logger.error('Error in /api/admin/diag/memory endpoint', { error });
+            res.status(500).json({ ok: false, error: 'internal_error' });
+        }
+    };
+
+    void handleDiag();
 });
 
 app.all(

@@ -12,9 +12,10 @@ interface MusicTitleWithHoverProps {
     title?: string;
     href?: string;
     className?: string;
+    singleLine?: boolean;
 }
 
-const DEFAULT_LINK_CLASS = 'hover:underline block truncate w-full';
+const DEFAULT_LINK_CLASS = 'hover:underline block w-full';
 const DEFAULT_COLOR_CLASS = 'text-blue-500 dark:text-purple-400';
 
 const makeCandidates = (videoId: string, thumbnail?: string): string[] => {
@@ -34,6 +35,7 @@ function MusicTitleWithHoverInner({
     title: externalTitle,
     href: externalHref,
     className,
+    singleLine = true,
 }: MusicTitleWithHoverProps) {
     const videoId = music?.id ?? externalVideoId ?? '';
     const title = music?.title ?? externalTitle ?? '';
@@ -49,7 +51,11 @@ function MusicTitleWithHoverInner({
 
     if (!videoId || !title) return;
 
-    const merged = cn(DEFAULT_LINK_CLASS, className ?? DEFAULT_COLOR_CLASS);
+    const merged = cn(
+        DEFAULT_LINK_CLASS,
+        singleLine ? 'truncate' : 'whitespace-normal wrap-break-word',
+        className ?? DEFAULT_COLOR_CLASS,
+    );
     const candidates = makeCandidates(videoId, music?.thumbnail);
 
     const activeIndices = failedIndices.id === videoId ? failedIndices.indices : new Set<number>();

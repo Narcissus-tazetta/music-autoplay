@@ -50,8 +50,8 @@ export function useAppInitialization(): void {
                             .setYtStatusVisible(parsed.data.ytStatusVisible);
                     }
                 }
-            } catch (error) {
-                if (import.meta.env.DEV) console.debug('loadFromServer failed', error);
+            } catch {
+                // Silently handle initialization error
             }
 
             try {

@@ -3,7 +3,7 @@ import { useAdminStore } from '@/shared/stores/adminStore';
 import { Button } from '@shadcn/ui/button';
 import { Dialog } from '@shadcn/ui/dialog';
 import { Sheet } from '@shadcn/ui/sheet';
-import { Crown, KeyRoundIcon, SlidersHorizontalIcon } from 'lucide-react';
+import { Crown, HelpCircle, KeyRoundIcon, SlidersHorizontalIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { Form, Link } from 'react-router';
 import { AdminLoginModalContent } from '~/components/ui/AdminLoginModalContent';
@@ -20,7 +20,7 @@ const developers = [
     {
         github: 'https://github.com/alinco8',
         name: 'Alinco8',
-        slack: 'https://n-highschool.slack.com/archives/D06QV02HW30',
+        slack: 'https://n-highschool.slack.com/team/U06RE8R54JV',
     },
 ];
 
@@ -128,8 +128,19 @@ const HeaderInner = ({ userName }: HeaderProps) => {
                         )}
                         <Settings />
                         <Sheet.Footer className='flex-col gap-2'>
+                            <div className='flex items-center gap-2'>
+                                <HelpCircle className='h-3 w-4 text-white' />
+                                <a
+                                    className='text-xs text-blue-500 dark:text-purple-400 hover:underline'
+                                    href='https://narcissus-tazetta.github.io/music-autoplay-instruction-manual/'
+                                    target='_blank'
+                                    rel='noopener noreferrer'
+                                >
+                                    使い方・ヘルプ
+                                </a>
+                            </div>
                             <span className='text-xs'>
-                                © 2025 {developers.map((dev, index) => (
+                                © 2026 {developers.map((dev, index) => (
                                     <span key={dev.name}>
                                         <DropdownMenu>
                                             <DropdownMenu.Trigger className='text-blue-500 dark:text-purple-400 hover:underline'>

@@ -115,5 +115,28 @@ export async function bootstrap(): Promise<BootstrapResult> {
         }
     });
 
+    const diagEnabled = configService.getBoolean('DIAG_MEM_ENABLED', false);
+    const diagIntervalMs = configService.getNumber('DIAG_MEM_LOG_INTERVAL_MS', 0) ?? 0;
+    if (diagEnabled && diagIntervalMs > 0) {
+        const timer = setInterval(() => {
+            try {
+                const mem = process.memoryUsage();
+                logger.info('diag.memory', {
+                    arrayBuffers: mem.arrayBuffers,
+                    external: mem.external,
+                    heapTotal: mem.heapTotal,
+                    heapUsed: mem.heapUsed,
+                    rss: mem.rss,
+                    uptimeSec: Math.round(process.uptime()),
+                });
+            } catch (error) {
+                logger.warn('diag.memory logging failed', { error: error });
+            }
+        }, diagIntervalMs);
+
+        appShutdownHandlers.push(() => clearInterval(timer));
+        logger.info('diag.memory logging enabled', { intervalMs: diagIntervalMs });
+    }
+
     return { appShutdownHandlers, fileStore, metricsManager, socketServer };
 }

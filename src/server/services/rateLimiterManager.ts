@@ -17,6 +17,19 @@ export class RateLimiterManager {
         this.limiters.set(name, limiter);
     }
 
+    getStats(): { name: string; totalKeys: number; totalAttempts: number }[] {
+        const stats: { name: string; totalKeys: number; totalAttempts: number }[] = [];
+        for (const [name, limiter] of this.limiters) {
+            const limiterStats = limiter.getStats();
+            stats.push({
+                name,
+                totalKeys: limiterStats.totalKeys,
+                totalAttempts: limiterStats.totalAttempts,
+            });
+        }
+        return stats;
+    }
+
     reset(name: string, key: string): void {
         const limiter = this.limiters.get(name);
         if (limiter) limiter.clear(key);

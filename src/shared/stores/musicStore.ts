@@ -91,41 +91,9 @@ export const useMusicStore = create<MusicStore>(set => {
                 const isStale = sequenceBehind || (hasSameSequence && !hasNewTimestamp) || isDuplicateByTraceId;
                 const isTooOld = incomingServerTimestamp < lastServerTimestamp - 5000;
 
-                if (isStale || isTooOld) {
-                    if (import.meta.env.DEV) {
-                        const log = isDuplicateByTraceId ? console.info : console.warn;
-                        log('[musicStore] ignoring stale update', {
-                            currentSeq: state.lastSequenceNumber,
-                            currentTimestamp: state.lastServerTimestamp,
-                            incomingSeq: meta.sequenceNumber,
-                            incomingTimestamp: meta.serverTimestamp,
-                            isStale,
-                            isTooOld,
-                            isDuplicateByTraceId,
-                            traceId: meta.traceId,
-                        });
-                    }
-                    return {};
-                }
+                if (isStale || isTooOld) return {};
 
                 const { _meta, ...statusWithoutMeta } = incomingState;
-
-                if (import.meta.env.DEV) {
-                    console.info('[musicStore] remoteStatusUpdated', {
-                        sequenceNumber: meta.sequenceNumber,
-                        serverTimestamp: meta.serverTimestamp,
-                        traceId: meta.traceId,
-                        type: statusWithoutMeta.type,
-                        currentTime: (statusWithoutMeta as any).currentTime,
-                        duration: (statusWithoutMeta as any).duration,
-                        sourcePreview: statusWithoutMeta.type === 'playing'
-                            ? {
-                                playbackRate: (statusWithoutMeta as any).playbackRate,
-                                progressPercent: (statusWithoutMeta as any).progressPercent,
-                            }
-                            : undefined,
-                    });
-                }
 
                 const PAUSE_TTL_MS = 60_000;
                 const PAUSE_ACCEPT_WINDOW_MS = 5_000;
@@ -342,7 +310,6 @@ export const useMusicStore = create<MusicStore>(set => {
                             if (called) return;
                             called = true;
                             clearTimeout(timeout);
-                            if (import.meta.env.DEV) console.info('[musicStore] getRemoteStatus response:', status);
                             if (status && typeof status === 'object' && 'type' in status) {
                                 const state = useMusicStore.getState();
                                 const timeSinceLastEvent = Date.now() - state.lastEventReceivedAt;
@@ -371,7 +338,6 @@ export const useMusicStore = create<MusicStore>(set => {
 
             socket
                 .on('connect', () => {
-                    if (import.meta.env.DEV) console.info('Socket connected');
                     try {
                         attemptGetAllMusics(socket as Socket<S2C, C2S>);
                         attemptGetRemoteStatus(socket as Socket<S2C, C2S>);

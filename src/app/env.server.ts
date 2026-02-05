@@ -45,6 +45,20 @@ const serverEnvSchema = z
         CLIENT_URL: z.string().url().default(clientUrlDefault),
         CORS_ORIGINS: z.string().optional(),
         DATABASE_URL: z.string().optional(),
+        DIAG_MEM_ENABLED: z.preprocess(v => {
+            if (v == undefined || v === '') return undefined;
+            if (typeof v === 'string') return v === 'true' ? true : (v === 'false' ? false : undefined);
+            return undefined;
+        }, z.boolean().optional()),
+        DIAG_MEM_LOG_INTERVAL_MS: z.preprocess(
+            v => toNumber(v),
+            z.number().int().nonnegative().default(0),
+        ),
+        DIAG_MEM_REQUIRE_ADMIN_SECRET: z.preprocess(v => {
+            if (v == undefined || v === '') return undefined;
+            if (typeof v === 'string') return v === 'true' ? true : (v === 'false' ? false : undefined);
+            return undefined;
+        }, z.boolean().optional().default(true)),
         MONGODB_URI: z.string().optional(),
         MONGODB_DB_NAME: z.string().optional().default('musicReq'),
         MONGODB_COLLECTION: z.string().optional().default('musicRequests'),
@@ -169,6 +183,9 @@ export const SERVER_ENV = (() => {
         CLIENT_URL: process.env.CLIENT_URL,
         CORS_ORIGINS: process.env.CORS_ORIGINS,
         DATABASE_URL: process.env.DATABASE_URL,
+        DIAG_MEM_ENABLED: process.env.DIAG_MEM_ENABLED,
+        DIAG_MEM_LOG_INTERVAL_MS: process.env.DIAG_MEM_LOG_INTERVAL_MS,
+        DIAG_MEM_REQUIRE_ADMIN_SECRET: process.env.DIAG_MEM_REQUIRE_ADMIN_SECRET,
         MONGODB_URI: process.env.MONGODB_URI,
         MONGODB_DB_NAME: process.env.MONGODB_DB_NAME,
         MONGODB_COLLECTION: process.env.MONGODB_COLLECTION,

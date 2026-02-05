@@ -36,4 +36,8 @@ export class TimerManager {
         for (const id of this.timers.values()) clearTimeout(id);
         this.timers.clear();
     }
+
+    getSize(): number {
+        return this.timers.size;
+    }
 }

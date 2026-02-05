@@ -136,6 +136,35 @@ export class SocketServerInstance {
         return this.httpRateLimiter;
     }
 
+    getDiagnostics(): {
+        musicDBSize: number;
+        remoteStatusType: RemoteStatus['type'];
+        connectedSockets: number;
+        roomCount: number;
+        timerCount: number;
+        windowClose: { lastEventCount: number; timerCount: number };
+        rateLimiter: {
+            socket: { totalKeys: number; totalAttempts: number };
+            http: { totalKeys: number; totalAttempts: number };
+        };
+    } {
+        const io = this.io;
+        const socketMap = io?.sockets?.sockets;
+        const roomMap = io?.sockets?.adapter?.rooms;
+        return {
+            musicDBSize: this.musicDB.size,
+            remoteStatusType: this.remoteStatus.type,
+            connectedSockets: socketMap ? socketMap.size : 0,
+            roomCount: roomMap ? roomMap.size : 0,
+            timerCount: this.timerManager.getSize(),
+            windowClose: this.windowCloseManager.getStats(),
+            rateLimiter: {
+                socket: this.rateLimiter.getStats(),
+                http: this.httpRateLimiter.getStats(),
+            },
+        };
+    }
+
     async close(): Promise<void> {
         if (!this.io) return;
 
