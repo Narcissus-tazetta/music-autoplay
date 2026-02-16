@@ -11,9 +11,16 @@ export class WindowCloseManager {
     private timers = new TimerManager();
     private lastEventAt = new Map<string, number>();
     private debounceMs: number;
+    private cleanupTimer?: NodeJS.Timeout;
 
     constructor(debounceMs: number = 500) {
         this.debounceMs = debounceMs;
+        this.cleanupTimer = setInterval(() => {
+            const now = Date.now();
+            const staleThreshold = 60 * 60 * 1000;
+            for (const [key, timestamp] of this.lastEventAt)
+                if (now - timestamp > staleThreshold) this.lastEventAt.delete(key);
+        }, 30 * 60 * 1000);
     }
 
     private keyFor(e: Event) {
@@ -45,6 +52,15 @@ export class WindowCloseManager {
             lastEventCount: this.lastEventAt.size,
             timerCount: this.timers.getSize(),
         };
+    }
+
+    destroy(): void {
+        if (this.cleanupTimer) {
+            clearInterval(this.cleanupTimer);
+            this.cleanupTimer = undefined;
+        }
+        this.timers.clearAll();
+        this.lastEventAt.clear();
     }
 }
 

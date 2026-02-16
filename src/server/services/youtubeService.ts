@@ -138,6 +138,11 @@ export class YouTubeService {
         this.isProcessingQueue = true;
 
         while (this.requestQueue.length > 0) {
+            if (this.requestQueue.length > 100) {
+                logger.warn('YouTubeService: requestQueue exceeds threshold', {
+                    queueSize: this.requestQueue.length,
+                });
+            }
             const request = this.requestQueue.shift();
             if (request) {
                 try {

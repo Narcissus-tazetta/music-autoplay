@@ -64,6 +64,15 @@ export function setupExtensionEventHandlers(
             const current = manager.getCurrent();
             if (current.type === 'closed') return;
             manager.update({ type: 'closed' }, 'extension_disconnect');
+
+            authoritativeVideoState.clear();
+            lastProgressSnapshotByVideoId.clear();
+            lastAdSnapshotByVideoId.clear();
+            videoEndDebounce.clear();
+            pendingNextByTabId.clear();
+            progressState.clear();
+            socket.removeAllListeners();
+
             log.info('extension socket disconnected: scheduled remote closed', {
                 connectionId,
                 reason,

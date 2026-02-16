@@ -33,6 +33,11 @@ export class PgHybridStore implements Store {
             })
         );
         this.pendingWrites.push(p);
+        if (this.pendingWrites.length > 100) {
+            logger.warn('PgHybridStore: pendingWrites exceeds threshold', {
+                count: this.pendingWrites.length,
+            });
+        }
         void p.finally(() => {
             this.pendingWrites = this.pendingWrites.filter(x => x !== p);
         });

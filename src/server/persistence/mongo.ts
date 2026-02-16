@@ -157,6 +157,11 @@ export class MongoHybridStore implements Store {
 
         const p = this.mongo.add(m).catch(error => logger.warn('MongoHybridStore: failed to add', { error }));
         this.pendingWrites.push(p);
+        if (this.pendingWrites.length > 100) {
+            logger.warn('MongoHybridStore: pendingWrites exceeds threshold', {
+                count: this.pendingWrites.length,
+            });
+        }
         void p.finally(() => {
             this.pendingWrites = this.pendingWrites.filter(x => x !== p);
         });

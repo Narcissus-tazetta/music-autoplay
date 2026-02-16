@@ -38,8 +38,8 @@ export class RateLimiterManager {
     scheduleCleanup(): void {
         const scheduleNext = (): void => {
             const now = Date.now();
-            const nextMidnightUTC = this.getNextMidnightUTC(now);
-            const delay = nextMidnightUTC - now;
+            const nextCleanupTime = this.getNextCleanupTime(now);
+            const delay = nextCleanupTime - now;
 
             this.cleanupTimerId = setTimeout(() => {
                 this.executeCleanup();
@@ -57,9 +57,37 @@ export class RateLimiterManager {
         }
     }
 
+    private getNextCleanupTime(now: number): number {
+        const d = new Date(now);
+        const currentHour = d.getUTCHours();
+        const nextCleanupHour = Math.ceil((currentHour + 1) / 6) * 6;
+
+        if (nextCleanupHour >= 24) {
+            return Date.UTC(
+                d.getUTCFullYear(),
+                d.getUTCMonth(),
+                d.getUTCDate() + 1,
+                0,
+                0,
+                0,
+                0,
+            );
+        }
+
+        return Date.UTC(
+            d.getUTCFullYear(),
+            d.getUTCMonth(),
+            d.getUTCDate(),
+            nextCleanupHour,
+            0,
+            0,
+            0,
+        );
+    }
+
     private getNextMidnightUTC(now: number): number {
         const d = new Date(now);
-        const nextDay = Date.UTC(
+        return Date.UTC(
             d.getUTCFullYear(),
             d.getUTCMonth(),
             d.getUTCDate() + 1,
@@ -68,7 +96,6 @@ export class RateLimiterManager {
             0,
             0,
         );
-        return nextDay;
     }
 
     private executeCleanup(): void {

@@ -14,6 +14,7 @@ import { FileStore, MongoHybridStore, MongoStore, PgHybridStore, PgStore } from 
 import CacheService from './services/cacheService';
 import ErrorService from './services/errorService';
 import MetricsManager from './services/metricsManager';
+import { RateLimiterManager } from './services/rateLimiterManager';
 import retry from './services/retryService';
 import { YouTubeService } from './services/youtubeService';
 import { SocketServerInstance } from './socket';
@@ -121,6 +122,10 @@ export async function bootstrap(): Promise<BootstrapResult> {
         const timer = setInterval(() => {
             try {
                 const mem = process.memoryUsage();
+                const rateLimiterStats = RateLimiterManager.getInstance().getStats();
+                const totalRateLimiterKeys = rateLimiterStats.reduce((sum: number, s) => sum + s.totalKeys, 0);
+                const totalRateLimiterAttempts = rateLimiterStats.reduce((sum: number, s) => sum + s.totalAttempts, 0);
+
                 logger.info('diag.memory', {
                     arrayBuffers: mem.arrayBuffers,
                     external: mem.external,
@@ -128,6 +133,9 @@ export async function bootstrap(): Promise<BootstrapResult> {
                     heapUsed: mem.heapUsed,
                     rss: mem.rss,
                     uptimeSec: Math.round(process.uptime()),
+                    musicDBSize: socketServer.musicDB?.size ?? 0,
+                    rateLimiterKeys: totalRateLimiterKeys,
+                    rateLimiterAttempts: totalRateLimiterAttempts,
                 });
             } catch (error) {
                 logger.warn('diag.memory logging failed', { error: error });

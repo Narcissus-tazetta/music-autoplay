@@ -169,6 +169,8 @@ export class SocketServerInstance {
         if (!this.io) return;
 
         RateLimiterManager.getInstance().stopCleanup();
+        this.windowCloseManager.destroy();
+        this.timerManager.clearAll();
 
         await new Promise<void>(resolve => {
             const io = this.getIo();
