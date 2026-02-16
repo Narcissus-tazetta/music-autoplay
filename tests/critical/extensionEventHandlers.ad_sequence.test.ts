@@ -5,7 +5,7 @@ import createFakeEmitter from '../helpers/fakeEmitter';
 import createFakeSocket from '../helpers/fakeSocket';
 
 describe('ad_state_changed sequences', () => {
-    test('ad_start -> ad_end toggles isAdvertisement and video_ended still triggers next', async () => {
+    test('ad_start -> ad_end toggles isAdvertisement and video_next triggers next', async () => {
         const socket = createFakeSocket();
         const musicMap = new Map();
         musicMap.set('AAAaaaAAA00', {
@@ -56,6 +56,8 @@ describe('ad_state_changed sequences', () => {
         expect(updates.some(u => u.reason === 'ad_ended' && u.s.isAdvertisement === false)).toBe(true);
 
         socket.trigger('video_ended', { url: 'https://youtu.be/AAAaaaAAA00', tabId: 5 });
+        await new Promise(res => setTimeout(res, 0));
+        socket.trigger('video_next', { url: 'https://youtu.be/AAAaaaAAA00', tabId: 5 });
         await new Promise(res => setTimeout(res, 0));
         const emitted = socket.getEmitted();
         const next = emitted.find(e => e.event === 'next_video_navigate');

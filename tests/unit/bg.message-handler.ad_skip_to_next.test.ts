@@ -4,7 +4,7 @@ import createFakeChrome from '../helpers/fakeChrome';
 import createFakeSocket from '../helpers/fakeSocket';
 
 describe('background message-handler ad_skip_to_next', () => {
-    test('ad_skip_to_next sends video_ended via socket with tabId', () => {
+    test('ad_skip_to_next sends video_ended and video_next via socket with tabId', () => {
         const chrome = createFakeChrome();
         const socket = createFakeSocket();
         (global as any).chrome = chrome;
@@ -14,6 +14,8 @@ describe('background message-handler ad_skip_to_next', () => {
         chrome.runtime.trigger(message, sender);
         const emitted = socket.getEmitted();
         const end = emitted.find(e => e.event === 'video_ended');
+        const next = emitted.find(e => e.event === 'video_next');
         expect(end).toBeDefined();
+        expect(next).toBeDefined();
     });
 });

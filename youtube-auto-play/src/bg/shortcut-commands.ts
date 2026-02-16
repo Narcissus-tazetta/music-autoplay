@@ -15,6 +15,7 @@ let commandListener: ((command: string) => void) | null = null;
 const PAUSE_COMMAND_DEBOUNCE_MS = 300;
 let lastPauseCommandAt = 0;
 let pauseCommandInFlight = false;
+let openFirstInFlight = false;
 
 export function setupShortcutCommands(socket: SocketInstance): void {
     currentSocket = socket;
@@ -136,6 +137,18 @@ async function resolvePauseTargetTabId(): Promise<number | null> {
 }
 
 function handleOpenFirstUrl(socket: SocketInstance | null): void {
+    // prevent re-entrancy / duplicate handling when the command fires twice quickly
+    if (openFirstInFlight) {
+        console.info('[handleOpenFirstUrl] ignored - already in flight');
+        return;
+    }
+    openFirstInFlight = true;
+    const clearInFlight = () => {
+        openFirstInFlight = false;
+    };
+    // safety: ensure flag clears if callback never fires
+    const safetyTimer = setTimeout(clearInFlight, 5000);
+
     console.info('[handleOpenFirstUrl] Invoked');
 
     const fallbackToLocal = () => {
@@ -148,7 +161,12 @@ function handleOpenFirstUrl(socket: SocketInstance | null): void {
 
     if (!socket?.connected) {
         console.warn('[handleOpenFirstUrl] Socket not connected, falling back to local storage');
-        fallbackToLocal();
+        try {
+            fallbackToLocal();
+        } finally {
+            clearTimeout(safetyTimer);
+            clearInFlight();
+        }
         return;
     }
 
@@ -157,6 +175,8 @@ function handleOpenFirstUrl(socket: SocketInstance | null): void {
         if (!responded) {
             console.warn('[handleOpenFirstUrl] Server did not respond in time, falling back to local storage');
             fallbackToLocal();
+            clearTimeout(safetyTimer);
+            clearInFlight();
         }
     }, 2000);
 
@@ -164,6 +184,8 @@ function handleOpenFirstUrl(socket: SocketInstance | null): void {
         socket.emit('request_first_url', (response: unknown) => {
             responded = true;
             clearTimeout(timer);
+            clearTimeout(safetyTimer);
+            clearInFlight();
 
             if (!response || typeof response !== 'object') {
                 console.warn('[handleOpenFirstUrl] Invalid response from server, falling back to local storage');
@@ -177,6 +199,8 @@ function handleOpenFirstUrl(socket: SocketInstance | null): void {
         });
     } catch (err) {
         clearTimeout(timer);
+        clearTimeout(safetyTimer);
+        clearInFlight();
         console.error('[handleOpenFirstUrl] Error while requesting first URL from server', err);
         fallbackToLocal();
     }

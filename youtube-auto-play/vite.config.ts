@@ -16,6 +16,7 @@ export default defineConfig({
                 popup: resolve(rootDir, 'src/popup/index.html'),
                 background: resolve(rootDir, 'src/background/sw.ts'),
                 content: resolve(rootDir, 'src/content/content.ts'),
+                'player-api-bridge': resolve(rootDir, 'src/content/player-api-bridge.ts'),
                 offscreen: resolve(rootDir, 'src/offscreen/index.html'),
             },
             output: {

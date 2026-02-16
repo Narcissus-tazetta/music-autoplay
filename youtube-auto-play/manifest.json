@@ -54,6 +54,19 @@
       ],
       "js": ["dist/content.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.youtube.com/*",
+        "http://www.youtube.com/*",
+        "https://*.youtube.com/*",
+        "http://*.youtube.com/*",
+        "https://youtu.be/*",
+        "http://youtu.be/*"
+      ],
+      "js": ["dist/player-api-bridge.js"],
+      "run_at": "document_idle",
+      "world": "MAIN"
     }
   ],
   "icons": {

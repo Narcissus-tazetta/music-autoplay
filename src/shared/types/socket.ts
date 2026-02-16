@@ -50,6 +50,7 @@ export interface C2S {
     tab_closed?(payload: unknown): void;
     ad_state_changed?(payload: unknown): void;
     video_ended?(payload: unknown): void;
+    video_next?(payload: unknown): void;
     progress_update?(payload: unknown): void;
     no_next_video?(payload: unknown): void;
 }

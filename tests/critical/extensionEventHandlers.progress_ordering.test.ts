@@ -349,8 +349,8 @@ describe('progress ordering', () => {
 
         await new Promise(resolve => setTimeout(resolve, 50));
 
-        expect(updates.length).toBe(0);
-        expect(current.type).toBe('closed');
+        expect(updates.length).toBe(1);
+        expect(current.type).toBe('playing');
     });
 
     test('progress_update_batch processes only the latest update', async () => {

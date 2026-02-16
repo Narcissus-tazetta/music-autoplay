@@ -1,6 +1,7 @@
 import { EXTENSION_NAMESPACE } from '../constants';
 import {
     addExtensionTab,
+    getActiveExtensionTabId,
     getActivePlaybackTabId,
     isActivePlaybackTab,
     isExtensionOpenedTab,
@@ -144,7 +145,10 @@ export function handleVideoEnded(currentUrl: string, tabId: number, socket: Sock
         return;
     }
 
-    if (socket.connected) socket.emit('video_ended', { url: currentUrl, tabId });
+    if (socket.connected) {
+        socket.emit('video_ended', { url: currentUrl, tabId });
+        socket.emit('video_next', { url: currentUrl, tabId });
+    }
 }
 
 export function navigateToNextVideo(nextUrl: string, tabId: number): void {
@@ -152,14 +156,26 @@ export function navigateToNextVideo(nextUrl: string, tabId: number): void {
         console.info('[Background] navigateToNextVideo requested', { nextUrl, tabId });
     } catch {}
 
-    addExtensionTab(tabId);
-    sendTabMessage(tabId, { type: 'mark_extension_navigating' });
+    let targetTabId = tabId;
+    if (tabId === -1) {
+        const activePlayback = getActivePlaybackTabId();
+        const activeExt = getActiveExtensionTabId();
+        targetTabId = activePlayback ?? activeExt ?? -1;
+        if (targetTabId === -1) {
+            console.warn('[Background] navigateToNextVideo: no active tab found for tabId=-1');
+            return;
+        }
+        console.info('[Background] navigateToNextVideo: resolved tabId=-1 to', { targetTabId });
+    }
 
-    chrome.tabs.update(tabId, { url: nextUrl }, () => {
+    addExtensionTab(targetTabId);
+    sendTabMessage(targetTabId, { type: 'mark_extension_navigating' });
+
+    chrome.tabs.update(targetTabId, { url: nextUrl }, () => {
         if (hasChromeError()) console.error('[Background] Failed to navigate to next video', chrome.runtime.lastError);
         else {
             try {
-                console.info('[Background] navigateToNextVideo succeeded', { nextUrl, tabId });
+                console.info('[Background] navigateToNextVideo succeeded', { nextUrl, tabId: targetTabId });
             } catch {}
         }
     });
@@ -175,7 +191,22 @@ export function navigateToNextVideo(nextUrl: string, tabId: number): void {
 }
 
 export function handleNoNextVideo(tabId: number): void {
-    sendTabMessage(tabId, { type: 'show_video_end_alert' });
+    let targetTabId = tabId;
+    if (tabId === -1) {
+        const activePlayback = getActivePlaybackTabId();
+        const activeExt = getActiveExtensionTabId();
+        targetTabId = activePlayback ?? activeExt ?? -1;
+        if (targetTabId === -1) {
+            console.warn('[Background] handleNoNextVideo: no active tab found for tabId=-1');
+            chrome.storage.local.set({ latestUrl: 'ended' }, () => {
+                if (hasChromeError())
+                    console.error('[Background] Failed to save latestUrl as ended', chrome.runtime.lastError);
+            });
+            return;
+        }
+    }
+
+    sendTabMessage(targetTabId, { type: 'show_video_end_alert' });
     chrome.storage.local.set({ latestUrl: 'ended' }, () => {
         if (hasChromeError()) console.error('[Background] Failed to save latestUrl as ended', chrome.runtime.lastError);
     });

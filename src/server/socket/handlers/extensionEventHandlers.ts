@@ -205,46 +205,6 @@ export function setupExtensionEventHandlers(
                 if (url) {
                     const videoId = extractYoutubeId(url);
                     const music = videoId ? repository.get(videoId) : undefined;
-                    if (videoId && repository.has(videoId)) {
-                        const removeResult = repository.remove(videoId);
-                        if (removeResult.ok) {
-                            const emitResult = emitter.emitMusicRemoved(videoId);
-                            if (!emitResult.ok) {
-                                log.warn('youtube_video_state: failed to emit musicRemoved', {
-                                    error: emitResult.error,
-                                    videoId,
-                                });
-                            }
-
-                            const urlListEmitResult = emitter.emitUrlList(
-                                repository.buildCompatList(),
-                            );
-                            if (!urlListEmitResult.ok) {
-                                log.warn('youtube_video_state: failed to emit url_list', {
-                                    error: urlListEmitResult.error,
-                                });
-                            }
-
-                            const persistResult = repository.persistRemove(videoId);
-                            if (!persistResult.ok) {
-                                log.warn('youtube_video_state: failed to persist removal', {
-                                    error: persistResult.error,
-                                    videoId,
-                                });
-                            }
-                            log.info('youtube_video_state: music removed on ended', {
-                                connectionId,
-                                socketId: socket.id,
-                                url,
-                                videoId,
-                            });
-                        } else {
-                            log.warn('youtube_video_state: failed to remove music', {
-                                error: removeResult.error,
-                                videoId,
-                            });
-                        }
-                    }
 
                     // Avoid leaving remoteStatus stuck in 'playing' if video_ended is missed.
                     if (videoId) {
@@ -440,6 +400,68 @@ export function setupExtensionEventHandlers(
                     log.warn('failed to update remote status (playing/paused)', {
                         error: error,
                     });
+                }
+
+                if (
+                    state === 'paused'
+                    && !isAdvertisement
+                    && typeof mergedCurrentTime === 'number'
+                    && typeof mergedDuration === 'number'
+                    && mergedDuration > 0
+                    && Math.abs(mergedCurrentTime - mergedDuration) < 0.5
+                    && resolvedVideoId
+                    && repository.has(resolvedVideoId)
+                ) {
+                    const preList = repository.list();
+                    const preIdx = preList.findIndex(m => m.id === resolvedVideoId);
+                    if (preIdx === -1) return;
+
+                    let nextId: string | undefined;
+                    if (preList.length > 1) {
+                        let nIdx = preIdx + 1;
+                        if (nIdx >= preList.length) nIdx = 0;
+                        nextId = preList[nIdx].id;
+                    }
+
+                    const rmRes = repository.remove(resolvedVideoId);
+                    if (rmRes.ok) {
+                        emitter.emitMusicRemoved(resolvedVideoId);
+                        emitter.emitUrlList(repository.buildCompatList());
+                        repository.persistRemove(resolvedVideoId);
+
+                        const postList = repository.list();
+                        if (postList.length === 0) {
+                            socket.emit('no_next_video', { tabId: -1 });
+                            manager.update({ type: 'closed' }, 'paused_100_no_next');
+                            log.info('paused+100%: no next video', { videoId: resolvedVideoId });
+                        } else {
+                            const nextMusic = nextId
+                                ? postList.find(m => m.id === nextId) ?? postList[0]
+                                : postList[0];
+                            if (nextMusic) {
+                                const { watchUrl } = await import('@/shared/utils/youtube');
+                                const nextUrl = watchUrl(nextMusic.id);
+                                socket.emit('next_video_navigate', {
+                                    nextUrl,
+                                    videoId: nextMusic.id,
+                                    tabId: -1,
+                                });
+                                manager.update(
+                                    {
+                                        type: 'paused',
+                                        isTransitioning: true,
+                                        musicId: nextMusic.id,
+                                        musicTitle: nextMusic.title,
+                                    },
+                                    'paused_100_navigate',
+                                );
+                                log.info('paused+100%: auto-navigate', {
+                                    from: resolvedVideoId,
+                                    to: nextMusic.id,
+                                });
+                            }
+                        }
+                    }
                 }
                 return;
             }
@@ -801,6 +823,8 @@ export function setupExtensionEventHandlers(
 
     const videoEndDebounce = new Map<string, number>();
     const VIDEO_END_DEBOUNCE_MS = 500;
+    const pendingNextByTabId = new Map<number, { videoId: string; nextCandidateId?: string; createdAt: number }>();
+    const PENDING_NEXT_TTL_MS = 15000;
 
     registerSocketEventSafely(
         extensionSocketOn,
@@ -825,7 +849,7 @@ export function setupExtensionEventHandlers(
             }
 
             try {
-                const { extractYoutubeId, watchUrl } = await import('@/shared/utils/youtube');
+                const { extractYoutubeId } = await import('@/shared/utils/youtube');
                 const videoId = extractYoutubeId(url);
 
                 if (!videoId) {
@@ -848,6 +872,34 @@ export function setupExtensionEventHandlers(
                     tabId,
                     videoId,
                     repositoryLength: repository.list().length,
+                });
+
+                // Determine the next music based on the pre-remove ordering so we
+                // advance to the element *after* the ended video (wrap if needed).
+                const preRemoveList = repository.list();
+                const preIndex = preRemoveList.findIndex(m => m.id === videoId);
+                let nextCandidateId: string | undefined;
+
+                if (preIndex === -1) {
+                    log.info('video_ended: ignored (video not in repository)', {
+                        connectionId,
+                        socketId: socket.id,
+                        tabId,
+                        videoId,
+                    });
+                    return;
+                }
+
+                if (preRemoveList.length > 1 && preIndex !== -1) {
+                    let nextIndex = preIndex + 1;
+                    if (nextIndex >= preRemoveList.length) nextIndex = 0;
+                    nextCandidateId = preRemoveList[nextIndex].id;
+                }
+
+                pendingNextByTabId.set(tabId, {
+                    videoId,
+                    nextCandidateId,
+                    createdAt: Date.now(),
                 });
 
                 const removeResult = repository.remove(videoId);
@@ -881,11 +933,104 @@ export function setupExtensionEventHandlers(
                         error: removeResult.error,
                         videoId,
                     });
+                    pendingNextByTabId.delete(tabId);
+                    return;
+                }
+            } catch (error) {
+                log.warn('video_ended: failed to process', {
+                    error: error,
+                    socketId: socket.id,
+                    url,
+                });
+            }
+        },
+        log,
+        socketContext,
+    );
+
+    registerSocketEventSafely(
+        extensionSocketOn,
+        'video_next',
+        async payload => {
+            if (!isRecord(payload)) {
+                log.debug('video_next: invalid payload', { payload });
+                return;
+            }
+
+            const url = typeof payload['url'] === 'string' ? payload['url'] : undefined;
+            const tabId = typeof payload['tabId'] === 'number' ? payload['tabId'] : undefined;
+
+            if (!url) {
+                log.debug('video_next: no url provided', { payload });
+                return;
+            }
+
+            if (!tabId) {
+                log.debug('video_next: no tabId provided', { payload });
+                return;
+            }
+
+            try {
+                const { extractYoutubeId, watchUrl } = await import('@/shared/utils/youtube');
+                const videoId = extractYoutubeId(url);
+
+                if (!videoId) {
+                    log.debug('video_next: invalid YouTube URL', { url });
+                    return;
                 }
 
-                const musicList = repository.list();
-                if (musicList.length > 0) {
-                    const nextMusic = musicList[0];
+                const pending = pendingNextByTabId.get(tabId);
+                if (pending && Date.now() - pending.createdAt > PENDING_NEXT_TTL_MS) pendingNextByTabId.delete(tabId);
+
+                const pendingEntry = pendingNextByTabId.get(tabId);
+                let nextCandidateId: string | undefined;
+
+                if (pendingEntry && pendingEntry.videoId === videoId) {
+                    nextCandidateId = pendingEntry.nextCandidateId;
+                    pendingNextByTabId.delete(tabId);
+                }
+
+                const postList = repository.list();
+                let nextMusic = nextCandidateId
+                    ? postList.find(m => m.id === nextCandidateId) ?? postList[0]
+                    : undefined;
+
+                if (postList.length === 0) {
+                    socket.emit('no_next_video', {
+                        tabId: tabId,
+                    });
+
+                    manager.update({ type: 'closed' }, 'video_next_no_next');
+
+                    log.info('video_next: no next video available', {
+                        connectionId,
+                        socketId: socket.id,
+                        tabId,
+                        videoId,
+                    });
+                    return;
+                }
+
+                if (!nextMusic) {
+                    const currentIndex = postList.findIndex(m => m.id === videoId);
+                    if (currentIndex === -1) {
+                        log.info('video_next: ignored (video not in repository)', {
+                            connectionId,
+                            socketId: socket.id,
+                            tabId,
+                            videoId,
+                        });
+                        return;
+                    }
+
+                    if (postList.length > 0) {
+                        let nextIndex = currentIndex + 1;
+                        if (nextIndex >= postList.length) nextIndex = 0;
+                        nextMusic = postList[nextIndex];
+                    }
+                }
+
+                if (nextMusic) {
                     const nextUrl = watchUrl(nextMusic.id);
 
                     socket.emit('next_video_navigate', {
@@ -901,10 +1046,10 @@ export function setupExtensionEventHandlers(
                             musicTitle: nextMusic.title,
                             type: 'paused',
                         },
-                        'video_ended',
+                        'video_next',
                     );
 
-                    log.info('video_ended: navigating to next', {
+                    log.info('video_next: navigating to next', {
                         connectionId,
                         from: videoId,
                         nextUrl,
@@ -917,9 +1062,9 @@ export function setupExtensionEventHandlers(
                         tabId: tabId,
                     });
 
-                    manager.update({ type: 'closed' }, 'video_ended_no_next');
+                    manager.update({ type: 'closed' }, 'video_next_no_next');
 
-                    log.info('video_ended: no next video available', {
+                    log.info('video_next: no next video available', {
                         connectionId,
                         socketId: socket.id,
                         tabId,
@@ -927,7 +1072,7 @@ export function setupExtensionEventHandlers(
                     });
                 }
             } catch (error) {
-                log.warn('video_ended: failed to process', {
+                log.warn('video_next: failed to process', {
                     error: error,
                     socketId: socket.id,
                     url,
@@ -1139,7 +1284,6 @@ export function setupExtensionEventHandlers(
 
             state.consecutiveStalls = consecutiveStalls;
 
-            // Cache the latest snapshot regardless of whether we update remoteStatus.
             const progressSnapshot: ProgressSnapshot = {
                 clientLatencyMs,
                 consecutiveStalls,
@@ -1156,8 +1300,34 @@ export function setupExtensionEventHandlers(
             if (shouldReplaceProgressSnapshot(lastProgressSnapshotByVideoId.get(videoId), progressSnapshot))
                 lastProgressSnapshotByVideoId.set(videoId, progressSnapshot);
 
-            // Never infer type='playing' from progress. Only update metadata if we're already
-            // in playing state for the same (or unknown) video.
+            // When status is still closed (e.g. youtube_video_state was ignored by the extension),
+            // allow the first progress to establish playing so the UI can show ad state and progress.
+            if (currentStatus.type === 'closed') {
+                const initialPlaying: RemoteStatus = {
+                    type: 'playing',
+                    musicTitle: (incomingMusicTitle && incomingMusicTitle.length > 0)
+                        ? incomingMusicTitle
+                        : (music?.title ?? ''),
+                    musicId: videoId,
+                    videoId,
+                    currentTime,
+                    duration,
+                    progressPercent,
+                    lastProgressUpdate: timestamp,
+                    consecutiveStalls,
+                    playbackRate,
+                    isBuffering,
+                    isAdvertisement: isAdvertisement ?? false,
+                    isExternalVideo: !music,
+                };
+                manager.update(initialPlaying, eventName);
+                log.debug(`${eventName}: established initial playing from progress`, {
+                    isAdvertisement: initialPlaying.isAdvertisement,
+                    videoId,
+                });
+                return;
+            }
+
             if (currentStatus.type !== 'playing') return;
             if (!isSameVideoOrUnknown(currentStatus, videoId)) return;
 

@@ -40,6 +40,8 @@ export interface EventMap {
     move_next_video: [payload: unknown];
     tab_closed: [payload: unknown];
     ad_state_changed: [payload: unknown];
+    video_ended: [payload: unknown];
+    video_next: [payload: unknown];
 
     // server -> client (emit)
     musicAdded: [payload: unknown];

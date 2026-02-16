@@ -11,6 +11,7 @@ const SEND_PROGRESS_INTERVAL_MS = 1000;
 const PROGRESS_SEND_MIN_DELTA_SEC = 2;
 const VIDEO_END_THRESHOLD = 0.5;
 const NEAR_END_THRESHOLD = 4;
+const END_DEBOUNCE_MS = 300;
 
 let reloadScheduledForInvalidatedContext = false;
 
@@ -100,6 +101,9 @@ export class AdDetector {
     private consecutiveStalls: number = 0;
     private imminentEndSent: boolean = false;
     private videoEndSent: boolean = false;
+    private endDebounceTimerId: number | null = null;
+    /** URL of the video we scheduled "ended" for; when we navigate before timer fires, we send video_ended(this) */
+    private pendingEndUrl: string = '';
     private lastVideoId: string = '';
     private readonly seqByVideoId = new Map<string, number>();
     private readonly validTransitions: Record<VideoState, VideoState[]> = {
@@ -262,24 +266,25 @@ export class AdDetector {
             this.lastVideoId = videoId;
             this.imminentEndSent = false;
             this.videoEndSent = false;
+            if (this.endDebounceTimerId !== null) {
+                clearTimeout(this.endDebounceTimerId);
+                this.endDebounceTimerId = null;
+            }
+            if (this.pendingEndUrl && this.pendingEndUrl !== location.href) {
+                try {
+                    chrome.runtime.sendMessage({ type: 'video_ended', url: this.pendingEndUrl, tabId: undefined });
+                } catch (e) {
+                    console.warn('[AdDetector] video_ended (on navigate) send failed:', e);
+                }
+                this.pendingEndUrl = '';
+            }
             if (videoId && !this.seqByVideoId.has(videoId)) this.seqByVideoId.set(videoId, 0);
         }
 
         const remaining = duration - currentTime;
         const isConfirmed = remaining <= 0.05 || this.videoElement.ended;
 
-        if (!this.videoEndSent && isConfirmed && !this.isAdCurrently) {
-            this.videoEndSent = true;
-            try {
-                chrome.runtime.sendMessage({
-                    type: 'video_ended',
-                    url: location.href,
-                    tabId: undefined,
-                });
-            } catch (error) {
-                console.warn('[AdDetector] video_ended send failed:', error);
-            }
-        }
+        if (!this.videoEndSent && isConfirmed && !this.isAdCurrently) this.scheduleVideoEndedWithDebounce();
 
         let targetState = this.videoState;
 
@@ -369,6 +374,82 @@ export class AdDetector {
 
     markMainVideoEnded(): void {
         this.setVideoState(VideoState.ENDED);
+    }
+
+    /**
+     * Schedules a debounced "video ended" check. After END_DEBOUNCE_MS, if DOM does not
+     * show ad (ad-interrupting/ad-showing), sends video_ended and youtube_video_state
+     * so that post-roll ad transitions do not trigger a false "next video".
+     */
+    scheduleVideoEndedWithDebounce(): void {
+        if (this.endDebounceTimerId !== null) {
+            clearTimeout(this.endDebounceTimerId);
+            this.endDebounceTimerId = null;
+        }
+        this.pendingEndUrl = location.href;
+        this.endDebounceTimerId = window.setTimeout(() => {
+            this.endDebounceTimerId = null;
+            const urlToSend = this.pendingEndUrl || location.href;
+            if (this.videoEndSent) return;
+            if (this.checkIfAd()) {
+                this.pendingEndUrl = urlToSend;
+                return;
+            }
+            this.pendingEndUrl = '';
+            this.videoEndSent = true;
+            try {
+                chrome.runtime.sendMessage({
+                    type: 'video_ended',
+                    url: urlToSend,
+                    tabId: undefined,
+                });
+            } catch (error) {
+                console.warn('[AdDetector] video_ended send failed:', error);
+            }
+            const url = urlToSend;
+            const videoId = extractYouTubeIdFromUrl(urlToSend) ?? '';
+            const seq = videoId ? this.bumpSeq(videoId) : undefined;
+            const currentTime = this.videoElement?.currentTime ?? null;
+            const duration = this.videoElement?.duration ?? null;
+            try {
+                chrome.runtime.sendMessage({
+                    type: 'youtube_video_state',
+                    url,
+                    state: 'ended',
+                    currentTime: currentTime ?? undefined,
+                    duration: duration ?? undefined,
+                    timestamp: Date.now(),
+                    isAdvertisement: false,
+                    videoId: videoId || undefined,
+                    seq,
+                    openedByExtension: isExtensionOpenedTab(),
+                });
+                chrome.storage.local.set({ latestUrl: 'ended' });
+            } catch (error) {
+                console.warn('[AdDetector] youtube_video_state ended send failed:', error);
+            }
+            if (
+                this.videoElement && currentTime !== null && duration !== null && !isNaN(currentTime)
+                && !isNaN(duration)
+            ) {
+                this.addToProgressBuffer({
+                    type: 'progress_update',
+                    url,
+                    videoId: videoId || undefined,
+                    currentTime,
+                    duration,
+                    playbackRate: this.videoElement.playbackRate || 1,
+                    isBuffering: (this.videoElement.readyState ?? 0) < 3,
+                    visibilityState: document.visibilityState,
+                    timestamp: Date.now(),
+                    isAdvertisement: false,
+                    musicTitle: getYouTubeVideoInfo()?.title,
+                    progressPercent: Number(((currentTime / duration) * 100).toFixed(2)),
+                    seq: videoId ? this.getSeq(videoId) : undefined,
+                    openedByExtension: isExtensionOpenedTab(),
+                });
+            }
+        }, END_DEBOUNCE_MS);
     }
 
     markProgressSent(now: number): void {
@@ -535,6 +616,12 @@ export class AdDetector {
             clearInterval(this.batchInterval);
             this.batchInterval = null;
         }
+
+        if (this.endDebounceTimerId !== null) {
+            clearTimeout(this.endDebounceTimerId);
+            this.endDebounceTimerId = null;
+        }
+        this.pendingEndUrl = '';
 
         this.player = null;
         this.videoElement = null;
@@ -808,8 +895,7 @@ function attachVideoListeners(): void {
             if (isAdPlaying) return;
 
             transitionTracker.onVideoEnded(isAdPlaying);
-            notifyState('ended');
-            handleSignificantEvent('ended');
+            adDetector.scheduleVideoEndedWithDebounce();
         });
 
         video.addEventListener('play', () => {
@@ -1068,4 +1154,8 @@ if (windowWithFlag && !windowWithFlag._ytContentScriptInjected) {
 
     detectPageChange();
     adDetector.start();
+
+    window.addEventListener('ytAutoplayPlayerEnded', () => {
+        adDetector.scheduleVideoEndedWithDebounce();
+    });
 }
