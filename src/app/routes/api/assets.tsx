@@ -33,7 +33,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         }
 
         const yt = new YouTubeService();
-        const r = await yt.getVideoDetails(videoId);
+        const r = await (async () => {
+            try {
+                return await yt.getVideoDetails(videoId);
+            } finally {
+                yt.destroy();
+            }
+        })();
         if (!r.ok) {
             const msg = toMsg(r.error) || 'not found';
             const e = new Error(msg);

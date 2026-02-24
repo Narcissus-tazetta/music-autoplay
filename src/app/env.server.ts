@@ -72,6 +72,11 @@ const serverEnvSchema = z
         GOOGLE_CLIENT_SECRET: isTest
             ? z.string().default('test-google-client-secret')
             : z.string().min(1, 'GOOGLE_CLIENT_SECRET is required'),
+        ENABLE_HTTP_COMPRESSION: z.preprocess(v => {
+            if (v == undefined || v === '') return undefined;
+            if (typeof v === 'string') return v === 'true' ? true : (v === 'false' ? false : undefined);
+            return undefined;
+        }, z.boolean().optional()),
         LOG_LEVEL: z
             .enum(['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly'])
             .default(NODE_ENV === 'production' ? 'info' : (isTest ? 'error' : 'debug')),
@@ -153,9 +158,37 @@ const serverEnvSchema = z
             z.number().int().nonnegative().default(5000),
         ),
         SOCKET_PATH: z.string().default('/api/socket.io'),
+        SOCKET_HTTP_COMPRESSION: z.preprocess(v => {
+            if (v == undefined || v === '') return undefined;
+            if (typeof v === 'string') return v === 'true' ? true : (v === 'false' ? false : undefined);
+            return undefined;
+        }, z.boolean().optional()),
+        SOCKET_PERMESSAGE_DEFLATE: z.preprocess(v => {
+            if (v == undefined || v === '') return undefined;
+            if (typeof v === 'string') return v === 'true' ? true : (v === 'false' ? false : undefined);
+            return undefined;
+        }, z.boolean().optional()),
+        SOCKET_WEBSOCKET_ONLY: z.preprocess(v => {
+            if (v == undefined || v === '') return undefined;
+            if (typeof v === 'string') return v === 'true' ? true : (v === 'false' ? false : undefined);
+            return undefined;
+        }, z.boolean().optional()),
+        SOCKET_EVENT_LOG_ENABLED: z.preprocess(v => {
+            if (v == undefined || v === '') return undefined;
+            if (typeof v === 'string') return v === 'true' ? true : (v === 'false' ? false : undefined);
+            return undefined;
+        }, z.boolean().optional()),
+        SOCKET_EVENT_LOG_SAMPLE_RATE: z.preprocess(
+            v => toNumber(v),
+            z.number().min(0).max(1).optional(),
+        ),
         WINDOW_CLOSE_DEBOUNCE_MS: z.preprocess(
             v => toNumber(v),
             z.number().int().nonnegative().default(500),
+        ),
+        YOUTUBE_REQUEST_QUEUE_MAX: z.preprocess(
+            v => toNumber(v),
+            z.number().int().positive().default(500),
         ),
         YOUTUBE_API_KEY: isTest
             ? z.string().default('test-youtube-api-key')
@@ -192,6 +225,7 @@ export const SERVER_ENV = (() => {
         PERSISTENCE_PROVIDER: process.env.PERSISTENCE_PROVIDER,
         GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
         GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+        ENABLE_HTTP_COMPRESSION: process.env.ENABLE_HTTP_COMPRESSION,
         LOG_LEVEL: process.env.LOG_LEVEL,
         MORGAN_FORMAT: process.env.MORGAN_FORMAT,
         MORGAN_LOG_SOCKETIO: process.env.MORGAN_LOG_SOCKETIO,
@@ -209,7 +243,13 @@ export const SERVER_ENV = (() => {
         SESSION_SECRET: process.env.SESSION_SECRET,
         SHUTDOWN_TIMEOUT_MS: process.env.SHUTDOWN_TIMEOUT_MS,
         SOCKET_PATH: process.env.SOCKET_PATH,
+        SOCKET_HTTP_COMPRESSION: process.env.SOCKET_HTTP_COMPRESSION,
+        SOCKET_PERMESSAGE_DEFLATE: process.env.SOCKET_PERMESSAGE_DEFLATE,
+        SOCKET_WEBSOCKET_ONLY: process.env.SOCKET_WEBSOCKET_ONLY,
+        SOCKET_EVENT_LOG_ENABLED: process.env.SOCKET_EVENT_LOG_ENABLED,
+        SOCKET_EVENT_LOG_SAMPLE_RATE: process.env.SOCKET_EVENT_LOG_SAMPLE_RATE,
         WINDOW_CLOSE_DEBOUNCE_MS: process.env.WINDOW_CLOSE_DEBOUNCE_MS,
+        YOUTUBE_REQUEST_QUEUE_MAX: process.env.YOUTUBE_REQUEST_QUEUE_MAX,
         YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY,
     });
 

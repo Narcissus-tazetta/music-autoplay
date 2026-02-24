@@ -257,8 +257,8 @@ export function registerEngineAugmentations(
                                     logger.debug('failed to log engine http request', {
                                         error: error,
                                     });
-                                } catch (error) {
-                                    void error;
+                                } catch (debugError) {
+                                    void debugError;
                                 }
                             }
                         }
@@ -327,8 +327,8 @@ export function registerEngineAugmentations(
                                         logger.debug('failed to log engine conn error', {
                                             error: error,
                                         });
-                                    } catch (error) {
-                                        void error;
+                                    } catch (debugError) {
+                                        void debugError;
                                     }
                                 }
                             });
@@ -355,8 +355,8 @@ export function registerEngineAugmentations(
                                         logger.debug('failed to log engine conn close', {
                                             error: error,
                                         });
-                                    } catch (error) {
-                                        void error;
+                                    } catch (debugError) {
+                                        void debugError;
                                     }
                                 }
                             });

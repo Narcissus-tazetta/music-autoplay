@@ -90,6 +90,11 @@ export async function bootstrap(): Promise<BootstrapResult> {
     const appShutdownHandlers: (() => Promise<void> | void)[] = [];
     appShutdownHandlers.push(async () => {
         try {
+            try {
+                youtubeService.destroy();
+            } catch (destroyError) {
+                logger.warn('youtubeService.destroy failed', { error: destroyError });
+            }
             if (typeof fileStore.flush === 'function') {
                 await fileStore.flush();
                 logger.info('filestore flushed');
@@ -104,14 +109,14 @@ export async function bootstrap(): Promise<BootstrapResult> {
             });
             try {
                 if (typeof fileStore.closeSync === 'function') fileStore.closeSync();
-            } catch (error) {
-                logger.warn('fileStore.closeSync failed', { error: error });
+            } catch (closeSyncError) {
+                logger.warn('fileStore.closeSync failed', { error: closeSyncError });
             }
 
             try {
                 if (closeDb) await closeDb();
-            } catch (error) {
-                logger.warn('persistence backend close failed', { error });
+            } catch (closeDbError) {
+                logger.warn('persistence backend close failed', { error: closeDbError });
             }
         }
     });

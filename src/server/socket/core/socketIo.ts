@@ -13,7 +13,10 @@ export interface CreatedIo {
 
 export const createSocketIo = (server: HttpServer): CreatedIo => {
     const cfg = container.getOptional('configService') as
-        | { getString?(key: string): string }
+        | {
+            getString?(key: string): string;
+            getBoolean?(key: string, fallback?: boolean): boolean;
+        }
         | undefined;
     const rawSocketPath = cfg?.getString?.('SOCKET_PATH') ?? SERVER_ENV.SOCKET_PATH;
     const socketPath = typeof rawSocketPath === 'string' && rawSocketPath.length > 0
@@ -29,6 +32,18 @@ export const createSocketIo = (server: HttpServer): CreatedIo => {
     }
 
     const { origins, allowAllOrigins, allowExtensionOrigins } = buildCorsConfig();
+    const socketHttpCompression = cfg?.getBoolean?.('SOCKET_HTTP_COMPRESSION', SERVER_ENV.NODE_ENV !== 'production')
+        ?? SERVER_ENV.SOCKET_HTTP_COMPRESSION
+        ?? (SERVER_ENV.NODE_ENV !== 'production');
+    const socketPerMessageDeflate = cfg?.getBoolean?.('SOCKET_PERMESSAGE_DEFLATE', SERVER_ENV.NODE_ENV !== 'production')
+        ?? SERVER_ENV.SOCKET_PERMESSAGE_DEFLATE
+        ?? (SERVER_ENV.NODE_ENV !== 'production');
+    const socketWebsocketOnly = cfg?.getBoolean?.('SOCKET_WEBSOCKET_ONLY', false)
+        ?? SERVER_ENV.SOCKET_WEBSOCKET_ONLY
+        ?? false;
+    const transports: ('polling' | 'websocket')[] = socketWebsocketOnly
+        ? ['websocket']
+        : ['polling', 'websocket'];
 
     try {
         const io = new Server(server, {
@@ -60,11 +75,13 @@ export const createSocketIo = (server: HttpServer): CreatedIo => {
                         origins,
                     }),
                 },
+            httpCompression: socketHttpCompression,
             path: socketPath,
+            perMessageDeflate: socketPerMessageDeflate,
             pingInterval: 25_000,
             pingTimeout: 60_000,
             serveClient: false,
-            transports: ['polling', 'websocket'],
+            transports,
             upgradeTimeout: 30_000,
         });
 

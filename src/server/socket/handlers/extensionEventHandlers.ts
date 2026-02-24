@@ -494,7 +494,6 @@ export function setupExtensionEventHandlers(
             }
 
             try {
-                const { extractYoutubeId } = await import('@/shared/utils/youtube');
                 const videoId = extractYoutubeId(url);
 
                 if (!videoId) {
@@ -583,7 +582,6 @@ export function setupExtensionEventHandlers(
             }
 
             try {
-                const { extractYoutubeId } = await import('@/shared/utils/youtube');
                 const currentId = extractYoutubeId(currentUrl);
 
                 if (!currentId) {
@@ -665,7 +663,6 @@ export function setupExtensionEventHandlers(
             }
 
             try {
-                const { extractYoutubeId } = await import('@/shared/utils/youtube');
                 const currentId = extractYoutubeId(currentUrl);
 
                 if (!currentId) {
@@ -782,7 +779,6 @@ export function setupExtensionEventHandlers(
             }
 
             try {
-                const { extractYoutubeId } = await import('@/shared/utils/youtube');
                 const videoId = extractYoutubeId(url);
 
                 if (!videoId) {
@@ -858,7 +854,6 @@ export function setupExtensionEventHandlers(
             }
 
             try {
-                const { extractYoutubeId } = await import('@/shared/utils/youtube');
                 const videoId = extractYoutubeId(url);
 
                 if (!videoId) {
@@ -980,7 +975,7 @@ export function setupExtensionEventHandlers(
             }
 
             try {
-                const { extractYoutubeId, watchUrl } = await import('@/shared/utils/youtube');
+                const { watchUrl } = await import('@/shared/utils/youtube');
                 const videoId = extractYoutubeId(url);
 
                 if (!videoId) {
@@ -1481,7 +1476,6 @@ export function setupExtensionEventHandlers(
             }
 
             try {
-                const { extractYoutubeId } = await import('@/shared/utils/youtube');
                 const videoId = extractYoutubeId(url);
 
                 if (!videoId) {

@@ -69,9 +69,9 @@ export class FileStore implements Store {
             } catch (error) {
                 try {
                     if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
-                } catch (error) {
+                } catch (cleanupError) {
                     logger.warn('musicPersistence: failed to remove tmp file', {
-                        error: error,
+                        error: cleanupError,
                     });
                 }
                 const backoff = WRITE_BACKOFF_BASE_MS * Math.pow(2, attempt);

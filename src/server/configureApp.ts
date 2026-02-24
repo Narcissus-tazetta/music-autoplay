@@ -62,7 +62,9 @@ export async function configureApp(
             },
         }),
     );
-    app.use(compression());
+    const enableHttpCompression = SERVER_ENV.ENABLE_HTTP_COMPRESSION
+        ?? (SERVER_ENV.NODE_ENV !== 'production');
+    if (enableHttpCompression) app.use(compression());
     app.disable('x-powered-by');
 
     app.use(
@@ -227,9 +229,9 @@ export async function configureApp(
     app.get('/diagnostics/socket', (req, res) => {
         try {
             const origin = req.headers.origin;
-            const config = getConfig();
-            const socketPath = config.getString('SOCKET_PATH');
-            const allowExtensionOrigins = config.getString('ALLOW_EXTENSION_ORIGINS') === 'true';
+            const diagConfig = getConfig();
+            const socketPath = diagConfig.getString('SOCKET_PATH');
+            const allowExtensionOrigins = diagConfig.getString('ALLOW_EXTENSION_ORIGINS') === 'true';
             res.json({
                 allowExtensionOrigins,
                 debug: {
@@ -282,18 +284,18 @@ export async function configureApp(
         }
     });
     {
-        const config = getConfig();
-        const morganFormat = config.getString('MORGAN_FORMAT');
-        const skipSocketIo = config.getString('MORGAN_LOG_SOCKETIO') !== 'true';
+        const morganConfig = getConfig();
+        const morganFormat = morganConfig.getString('MORGAN_FORMAT');
+        const skipSocketIo = morganConfig.getString('MORGAN_LOG_SOCKETIO') !== 'true';
         app.use(
             morgan(morganFormat, {
                 skip: (req: express.Request) => {
                     if (!skipSocketIo) return false;
                     try {
-                        const path = req.path ? req.path : req.url || '';
-                        const socketPrefix = config.getString('SOCKET_PATH');
+                        const reqPath = req.path ? req.path : req.url || '';
+                        const socketPrefix = morganConfig.getString('SOCKET_PATH');
                         return (
-                            path.startsWith('/socket.io') || path.startsWith(socketPrefix)
+                            reqPath.startsWith('/socket.io') || reqPath.startsWith(socketPrefix)
                         );
                     } catch (error) {
                         logger.debug('morgan: error while deciding skip', { error: error });

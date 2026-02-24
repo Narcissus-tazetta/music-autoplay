@@ -57,10 +57,10 @@ export function useUrlList(): UseUrlListReturn {
         return () => {
             chrome.runtime.onMessage.removeListener(messageListener);
             try {
-                const storageApi = chrome.storage as unknown as {
+                const storageApiCleanup = chrome.storage as unknown as {
                     onChanged?: { addListener: (cb: any) => void; removeListener?: (cb: any) => void };
                 };
-                storageApi.onChanged?.removeListener?.(storageListener as any);
+                storageApiCleanup.onChanged?.removeListener?.(storageListener as any);
             } catch {}
         };
     }, []);
@@ -76,8 +76,8 @@ export function useUrlList(): UseUrlListReturn {
             try {
                 await sendChromeMessage({ type: 'delete_url', url: urlToRemove });
                 setUrls(prev => prev.filter((_, i) => i !== index));
-            } catch (error) {
-                console.error('[useUrlList] Failed to remove URL:', error);
+            } catch (removeError) {
+                console.error('[useUrlList] Failed to remove URL:', removeError);
                 setError(`URLの削除に失敗しました`);
             }
         },

@@ -50,6 +50,7 @@ export class YouTubeService {
     private cleanupTimer?: NodeJS.Timeout;
     private rateLimitRetry = 2000;
     private requestQueue: (() => Promise<void>)[] = [];
+    private requestQueueMax = 500;
     private isProcessingQueue = false;
     private domPurify: ReturnType<typeof DOMPurify>;
 
@@ -67,6 +68,8 @@ export class YouTubeService {
             );
         }
         this.youtube = google.youtube({ auth: key, version: 'v3' });
+        const configuredQueueMax = configService?.getNumber('YOUTUBE_REQUEST_QUEUE_MAX');
+        if (typeof configuredQueueMax === 'number' && configuredQueueMax > 0) this.requestQueueMax = configuredQueueMax;
         this.cleanupTimer = setInterval(
             () => {
                 this.cleanupExpired();
@@ -119,6 +122,15 @@ export class YouTubeService {
 
     private async queueRequest<T>(requestFn: () => Promise<T>): Promise<T> {
         return new Promise((resolve, reject) => {
+            if (this.requestQueue.length >= this.requestQueueMax) {
+                logger.warn('YouTubeService request queue limit reached', {
+                    queueSize: this.requestQueue.length,
+                    requestQueueMax: this.requestQueueMax,
+                });
+                reject(new Error('YouTube request queue is full'));
+                return;
+            }
+
             this.requestQueue.push(async () => {
                 try {
                     const result = await requestFn();
@@ -194,6 +206,48 @@ export class YouTubeService {
                 type: 'suspicious_request',
             });
         }
+    }
+
+    private compactRaw(item: unknown): unknown {
+        if (!item || typeof item !== 'object') return undefined;
+        const record = item as Record<string, unknown>;
+        const snippet = record.snippet && typeof record.snippet === 'object'
+            ? (record.snippet as Record<string, unknown>)
+            : undefined;
+        const contentDetails = record.contentDetails && typeof record.contentDetails === 'object'
+            ? (record.contentDetails as Record<string, unknown>)
+            : undefined;
+
+        const thumbnails = snippet?.thumbnails && typeof snippet.thumbnails === 'object'
+            ? (snippet.thumbnails as Record<string, unknown>)
+            : undefined;
+
+        const high = thumbnails?.high && typeof thumbnails.high === 'object'
+            ? (thumbnails.high as Record<string, unknown>)
+            : undefined;
+        const def = thumbnails?.default && typeof thumbnails.default === 'object'
+            ? (thumbnails.default as Record<string, unknown>)
+            : undefined;
+
+        const compactSnippet: Record<string, unknown> = {
+            channelId: snippet?.channelId,
+            channelTitle: snippet?.channelTitle,
+            title: snippet?.title,
+        };
+        if (typeof high?.url === 'string' || typeof def?.url === 'string') {
+            compactSnippet.thumbnails = {
+                default: typeof def?.url === 'string' ? { url: def.url } : undefined,
+                high: typeof high?.url === 'string' ? { url: high.url } : undefined,
+            };
+        }
+
+        return {
+            contentDetails: {
+                contentRating: contentDetails?.contentRating,
+                duration: contentDetails?.duration,
+            },
+            snippet: compactSnippet,
+        };
     }
 
     async getVideoDetails(
@@ -321,7 +375,7 @@ export class YouTubeService {
                     channelTitle: sanitizedChannelTitle,
                     duration: durationStr,
                     isAgeRestricted,
-                    raw: item,
+                    raw: this.compactRaw(item),
                     title: sanitizedTitle,
                 };
                 try {

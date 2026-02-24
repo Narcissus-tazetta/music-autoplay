@@ -21,6 +21,13 @@
 - `CLIENT_URL` : 公開されたフロントエンドの URL（例: `https://music-auto-play.onrender.com`）
 - `CORS_ORIGINS` : カンマ区切りで許可するオリジン
 - `YOUTUBE_API_KEY` : YouTube API を使う場合の API キー
+- `ENABLE_HTTP_COMPRESSION` : HTTPレスポンス圧縮を有効化するか（本番は `false` 推奨）
+- `SOCKET_HTTP_COMPRESSION` : Socket.IO の HTTP 圧縮を有効化するか
+- `SOCKET_PERMESSAGE_DEFLATE` : Socket.IO の per-message deflate を有効化するか
+- `SOCKET_WEBSOCKET_ONLY` : `true` で websocket のみに制限（メモリ優先）
+- `SOCKET_EVENT_LOG_ENABLED` : Socketイベント詳細ログの有効/無効
+- `SOCKET_EVENT_LOG_SAMPLE_RATE` : Socketイベントログのサンプリング率（0〜1）
+- `YOUTUBE_REQUEST_QUEUE_MAX` : YouTube API リクエストキュー上限
 - `ADMIN_SECRET` : 管理用シークレット（任意）
 - `SESSION_SECRET` : セッション署名に使う秘密鍵
 - `DATABASE_URL` : PostgreSQL 等の接続文字列（このプロジェクトで使う場合）

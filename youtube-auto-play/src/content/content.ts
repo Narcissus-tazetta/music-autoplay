@@ -321,11 +321,11 @@ export class AdDetector {
             || nearEnd;
 
         if (shouldSend) {
-            const remaining = duration - currentTime;
-            const isImminent = remaining <= 0.5 && remaining > 0.05;
+            const remainingNow = duration - currentTime;
+            const isImminent = remainingNow <= 0.5 && remainingNow > 0.05;
 
             const url = location.href;
-            const videoId = extractYouTubeIdFromUrl(url) ?? '';
+            const currentVideoId = extractYouTubeIdFromUrl(url) ?? '';
 
             this.addToProgressBuffer({
                 consecutiveStalls: this.consecutiveStalls,
@@ -340,8 +340,8 @@ export class AdDetector {
                 timestamp: now,
                 type: 'progress_update',
                 url,
-                videoId: videoId || undefined,
-                seq: videoId ? this.getSeq(videoId) : undefined,
+                videoId: currentVideoId || undefined,
+                seq: currentVideoId ? this.getSeq(currentVideoId) : undefined,
                 openedByExtension: isExtensionOpenedTab(),
                 visibilityState: document.visibilityState,
             });

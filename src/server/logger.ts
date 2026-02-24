@@ -93,8 +93,8 @@ function safeSerialize(obj: unknown): unknown {
         } catch (error) {
             try {
                 console.debug('safeSerialize failed', String(error), String(error));
-            } catch (error) {
-                void error;
+            } catch (debugError) {
+                void debugError;
             }
             return '[unserializable]';
         }
@@ -190,14 +190,14 @@ const baseFormat = isProd
                 } catch (error) {
                     try {
                         metaStr = typeof metaObj === 'string' ? metaObj : JSON.stringify(metaObj);
-                    } catch (error) {
-                        void error;
+                    } catch (stringifyError) {
+                        void stringifyError;
                         metaStr = String(metaObj);
                     }
                     try {
                         console.debug('logger meta stringify fallback', error);
-                    } catch (error) {
-                        void error;
+                    } catch (debugError) {
+                        void debugError;
                     }
                 }
             }
@@ -379,8 +379,8 @@ export function safeLog(
     } catch (error) {
         try {
             console.debug(msg, meta, error);
-        } catch (error) {
-            void error;
+        } catch (debugError) {
+            void debugError;
         }
     }
 }

@@ -16,8 +16,8 @@ export async function persistAdd(
                 error: error,
                 id: music.id,
             });
-        } catch (error) {
-            void error;
+        } catch (logError) {
+            void logError;
         }
     }
 }
@@ -33,8 +33,8 @@ export async function persistRemove(
     } catch (error) {
         try {
             logger.warn('failed to persist music removal', { error: error, id });
-        } catch (error) {
-            void error;
+        } catch (logError) {
+            void logError;
         }
     }
 }

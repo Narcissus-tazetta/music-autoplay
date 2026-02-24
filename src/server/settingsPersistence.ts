@@ -44,9 +44,9 @@ export class SettingsStore {
         } catch (error) {
             try {
                 if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
-            } catch (error) {
+            } catch (cleanupError) {
                 logger.warn('settingsPersistence: failed to cleanup temp file', {
-                    error: error,
+                    error: cleanupError,
                 });
             }
             throw error;
