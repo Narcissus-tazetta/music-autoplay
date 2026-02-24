@@ -34,6 +34,10 @@ const shouldReplaceProgressSnapshot = (prev: ProgressSnapshot | undefined, next:
     return nextSeq > prevSeq;
 };
 
+const AUTHORITATIVE_PAUSE_HOLD_MS = 3000;
+const AUTHORITATIVE_PLAYING_PROMOTION_MS = 3000;
+const AUTHORITATIVE_RESUME_EPSILON_SEC = 0.75;
+
 const isSameVideoOrUnknown = (
     current: RemoteStatus,
     videoId: string,
@@ -97,6 +101,34 @@ export function setupExtensionEventHandlers(
             duration?: number;
         }
     >();
+
+    const shouldIgnorePlayingFromStaleAuthoritative = (
+        videoId: string | undefined,
+        incoming: {
+            seq?: number;
+            currentTime?: number;
+        },
+    ): boolean => {
+        if (!videoId) return false;
+        const authoritative = authoritativeVideoState.get(videoId);
+        if (!authoritative || authoritative.state !== 'paused') return false;
+
+        const now = Date.now();
+        if (now - authoritative.receivedAt > AUTHORITATIVE_PAUSE_HOLD_MS) return false;
+
+        const hasSeq = typeof incoming.seq === 'number' && typeof authoritative.seq === 'number';
+        const seqLooksStale = hasSeq
+            ? (incoming.seq as number) <= (authoritative.seq as number)
+            : true;
+
+        const hasTime = typeof incoming.currentTime === 'number' && typeof authoritative.currentTime === 'number';
+        const timeLooksStale = hasTime
+            ? (incoming.currentTime as number)
+                <= (authoritative.currentTime as number) + AUTHORITATIVE_RESUME_EPSILON_SEC
+            : true;
+
+        return seqLooksStale && timeLooksStale;
+    };
 
     const lastProgressSnapshotByVideoId = new Map<string, ProgressSnapshot>();
     const lastAdSnapshotByVideoId = new Map<string, { isAdvertisement: boolean; adTimestamp?: number }>();
@@ -243,6 +275,25 @@ export function setupExtensionEventHandlers(
 
                 const state = stateRaw === 'playing' ? 'playing' : 'paused';
 
+                const resolvedVideoIdForGuard = url
+                    ? (extractYoutubeId(url) ?? undefined)
+                    : undefined;
+                if (
+                    state === 'playing'
+                    && shouldIgnorePlayingFromStaleAuthoritative(resolvedVideoIdForGuard, {
+                        seq: incomingSeq,
+                        currentTime: incomingCurrentTime,
+                    })
+                ) {
+                    log.debug('youtube_video_state: stale playing ignored after authoritative pause', {
+                        currentTime: incomingCurrentTime,
+                        seq: incomingSeq,
+                        url,
+                        videoId: resolvedVideoIdForGuard,
+                    });
+                    return;
+                }
+
                 log.debug(`youtube_video_state: received ${state}`, {
                     currentTime: incomingCurrentTime,
                     duration: incomingDuration,
@@ -328,8 +379,8 @@ export function setupExtensionEventHandlers(
                     });
                 }
 
-                const resolvedVideoId = url
-                    ? (extractYoutubeId(url) ?? undefined)
+                const resolvedVideoId = resolvedVideoIdForGuard
+                    ? resolvedVideoIdForGuard
                     : undefined;
                 const progressSnapshot = resolvedVideoId
                     ? lastProgressSnapshotByVideoId.get(resolvedVideoId)
@@ -1304,9 +1355,35 @@ export function setupExtensionEventHandlers(
             if (shouldReplaceProgressSnapshot(lastProgressSnapshotByVideoId.get(videoId), progressSnapshot))
                 lastProgressSnapshotByVideoId.set(videoId, progressSnapshot);
 
-            // When status is still closed (e.g. youtube_video_state was ignored by the extension),
-            // allow the first progress to establish playing so the UI can show ad state and progress.
+            const authoritative = authoritativeVideoState.get(videoId);
+
+            if (visibilityState === 'hidden' && currentStatus.type !== 'playing') {
+                log.debug(`${eventName}: hidden progress ignored while non-playing`, {
+                    currentStatus: currentStatus.type,
+                    videoId,
+                });
+                return;
+            }
+
             if (currentStatus.type === 'closed') {
+                const hasFreshAuthoritativePlaying = authoritative?.state === 'playing'
+                    && timestamp - authoritative.receivedAt <= AUTHORITATIVE_PLAYING_PROMOTION_MS
+                    && (
+                        typeof incomingSeq !== 'number'
+                        || typeof authoritative.seq !== 'number'
+                        || incomingSeq >= authoritative.seq
+                    );
+
+                if (!hasFreshAuthoritativePlaying) {
+                    log.debug(`${eventName}: closed->playing promotion blocked (no fresh authoritative playing)`, {
+                        authoritativeState: authoritative?.state,
+                        authoritativeTs: authoritative?.receivedAt,
+                        timestamp,
+                        videoId,
+                    });
+                    return;
+                }
+
                 const initialPlaying: RemoteStatus = {
                     type: 'playing',
                     musicTitle: (incomingMusicTitle && incomingMusicTitle.length > 0)
@@ -1334,8 +1411,6 @@ export function setupExtensionEventHandlers(
 
             if (currentStatus.type !== 'playing') return;
             if (!isSameVideoOrUnknown(currentStatus, videoId)) return;
-
-            const authoritative = authoritativeVideoState.get(videoId);
             if (authoritative?.state === 'paused') return;
 
             const updated: RemoteStatus = {

@@ -23,6 +23,10 @@ interface YouTubeVideoStateMessage {
     openedByExtension?: boolean;
 }
 
+const PAUSE_HOLD_MS = 3000;
+const RESUME_EPSILON_SEC = 0.75;
+const lastPausedByTabId = new Map<number, { at: number; seq?: number; currentTime?: number; url: string }>();
+
 export function handleYouTubeVideoState(
     message: YouTubeVideoStateMessage,
     sender: MessageSender,
@@ -54,6 +58,25 @@ export function handleYouTubeVideoState(
     // - paused: accept if it's already active OR we don't have an active playback tab yet
     if (typeof tabId === 'number') {
         if (message.state === 'playing') {
+            const recentPause = lastPausedByTabId.get(tabId);
+            if (recentPause && Date.now() - recentPause.at <= PAUSE_HOLD_MS) {
+                const hasSeq = typeof message.seq === 'number' && typeof recentPause.seq === 'number';
+                const seqLooksStale = hasSeq ? (message.seq as number) <= (recentPause.seq as number) : true;
+                const hasTime = typeof message.currentTime === 'number' && typeof recentPause.currentTime === 'number';
+                const timeLooksStale = hasTime
+                    ? (message.currentTime as number) <= (recentPause.currentTime as number) + RESUME_EPSILON_SEC
+                    : true;
+                if (recentPause.url === message.url && seqLooksStale && timeLooksStale) {
+                    console.info('[Background] handleYouTubeVideoState ignored stale playing', {
+                        currentTime: message.currentTime,
+                        seq: message.seq,
+                        tabId,
+                        url: message.url,
+                    });
+                    return;
+                }
+            }
+            lastPausedByTabId.delete(tabId);
             setActivePlaybackTab(tabId);
             shouldProcess = true;
             console.info('[Background] handleYouTubeVideoState promoted tab to activePlaybackTab', {
@@ -63,6 +86,12 @@ export function handleYouTubeVideoState(
                 reason: 'playing',
             });
         } else if (message.state === 'paused') {
+            lastPausedByTabId.set(tabId, {
+                at: Date.now(),
+                seq: message.seq,
+                currentTime: message.currentTime,
+                url: message.url,
+            });
             const activeId = getActivePlaybackTabId();
             if (activeId === null || activeId === tabId || isKnownTab) {
                 if (activeId === null) setActivePlaybackTab(tabId);

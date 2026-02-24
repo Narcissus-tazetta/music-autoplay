@@ -383,5 +383,45 @@ describe('SocketManager', () => {
             );
             expect(pausedEmits.length).toBeGreaterThan(0);
         });
+
+        test('should not reset inactivity timer for equal-status heartbeat updates', async () => {
+            const localEvents: { event: string; payload: any }[] = [];
+            const localEmit = mock((event: string, payload: unknown) => {
+                localEvents.push({ event, payload });
+                return true;
+            });
+            const localTimer = new TimerManager();
+            const localWindowClose = new WindowCloseManager(10);
+            const localManager = new SocketManager(
+                localEmit as unknown as EmitFn,
+                localTimer,
+                localWindowClose,
+                {
+                    debounceMs: 10,
+                    graceMs: 10,
+                    inactivityMs: 0,
+                    inactivityMsPaused: 70,
+                },
+            );
+
+            const status: RemoteStatus = {
+                musicId: 'test',
+                musicTitle: 'Test',
+                type: 'paused',
+            };
+
+            localManager.update(status, 'extension');
+            await new Promise(resolve => setTimeout(resolve, 40));
+            localManager.update(status, 'extension_heartbeat');
+            await new Promise(resolve => setTimeout(resolve, 55));
+
+            expect(localManager.getCurrent().type).toBe('closed');
+            const closedEvents = localEvents.filter(e =>
+                e.event === 'remoteStatusUpdated' && e.payload.type === 'closed'
+            );
+            expect(closedEvents.length).toBeGreaterThan(0);
+
+            localManager.shutdown();
+        });
     });
 });

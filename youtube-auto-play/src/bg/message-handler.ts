@@ -158,7 +158,8 @@ export function setupMessageHandler(socket: SocketInstance): void {
                     && typeof msg.duration === 'number'
                     && typeof msg.timestamp === 'number'
                 ) {
-                    if (typeof senderTabId === 'number') setActivePlaybackTab(senderTabId);
+                    const shouldPromotePlaybackTab = msg.visibilityState !== 'hidden';
+                    if (typeof senderTabId === 'number' && shouldPromotePlaybackTab) setActivePlaybackTab(senderTabId);
                     if (msg.openedByExtension === true && typeof senderTabId === 'number') addExtensionTab(senderTabId);
                     if (typeof senderTabId === 'number' && isExtensionOpenedTab(senderTabId))
                         setActiveExtensionTab(senderTabId);
@@ -169,7 +170,9 @@ export function setupMessageHandler(socket: SocketInstance): void {
 
             if (msg.type === 'batch_progress_update') {
                 if (Array.isArray(msg.updates)) {
-                    if (typeof senderTabId === 'number') setActivePlaybackTab(senderTabId);
+                    const latest = msg.updates[msg.updates.length - 1] as ProgressUpdatePayload | undefined;
+                    const shouldPromotePlaybackTab = latest?.visibilityState !== 'hidden';
+                    if (typeof senderTabId === 'number' && shouldPromotePlaybackTab) setActivePlaybackTab(senderTabId);
                     if (msg.openedByExtension === true && typeof senderTabId === 'number') addExtensionTab(senderTabId);
                     if (typeof senderTabId === 'number' && isExtensionOpenedTab(senderTabId))
                         setActiveExtensionTab(senderTabId);

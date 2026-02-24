@@ -155,7 +155,7 @@ export class AdDetector {
 
     private setupHeartbeat(): void {
         this.heartbeatInterval = window.setInterval(() => {
-            if (document.hidden && this.videoElement) {
+            if (document.hidden && this.videoElement && !this.videoElement.paused) {
                 try {
                     if (!hasRuntimeSendMessage()) {
                         this.handleInvalidatedContext();

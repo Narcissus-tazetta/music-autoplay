@@ -303,7 +303,7 @@ describe('progress ordering', () => {
         }
     });
 
-    test('does not infer playing from progress_update_batch when closed', async () => {
+    test('does not promote closed to playing from progress_update_batch without authoritative playing', async () => {
         const socket = createFakeSocket();
         const repo = createFakeRepo([{ id: 'dQw4w9WgXcQ', url: 'https://youtu.be/dQw4w9WgXcQ' }]);
         const emitter = createFakeEmitter();
@@ -349,8 +349,97 @@ describe('progress ordering', () => {
 
         await new Promise(resolve => setTimeout(resolve, 50));
 
-        expect(updates.length).toBe(1);
+        expect(updates.length).toBe(0);
+        expect(current.type).toBe('closed');
+
+        socket.trigger('youtube_video_state', {
+            state: 'playing',
+            url: 'https://youtu.be/dQw4w9WgXcQ',
+            timestamp: base + 1200,
+            seq: 1,
+        });
+
+        socket.trigger('progress_update_batch', {
+            updates: [
+                {
+                    url: 'https://youtu.be/dQw4w9WgXcQ',
+                    currentTime: 2,
+                    duration: 100,
+                    playbackRate: 1,
+                    timestamp: base + 1300,
+                    visibilityState: 'visible',
+                    isBuffering: false,
+                    seq: 1,
+                },
+            ],
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 50));
         expect(current.type).toBe('playing');
+    });
+
+    test('ignores stale youtube_video_state playing shortly after paused', async () => {
+        const socket = createFakeSocket();
+        const repo = createFakeRepo([{ id: 'dQw4w9WgXcQ', url: 'https://youtu.be/dQw4w9WgXcQ' }]);
+        const emitter = createFakeEmitter();
+        const updates: any[] = [];
+        let current: any = { type: 'closed' };
+        const manager: any = {
+            update: (s: any) => {
+                current = s;
+                updates.push(s);
+            },
+            getCurrent: () => current,
+        };
+        const youtubeService: any = {};
+        const log: any = { debug() {}, info() {}, warn() {} };
+
+        (socket as any).id = 'test-socket-id';
+
+        setupExtensionEventHandlers(
+            socket as any,
+            log,
+            'conn',
+            new Map(),
+            manager,
+            repo as any,
+            emitter as any,
+            youtubeService,
+        );
+
+        const realDateNow = Date.now;
+        try {
+            let now = 2_000_000;
+            (Date as any).now = () => now;
+
+            socket.trigger('youtube_video_state', {
+                state: 'paused',
+                url: 'https://youtu.be/dQw4w9WgXcQ',
+                currentTime: 10,
+                duration: 100,
+                timestamp: now,
+                seq: 5,
+            });
+
+            await new Promise(resolve => setTimeout(resolve, 30));
+
+            now += 1000;
+
+            socket.trigger('youtube_video_state', {
+                state: 'playing',
+                url: 'https://youtu.be/dQw4w9WgXcQ',
+                currentTime: 10.2,
+                duration: 100,
+                timestamp: now,
+                seq: 5,
+            });
+
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            expect(updates[updates.length - 1].type).toBe('paused');
+        } finally {
+            (Date as any).now = realDateNow;
+        }
     });
 
     test('progress_update_batch processes only the latest update', async () => {
