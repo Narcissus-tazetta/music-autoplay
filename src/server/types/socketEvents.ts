@@ -42,6 +42,10 @@ export interface EventMap {
     ad_state_changed: [payload: unknown];
     video_ended: [payload: unknown];
     video_next: [payload: unknown];
+    admin_youtube_control: [
+        payload: { action: 'toggle_play_pause' | 'prev' | 'next' | 'skip' },
+        callback?: (res: { success: boolean; error?: string }) => void,
+    ];
 
     // server -> client (emit)
     musicAdded: [payload: unknown];
@@ -51,6 +55,7 @@ export interface EventMap {
     url_list: [Array<Music & { url: string }>];
     // メモ: 今後追加されるイベントはここに追記してください
     deleteMusic: [string];
+    admin_youtube_control_command: [payload: { action: 'toggle_play_pause' | 'prev' | 'next' | 'skip' }];
 }
 
 export type EventName = keyof EventMap;

@@ -5,8 +5,21 @@ describe('settingsStore', () => {
     test('initial state has default values', () => {
         useSettingsStore.getState().reset();
         const state = useSettingsStore.getState();
+        expect(state.ytAdminControlsEnabled).toBe(false);
         expect(state.ytStatusVisible).toBe(true);
         expect(state.ytStatusMode).toBe('player');
+    });
+
+    test('setYtAdminControlsEnabled updates state', () => {
+        useSettingsStore.getState().reset();
+        const store = useSettingsStore.getState();
+        expect(store.ytAdminControlsEnabled).toBe(false);
+
+        store.setYtAdminControlsEnabled(true);
+        expect(useSettingsStore.getState().ytAdminControlsEnabled).toBe(true);
+
+        store.setYtAdminControlsEnabled(false);
+        expect(useSettingsStore.getState().ytAdminControlsEnabled).toBe(false);
     });
 
     test('setYtStatusVisible updates visibility state', () => {
@@ -37,10 +50,12 @@ describe('settingsStore', () => {
         useSettingsStore.getState().reset();
         const store = useSettingsStore.getState();
 
+        store.setYtAdminControlsEnabled(true);
         store.setYtStatusVisible(false);
         expect(useSettingsStore.getState().ytStatusVisible).toBe(false);
 
         store.reset();
+        expect(useSettingsStore.getState().ytAdminControlsEnabled).toBe(false);
         expect(useSettingsStore.getState().ytStatusVisible).toBe(true);
         expect(useSettingsStore.getState().ytStatusMode).toBe('player');
     });
@@ -53,6 +68,8 @@ describe('settingsStore', () => {
         expect(useSettingsStore.getState().ytStatusVisible).toBe(false);
         store.loadFromServer({ ytStatusMode: 'compact' });
         expect(useSettingsStore.getState().ytStatusMode).toBe('compact');
+        store.loadFromServer({ ytAdminControlsEnabled: true });
+        expect(useSettingsStore.getState().ytAdminControlsEnabled).toBe(true);
 
         useSettingsStore.getState().reset();
     });
@@ -71,9 +88,11 @@ describe('settingsStore', () => {
     test('syncToServer returns current state', () => {
         useSettingsStore.getState().reset();
         const store = useSettingsStore.getState();
+        store.setYtAdminControlsEnabled(true);
         store.setYtStatusVisible(false);
 
         const synced = store.syncToServer();
+        expect(synced.ytAdminControlsEnabled).toBe(true);
         expect(synced.ytStatusVisible).toBe(false);
 
         useSettingsStore.getState().reset();
@@ -95,10 +114,12 @@ describe('settingsStore', () => {
     test('syncToServer returns current state including mode', () => {
         useSettingsStore.getState().reset();
         const store = useSettingsStore.getState();
+        store.setYtAdminControlsEnabled(true);
         store.setYtStatusVisible(false);
         store.setYtStatusMode('compact');
 
         const synced = store.syncToServer();
+        expect(synced.ytAdminControlsEnabled).toBe(true);
         expect(synced.ytStatusVisible).toBe(false);
         expect(synced.ytStatusMode).toBe('compact');
 

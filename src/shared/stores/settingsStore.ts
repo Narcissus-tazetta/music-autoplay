@@ -10,10 +10,20 @@ export interface SettingsStore {
     setYtStatusVisible: (v: boolean) => void;
     ytStatusMode: YtStatusMode;
     setYtStatusMode: (v: YtStatusMode) => void;
+    ytAdminControlsEnabled: boolean;
+    setYtAdminControlsEnabled: (v: boolean) => void;
     loadFromServer: (
-        data?: Partial<{ ytStatusVisible: boolean; ytStatusMode: YtStatusMode }>,
+        data?: Partial<{
+            ytStatusVisible: boolean;
+            ytStatusMode: YtStatusMode;
+            ytAdminControlsEnabled: boolean;
+        }>,
     ) => void;
-    syncToServer: () => { ytStatusVisible: boolean; ytStatusMode: YtStatusMode };
+    syncToServer: () => {
+        ytStatusVisible: boolean;
+        ytStatusMode: YtStatusMode;
+        ytAdminControlsEnabled: boolean;
+    };
     reset: () => void;
 }
 
@@ -21,7 +31,11 @@ const loadFromServerAsync = async (): Promise<void> => {
     try {
         const resp = await fetch('/api/settings');
         const norm = await normalizeApiResponse<
-            Partial<{ ytStatusVisible: boolean; ytStatusMode: YtStatusMode }>
+            Partial<{
+                ytStatusVisible: boolean;
+                ytStatusMode: YtStatusMode;
+                ytAdminControlsEnabled: boolean;
+            }>
         >(resp);
         if (!norm.success) {
             try {
@@ -43,12 +57,12 @@ const loadFromServerAsync = async (): Promise<void> => {
             return;
         }
         const server = norm.data;
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (server && typeof server.ytStatusVisible === 'boolean')
             useSettingsStore.getState().setYtStatusVisible(server.ytStatusVisible);
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (server && typeof server.ytStatusMode === 'string')
             useSettingsStore.getState().setYtStatusMode(server.ytStatusMode);
+        if (server && typeof server.ytAdminControlsEnabled === 'boolean')
+            useSettingsStore.getState().setYtAdminControlsEnabled(server.ytAdminControlsEnabled);
     } catch (error) {
         if (import.meta.env.DEV) console.warn('loadFromServer error', error);
     }
@@ -57,6 +71,7 @@ const loadFromServerAsync = async (): Promise<void> => {
 const _syncToServerAsync = async (): Promise<void> => {
     try {
         const payload = {
+            ytAdminControlsEnabled: useSettingsStore.getState().ytAdminControlsEnabled,
             ytStatusMode: useSettingsStore.getState().ytStatusMode,
             ytStatusVisible: useSettingsStore.getState().ytStatusVisible,
         };
@@ -96,6 +111,7 @@ export const useSettingsStore = create<SettingsStore>()(
                 data?: Partial<{
                     ytStatusVisible: boolean;
                     ytStatusMode: YtStatusMode;
+                    ytAdminControlsEnabled: boolean;
                 }>,
             ) => {
                 if (!data) {
@@ -106,19 +122,25 @@ export const useSettingsStore = create<SettingsStore>()(
                 const d = data as Partial<{
                     ytStatusVisible: boolean;
                     ytStatusMode: YtStatusMode;
+                    ytAdminControlsEnabled: boolean;
                 }>;
                 if (d.ytStatusMode === 'compact' || d.ytStatusMode === 'player') set({ ytStatusMode: d.ytStatusMode });
+                if (typeof d.ytAdminControlsEnabled === 'boolean')
+                    set({ ytAdminControlsEnabled: d.ytAdminControlsEnabled });
             },
-            reset: () => set({ ytStatusMode: 'player', ytStatusVisible: true }),
+            reset: () => set({ ytAdminControlsEnabled: false, ytStatusMode: 'player', ytStatusVisible: true }),
+            setYtAdminControlsEnabled: (v: boolean) => set({ ytAdminControlsEnabled: v }),
             setYtStatusMode: (v: YtStatusMode) => set({ ytStatusMode: v }),
             setYtStatusVisible: (v: boolean) => set({ ytStatusVisible: v }),
             syncToServer: () => {
                 void _syncToServerAsync();
                 return {
+                    ytAdminControlsEnabled: get().ytAdminControlsEnabled,
                     ytStatusMode: get().ytStatusMode,
                     ytStatusVisible: get().ytStatusVisible,
                 };
             },
+            ytAdminControlsEnabled: false,
             ytStatusMode: 'player',
             ytStatusVisible: true,
         }),

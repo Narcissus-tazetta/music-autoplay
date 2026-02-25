@@ -15,6 +15,9 @@ export interface S2C {
         videoId?: string;
     }): void;
     no_next_video?(payload: { tabId?: number }): void;
+    admin_youtube_control_command?(payload: {
+        action: 'toggle_play_pause' | 'prev' | 'next' | 'skip';
+    }): void;
 }
 
 export interface C2S {
@@ -53,4 +56,8 @@ export interface C2S {
     video_next?(payload: unknown): void;
     progress_update?(payload: unknown): void;
     no_next_video?(payload: unknown): void;
+    admin_youtube_control?(
+        payload: { action: 'toggle_play_pause' | 'prev' | 'next' | 'skip' },
+        callback?: (result: { success: boolean; error?: string }) => void,
+    ): void;
 }

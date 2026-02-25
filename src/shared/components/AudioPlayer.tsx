@@ -1,12 +1,15 @@
 import { cn } from '@/app/utils/cn';
+import { getSocket } from '@/app/utils/socketClient';
 import { useInterpolatedTime, useThumbnail, useVisibilityTimer } from '@/shared/hooks/usePlayerState';
+import { useAdminStore } from '@/shared/stores/adminStore';
 import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
 import { useSettingsStore } from '@/shared/stores/settingsStore';
 import { formatSecondsToTime } from '@/shared/utils/format';
 import { watchUrl } from '@/shared/utils/youtube';
+import { Button } from '@shadcn/ui/button';
 import { motion } from 'framer-motion';
-import { ChevronDown } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
+import { ChevronDown, FastForward, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 import { MusicTitleWithHover } from './MusicTitleWithHover';
 
@@ -97,7 +100,9 @@ function AudioPlayerInner({
     music,
 }: AudioPlayerProps): ReactElement | null {
     const settings = useSettingsStore();
+    const isAdmin = useAdminStore(s => s.isAdmin);
     const ytStatusVisible = settings.ytStatusVisible;
+    const ytAdminControlsEnabled = settings.ytAdminControlsEnabled;
 
     const videoId = (status?.type === 'playing' && (status.musicId || status.videoId))
         || (status?.type === 'paused' && (status.musicId || status.videoId))
@@ -166,6 +171,16 @@ function AudioPlayerInner({
         return { current, total, color };
     }, [duration, isAdvertisement, pausedIndicator, localCurrentTime]);
 
+    const emitAdminControl = useCallback((action: 'toggle_play_pause' | 'prev' | 'next' | 'skip') => {
+        try {
+            const socket = getSocket();
+            if (!socket.connected) socket.connect();
+            socket.emit('admin_youtube_control', { action });
+        } catch {
+            return;
+        }
+    }, []);
+
     if (!status || !ytStatusVisible || visibility === 'hidden') return null;
 
     const progressPercent = duration != undefined && duration > 0
@@ -173,6 +188,7 @@ function AudioPlayerInner({
         : 0;
 
     const href = videoId ? watchUrl(videoId) : undefined;
+    const showAdminControls = isAdmin && ytAdminControlsEnabled;
 
     return (
         <motion.div
@@ -213,6 +229,55 @@ function AudioPlayerInner({
                     <div className='text-xs sm:text-sm text-gray-600 dark:text-gray-400 flex justify-between items-center'>
                         <span className={timeTexts.color}>{timeTexts.current}</span>
                         <span className={timeTexts.color}>{timeTexts.total}</span>
+                    </div>
+                )}
+
+                {showAdminControls && (
+                    <div className='grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1'>
+                        <Button
+                            type='button'
+                            variant='outline'
+                            size='sm'
+                            className='w-full'
+                            onClick={() => emitAdminControl('prev')}
+                            aria-label='前の動画'
+                        >
+                            <SkipBack className='h-4 w-4' />
+                            <span>前へ</span>
+                        </Button>
+                        <Button
+                            type='button'
+                            variant='outline'
+                            size='sm'
+                            className='w-full'
+                            onClick={() => emitAdminControl('toggle_play_pause')}
+                            aria-label={pausedIndicator ? '再生' : '停止'}
+                        >
+                            {pausedIndicator ? <Play className='h-4 w-4' /> : <Pause className='h-4 w-4' />}
+                            <span>{pausedIndicator ? '再生' : '停止'}</span>
+                        </Button>
+                        <Button
+                            type='button'
+                            variant='outline'
+                            size='sm'
+                            className='w-full'
+                            onClick={() => emitAdminControl('next')}
+                            aria-label='次の動画'
+                        >
+                            <SkipForward className='h-4 w-4' />
+                            <span>次へ</span>
+                        </Button>
+                        <Button
+                            type='button'
+                            variant='outline'
+                            size='sm'
+                            className='w-full'
+                            onClick={() => emitAdminControl('skip')}
+                            aria-label='スキップ'
+                        >
+                            <FastForward className='h-4 w-4' />
+                            <span>スキップ</span>
+                        </Button>
                     </div>
                 )}
             </div>

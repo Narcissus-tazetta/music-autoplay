@@ -1,13 +1,22 @@
 import { useSettingsSync } from '@/app/hooks/useSettingsSync';
+import { useAdminStore } from '@/shared/stores/adminStore';
 import { Label } from '@shadcn/ui/label';
 import { ToggleGroup } from '@shadcn/ui/toggle-group';
-import { Eye, EyeOff, List, MoonIcon, Play, SparklesIcon, SunIcon } from 'lucide-react';
+import { Eye, EyeOff, List, MoonIcon, Play, Settings2, SparklesIcon, SunIcon } from 'lucide-react';
 import { type FC, memo } from 'react';
 import { type Theme, useTheme } from 'remix-themes';
 
 const SettingsInner: FC = () => {
     const [theme, setTheme, meta] = useTheme();
-    const { ytStatusVisible, setYtStatusVisible, ytStatusMode, setYtStatusMode } = useSettingsSync();
+    const {
+        ytStatusVisible,
+        setYtStatusVisible,
+        ytStatusMode,
+        setYtStatusMode,
+        ytAdminControlsEnabled,
+        setYtAdminControlsEnabled,
+    } = useSettingsSync();
+    const isAdmin = useAdminStore(s => s.isAdmin);
 
     return (
         <div className='flex flex-col gap-4 p-3 sm:p-4'>
@@ -104,6 +113,40 @@ const SettingsInner: FC = () => {
                     <span className='text-sm sm:text-base'>非表示</span>
                 </ToggleGroup.Item>
             </ToggleGroup>
+
+            {isAdmin && (
+                <>
+                    <Label className='flex items-center gap-2 text-sm sm:text-base bg-[repeating-linear-gradient(315deg,var(--pattern-fg)_0,var(--pattern-fg)_1px,transparent_0,transparent_50%)]'>
+                        Admin Controls
+                    </Label>
+                    <ToggleGroup
+                        type='single'
+                        variant='outline'
+                        unselectable='off'
+                        value={ytAdminControlsEnabled ? 'on' : 'off'}
+                        onValueChange={value => {
+                            if (value === undefined) return;
+                            setYtAdminControlsEnabled(value === 'on');
+                        }}
+                        className='w-full'
+                    >
+                        <ToggleGroup.Item
+                            value='on'
+                            className='w-full h-11 sm:h-10 flex items-center justify-center gap-2 touch-target'
+                        >
+                            <Settings2 className='w-5 h-5 sm:w-4 sm:h-4' />
+                            <span className='text-sm sm:text-base'>ON</span>
+                        </ToggleGroup.Item>
+                        <ToggleGroup.Item
+                            value='off'
+                            className='w-full h-11 sm:h-10 flex items-center justify-center gap-2 touch-target'
+                        >
+                            <Settings2 className='w-5 h-5 sm:w-4 sm:h-4' />
+                            <span className='text-sm sm:text-base'>OFF</span>
+                        </ToggleGroup.Item>
+                    </ToggleGroup>
+                </>
+            )}
         </div>
     );
 };

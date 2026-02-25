@@ -42,7 +42,9 @@ export const action = async ({ request }: LoaderFunctionArgs) => {
         const cookie = request.headers.get('Cookie') || '';
         const sess = await loginSession.getSession(cookie);
         const user = sess.get('user');
+        const isAdminSession = sess.get('admin') === true;
 
+        if ((!user || typeof user.id !== 'string') && isAdminSession) return { __status: 204 } as { __status: number };
         if (!user || typeof user.id !== 'string') return { __status: 401 } as { __status: number };
 
         const data = (await request.json()) as unknown;
@@ -50,6 +52,7 @@ export const action = async ({ request }: LoaderFunctionArgs) => {
 
         const SettingsSchema = z
             .object({
+                ytAdminControlsEnabled: z.boolean().optional(),
                 ytStatusMode: z.enum(['compact', 'player']).optional(),
                 ytStatusVisible: z.boolean().optional(),
             })

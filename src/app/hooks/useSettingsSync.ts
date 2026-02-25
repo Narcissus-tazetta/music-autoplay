@@ -8,17 +8,21 @@ export function useSettingsSync() {
     const setYtStatusVisible = settings.setYtStatusVisible;
     const ytStatusMode: YtStatusMode = settings.ytStatusMode;
     const setYtStatusMode = settings.setYtStatusMode;
+    const ytAdminControlsEnabled = settings.ytAdminControlsEnabled;
+    const setYtAdminControlsEnabled = settings.setYtAdminControlsEnabled;
     const loadFromServer = settings.loadFromServer;
     const syncToServer = settings.syncToServer;
 
     const hasLoadedRef = useRef(false);
     const prevValueRef = useRef(ytStatusVisible);
     const prevModeRef = useRef<YtStatusMode>(ytStatusMode);
+    const prevAdminControlsEnabledRef = useRef(ytAdminControlsEnabled);
 
     useEffect(() => {
         if (!hasLoadedRef.current) {
             hasLoadedRef.current = true;
             prevValueRef.current = ytStatusVisible;
+            prevAdminControlsEnabledRef.current = ytAdminControlsEnabled;
             if (typeof loadFromServer === 'function') loadFromServer();
             return;
         }
@@ -32,11 +36,18 @@ export function useSettingsSync() {
             prevModeRef.current = ytStatusMode;
             if (typeof syncToServer === 'function') syncToServer();
         }
-    }, [loadFromServer, syncToServer, ytStatusVisible, ytStatusMode]);
+
+        if (prevAdminControlsEnabledRef.current !== ytAdminControlsEnabled) {
+            prevAdminControlsEnabledRef.current = ytAdminControlsEnabled;
+            if (typeof syncToServer === 'function') syncToServer();
+        }
+    }, [loadFromServer, syncToServer, ytAdminControlsEnabled, ytStatusVisible, ytStatusMode]);
 
     return {
+        setYtAdminControlsEnabled,
         setYtStatusMode,
         setYtStatusVisible,
+        ytAdminControlsEnabled,
         ytStatusMode,
         ytStatusVisible,
     };
