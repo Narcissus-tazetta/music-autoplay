@@ -35,14 +35,16 @@ jobs:
         if: ${{ github.event.inputs.generate-xml == 'true' }}
         run: |
           echo "Generating updates.xml"
-          echo "<updates><update>Example Update</update></updates>" > updates.xml
+          mkdir -p ./gh-pages
+          echo "<updates><update>Example Update</update></updates>" > ./gh-pages/updates.xml
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         if: ${{ github.event.inputs.generate-xml == 'true' }}
         with:
-          path: "./updates.xml"
+          path: "./gh-pages"
       - name: Deploy to GitHub Pages
         id: deployment
+        if: success() && github.event.inputs.generate-xml == 'true'
         uses: actions/deploy-pages@v4
       - name: Deploy to Render
         if: success() && github.event.inputs.render-deploy == 'true'
