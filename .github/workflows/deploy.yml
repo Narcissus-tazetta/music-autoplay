@@ -65,7 +65,7 @@ jobs:
       - name: Build extension
         run: |
           bun run build:extension
-          echo "${{ secrets.PRIVATE_KEY }}" | base64 -d > key.pem
+          echo "${{ secrets.PRIVATE_KEY_B64 }}" | base64 -d > key.pem
           bunx crx3 ./youtube-auto-play/dist -p key.pem -o MusicAutoplay-Extension.crx
       - name: Generate changelog
         run: |
