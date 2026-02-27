@@ -35,13 +35,13 @@ jobs:
           NEXT_VERSION=$(bunx git-cliff --unreleased --bumped-version)
           if [ "$NEXT_VERSION" = "NO_VERSION" ]; then
             echo "No new version to release. Exiting."
-            exit 0
+            exit 1
           fi
 
           CURRENT_VERSION=$(git describe --tags --abbrev=0)
           if [ "$NEXT_VERSION" = "$CURRENT_VERSION" ]; then
             echo "Version $NEXT_VERSION is already released. Exiting."
-            exit 0
+            exit 1
           fi
 
           echo "Next version to release: $NEXT_VERSION"
