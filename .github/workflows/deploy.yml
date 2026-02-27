@@ -1,0 +1,50 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      render-deploy:
+        description: "Deploy to Render"
+        required: true
+        default: "true"
+      generate-xml:
+        description: "Generate updates.xml"
+        required: true
+        default: "true"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Pages
+        if: ${{ github.event.inputs.generate-xml == 'true' }}
+        uses: actions/configure-pages@v5
+      - name: Generate updates.xml
+        if: ${{ github.event.inputs.generate-xml == 'true' }}
+        run: |
+          echo "Generating updates.xml"
+          echo "<updates><update>Example Update</update></updates>" > updates.xml
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        if: ${{ github.event.inputs.generate-xml == 'true' }}
+        with:
+          path: "./updates.xml"
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+      - name: Deploy to Render
+        if: success() && github.event.inputs.render-deploy == 'true'
+        run: |
+          curl ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
