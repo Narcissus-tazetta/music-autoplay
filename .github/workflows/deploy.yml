@@ -53,8 +53,8 @@ jobs:
 
           mkdir -p ./gh-pages
           cp updates.xml ./gh-pages/updates.xml
-          sed -i "s/\$ASSET_VERSION\$/${ASSET_VERSION}/g" ./gh-pages/updates.xml
-          sed -i "s/\$EXTENSION_VERSION\$/${EXTENSION_VERSION}/g" ./gh-pages/updates.xml
+          sed -i "s/\$ASSET_VERSION/${ASSET_VERSION}/g" ./gh-pages/updates.xml
+          sed -i "s/\$EXTENSION_VERSION/${EXTENSION_VERSION}/g" ./gh-pages/updates.xml
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
