@@ -27,9 +27,6 @@ export interface InitSocketServerResult {
     runtime: SocketRuntime;
     socketPath: string;
 }
-/**
- * socket.io を初期化し、永続化されたデータを復元し、ランタイムを設定して接続ハンドラを登録しています。
- */
 export async function initSocketServer(
     server: HttpServer,
     deps: {

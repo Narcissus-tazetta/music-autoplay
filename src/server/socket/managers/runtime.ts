@@ -45,7 +45,6 @@ export class SocketRuntime {
 
     createManager(): SocketManager {
         if (!this.manager) {
-            // Create a safe emit function for the manager
             const managerEmitter = createSocketEmitter(this.ioGetter, {
                 source: 'SocketManager',
             });

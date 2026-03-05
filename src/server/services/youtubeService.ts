@@ -53,6 +53,7 @@ export class YouTubeService {
     private requestQueueMax = 500;
     private isProcessingQueue = false;
     private domPurify: ReturnType<typeof DOMPurify>;
+    private cacheSizeProvider: () => number;
 
     constructor(
         apiKey?: string,
@@ -68,6 +69,7 @@ export class YouTubeService {
             );
         }
         this.youtube = google.youtube({ auth: key, version: 'v3' });
+        this.cacheSizeProvider = () => this.cache.size;
         const configuredQueueMax = configService?.getNumber('YOUTUBE_REQUEST_QUEUE_MAX');
         if (typeof configuredQueueMax === 'number' && configuredQueueMax > 0) this.requestQueueMax = configuredQueueMax;
         this.cleanupTimer = setInterval(
@@ -112,7 +114,29 @@ export class YouTubeService {
                 return adapter;
             };
             this.cache = adapter;
+            this.cacheSizeProvider = () => {
+                if (typeof cacheService.getStats === 'function') return cacheService.getStats().size;
+                return this.cache.size;
+            };
         }
+    }
+
+    getDiagnostics(): {
+        cacheSize: number;
+        defaultTtlMs: number;
+        isProcessingQueue: boolean;
+        maxEntries: number;
+        requestQueueLength: number;
+        requestQueueMax: number;
+    } {
+        return {
+            cacheSize: this.cacheSizeProvider(),
+            defaultTtlMs: this.defaultTtl,
+            isProcessingQueue: this.isProcessingQueue,
+            maxEntries: this.maxEntries,
+            requestQueueLength: this.requestQueue.length,
+            requestQueueMax: this.requestQueueMax,
+        };
     }
 
     private cleanupExpired() {

@@ -69,8 +69,6 @@ export class SocketServerBuilder {
             rateLimiterManager.register('http', httpRateLimiter);
             rateLimiterManager.scheduleCleanup();
 
-            // Register rateLimiter in DI container for factory access
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
             const { container } = require('../di/container') as {
                 container: {
                     register: (token: string, factory: () => unknown) => void;

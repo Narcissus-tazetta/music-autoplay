@@ -28,6 +28,13 @@ export class CacheService<V = unknown> {
     clear() {
         this.map.clear();
     }
+
+    getStats(): { size: number; maxEntries: number } {
+        return {
+            size: this.map.size,
+            maxEntries: this.maxEntries,
+        };
+    }
 }
 
 export default CacheService;

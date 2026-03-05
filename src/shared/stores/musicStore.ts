@@ -75,8 +75,6 @@ interface MusicStore {
 export const useMusicStore = create<MusicStore>(set => {
     let socket: Socket<S2C, C2S> | null;
     const STORAGE_KEY = 'music-auto-play:musics:v1';
-
-    // Extracted logic for handling remote status updates
     const handleRemoteStatusUpdate = (incomingState: RemoteStatusWithMeta) => {
         const meta = incomingState._meta;
 
@@ -98,8 +96,6 @@ export const useMusicStore = create<MusicStore>(set => {
                 const PAUSE_TTL_MS = 60_000;
                 const PAUSE_ACCEPT_WINDOW_MS = 5_000;
                 const PAUSE_EPSILON_S = 0.5;
-
-                // record authoritative pause
                 if (statusWithoutMeta.type === 'paused') {
                     if (typeof statusWithoutMeta.currentTime === 'number') {
                         return {
@@ -117,8 +113,6 @@ export const useMusicStore = create<MusicStore>(set => {
                             },
                         };
                     }
-
-                    // paused but no explicit currentTime: fall back to previous known currentTime if available
                     const fallbackTime = (state.remoteStatus
                             && (state.remoteStatus.type === 'playing' || state.remoteStatus.type === 'paused')
                             && typeof (state.remoteStatus as any).currentTime === 'number')
@@ -137,7 +131,6 @@ export const useMusicStore = create<MusicStore>(set => {
                     };
                 }
 
-                // if recent authoritative pause exists, suppress transient playing updates that are within epsilon and time window
                 const now = Date.now();
                 if (
                     statusWithoutMeta.type === 'playing'
@@ -168,9 +161,7 @@ export const useMusicStore = create<MusicStore>(set => {
                         }
                         return {};
                     }
-                    // if incoming playing is clearly ahead, clear pause
                     if (!isNaN(incomingTime) && incomingTime > pause.time + SEEK_THRESHOLD) {
-                        // clear pause and accept
                         return {
                             lastSequenceNumber: meta.sequenceNumber,
                             lastServerTimestamp: meta.serverTimestamp,

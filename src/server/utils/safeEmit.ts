@@ -114,7 +114,6 @@ export function safeEmitSync<K extends EventName>(
 
     try {
         if ('emit' in emitter && typeof emitter.emit === 'function') {
-            // cast emitter.emit to accept unknown args to avoid unsafe-argument errors
             (emitter.emit as (...a: unknown[]) => void)(
                 event,
                 ...(emitArgs as unknown as unknown[]),

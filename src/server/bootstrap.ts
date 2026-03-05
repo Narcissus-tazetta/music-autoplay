@@ -28,6 +28,7 @@ export interface BootstrapResult {
     fileStore: Store;
     socketServer: InstanceType<typeof SocketServerInstance>;
     metricsManager: MetricsManager;
+    youtubeService: YouTubeService;
 }
 
 export async function bootstrap(): Promise<BootstrapResult> {
@@ -121,12 +122,14 @@ export async function bootstrap(): Promise<BootstrapResult> {
         }
     });
 
-    const diagEnabled = configService.getBoolean('DIAG_MEM_ENABLED', false);
-    const diagIntervalMs = configService.getNumber('DIAG_MEM_LOG_INTERVAL_MS', 0) ?? 0;
+    const diagEnabled = configService.getBoolean('DIAG_MEM_ENABLED', true);
+    const diagIntervalMs = configService.getNumber('DIAG_MEM_LOG_INTERVAL_MS', 30_000) ?? 30_000;
     if (diagEnabled && diagIntervalMs > 0) {
         const timer = setInterval(() => {
             try {
                 const mem = process.memoryUsage();
+                const socketDiagnostics = socketServer.getDiagnostics();
+                const youtubeDiagnostics = youtubeService.getDiagnostics();
                 const rateLimiterStats = RateLimiterManager.getInstance().getStats();
                 const totalRateLimiterKeys = rateLimiterStats.reduce((sum: number, s) => sum + s.totalKeys, 0);
                 const totalRateLimiterAttempts = rateLimiterStats.reduce((sum: number, s) => sum + s.totalAttempts, 0);
@@ -138,9 +141,25 @@ export async function bootstrap(): Promise<BootstrapResult> {
                     heapUsed: mem.heapUsed,
                     rss: mem.rss,
                     uptimeSec: Math.round(process.uptime()),
-                    musicDBSize: socketServer.musicDB?.size ?? 0,
+                    musicDBSize: socketDiagnostics.musicDBSize,
                     rateLimiterKeys: totalRateLimiterKeys,
                     rateLimiterAttempts: totalRateLimiterAttempts,
+                    socketConnectedSockets: socketDiagnostics.connectedSockets,
+                    socketRoomCount: socketDiagnostics.roomCount,
+                    socketTimerCount: socketDiagnostics.timerCount,
+                    socketWindowCloseLastEventCount: socketDiagnostics.windowClose.lastEventCount,
+                    socketWindowCloseTimerCount: socketDiagnostics.windowClose.timerCount,
+                    socketRateLimiterKeys: socketDiagnostics.rateLimiter.socket.totalKeys,
+                    socketRateLimiterAttempts: socketDiagnostics.rateLimiter.socket.totalAttempts,
+                    httpRateLimiterKeys: socketDiagnostics.rateLimiter.http.totalKeys,
+                    httpRateLimiterAttempts: socketDiagnostics.rateLimiter.http.totalAttempts,
+                    youtubeCacheSize: youtubeDiagnostics.cacheSize,
+                    youtubeMaxEntries: youtubeDiagnostics.maxEntries,
+                    youtubeDefaultTtlMs: youtubeDiagnostics.defaultTtlMs,
+                    youtubeRequestQueueLength: youtubeDiagnostics.requestQueueLength,
+                    youtubeRequestQueueMax: youtubeDiagnostics.requestQueueMax,
+                    youtubeQueueProcessing: youtubeDiagnostics.isProcessingQueue,
+                    rateLimiterStats,
                 });
             } catch (error) {
                 logger.warn('diag.memory logging failed', { error: error });
@@ -151,5 +170,5 @@ export async function bootstrap(): Promise<BootstrapResult> {
         logger.info('diag.memory logging enabled', { intervalMs: diagIntervalMs });
     }
 
-    return { appShutdownHandlers, fileStore, metricsManager, socketServer };
+    return { appShutdownHandlers, fileStore, metricsManager, socketServer, youtubeService };
 }

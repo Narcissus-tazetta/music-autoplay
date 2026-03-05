@@ -25,7 +25,12 @@ const port = typeof portCandidate === 'number' && !Number.isNaN(portCandidate)
     : safeNumber(SERVER_ENV.PORT, 3000);
 
 if (config.nodeEnv !== 'test') replaceConsoleWithLogger();
-const { appShutdownHandlers, socketServer, metricsManager } = await bootstrap();
+const {
+    appShutdownHandlers,
+    socketServer,
+    metricsManager,
+    youtubeService,
+} = await bootstrap();
 
 const server = app.listen(port, () => {
     const envName = config.nodeEnv;
@@ -249,12 +254,8 @@ app.post('/api/admin/login', express.json(), (req, res) => {
             const body = req.body as Record<string, unknown>;
             const username = body.username;
             const password = body.password;
-
-            // Get client IP for rate limiting (prevents username enumeration)
             const clientIp = req.ip || req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown';
             const rateLimitKey = typeof clientIp === 'string' ? clientIp : clientIp[0] || 'unknown';
-
-            // Check rate limit BEFORE any validation (prevents username enumeration)
             if (adminRateLimiter.isLocked(rateLimitKey)) {
                 const retryAfter = adminRateLimiter.getRetryAfterSeconds(rateLimitKey);
                 logger.info('Admin login attempt from rate-limited IP', { ip: rateLimitKey });
@@ -272,7 +273,6 @@ app.post('/api/admin/login', express.json(), (req, res) => {
                 return;
             }
 
-            // Enforce maximum length for username and password
             const MAX_CREDENTIAL_LENGTH = 256;
             if (username.length > MAX_CREDENTIAL_LENGTH || password.length > MAX_CREDENTIAL_LENGTH) {
                 adminRateLimiter.recordFailure(rateLimitKey);
@@ -280,13 +280,10 @@ app.post('/api/admin/login', express.json(), (req, res) => {
                 return;
             }
 
-            // CSRF PROTECTION: Check origin/referer to prevent cross-origin requests
-            // This endpoint uses cookies for session state, so CSRF protection is essential
             const origin = req.headers.origin || req.headers.referer;
             const clientUrl = config.getString('CLIENT_URL') || SERVER_ENV.CLIENT_URL;
             const allowedOrigin = new URL(clientUrl).origin;
 
-            // Require origin header for CSRF protection
             if (!origin) {
                 adminRateLimiter.recordFailure(rateLimitKey);
                 logger.warn('CSRF protection: Missing origin header');
@@ -297,7 +294,6 @@ app.post('/api/admin/login', express.json(), (req, res) => {
                 return;
             }
 
-            // Strict origin validation (exact match)
             const requestOrigin = origin.startsWith('http') ? new URL(origin).origin : origin;
             if (requestOrigin !== allowedOrigin) {
                 adminRateLimiter.recordFailure(rateLimitKey);
@@ -378,10 +374,16 @@ app.get('/api/admin/status', (req, res) => {
     void handleStatus();
 });
 
-const isDiagnosticsEnabled = () => config.getString('DIAG_MEM_ENABLED') === 'true';
+const toBoolean = (raw: string, fallback: boolean): boolean => {
+    const lower = raw.toLowerCase();
+    if (lower === 'true' || lower === '1' || lower === 'yes') return true;
+    if (lower === 'false' || lower === '0' || lower === 'no') return false;
+    return fallback;
+};
+
+const isDiagnosticsEnabled = () => toBoolean(config.getString('DIAG_MEM_ENABLED'), true);
 const requireAdminSecret = () => {
-    const raw = config.getString('DIAG_MEM_REQUIRE_ADMIN_SECRET');
-    return raw !== 'false';
+    return toBoolean(config.getString('DIAG_MEM_REQUIRE_ADMIN_SECRET'), false);
 };
 
 async function isAdminSession(req: express.Request): Promise<boolean> {
@@ -418,6 +420,7 @@ app.get('/api/admin/diag/memory', (req, res) => {
 
             const mem = process.memoryUsage();
             const socketDiagnostics = socketServer.getDiagnostics();
+            const youtubeDiagnostics = youtubeService.getDiagnostics();
             const rateLimiterStats = RateLimiterManager.getInstance().getStats();
 
             res.json({
@@ -435,6 +438,7 @@ app.get('/api/admin/diag/memory', (req, res) => {
                         pid: process.pid,
                     },
                     socket: socketDiagnostics,
+                    youtube: youtubeDiagnostics,
                     rateLimiters: rateLimiterStats,
                     timestamp: new Date().toISOString(),
                 },

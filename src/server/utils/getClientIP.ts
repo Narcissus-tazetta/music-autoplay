@@ -12,7 +12,6 @@ export function getClientIP(request: Request): string {
         const cfConnectingIP = request.headers.get('cf-connecting-ip');
         if (cfConnectingIP) return cfConnectingIP.trim();
     } catch {
-        // ignore
     }
 
     return 'unknown';

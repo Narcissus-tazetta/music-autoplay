@@ -49,16 +49,16 @@ const serverEnvSchema = z
             if (v == undefined || v === '') return undefined;
             if (typeof v === 'string') return v === 'true' ? true : (v === 'false' ? false : undefined);
             return undefined;
-        }, z.boolean().optional()),
+        }, z.boolean().optional().default(true)),
         DIAG_MEM_LOG_INTERVAL_MS: z.preprocess(
             v => toNumber(v),
-            z.number().int().nonnegative().default(0),
+            z.number().int().positive().default(30_000),
         ),
         DIAG_MEM_REQUIRE_ADMIN_SECRET: z.preprocess(v => {
             if (v == undefined || v === '') return undefined;
             if (typeof v === 'string') return v === 'true' ? true : (v === 'false' ? false : undefined);
             return undefined;
-        }, z.boolean().optional().default(true)),
+        }, z.boolean().optional().default(false)),
         MONGODB_URI: z.string().optional(),
         MONGODB_DB_NAME: z.string().optional().default('musicReq'),
         MONGODB_COLLECTION: z.string().optional().default('musicRequests'),
