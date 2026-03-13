@@ -1,4 +1,6 @@
 import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
+import type { HistoryQuery } from '@/shared/types/history';
+import type { HistoryService } from '../../history/historyService';
 import logger from '../../logger';
 import type MetricsManager from '../../services/metricsManager';
 import ServiceResolver from '../../utils/serviceResolver';
@@ -56,6 +58,17 @@ export function createGetRemoteStatusHandler(
                 logger.warn('getRemoteStatus handler failed', { error });
                 return { type: 'closed' };
             }
+        },
+        logPayload: false,
+        logResponse: false,
+    });
+}
+
+export function createGetHistoryHandler(historyService: HistoryService) {
+    return createSocketEventHandler({
+        event: 'getHistory',
+        handler(payload: HistoryQuery | undefined) {
+            return historyService.query(payload);
         },
         logPayload: false,
         logResponse: false,

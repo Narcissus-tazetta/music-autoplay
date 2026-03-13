@@ -27,7 +27,7 @@ function MusicFormInner({
             <Card.Content className='p-0'>
                 <div className='flex flex-col items-stretch sm:items-center gap-3 sm:gap-4'>
                     <Input
-                        leftIcon={<LinkIcon size={16} className='sm:w-[18px] sm:h-[18px]' />}
+                        leftIcon={<LinkIcon size={16} className='sm:w-4.5 sm:h-4.5' />}
                         name={urlFieldName}
                         placeholder='https://www.youtube.com/watch?v=...'
                         autoComplete='off'

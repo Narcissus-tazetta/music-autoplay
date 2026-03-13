@@ -10,6 +10,7 @@ export interface MusicTableProps {
     isAdmin: boolean;
     isDeleting: boolean;
     onDelete: (id: string, asAdmin?: boolean) => void;
+    headerAction?: React.ReactNode;
 }
 
 function MusicTableInner({
@@ -18,6 +19,7 @@ function MusicTableInner({
     isAdmin,
     isDeleting,
     onDelete,
+    headerAction,
 }: MusicTableProps) {
     return (
         <Table className='overflow-hidden my-4 sm:my-6 table-fixed'>
@@ -27,8 +29,8 @@ function MusicTableInner({
                         No.
                     </Table.Head>
                     <Table.Head className='text-sm sm:text-base'>楽曲名</Table.Head>
-                    <Table.Head className='w-20 sm:w-24 text-right'>
-                        <span className='sr-only'>操作</span>
+                    <Table.Head className='w-12 sm:w-16 text-right align-middle'>
+                        {headerAction ? headerAction : <span className='sr-only'>操作</span>}
                     </Table.Head>
                 </Table.Row>
             </Table.Header>

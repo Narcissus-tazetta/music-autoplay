@@ -1,4 +1,5 @@
 import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
+import type { HistoryItem, HistoryQuery } from '@/shared/types/history';
 
 type ReplyOptions = { formErrors?: string[] } | Record<string, unknown>;
 
@@ -16,6 +17,7 @@ export interface EventMap {
         cb?: (res: ReplyOptions) => void,
     ];
     getAllMusics: [cb: (musics: Music[]) => void];
+    getHistory: [payload: HistoryQuery | undefined, cb: (items: HistoryItem[]) => void];
     getRemoteStatus: [cb: (state: RemoteStatus) => void];
     adminAuth: [
         token: string,
@@ -49,6 +51,7 @@ export interface EventMap {
     // server -> client (emit)
     musicAdded: [payload: unknown];
     musicRemoved: [id: string];
+    historyAdded: [item: HistoryItem];
     remoteStatusUpdated: [RemoteStatus];
     initMusics: [Array<Music & { url: string }>];
     url_list: [Array<Music & { url: string }>];

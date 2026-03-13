@@ -2,6 +2,7 @@ import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
 import { isRecord } from '@/shared/utils/typeGuards';
 import { extractYoutubeId } from '@/shared/utils/youtube';
 import type { Socket } from 'socket.io';
+import { getHistoryService, type HistoryService } from '../../history/historyService';
 import type { AppLogger } from '../../logger';
 import type { MusicEventEmitter } from '../../music/emitter/musicEventEmitter';
 import type { MusicRepository } from '../../music/repository/musicRepository';
@@ -59,9 +60,31 @@ export function setupExtensionEventHandlers(
     repository: MusicRepository,
     emitter: MusicEventEmitter,
     youtubeService: YouTubeService,
+    historyService: HistoryService = getHistoryService(),
 ) {
     const extensionSocketOn = extractSocketOn(socket);
     const socketContext = { socketId: socket.id };
+
+    const recordHistory = (music: Music | undefined, reason: string) => {
+        if (!music) return;
+        try {
+            const historyItem = historyService.recordPlayed(music);
+            const emitResult = emitter.emitHistoryAdded(historyItem);
+            if (!emitResult.ok) {
+                log.warn('historyAdded emit failed', {
+                    error: emitResult.error,
+                    musicId: music.id,
+                    reason,
+                });
+            }
+        } catch (error) {
+            log.warn('history record failed', {
+                error,
+                musicId: music.id,
+                reason,
+            });
+        }
+    };
 
     socket.on('disconnect', reason => {
         try {
@@ -475,6 +498,7 @@ export function setupExtensionEventHandlers(
                     const preList = repository.list();
                     const preIdx = preList.findIndex(m => m.id === resolvedVideoId);
                     if (preIdx === -1) return;
+                    const endedMusic = preList[preIdx];
 
                     let nextId: string | undefined;
                     if (preList.length > 1) {
@@ -485,6 +509,7 @@ export function setupExtensionEventHandlers(
 
                     const rmRes = repository.remove(resolvedVideoId);
                     if (rmRes.ok) {
+                        recordHistory(endedMusic, 'paused_ended');
                         emitter.emitMusicRemoved(resolvedVideoId);
                         emitter.emitUrlList(repository.buildCompatList());
                         repository.persistRemove(resolvedVideoId);
@@ -934,6 +959,7 @@ export function setupExtensionEventHandlers(
                 const preRemoveList = repository.list();
                 const preIndex = preRemoveList.findIndex(m => m.id === videoId);
                 let nextCandidateId: string | undefined;
+                const endedMusic = preIndex !== -1 ? preRemoveList[preIndex] : undefined;
 
                 if (preIndex === -1) {
                     log.info('video_ended: ignored (video not in repository)', {
@@ -959,6 +985,7 @@ export function setupExtensionEventHandlers(
 
                 const removeResult = repository.remove(videoId);
                 if (removeResult.ok) {
+                    recordHistory(endedMusic, 'video_ended');
                     const emitResult = emitter.emitMusicRemoved(videoId);
                     if (!emitResult.ok) {
                         log.warn('video_ended: failed to emit musicRemoved', {

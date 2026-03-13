@@ -1,6 +1,10 @@
 export function createFakeEmitter() {
     const calls: Array<{ event: string; payload: any }> = [];
     return {
+        emitHistoryAdded(payload: any) {
+            calls.push({ event: 'historyAdded', payload });
+            return { ok: true };
+        },
         emitMusicRemoved(payload: any) {
             calls.push({ event: 'musicRemoved', payload });
             return { ok: true };

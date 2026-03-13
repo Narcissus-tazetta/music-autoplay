@@ -4,17 +4,21 @@ import usePlayingMusic from '@/app/hooks/usePlayingMusic';
 import { useSettingsSync } from '@/app/hooks/useSettingsSync';
 import { useUiActionExecutor } from '@/app/hooks/useUiActionExecutor';
 import { StatusBadge } from '@/shared/components';
+import { useHistoryStore } from '@/shared/stores/historyStore';
 import { useMusicStore } from '@/shared/stores/musicStore';
 import { safeExecuteAsync } from '@/shared/utils/errors';
 import { err as makeErr } from '@/shared/utils/errors/result-handlers';
 import { respondWithResult } from '@/shared/utils/httpResponse';
 import { watchUrl } from '@/shared/utils/youtube';
+import { Button } from '@shadcn/ui/button';
 import { AnimatePresence } from 'framer-motion';
+import { History as HistoryIcon } from 'lucide-react';
 import { createHash } from 'node:crypto';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLoaderData } from 'react-router';
 import type { ActionFunctionArgs } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
+import HistoryView from '~/components/HistoryView';
 import { MusicForm } from '~/components/MusicForm';
 import { MusicTable } from '~/components/MusicTable';
 import { loginSession } from '~/sessions.server';
@@ -69,6 +73,8 @@ export const loader = async ({ request }: ActionFunctionArgs) => {
 
 export default function Home() {
     const { userHash } = useLoaderData<typeof loader>();
+    const [viewMode, setViewMode] = useState<'requests' | 'history'>('requests');
+    const [visibleHistoryCount, setVisibleHistoryCount] = useState(10);
 
     const { musics, remoteStatus } = useMusicStore(
         useShallow(state => ({
@@ -81,11 +87,56 @@ export default function Home() {
     const isAdmin = useAdminStore(s => s.isAdmin);
     const { fetcher, form, fields, isSubmitting, canSubmit, retryAfter } = useMusicForm();
     const { parsedAction } = useFormErrors(fetcher.data);
+    const {
+        items: historyItems,
+        query,
+        from,
+        to,
+        sort,
+        setQuery,
+        setFrom,
+        setTo,
+        setSort,
+        connectSocket: connectHistorySocket,
+        fetchHistory,
+    } = useHistoryStore(
+        useShallow(state => ({
+            connectSocket: state.connectSocket,
+            fetchHistory: state.fetchHistory,
+            from: state.from,
+            items: state.items,
+            query: state.query,
+            setFrom: state.setFrom,
+            setQuery: state.setQuery,
+            setSort: state.setSort,
+            setTo: state.setTo,
+            sort: state.sort,
+            to: state.to,
+        })),
+    );
 
     useUiActionExecutor({
         conformFields: fields,
         parsedAction,
     });
+
+    useEffect(() => {
+        connectHistorySocket();
+    }, [connectHistorySocket]);
+
+    useEffect(() => {
+        if (viewMode !== 'history') return;
+        setVisibleHistoryCount(10);
+        const timer = setTimeout(() => {
+            fetchHistory({
+                from: from || undefined,
+                query: query || undefined,
+                sort,
+                to: to || undefined,
+            });
+        }, 180);
+        return () => clearTimeout(timer);
+    }, [fetchHistory, from, query, sort, to, viewMode]);
 
     const handleDelete = useCallback(
         (id: string, asAdmin?: boolean) => {
@@ -100,8 +151,12 @@ export default function Home() {
         [fetcher],
     );
 
+    const filteredHistoryCount = historyItems.length;
+    const visibleHistoryItems = historyItems.slice(0, visibleHistoryCount);
+    const remainingHistoryCount = Math.max(filteredHistoryCount - visibleHistoryItems.length, 0);
+
     return (
-        <div className='flex flex-col w-full max-w-4xl gap-4 sm:gap-5 px-3 sm:px-4 mt-8 sm:mt-12 pb-6 sm:pb-8'>
+        <div className='flex flex-col w-full max-w-5xl gap-4 sm:gap-5 px-3 sm:px-4 mt-8 sm:mt-12 pb-6 sm:pb-8'>
             <fetcher.Form method='post' action='/api/music/add' id={form.id}>
                 <MusicForm
                     formId={form.id}
@@ -125,13 +180,56 @@ export default function Home() {
                 </AnimatePresence>
             </div>
 
-            <MusicTable
-                musics={musics}
-                userHash={userHash}
-                isAdmin={isAdmin}
-                isDeleting={isSubmitting}
-                onDelete={handleDelete}
-            />
+            {viewMode === 'history'
+                ? (
+                    <HistoryView
+                        filteredHistoryCount={filteredHistoryCount}
+                        visibleHistoryItems={visibleHistoryItems}
+                        remainingHistoryCount={remainingHistoryCount}
+                        query={query}
+                        from={from}
+                        to={to}
+                        sort={sort}
+                        setQuery={setQuery}
+                        setFrom={setFrom}
+                        setTo={setTo}
+                        setSort={setSort}
+                        setViewMode={setViewMode}
+                        setVisibleHistoryCount={setVisibleHistoryCount}
+                    />
+                )
+                : (
+                    <>
+                        <MusicTable
+                            musics={musics}
+                            userHash={userHash}
+                            isAdmin={isAdmin}
+                            isDeleting={isSubmitting}
+                            onDelete={handleDelete}
+                            headerAction={
+                                <Button
+                                    type='button'
+                                    variant='ghost'
+                                    size='icon'
+                                    aria-label='履歴'
+                                    className='h-9 w-9 p-0 rounded-md text-muted-foreground hover:bg-accent/30'
+                                    onClick={() => {
+                                        setViewMode('history');
+                                        setVisibleHistoryCount(10);
+                                        fetchHistory({
+                                            from: from || undefined,
+                                            query: query || undefined,
+                                            sort,
+                                            to: to || undefined,
+                                        });
+                                    }}
+                                >
+                                    <HistoryIcon className='h-4 w-4' />
+                                </Button>
+                            }
+                        />
+                    </>
+                )}
         </div>
     );
 }

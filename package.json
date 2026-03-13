@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "actions": "bun run tsc && bun run lint && bun test",
     "build": "react-router build && bun run scripts/fix-react-dom-server.ts",
     "build:extension": "vite build --config youtube-auto-play/vite.config.ts && node youtube-auto-play/scripts/copy-manifest.js",
     "dev": "bun run --watch src/server/server.ts",

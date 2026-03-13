@@ -1,4 +1,5 @@
 import type { Music } from '@/shared/stores/musicStore';
+import type { HistoryItem } from '@/shared/types/history';
 import type { HandlerError } from '@/shared/utils/errors';
 import { toHandlerError } from '@/shared/utils/errors';
 import type { Result } from '@/shared/utils/errors/result-handlers';
@@ -79,6 +80,20 @@ export class MusicEventEmitter {
                 },
             });
 
+            return ok(undefined);
+        } catch (error: unknown) {
+            return err(toHandlerError(error));
+        }
+    }
+
+    emitHistoryAdded(item: HistoryItem): Result<void, HandlerError> {
+        try {
+            this.emitFn('historyAdded', item, {
+                context: {
+                    identifiers: { musicId: item.id },
+                    operation: 'historyAdded',
+                },
+            });
             return ok(undefined);
         } catch (error: unknown) {
             return err(toHandlerError(error));

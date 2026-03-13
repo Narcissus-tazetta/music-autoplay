@@ -39,7 +39,7 @@ function MusicTitleWithHoverInner({
 }: MusicTitleWithHoverProps) {
     const videoId = music?.id ?? externalVideoId ?? '';
     const title = music?.title ?? externalTitle ?? '';
-    const href = externalHref ?? (music ? watchUrl(music.id) : undefined);
+    const href = externalHref ?? (videoId ? watchUrl(videoId) : undefined);
 
     const [failedIndices, setFailedIndices] = useState<{
         id: string;
@@ -82,14 +82,16 @@ function MusicTitleWithHoverInner({
 
     return (
         <HoverCard>
-            <HoverCardTrigger
-                href={href}
-                target='_blank'
-                rel='noopener noreferrer'
-                className={cn(merged, 'text-sm sm:text-base')}
-                title={title}
-            >
-                {title}
+            <HoverCardTrigger asChild>
+                <a
+                    href={href}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className={cn(merged, 'text-sm sm:text-base')}
+                    title={title}
+                >
+                    {title}
+                </a>
             </HoverCardTrigger>
             <HoverCardContent className='w-80 p-2'>
                 <img

@@ -1,8 +1,10 @@
 import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
+import type { HistoryItem, HistoryQuery } from '@/shared/types/history';
 
 export interface S2C {
     musicAdded(music: Music): void;
     musicRemoved(musicId: string): void;
+    historyAdded(history: HistoryItem): void;
     remoteStatusUpdated(state: RemoteStatus): void;
     initMusics?(musics: (Music & { url: string })[]): void;
     url_list?(musics: (Music & { url: string })[]): void;
@@ -22,6 +24,7 @@ export interface S2C {
 
 export interface C2S {
     getAllMusics(callback: (musics: Music[]) => void): void;
+    getHistory(payload: HistoryQuery | undefined, callback: (items: HistoryItem[]) => void): void;
     getRemoteStatus(callback: (state: RemoteStatus) => void): void;
     adminAuth(
         token: string,

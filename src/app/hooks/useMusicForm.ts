@@ -1,10 +1,10 @@
-import { getMessage } from '@/shared/constants/messages';
 import { AddMusicSchema } from '@/shared/schemas/music';
 import type { SubmissionResult } from '@conform-to/dom';
 import { useForm } from '@conform-to/react';
 import { parseWithZod } from '@conform-to/zod/v4';
 import { useEffect, useRef, useState } from 'react';
 import { useFetcher } from 'react-router';
+import { useMusicSubmissionFeedback } from './useMusicSubmissionFeedback';
 
 interface FetcherData {
     status: 'success' | 'error';
@@ -14,12 +14,13 @@ interface FetcherData {
 
 export function useMusicForm() {
     const fetcher = useFetcher();
-    const hasShownToastRef = useRef(false);
     const lastStateRef = useRef(fetcher.state);
     const [retryAfter, setRetryAfter] = useState(0);
     const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(
         undefined,
     );
+
+    useMusicSubmissionFeedback({ fetcher });
 
     const [form, fields] = useForm({
         lastResult: fetcher.data as SubmissionResult | null | undefined,
@@ -35,33 +36,9 @@ export function useMusicForm() {
         const wasSubmitting = lastStateRef.current !== 'idle';
         const isNowIdle = fetcher.state === 'idle';
         const data = fetcher.data as FetcherData | null | undefined;
+        const errorMessage = typeof data?.error === 'string' ? data.error : undefined;
 
-        if (wasSubmitting && isNowIdle && data?.status === 'success') {
-            if (!hasShownToastRef.current) {
-                hasShownToastRef.current = true;
-                void (async () => {
-                    try {
-                        const mod = await import('@/shared/utils/uiActionExecutor');
-                        mod.executeUiAction(
-                            {
-                                level: 'success',
-                                message: getMessage('SUCCESS_ADDED'),
-                                type: 'showToast',
-                            },
-                            { conformFields: fields as Record<string, unknown> },
-                        );
-                    } catch (error) {
-                        if (import.meta.env.DEV) console.debug('showToast failed', error);
-                    }
-                })();
-            }
-        }
-
-        if (wasSubmitting && isNowIdle && data?.error) {
-            const response = fetcher.data as { error: string };
-            const errorMessage = typeof response.error === 'string'
-                ? response.error
-                : String(response.error);
+        if (wasSubmitting && isNowIdle && errorMessage) {
             const isRateLimitError = errorMessage.includes('レート制限');
 
             if (isRateLimitError) {
@@ -93,28 +70,10 @@ export function useMusicForm() {
                     }, 1000);
                 }
             }
-
-            void (async () => {
-                try {
-                    const mod = await import('@/shared/utils/uiActionExecutor');
-                    mod.executeUiAction(
-                        {
-                            level: 'error',
-                            message: errorMessage,
-                            type: 'showToast',
-                        },
-                        { conformFields: fields as Record<string, unknown> },
-                    );
-                } catch (error) {
-                    if (import.meta.env.DEV) console.debug('showToast failed', error);
-                }
-            })();
         }
 
-        if (fetcher.state === 'submitting') hasShownToastRef.current = false;
-
         lastStateRef.current = fetcher.state;
-    }, [fetcher.state, fetcher.data, fields, retryAfter]);
+    }, [fetcher.state, fetcher.data, retryAfter]);
 
     useEffect(() => {
         return () => {

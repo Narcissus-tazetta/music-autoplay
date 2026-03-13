@@ -1,6 +1,7 @@
 import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
 import type { Socket } from 'socket.io';
 import type { Server as IOServer } from 'socket.io';
+import { getHistoryService } from '../../history/historyService';
 import type { Store } from '../../persistence';
 import type { RateLimiter } from '../../services/rateLimiter';
 import type { YouTubeService } from '../../services/youtubeService';
@@ -9,7 +10,7 @@ import ServiceResolver from '../../utils/serviceResolver';
 import type { SocketManager } from '../managers/manager';
 import { registerBatchHandlers } from './eventHandler';
 import { createMusicHandlers } from './musicHandlers';
-import { createGetAllMusicsHandler, createGetRemoteStatusHandler } from './standardHandlers';
+import { createGetAllMusicsHandler, createGetHistoryHandler, createGetRemoteStatusHandler } from './standardHandlers';
 
 const ADMIN_YT_CONTROL_ACTIONS = new Set([
     'toggle_play_pause',
@@ -42,6 +43,7 @@ export function registerSocketHandlers(
     const resolver = ServiceResolver.getInstance();
 
     const getAllMusicsHandler = createGetAllMusicsHandler(deps.musicDB);
+    const getHistoryHandler = createGetHistoryHandler(getHistoryService());
 
     let getRemoteStatusHandler;
     if (deps.manager) {
@@ -75,6 +77,7 @@ export function registerSocketHandlers(
 
     const handlers = [
         { event: 'getAllMusics', handler: getAllMusicsHandler },
+        { event: 'getHistory', handler: getHistoryHandler },
         ...(getRemoteStatusHandler
             ? [{ event: 'getRemoteStatus', handler: getRemoteStatusHandler }]
             : []),

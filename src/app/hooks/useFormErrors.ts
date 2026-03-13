@@ -26,28 +26,47 @@ const extractDeepestData = (data: unknown): unknown => {
     return data;
 };
 
-const joinErrorArray = (errors: unknown): string | undefined => {
-    if (!Array.isArray(errors)) return undefined;
-    const stringErrors = errors.filter((e): e is string => typeof e === 'string');
-    return stringErrors.length > 0 ? stringErrors.join(' ') : undefined;
+const collectErrorStrings = (value: unknown): string[] => {
+    if (typeof value === 'string') return [value];
+
+    if (Array.isArray(value)) return value.flatMap(item => collectErrorStrings(item));
+
+    if (isRecord(value)) return Object.values(value).flatMap(item => collectErrorStrings(item));
+
+    return [];
+};
+
+const extractErrorString = (value: unknown): string | undefined => {
+    const messages = collectErrorStrings(value).filter(Boolean);
+    return messages.length > 0 ? messages.join(' ') : undefined;
 };
 
 const extractFormErrors = (data: UnknownRecord): FormErrorResult | null => {
     if ('submission' in data && isRecord(data.submission)) {
         const submission = data.submission;
         if ('error' in submission) {
-            const errorString = joinErrorArray(submission.error);
+            const errorString = extractErrorString(submission.error);
+            if (errorString) return { formErrorsString: errorString, parsedAction: undefined };
+        }
+
+        if ('fieldErrors' in submission) {
+            const errorString = extractErrorString(submission.fieldErrors);
             if (errorString) return { formErrorsString: errorString, parsedAction: undefined };
         }
     }
 
     if ('error' in data) {
-        const errorString = joinErrorArray(data.error);
+        const errorString = extractErrorString(data.error);
         if (errorString) return { formErrorsString: errorString, parsedAction: undefined };
     }
 
     if ('formErrors' in data) {
-        const errorString = joinErrorArray(data.formErrors);
+        const errorString = extractErrorString(data.formErrors);
+        if (errorString) return { formErrorsString: errorString, parsedAction: undefined };
+    }
+
+    if ('fieldErrors' in data) {
+        const errorString = extractErrorString(data.fieldErrors);
         if (errorString) return { formErrorsString: errorString, parsedAction: undefined };
     }
 
@@ -78,11 +97,11 @@ export const useFormErrors = (fetcherData: unknown): FormErrorResult => {
 
     if (!isRecord(deepData)) return EMPTY_RESULT;
 
-    const formErrors = extractFormErrors(deepData);
-    if (formErrors) return formErrors;
-
     const apiError = extractApiError(deepData);
     if (apiError) return apiError;
+
+    const formErrors = extractFormErrors(deepData);
+    if (formErrors) return formErrors;
 
     const fallbackError = extractErrorMessage(deepData, { joinWith: ' ' });
     return fallbackError
