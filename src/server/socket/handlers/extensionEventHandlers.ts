@@ -90,6 +90,25 @@ export function setupExtensionEventHandlers(
         try {
             const current = manager.getCurrent();
             if (current.type === 'closed') return;
+
+            const listenersBefore = socket.eventNames().reduce((sum, name) => {
+                try {
+                    return sum + socket.listenerCount(String(name));
+                } catch {
+                    return sum;
+                }
+            }, 0);
+            const cleanupBefore = {
+                authoritativeVideoState: authoritativeVideoState.size,
+                lastAdSnapshotByVideoId: lastAdSnapshotByVideoId.size,
+                lastProgressSnapshotByVideoId: lastProgressSnapshotByVideoId.size,
+                pendingNextByTabId: pendingNextByTabId.size,
+                progressState: progressState.size,
+                socketListenerEvents: socket.eventNames().map(name => String(name)).slice(0, 25),
+                socketListenersTotal: listenersBefore,
+                videoEndDebounce: videoEndDebounce.size,
+            };
+
             manager.update({ type: 'closed' }, 'extension_disconnect');
 
             authoritativeVideoState.clear();
@@ -100,7 +119,28 @@ export function setupExtensionEventHandlers(
             progressState.clear();
             socket.removeAllListeners();
 
+            const listenersAfter = socket.eventNames().reduce((sum, name) => {
+                try {
+                    return sum + socket.listenerCount(String(name));
+                } catch {
+                    return sum;
+                }
+            }, 0);
+
+            const cleanupAfter = {
+                authoritativeVideoState: authoritativeVideoState.size,
+                lastAdSnapshotByVideoId: lastAdSnapshotByVideoId.size,
+                lastProgressSnapshotByVideoId: lastProgressSnapshotByVideoId.size,
+                pendingNextByTabId: pendingNextByTabId.size,
+                progressState: progressState.size,
+                socketListenerEvents: socket.eventNames().map(name => String(name)).slice(0, 25),
+                socketListenersTotal: listenersAfter,
+                videoEndDebounce: videoEndDebounce.size,
+            };
+
             log.info('extension socket disconnected: scheduled remote closed', {
+                cleanupAfter,
+                cleanupBefore,
                 connectionId,
                 reason,
                 socketId: socket.id,

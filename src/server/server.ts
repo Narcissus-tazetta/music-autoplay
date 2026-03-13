@@ -419,6 +419,14 @@ app.get('/api/admin/diag/memory', (req, res) => {
             }
 
             const mem = process.memoryUsage();
+            const processWithInternals = process as NodeJS.Process & {
+                _getActiveHandles?: () => unknown[];
+                _getActiveRequests?: () => unknown[];
+                getActiveResourcesInfo?: () => string[];
+            };
+            const activeResources = processWithInternals.getActiveResourcesInfo?.();
+            const activeHandleCount = processWithInternals._getActiveHandles?.().length;
+            const activeRequestCount = processWithInternals._getActiveRequests?.().length;
             const socketDiagnostics = socketServer.getDiagnostics();
             const youtubeDiagnostics = youtubeService.getDiagnostics();
             const rateLimiterStats = RateLimiterManager.getInstance().getStats();
@@ -434,6 +442,9 @@ app.get('/api/admin/diag/memory', (req, res) => {
                         arrayBuffers: mem.arrayBuffers,
                     },
                     process: {
+                        activeHandleCount,
+                        activeRequestCount,
+                        activeResourcesCount: activeResources?.length,
                         uptimeSec: Math.round(process.uptime()),
                         pid: process.pid,
                     },

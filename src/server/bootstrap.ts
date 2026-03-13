@@ -124,10 +124,50 @@ export async function bootstrap(): Promise<BootstrapResult> {
 
     const diagEnabled = configService.getBoolean('DIAG_MEM_ENABLED', true);
     const diagIntervalMs = configService.getNumber('DIAG_MEM_LOG_INTERVAL_MS', 30_000) ?? 30_000;
+    const processWithInternals = process as NodeJS.Process & {
+        _getActiveHandles?: () => unknown[];
+        _getActiveRequests?: () => unknown[];
+        getActiveResourcesInfo?: () => string[];
+    };
+
+    const collectRuntimeDiagnostics = (): {
+        activeHandleCount?: number;
+        activeRequestCount?: number;
+        activeResourcesCount?: number;
+        activeResourcesTop?: Array<{ count: number; resource: string }>;
+    } => {
+        const activeHandleCount = processWithInternals._getActiveHandles?.().length;
+        const activeRequestCount = processWithInternals._getActiveRequests?.().length;
+        const activeResources = processWithInternals.getActiveResourcesInfo?.();
+
+        if (!activeResources) {
+            return {
+                activeHandleCount,
+                activeRequestCount,
+            };
+        }
+
+        const byType = new Map<string, number>();
+        for (const resourceType of activeResources) byType.set(resourceType, (byType.get(resourceType) ?? 0) + 1);
+
+        const activeResourcesTop = Array.from(byType.entries())
+            .map(([resource, count]) => ({ count, resource }))
+            .toSorted((a, b) => b.count - a.count)
+            .slice(0, 10);
+
+        return {
+            activeHandleCount,
+            activeRequestCount,
+            activeResourcesCount: activeResources.length,
+            activeResourcesTop,
+        };
+    };
+
     if (diagEnabled && diagIntervalMs > 0) {
         const timer = setInterval(() => {
             try {
                 const mem = process.memoryUsage();
+                const runtimeDiagnostics = collectRuntimeDiagnostics();
                 const socketDiagnostics = socketServer.getDiagnostics();
                 const youtubeDiagnostics = youtubeService.getDiagnostics();
                 const rateLimiterStats = RateLimiterManager.getInstance().getStats();
@@ -139,8 +179,16 @@ export async function bootstrap(): Promise<BootstrapResult> {
                     external: mem.external,
                     heapTotal: mem.heapTotal,
                     heapUsed: mem.heapUsed,
+                    pid: process.pid,
+                    platform: process.platform,
+                    processArch: process.arch,
+                    processVersion: process.version,
                     rss: mem.rss,
                     uptimeSec: Math.round(process.uptime()),
+                    activeHandleCount: runtimeDiagnostics.activeHandleCount,
+                    activeRequestCount: runtimeDiagnostics.activeRequestCount,
+                    activeResourcesCount: runtimeDiagnostics.activeResourcesCount,
+                    activeResourcesTop: runtimeDiagnostics.activeResourcesTop,
                     musicDBSize: socketDiagnostics.musicDBSize,
                     rateLimiterKeys: totalRateLimiterKeys,
                     rateLimiterAttempts: totalRateLimiterAttempts,

@@ -42,6 +42,92 @@ export type ConnectionHandlerFactory = (
     deps: ConnectionDeps,
 ) => (socket: Socket) => void;
 
+type SourceKind = 'extension' | 'browser' | 'unknown';
+
+const classifyClientSource = (origin: string | undefined): SourceKind => {
+    if (typeof origin !== 'string' || origin.length === 0) return 'unknown';
+    if (origin.startsWith('chrome-extension://')) return 'extension';
+    return 'browser';
+};
+
+const getSocketListenerSummary = (socket: Socket): {
+    eventCount: number;
+    events: string[];
+    totalListeners: number;
+} => {
+    try {
+        const names = socket.eventNames().map(name => String(name));
+        const totalListeners = names.reduce((sum, name) => {
+            try {
+                return sum + socket.listenerCount(name);
+            } catch {
+                return sum;
+            }
+        }, 0);
+        return {
+            eventCount: names.length,
+            events: names.slice(0, 25),
+            totalListeners,
+        };
+    } catch {
+        return {
+            eventCount: -1,
+            events: [],
+            totalListeners: -1,
+        };
+    }
+};
+
+const getSocketFleetSnapshot = (io: IOServer): {
+    browserSockets: number;
+    extensionSockets: number;
+    openSockets: number;
+    pollingSockets: number;
+    unknownSourceSockets: number;
+    websocketSockets: number;
+} => {
+    const socketMap = io?.sockets?.sockets;
+    if (!socketMap) {
+        return {
+            browserSockets: 0,
+            extensionSockets: 0,
+            openSockets: 0,
+            pollingSockets: 0,
+            unknownSourceSockets: 0,
+            websocketSockets: 0,
+        };
+    }
+
+    let extensionSockets = 0;
+    let browserSockets = 0;
+    let unknownSourceSockets = 0;
+    let websocketSockets = 0;
+    let pollingSockets = 0;
+
+    for (const activeSocket of socketMap.values()) {
+        const activeOrigin = typeof activeSocket.handshake?.headers?.origin === 'string'
+            ? activeSocket.handshake.headers.origin
+            : undefined;
+        const source = classifyClientSource(activeOrigin);
+        if (source === 'extension') extensionSockets++;
+        else if (source === 'browser') browserSockets++;
+        else unknownSourceSockets++;
+
+        const activeTransport = activeSocket.conn?.transport?.name;
+        if (activeTransport === 'websocket') websocketSockets++;
+        else if (activeTransport === 'polling') pollingSockets++;
+    }
+
+    return {
+        browserSockets,
+        extensionSockets,
+        openSockets: socketMap.size,
+        pollingSockets,
+        unknownSourceSockets,
+        websocketSockets,
+    };
+};
+
 export function makeConnectionHandler(
     deps: ConnectionDeps,
 ): (socket: Socket) => void {
@@ -67,10 +153,12 @@ export function makeConnectionHandler(
         const origin = typeof headersSnapshot?.origin === 'string'
             ? headersSnapshot.origin
             : undefined;
-        const isExtension = origin?.startsWith('chrome-extension://') ?? false;
+        const sourceKind = classifyClientSource(origin);
+        const isExtension = sourceKind === 'extension';
 
         const transport = extractTransportName(socket);
-        const clientSource = isExtension ? 'extension' : 'browser';
+        const clientSource = sourceKind === 'unknown' ? 'browser' : sourceKind;
+        const connectedAtMs = Date.now();
 
         log.info('socket connection established', {
             clientSource,
@@ -81,6 +169,26 @@ export function makeConnectionHandler(
             timestamp: new Date().toISOString(),
             transport,
         });
+
+        try {
+            const socketFleet = getSocketFleetSnapshot(deps.getIo());
+            const listenerSummary = getSocketListenerSummary(socket);
+            log.info('socket lifecycle connected', {
+                clientSource,
+                connectionId,
+                listenerEventCount: listenerSummary.eventCount,
+                listenerEvents: listenerSummary.events,
+                listenerTotalCount: listenerSummary.totalListeners,
+                socketId: socket.id,
+                socketFleet,
+                transport,
+            });
+        } catch (error) {
+            log.debug('socket lifecycle connected snapshot failed', {
+                error: error,
+                socketId: socket.id,
+            });
+        }
 
         withErrorHandler(() => {
             logMetric(
@@ -188,6 +296,42 @@ export function makeConnectionHandler(
                 deps.youtubeService,
             );
         }
+
+        socket.once('disconnect', reason => {
+            try {
+                const socketFleet = getSocketFleetSnapshot(deps.getIo());
+                const listenerSummary = getSocketListenerSummary(socket);
+                const lifetimeMs = Date.now() - connectedAtMs;
+
+                log.info('socket lifecycle disconnected', {
+                    clientSource,
+                    connectionId,
+                    lifetimeMs,
+                    listenerEventCount: listenerSummary.eventCount,
+                    listenerEvents: listenerSummary.events,
+                    listenerTotalCount: listenerSummary.totalListeners,
+                    reason,
+                    socketId: socket.id,
+                    socketFleet,
+                    transport,
+                });
+
+                if (isExtension && lifetimeMs <= 45_000) {
+                    log.warn('extension short-lived socket detected', {
+                        connectionId,
+                        lifetimeMs,
+                        reason,
+                        socketId: socket.id,
+                        transport,
+                    });
+                }
+            } catch (error) {
+                log.debug('socket lifecycle disconnect snapshot failed', {
+                    error: error,
+                    socketId: socket.id,
+                });
+            }
+        });
     };
 }
 
