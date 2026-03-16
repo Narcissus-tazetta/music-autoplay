@@ -1,17 +1,13 @@
+import { HistoryFileStore } from '@/server/history/historyFileStore';
+import type { HistoryStore } from '@/server/history/historyStore';
 import type { Music } from '@/shared/stores/musicStore';
 import type { HistoryItem, HistoryQuery, HistorySort } from '@/shared/types/history';
-import fs from 'node:fs';
-import path from 'node:path';
 import logger from '../logger';
 
-type HistoryPersistFile = {
-    items: HistoryItem[];
-    lastUpdated?: string;
-};
-
-const DEFAULT_HISTORY_PATH = path.resolve(process.cwd(), 'data', 'history.json');
-const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
-const FLUSH_DELAY_MS = 400;
+const HISTORY_RETENTION_YEARS = 3;
+const HISTORY_RETENTION_MS = HISTORY_RETENTION_YEARS * 365 * 24 * 60 * 60 * 1000;
+const YOUTUBE_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
+const ISO_8601_DURATION_PATTERN = /^PT(?=\d)(\d+H)?(\d+M)?(\d+S)?$/;
 
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -25,114 +21,114 @@ function parseBoundaryMs(value: string | undefined, isEnd: boolean): number {
     return start + (24 * 60 * 60 * 1000) - 1;
 }
 
+function isRecordableMusic(music: Music): boolean {
+    if (!music) return false;
+
+    const id = music.id.trim();
+    if (!YOUTUBE_ID_PATTERN.test(id)) return false;
+
+    if (music.title.trim().length === 0) return false;
+    if (music.channelName.trim().length === 0) return false;
+
+    const duration = music.duration.trim();
+    if (!ISO_8601_DURATION_PATTERN.test(duration)) return false;
+
+    return true;
+}
+
+function normalizePlayedAtIso(input?: string): string {
+    if (!input) return new Date().toISOString();
+    const ms = Date.parse(input);
+    if (!Number.isFinite(ms)) return new Date().toISOString();
+    return new Date(ms).toISOString();
+}
+
 export class HistoryService {
-    private readonly filePath: string;
+    private readonly store: HistoryStore;
     private readonly itemsById = new Map<string, HistoryItem>();
     private loaded = false;
-    private flushTimer: NodeJS.Timeout | null = null;
 
-    constructor(filePath?: string) {
-        this.filePath = filePath ?? DEFAULT_HISTORY_PATH;
+    constructor(filePathOrStore?: string | HistoryStore) {
+        if (typeof filePathOrStore === 'string' || !filePathOrStore) {
+            this.store = new HistoryFileStore(filePathOrStore);
+            return;
+        }
+
+        this.store = filePathOrStore;
     }
 
     private ensureLoaded(): void {
         if (this.loaded) return;
         this.loaded = true;
-        this.ensureDataDir();
-        const persisted = this.readFileSafe();
+        const persisted = this.store.load();
         for (const item of persisted.items) this.itemsById.set(item.id, item);
         this.pruneExpired(Date.now());
     }
 
-    private ensureDataDir(): void {
-        const dir = path.dirname(this.filePath);
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    }
-
-    private readFileSafe(): HistoryPersistFile {
-        try {
-            if (!fs.existsSync(this.filePath)) return { items: [] };
-            const raw = fs.readFileSync(this.filePath, 'utf8');
-            const parsed = JSON.parse(raw) as HistoryPersistFile;
-            const items = Array.isArray(parsed.items) ? parsed.items : [];
-            return { items, lastUpdated: parsed.lastUpdated };
-        } catch (error) {
-            logger.warn('historyService read failed', { error });
-            return { items: [] };
-        }
-    }
-
-    private scheduleFlush(): void {
-        if (this.flushTimer) clearTimeout(this.flushTimer);
-        this.flushTimer = setTimeout(() => {
-            this.flushTimer = null;
-            void this.flush();
-        }, FLUSH_DELAY_MS);
-    }
-
-    private async flush(): Promise<void> {
-        try {
-            this.ensureDataDir();
-            const payload: HistoryPersistFile = {
-                items: [...this.itemsById.values()],
-                lastUpdated: new Date().toISOString(),
-            };
-            const serialized = JSON.stringify(payload, undefined, 2);
-            const tmp = `${this.filePath}.${process.pid}.${Date.now()}.tmp`;
-            await fs.promises.writeFile(tmp, serialized, 'utf8');
-            await fs.promises.rename(tmp, this.filePath);
-        } catch (error) {
-            logger.warn('historyService flush failed', { error });
-        }
-    }
-
     private pruneExpired(nowMs: number): void {
-        const cutoff = nowMs - ONE_YEAR_MS;
-        let removed = 0;
+        const cutoff = nowMs - HISTORY_RETENTION_MS;
+        const removedIds: string[] = [];
         for (const [id, item] of this.itemsById.entries()) {
             const ts = Date.parse(item.lastPlayedAt);
             if (!Number.isFinite(ts) || ts < cutoff) {
                 this.itemsById.delete(id);
-                removed++;
+                removedIds.push(id);
             }
         }
-        if (removed > 0) this.scheduleFlush();
+        for (const id of removedIds) this.store.remove(id);
     }
 
     recordPlayed(music: Music, playedAtIso?: string): HistoryItem {
+        if (!isRecordableMusic(music)) {
+            logger.warn('historyService: skipped invalid music payload', {
+                musicId: music?.id,
+                title: music?.title,
+                channelName: music?.channelName,
+                duration: music?.duration,
+            });
+            throw new Error('historyService: invalid music payload');
+        }
+
         this.ensureLoaded();
-        const nowIso = playedAtIso ?? new Date().toISOString();
-        const existing = this.itemsById.get(music.id);
+        const nowIso = normalizePlayedAtIso(playedAtIso);
+        const normalizedMusic: Music = {
+            ...music,
+            id: music.id.trim(),
+            title: music.title.trim(),
+            channelName: music.channelName.trim(),
+            duration: music.duration.trim(),
+        };
+        const existing = this.itemsById.get(normalizedMusic.id);
 
         if (existing) {
             const next: HistoryItem = {
                 ...existing,
-                channelId: music.channelId,
-                channelName: music.channelName,
-                duration: music.duration,
+                channelId: normalizedMusic.channelId,
+                channelName: normalizedMusic.channelName,
+                duration: normalizedMusic.duration,
                 lastPlayedAt: nowIso,
                 playCount: existing.playCount + 1,
-                title: music.title,
+                title: normalizedMusic.title,
             };
-            this.itemsById.set(music.id, next);
+            this.itemsById.set(normalizedMusic.id, next);
             this.pruneExpired(Date.now());
-            this.scheduleFlush();
+            this.store.upsert(next);
             return next;
         }
 
         const created: HistoryItem = {
-            channelId: music.channelId,
-            channelName: music.channelName,
-            duration: music.duration,
+            channelId: normalizedMusic.channelId,
+            channelName: normalizedMusic.channelName,
+            duration: normalizedMusic.duration,
             firstPlayedAt: nowIso,
-            id: music.id,
+            id: normalizedMusic.id,
             lastPlayedAt: nowIso,
             playCount: 1,
-            title: music.title,
+            title: normalizedMusic.title,
         };
-        this.itemsById.set(music.id, created);
+        this.itemsById.set(normalizedMusic.id, created);
         this.pruneExpired(Date.now());
-        this.scheduleFlush();
+        this.store.upsert(created);
         return created;
     }
 
@@ -173,9 +169,21 @@ export class HistoryService {
         rows.sort((a, b) => Date.parse(b.lastPlayedAt) - Date.parse(a.lastPlayedAt));
         return rows;
     }
+
+    async flush(): Promise<void> {
+        if (typeof this.store.flush === 'function') await this.store.flush();
+    }
+
+    closeSync(): void {
+        if (typeof this.store.closeSync === 'function') this.store.closeSync();
+    }
 }
 
 let historyServiceSingleton: HistoryService | undefined;
+
+export function setHistoryService(service: HistoryService): void {
+    historyServiceSingleton = service;
+}
 
 export function getHistoryService(): HistoryService {
     if (!historyServiceSingleton) historyServiceSingleton = new HistoryService();

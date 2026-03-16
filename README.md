@@ -32,6 +32,8 @@
 - `SESSION_SECRET` : セッション署名に使う秘密鍵
 - `DATABASE_URL` : PostgreSQL 等の接続文字列（このプロジェクトで使う場合）
 - `PERSISTENCE_PROVIDER` : 永続化先の選択（`file` | `pg` | `mongo`、未指定は `file`）
+- `PERSISTENCE_PROVIDER` が `file` の場合、履歴は `data/history.json` に保存されます
+- `PERSISTENCE_PROVIDER` が `mongo` の場合、履歴は MongoDB の `history` コレクションに保存されます
 - `MONGODB_URI` : MongoDB 接続文字列（`PERSISTENCE_PROVIDER=mongo` のとき必須）
 - `MONGODB_DB_NAME` : MongoDB DB名（未指定は `musicReq`）
 - `MONGODB_COLLECTION` : MongoDB コレクション名（未指定は `musicRequests`）

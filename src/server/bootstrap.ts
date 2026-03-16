@@ -6,8 +6,11 @@ declare global {
         }
         | undefined;
 }
+import { MongoClient } from 'mongodb';
 import { getConfigService } from './config/configService';
 import { container } from './di/container';
+import { HistoryMongoHybridStore, HistoryMongoStore } from './history/historyMongoStore';
+import { getHistoryService, HistoryService, setHistoryService } from './history/historyService';
 import logger from './logger';
 import type { Store } from './persistence';
 import { FileStore, MongoHybridStore, MongoStore, PgHybridStore, PgStore } from './persistence';
@@ -43,6 +46,7 @@ export async function bootstrap(): Promise<BootstrapResult> {
 
     let fileStore: Store;
     let closeDb: (() => Promise<void>) | undefined;
+    let historyService: HistoryService;
 
     if (persistenceProvider === 'mongo') {
         const uri = configService.getString('MONGODB_URI');
@@ -50,16 +54,35 @@ export async function bootstrap(): Promise<BootstrapResult> {
         const dbName = configService.getString('MONGODB_DB_NAME', 'musicReq') ?? 'musicReq';
         const collectionName = configService.getString('MONGODB_COLLECTION', 'musicRequests')
             ?? 'musicRequests';
+        const client = new MongoClient(uri, {
+            serverSelectionTimeoutMS: 5_000,
+        });
 
-        const mongo = new MongoStore({ uri, collectionName, dbName });
+        const mongo = new MongoStore({ uri, collectionName, dbName, client });
         await mongo.initialize();
         const initial = await mongo.loadAll();
         fileStore = new MongoHybridStore(mongo, initial);
-        closeDb = () => mongo.close();
+
+        const historyMongo = new HistoryMongoStore({
+            uri,
+            dbName,
+            collectionName: 'history',
+            client,
+        });
+        await historyMongo.initialize();
+        const historyInitial = await historyMongo.loadAll();
+        historyService = new HistoryService(new HistoryMongoHybridStore(historyMongo, historyInitial));
+        setHistoryService(historyService);
+
+        closeDb = async () => {
+            await Promise.all([mongo.close(), historyMongo.close()]);
+            await client.close();
+        };
 
         logger.info('persistence provider: mongo', {
             dbName,
             collectionName,
+            historyCollection: 'history',
         });
     } else if (persistenceProvider === 'pg') {
         const pg = new PgStore();
@@ -67,10 +90,14 @@ export async function bootstrap(): Promise<BootstrapResult> {
         const initial = await pg.loadAll();
         fileStore = new PgHybridStore(pg, initial);
         closeDb = () => pg.close();
+        historyService = new HistoryService();
+        setHistoryService(historyService);
 
         logger.info('persistence provider: pg');
     } else {
         fileStore = new FileStore();
+        historyService = new HistoryService();
+        setHistoryService(historyService);
         logger.info('persistence provider: file');
     }
 
@@ -100,6 +127,9 @@ export async function bootstrap(): Promise<BootstrapResult> {
                 await fileStore.flush();
                 logger.info('filestore flushed');
             }
+            const managedHistoryService = historyService ?? getHistoryService();
+            await managedHistoryService.flush();
+            logger.info('historyService flushed');
             if (closeDb) {
                 await closeDb();
                 logger.info('persistence backend closed');
@@ -112,6 +142,13 @@ export async function bootstrap(): Promise<BootstrapResult> {
                 if (typeof fileStore.closeSync === 'function') fileStore.closeSync();
             } catch (closeSyncError) {
                 logger.warn('fileStore.closeSync failed', { error: closeSyncError });
+            }
+
+            try {
+                const managedHistoryService = historyService ?? getHistoryService();
+                managedHistoryService.closeSync();
+            } catch (historyCloseError) {
+                logger.warn('historyService.closeSync failed', { error: historyCloseError });
             }
 
             try {

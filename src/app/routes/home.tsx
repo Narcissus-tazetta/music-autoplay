@@ -3,7 +3,7 @@ import { useMusicForm } from '@/app/hooks/useMusicForm';
 import usePlayingMusic from '@/app/hooks/usePlayingMusic';
 import { useSettingsSync } from '@/app/hooks/useSettingsSync';
 import { useUiActionExecutor } from '@/app/hooks/useUiActionExecutor';
-import { StatusBadge } from '@/shared/components';
+import { StatusBadge, Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components';
 import { useHistoryStore } from '@/shared/stores/historyStore';
 import { useMusicStore } from '@/shared/stores/musicStore';
 import { safeExecuteAsync } from '@/shared/utils/errors';
@@ -207,25 +207,30 @@ export default function Home() {
                             isDeleting={isSubmitting}
                             onDelete={handleDelete}
                             headerAction={
-                                <Button
-                                    type='button'
-                                    variant='ghost'
-                                    size='icon'
-                                    aria-label='履歴'
-                                    className='h-9 w-9 p-0 rounded-md text-muted-foreground hover:bg-accent/30'
-                                    onClick={() => {
-                                        setViewMode('history');
-                                        setVisibleHistoryCount(10);
-                                        fetchHistory({
-                                            from: from || undefined,
-                                            query: query || undefined,
-                                            sort,
-                                            to: to || undefined,
-                                        });
-                                    }}
-                                >
-                                    <HistoryIcon className='h-4 w-4' />
-                                </Button>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            type='button'
+                                            variant='ghost'
+                                            size='icon'
+                                            aria-label='履歴'
+                                            className='h-9 w-9 p-0 rounded-md text-muted-foreground hover:bg-accent/30'
+                                            onClick={() => {
+                                                setViewMode('history');
+                                                setVisibleHistoryCount(10);
+                                                fetchHistory({
+                                                    from: from || undefined,
+                                                    query: query || undefined,
+                                                    sort,
+                                                    to: to || undefined,
+                                                });
+                                            }}
+                                        >
+                                            <HistoryIcon className='h-4 w-4' />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>履歴を見る</TooltipContent>
+                                </Tooltip>
                             }
                         />
                     </>
