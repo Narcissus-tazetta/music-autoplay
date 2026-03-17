@@ -8,6 +8,7 @@ const HISTORY_RETENTION_YEARS = 3;
 const HISTORY_RETENTION_MS = HISTORY_RETENTION_YEARS * 365 * 24 * 60 * 60 * 1000;
 const YOUTUBE_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 const ISO_8601_DURATION_PATTERN = /^PT(?=\d)(\d+H)?(\d+M)?(\d+S)?$/;
+const HH_MM_SS_DURATION_PATTERN = /^\d{2}:\d{2}:\d{2}$/;
 
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -31,7 +32,7 @@ function isRecordableMusic(music: Music): boolean {
     if (music.channelName.trim().length === 0) return false;
 
     const duration = music.duration.trim();
-    if (!ISO_8601_DURATION_PATTERN.test(duration)) return false;
+    if (!ISO_8601_DURATION_PATTERN.test(duration) && !HH_MM_SS_DURATION_PATTERN.test(duration)) return false;
 
     return true;
 }
