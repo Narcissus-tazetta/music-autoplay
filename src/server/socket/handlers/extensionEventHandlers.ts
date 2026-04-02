@@ -1,6 +1,7 @@
+import { SERVER_ENV } from '@/app/env.server';
 import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
 import { isRecord } from '@/shared/utils/typeGuards';
-import { extractYoutubeId } from '@/shared/utils/youtube';
+import { extractYoutubeId, watchUrl } from '@/shared/utils/youtube';
 import type { Socket } from 'socket.io';
 import { getHistoryService, type HistoryService } from '../../history/historyService';
 import type { AppLogger } from '../../logger';
@@ -38,6 +39,8 @@ const shouldReplaceProgressSnapshot = (prev: ProgressSnapshot | undefined, next:
 const AUTHORITATIVE_PAUSE_HOLD_MS = 3000;
 const AUTHORITATIVE_PLAYING_PROMOTION_MS = 3000;
 const AUTHORITATIVE_RESUME_EPSILON_SEC = 0.75;
+const EXTERNAL_VIDEO_TITLE_CACHE_TTL_MS = 10 * 60 * 1000;
+const EXTERNAL_VIDEO_TITLE_CACHE_MAX = 500;
 
 const isSameVideoOrUnknown = (
     current: RemoteStatus,
@@ -51,6 +54,20 @@ const isSameVideoOrUnknown = (
     return current.musicId === videoId || current.videoId === videoId;
 };
 
+const indexOfMusicById = (musicList: Music[], id: string): number => {
+    for (let i = 0; i < musicList.length; i++) if (musicList[i].id === id) return i;
+    return -1;
+};
+
+const canRecordHistory = (music: Music): boolean => (
+    typeof music.id === 'string'
+    && typeof music.title === 'string'
+    && typeof music.channelName === 'string'
+    && music.id.length > 0
+    && music.title.length > 0
+    && music.channelName.length > 0
+);
+
 export function setupExtensionEventHandlers(
     socket: Socket,
     log: AppLogger,
@@ -62,11 +79,13 @@ export function setupExtensionEventHandlers(
     youtubeService: YouTubeService,
     historyService: HistoryService = getHistoryService(),
 ) {
+    void musicDB;
     const extensionSocketOn = extractSocketOn(socket);
     const socketContext = { socketId: socket.id };
 
     const recordHistory = (music: Music | undefined, reason: string) => {
         if (!music) return;
+        if (!canRecordHistory(music)) return;
         try {
             const historyItem = historyService.recordPlayed(music);
             const emitResult = emitter.emitHistoryAdded(historyItem);
@@ -164,6 +183,29 @@ export function setupExtensionEventHandlers(
             duration?: number;
         }
     >();
+    const externalVideoTitleCache = new Map<string, { title: string; cachedAt: number }>();
+
+    const getExternalVideoTitle = async (videoId: string): Promise<string> => {
+        const now = Date.now();
+        const cached = externalVideoTitleCache.get(videoId);
+        if (cached && now - cached.cachedAt <= EXTERNAL_VIDEO_TITLE_CACHE_TTL_MS) {
+            externalVideoTitleCache.delete(videoId);
+            externalVideoTitleCache.set(videoId, cached);
+            return cached.title;
+        }
+
+        const result = await youtubeService.getVideoDetails(videoId, 1, 2000);
+        const title = result.ok ? result.value.title : `動画ID: ${videoId}`;
+
+        externalVideoTitleCache.set(videoId, { cachedAt: now, title });
+        while (externalVideoTitleCache.size > EXTERNAL_VIDEO_TITLE_CACHE_MAX) {
+            const oldestVideoId = externalVideoTitleCache.keys().next().value;
+            if (!oldestVideoId) break;
+            externalVideoTitleCache.delete(oldestVideoId);
+        }
+
+        return title;
+    };
 
     const shouldIgnorePlayingFromStaleAuthoritative = (
         videoId: string | undefined,
@@ -368,56 +410,35 @@ export function setupExtensionEventHandlers(
                 let externalVideoId: string | undefined;
 
                 if (url) {
-                    const { watchUrl } = await import('@/shared/utils/youtube');
-
-                    for (const m of musicDB.values()) {
-                        try {
-                            const generated = watchUrl((m as { id: string }).id);
-                            if (generated === url) {
-                                match = {
-                                    title: (m as { title: string }).title,
-                                    url: generated,
-                                };
-                                break;
-                            }
-                        } catch {
-                            continue;
-                        }
-                    }
-
-                    if (!match) {
-                        const videoId = extractYoutubeId(url);
-                        if (videoId) {
+                    const videoId = extractYoutubeId(url);
+                    if (videoId) {
+                        const localMusic = repository.get(videoId);
+                        if (localMusic) {
+                            match = {
+                                title: localMusic.title,
+                                url,
+                            };
+                        } else {
                             isExternalVideo = true;
                             externalVideoId = videoId;
                             try {
                                 log.debug('Fetching external video details', { state, url, videoId });
-                                const result = await youtubeService.getVideoDetails(
-                                    videoId,
-                                    1,
-                                    2000,
-                                );
-
-                                if (result.ok) {
-                                    match = {
-                                        title: result.value.title,
-                                        url,
-                                    };
-                                    log.info('External video title fetched', {
+                                const title = await getExternalVideoTitle(videoId);
+                                match = {
+                                    title,
+                                    url,
+                                };
+                                if (title.startsWith('動画ID: ')) {
+                                    log.warn('Failed to fetch external video details', {
                                         state,
-                                        title: result.value.title,
                                         videoId,
                                     });
                                 } else {
-                                    log.warn('Failed to fetch external video details', {
-                                        error: result.error,
+                                    log.info('External video title fetched', {
                                         state,
+                                        title,
                                         videoId,
                                     });
-                                    match = {
-                                        title: `動画ID: ${videoId}`,
-                                        url,
-                                    };
                                 }
                             } catch (error) {
                                 log.warn('Exception while fetching external video details', {
@@ -536,7 +557,7 @@ export function setupExtensionEventHandlers(
                     && repository.has(resolvedVideoId)
                 ) {
                     const preList = repository.list();
-                    const preIdx = preList.findIndex(m => m.id === resolvedVideoId);
+                    const preIdx = indexOfMusicById(preList, resolvedVideoId);
                     if (preIdx === -1) return;
                     const endedMusic = preList[preIdx];
 
@@ -560,11 +581,9 @@ export function setupExtensionEventHandlers(
                             manager.update({ type: 'closed' }, 'paused_100_no_next');
                             log.info('paused+100%: no next video', { videoId: resolvedVideoId });
                         } else {
-                            const nextMusic = nextId
-                                ? postList.find(m => m.id === nextId) ?? postList[0]
-                                : postList[0];
+                            const nextIdx = nextId ? indexOfMusicById(postList, nextId) : -1;
+                            const nextMusic = nextIdx >= 0 ? postList[nextIdx] : postList[0];
                             if (nextMusic) {
-                                const { watchUrl } = await import('@/shared/utils/youtube');
                                 const nextUrl = watchUrl(nextMusic.id);
                                 socket.emit('next_video_navigate', {
                                     nextUrl,
@@ -706,7 +725,7 @@ export function setupExtensionEventHandlers(
                 }
 
                 const musicList = repository.list();
-                const currentIndex = musicList.findIndex(m => m.id === currentId);
+                const currentIndex = indexOfMusicById(musicList, currentId);
 
                 if (currentIndex === -1) {
                     log.debug('move_prev_video: current music not found', { currentId });
@@ -716,7 +735,6 @@ export function setupExtensionEventHandlers(
                 const prevIndex = currentIndex === 0 ? musicList.length - 1 : currentIndex - 1;
                 const prevMusic = musicList[prevIndex];
 
-                const { watchUrl } = await import('@/shared/utils/youtube');
                 const nextUrl = watchUrl(prevMusic.id);
 
                 socket.emit('next_video_navigate', {
@@ -787,7 +805,7 @@ export function setupExtensionEventHandlers(
                 }
 
                 const musicList = repository.list();
-                const currentIndex = musicList.findIndex(m => m.id === currentId);
+                const currentIndex = indexOfMusicById(musicList, currentId);
 
                 if (currentIndex === -1) {
                     log.debug('move_next_video: current music not found', { currentId });
@@ -797,7 +815,6 @@ export function setupExtensionEventHandlers(
                 const nextIndex = (currentIndex + 1) % musicList.length;
                 const nextMusic = musicList[nextIndex];
 
-                const { watchUrl } = await import('@/shared/utils/youtube');
                 const nextUrl = watchUrl(nextMusic.id);
 
                 socket.emit('next_video_navigate', {
@@ -997,7 +1014,7 @@ export function setupExtensionEventHandlers(
                 // Determine the next music based on the pre-remove ordering so we
                 // advance to the element *after* the ended video (wrap if needed).
                 const preRemoveList = repository.list();
-                const preIndex = preRemoveList.findIndex(m => m.id === videoId);
+                const preIndex = indexOfMusicById(preRemoveList, videoId);
                 let nextCandidateId: string | undefined;
                 const endedMusic = preIndex !== -1 ? preRemoveList[preIndex] : undefined;
 
@@ -1093,7 +1110,6 @@ export function setupExtensionEventHandlers(
             }
 
             try {
-                const { watchUrl } = await import('@/shared/utils/youtube');
                 const videoId = extractYoutubeId(url);
 
                 if (!videoId) {
@@ -1113,9 +1129,11 @@ export function setupExtensionEventHandlers(
                 }
 
                 const postList = repository.list();
-                let nextMusic = nextCandidateId
-                    ? postList.find(m => m.id === nextCandidateId) ?? postList[0]
-                    : undefined;
+                let nextMusic = undefined as Music | undefined;
+                if (nextCandidateId) {
+                    const nextCandidateIndex = indexOfMusicById(postList, nextCandidateId);
+                    nextMusic = nextCandidateIndex >= 0 ? postList[nextCandidateIndex] : postList[0];
+                }
 
                 if (postList.length === 0) {
                     socket.emit('no_next_video', {
@@ -1134,7 +1152,7 @@ export function setupExtensionEventHandlers(
                 }
 
                 if (!nextMusic) {
-                    const currentIndex = postList.findIndex(m => m.id === videoId);
+                    const currentIndex = indexOfMusicById(postList, videoId);
                     if (currentIndex === -1) {
                         log.info('video_next: ignored (video not in repository)', {
                             connectionId,
@@ -1300,6 +1318,27 @@ export function setupExtensionEventHandlers(
             return;
         }
 
+        const incomingSnapshotForOrdering: ProgressSnapshot = {
+            timestamp,
+            seq: incomingSeq,
+            currentTime,
+            duration,
+        };
+        const previousSnapshotForOrdering = lastProgressSnapshotByVideoId.get(videoId);
+        if (
+            previousSnapshotForOrdering
+            && !shouldReplaceProgressSnapshot(previousSnapshotForOrdering, incomingSnapshotForOrdering)
+        ) {
+            log.debug(`${eventName}: duplicate/stale snapshot ignored`, {
+                incomingSeq,
+                previousSeq: previousSnapshotForOrdering.seq,
+                timestamp,
+                previousTimestamp: previousSnapshotForOrdering.timestamp,
+                videoId,
+            });
+            return;
+        }
+
         try {
             let state = progressState.get(videoId);
             const isFirstUpdate = !state;
@@ -1355,7 +1394,6 @@ export function setupExtensionEventHandlers(
             const music = repository.get(videoId);
             const progressPercent = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0;
 
-            const { SERVER_ENV } = await import('@/app/env.server');
             const stallThreshold = SERVER_ENV.PROGRESS_STALL_THRESHOLD_MS;
             const minDelta = SERVER_ENV.PROGRESS_MIN_DELTA_SEC;
             const stallCount = SERVER_ENV.PROGRESS_STALL_COUNT;
@@ -1580,7 +1618,6 @@ export function setupExtensionEventHandlers(
             }
 
             const firstMusic = musicList[0];
-            const { watchUrl } = await import('@/shared/utils/youtube');
             const firstUrl = watchUrl(firstMusic.id);
 
             log.info('request_first_url: returning first URL', {
