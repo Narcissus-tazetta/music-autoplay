@@ -57,7 +57,6 @@ export class StateReconciler {
             return { shouldEmit: true, status: incomingStatus };
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (incomingStatus.type === 'playing') {
             const withinGracePeriod = now - this.state.lastPausedAt < this.config.pausedGracePeriodMs;
             if (withinGracePeriod && isProgressSource) {

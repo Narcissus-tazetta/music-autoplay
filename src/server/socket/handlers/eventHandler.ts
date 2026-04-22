@@ -57,7 +57,6 @@ function formatZodErrors(error: ZodError): Record<string, string[]> {
         const path = issue.path.join('.');
         const field = path || 'root';
 
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (!fieldErrors[field]) fieldErrors[field] = [];
         fieldErrors[field].push(issue.message);
     }

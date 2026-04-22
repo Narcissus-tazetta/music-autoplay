@@ -1,9 +1,20 @@
 {
   "include": [
-    "**/*",
-    "**/.server/**/*",
-    "**/.client/**/*",
+    "src/**/*",
+    "tests/**/*",
+    "scripts/**/*",
+    "youtube-auto-play/src/**/*",
+    "youtube-auto-play/vite.config.ts",
     ".react-router/types/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "build",
+    "dist",
+    "youtube-auto-play/dist",
+    "test-results",
+    "logs",
+    "tmp_test_data"
   ],
   "compilerOptions": {
     "lib": ["DOM", "DOM.Iterable", "ES2023"],

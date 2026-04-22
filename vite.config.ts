@@ -7,7 +7,6 @@ export default defineConfig({
     optimizeDeps: {
         include: ['socket.io-client', 'framer-motion', 'zustand'],
     },
-    // @ts-ignore - bun cached type definition mismatch with vite 6.x
     plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
     server: {
         proxy: {

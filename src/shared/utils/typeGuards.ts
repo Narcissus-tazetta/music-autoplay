@@ -18,7 +18,6 @@ export function hasOwnProperty(
 }
 
 export function getStructuredClone(): ((x: unknown) => unknown) | undefined {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (typeof globalThis === 'object' && globalThis !== null) {
         const g = globalThis as Record<string, unknown>;
         const sc = g['structuredClone'];

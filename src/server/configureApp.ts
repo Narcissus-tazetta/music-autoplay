@@ -76,7 +76,6 @@ export async function configureApp(
             const rid = typeof req.headers['x-request-id'] === 'string'
                 ? req.headers['x-request-id']
                 : randomUUID();
-            // @ts-expect-error - we attach a runtime-only property `requestId` for observability;
             req.requestId = rid;
             try {
                 res.setHeader('X-Request-Id', rid);

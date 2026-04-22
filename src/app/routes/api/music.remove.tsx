@@ -104,7 +104,6 @@ export const action = async ({
             let msg = 'Unknown error';
             if (typeof errVal === 'string') msg = errVal;
             else if (
-                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                 errVal
                 && typeof errVal === 'object'
                 && 'message' in (errVal as Record<string, unknown>)
@@ -122,7 +121,6 @@ export const action = async ({
         }
 
         const value = result.value;
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (typeof value === 'object' && value != undefined) {
             const rec = value as Record<string, unknown>;
             const fe = rec.formErrors;

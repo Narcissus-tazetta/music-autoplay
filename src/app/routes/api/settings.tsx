@@ -30,7 +30,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     ) {
         return new Response(undefined, { status: 204 });
     }
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- res.value may be undefined
     return new Response(JSON.stringify(res.value ?? {}), {
         headers: { 'Content-Type': 'application/json' },
         status: 200,
@@ -70,7 +69,6 @@ export const action = async ({ request }: LoaderFunctionArgs) => {
         let msg = 'Unknown error';
         if (typeof errVal === 'string') msg = errVal;
         else if (
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             errVal
             && typeof errVal === 'object'
             && 'message' in (errVal as Record<string, unknown>)
