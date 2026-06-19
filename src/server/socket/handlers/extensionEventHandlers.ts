@@ -1271,7 +1271,8 @@ export function setupExtensionEventHandlers(
             : undefined;
         const duration = typeof payload['duration'] === 'number' ? payload['duration'] : undefined;
 
-        if (import.meta.env.DEV) console.debug(`[handleProgressUpdate] START`, { url, currentTime, eventName });
+        if (process.env.NODE_ENV !== 'production')
+            console.debug(`[handleProgressUpdate] START`, { url, currentTime, eventName });
         const playbackRate = typeof payload['playbackRate'] === 'number' ? payload['playbackRate'] : 1;
         const isBuffering = typeof payload['isBuffering'] === 'boolean'
             ? payload['isBuffering']
