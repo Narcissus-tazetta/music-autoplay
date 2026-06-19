@@ -3,7 +3,9 @@ import type { Music } from '@/shared/stores/musicStore';
 import type { HandlerError } from '@/shared/utils/errors';
 import type { Result } from '@/shared/utils/errors/result-handlers';
 import { err, ok } from '@/shared/utils/errors/result-handlers';
+import { watchUrl } from '@/shared/utils/youtube';
 import logger from '../logger';
+import { getRequestLogService } from '../requestLog/requestLogService';
 import type { AuthChecker } from './auth/authChecker';
 import type { MusicEventEmitter } from './emitter/musicEventEmitter';
 import type { MusicRepository } from './repository/musicRepository';
@@ -95,6 +97,12 @@ export class MusicService {
                 error: persistResult.error,
                 musicId: music.id,
             });
+        }
+
+        try {
+            getRequestLogService().appendFromMusic(music, watchUrl(music.id));
+        } catch (error) {
+            logger.warn('failed to append request log', { error, musicId: music.id });
         }
 
         return ok(music);

@@ -8,7 +8,9 @@
   "rules": {
     "sort-imports": "off",
     "no-ternary": "off",
-    "curly": "off"
+    "curly": "off",
+    "no-underscore-dangle": "off",
+    "unicorn/consistent-function-scoping": "off"
   },
   "settings": {
     "jsx-a11y": {

@@ -165,6 +165,8 @@ export function makeConnectionHandler(
             connectionId,
             headers: snapshotHeaders(socket),
             origin,
+            requesterHashPrefix: socket.data.requesterHash?.slice(0, 8),
+            requesterName: socket.data.requesterName,
             socketId: socket.id,
             timestamp: new Date().toISOString(),
             transport,

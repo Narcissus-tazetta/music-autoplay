@@ -17,7 +17,7 @@ export interface HistoryViewProps {
     setFrom: (s: string) => void;
     setTo: (s: string) => void;
     setSort: (s: import('@/shared/types/history').HistorySort) => void;
-    setViewMode: (mode: 'requests' | 'history') => void;
+    setViewMode: (mode: 'requests' | 'history' | 'requestLogs') => void;
     setVisibleHistoryCount: (n: number) => void;
 }
 

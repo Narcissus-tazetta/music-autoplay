@@ -31,6 +31,7 @@ export function getSocket(): Socket<S2C, C2S> {
             reconnectionDelayMax: 5000,
             timeout: 20_000,
             transports: ['websocket', 'polling'],
+            withCredentials: true,
         };
         socket = io(options) as Socket<S2C, C2S>;
         try {

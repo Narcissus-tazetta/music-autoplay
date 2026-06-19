@@ -3,6 +3,7 @@ import { Table } from '@shadcn/ui/table';
 import { AnimatePresence } from 'framer-motion';
 import { memo } from 'react';
 import { MemoizedMusicTableRow } from './MusicTableRow';
+import type { RequesterSelection } from './RequesterDetailDialog';
 
 export interface MusicTableProps {
     musics: Music[];
@@ -10,6 +11,7 @@ export interface MusicTableProps {
     isAdmin: boolean;
     isDeleting: boolean;
     onDelete: (id: string, asAdmin?: boolean) => void;
+    onRequesterClick?: (requester: RequesterSelection) => void;
     headerAction?: React.ReactNode;
 }
 
@@ -19,6 +21,7 @@ function MusicTableInner({
     isAdmin,
     isDeleting,
     onDelete,
+    onRequesterClick,
     headerAction,
 }: MusicTableProps) {
     return (
@@ -47,6 +50,7 @@ function MusicTableInner({
                                     isAdmin={isAdmin}
                                     isDeleting={isDeleting}
                                     onDelete={onDelete}
+                                    onRequesterClick={onRequesterClick}
                                 />
                             ))
                         )

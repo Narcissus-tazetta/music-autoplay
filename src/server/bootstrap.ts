@@ -14,6 +14,8 @@ import { getHistoryService, HistoryService, setHistoryService } from './history/
 import logger from './logger';
 import type { Store } from './persistence';
 import { FileStore, MongoHybridStore, MongoStore, PgHybridStore, PgStore } from './persistence';
+import { RequestLogMongoHybridStore, RequestLogMongoStore } from './requestLog/requestLogMongoStore';
+import { RequestLogService, setRequestLogService } from './requestLog/requestLogService';
 import CacheService from './services/cacheService';
 import ErrorService from './services/errorService';
 import MetricsManager from './services/metricsManager';
@@ -47,6 +49,7 @@ export async function bootstrap(): Promise<BootstrapResult> {
     let fileStore: Store;
     let closeDb: (() => Promise<void>) | undefined;
     let historyService: HistoryService;
+    let requestLogService: RequestLogService;
 
     if (persistenceProvider === 'mongo') {
         const uri = configService.getString('MONGODB_URI');
@@ -54,6 +57,10 @@ export async function bootstrap(): Promise<BootstrapResult> {
         const dbName = configService.getString('MONGODB_DB_NAME', 'musicReq') ?? 'musicReq';
         const collectionName = configService.getString('MONGODB_COLLECTION', 'musicRequests')
             ?? 'musicRequests';
+        const requestLogCollectionName = configService.getString(
+            'MONGODB_REQUEST_LOG_COLLECTION',
+            'requestLogs',
+        ) ?? 'requestLogs';
         const client = new MongoClient(uri, {
             serverSelectionTimeoutMS: 5_000,
         });
@@ -74,8 +81,21 @@ export async function bootstrap(): Promise<BootstrapResult> {
         historyService = new HistoryService(new HistoryMongoHybridStore(historyMongo, historyInitial));
         setHistoryService(historyService);
 
+        const requestLogMongo = new RequestLogMongoStore({
+            uri,
+            dbName,
+            collectionName: requestLogCollectionName,
+            client,
+        });
+        await requestLogMongo.initialize();
+        const requestLogInitial = await requestLogMongo.loadAll();
+        requestLogService = new RequestLogService(
+            new RequestLogMongoHybridStore(requestLogMongo, requestLogInitial),
+        );
+        setRequestLogService(requestLogService);
+
         closeDb = async () => {
-            await Promise.all([mongo.close(), historyMongo.close()]);
+            await Promise.all([mongo.close(), historyMongo.close(), requestLogMongo.close()]);
             await client.close();
         };
 
@@ -83,6 +103,7 @@ export async function bootstrap(): Promise<BootstrapResult> {
             dbName,
             collectionName,
             historyCollection: 'history',
+            requestLogCollection: requestLogCollectionName,
         });
     } else if (persistenceProvider === 'pg') {
         const pg = new PgStore();
@@ -92,12 +113,16 @@ export async function bootstrap(): Promise<BootstrapResult> {
         closeDb = () => pg.close();
         historyService = new HistoryService();
         setHistoryService(historyService);
+        requestLogService = new RequestLogService();
+        setRequestLogService(requestLogService);
 
         logger.info('persistence provider: pg');
     } else {
         fileStore = new FileStore();
         historyService = new HistoryService();
         setHistoryService(historyService);
+        requestLogService = new RequestLogService();
+        setRequestLogService(requestLogService);
         logger.info('persistence provider: file');
     }
 
@@ -130,6 +155,8 @@ export async function bootstrap(): Promise<BootstrapResult> {
             const managedHistoryService = historyService ?? getHistoryService();
             await managedHistoryService.flush();
             logger.info('historyService flushed');
+            await requestLogService.flush();
+            logger.info('requestLogService flushed');
             if (closeDb) {
                 await closeDb();
                 logger.info('persistence backend closed');
@@ -149,6 +176,12 @@ export async function bootstrap(): Promise<BootstrapResult> {
                 managedHistoryService.closeSync();
             } catch (historyCloseError) {
                 logger.warn('historyService.closeSync failed', { error: historyCloseError });
+            }
+
+            try {
+                requestLogService.closeSync();
+            } catch (requestLogCloseError) {
+                logger.warn('requestLogService.closeSync failed', { error: requestLogCloseError });
             }
 
             try {

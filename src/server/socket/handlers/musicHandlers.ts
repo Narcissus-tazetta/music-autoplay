@@ -4,6 +4,7 @@ import type { ReplyOptions } from '@/shared/utils/errors';
 import { withErrorHandler } from '@/shared/utils/errors';
 import type { Socket } from 'socket.io';
 import type { Server } from 'socket.io';
+import { z } from 'zod';
 import { withContext } from '../../logger';
 import type { EmitFn } from '../../music/emitter/musicEventEmitter';
 import type { MusicService } from '../../music/musicService';
@@ -27,6 +28,24 @@ interface Deps {
     isAdmin?: (requesterHash?: string) => boolean;
     rateLimiter?: RateLimiter;
 }
+
+const SocketAddMusicSchema = z.preprocess(input => {
+    if (typeof input === 'string') return { url: input };
+    if (Array.isArray(input)) {
+        const [url, requesterHash, requesterName] = input;
+        return { requesterHash, requesterName, url };
+    }
+    return input;
+}, AddMusicSchema);
+
+const SocketRemoveMusicSchema = z.preprocess(input => {
+    if (typeof input === 'string') return { url: input };
+    if (Array.isArray(input)) {
+        const [url, requesterHash] = input;
+        return { requesterHash, url };
+    }
+    return input;
+}, RemoveMusicSchema);
 
 export function createMusicHandlers(deps: Deps): {
     register: (socket: Socket, context?: EventContext) => void;
@@ -58,7 +77,9 @@ export function createMusicHandlers(deps: Deps): {
     const addMusicHandler = createSocketEventHandler({
         event: 'addMusic',
         handler: async (payload, context): Promise<ReplyOptions> => {
-            const { url, requesterHash, requesterName } = payload;
+            const { url } = payload;
+            const requesterHash = context.socket?.data?.requesterHash ?? payload.requesterHash;
+            const requesterName = context.socket?.data?.requesterName ?? payload.requesterName ?? 'guest';
             const l = withContext(context as Record<string, unknown>);
 
             const result = await musicService.addMusic({
@@ -89,18 +110,19 @@ export function createMusicHandlers(deps: Deps): {
         logResponse: false,
         rateLimiter: deps.rateLimiter
             ? {
-                keyGenerator: socket => socket.handshake.address || socket.id,
+                keyGenerator: socket => socket.data.requesterHash ?? socket.handshake.address ?? socket.id,
                 maxAttempts: 10,
                 windowMs: 60_000,
             }
             : undefined,
-        validator: AddMusicSchema,
+        validator: SocketAddMusicSchema,
     });
 
     const removeMusicHandler = createSocketEventHandler({
         event: 'removeMusic',
         handler: async (payload, context): Promise<ReplyOptions> => {
-            const { url, requesterHash } = payload;
+            const { url } = payload;
+            const requesterHash = context.socket?.data?.requesterHash ?? payload.requesterHash;
             const l = withContext(context as Record<string, unknown>);
 
             const result = await musicService.removeMusic({ requesterHash, url });
@@ -127,12 +149,12 @@ export function createMusicHandlers(deps: Deps): {
         logResponse: false,
         rateLimiter: deps.rateLimiter
             ? {
-                keyGenerator: socket => socket.handshake.address || socket.id,
+                keyGenerator: socket => socket.data.requesterHash ?? socket.handshake.address ?? socket.id,
                 maxAttempts: 10,
                 windowMs: 60_000,
             }
             : undefined,
-        validator: RemoveMusicSchema,
+        validator: SocketRemoveMusicSchema,
     });
 
     const register = withErrorHandler((socket: Socket, ctx?: EventContext) => {

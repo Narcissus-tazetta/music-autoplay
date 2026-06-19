@@ -12,16 +12,17 @@ import { respondWithResult } from '@/shared/utils/httpResponse';
 import { watchUrl } from '@/shared/utils/youtube';
 import { Button } from '@shadcn/ui/button';
 import { AnimatePresence } from 'framer-motion';
-import { History as HistoryIcon } from 'lucide-react';
-import { createHash } from 'node:crypto';
-import { useCallback, useEffect, useState } from 'react';
+import { ClipboardList, History as HistoryIcon } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLoaderData } from 'react-router';
 import type { ActionFunctionArgs } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
 import HistoryView from '~/components/HistoryView';
 import { MusicForm } from '~/components/MusicForm';
 import { MusicTable } from '~/components/MusicTable';
-import { loginSession } from '~/sessions.server';
+import { RequesterDetailDialog, type RequesterSelection } from '~/components/RequesterDetailDialog';
+import { RequestLogView } from '~/components/RequestLogView';
+import { resolveRequesterIdentity } from '~/requesterIdentity.server';
 import { useAdminStore } from '../../shared/stores/adminStore';
 
 export const meta = () => [
@@ -34,15 +35,11 @@ export const meta = () => [
 
 export const loader = async ({ request }: ActionFunctionArgs) => {
     const res = await safeExecuteAsync(async () => {
-        const session = await loginSession.getSession(
-            request.headers.get('Cookie'),
-        );
-        const user = session.get('user');
+        const identity = await resolveRequesterIdentity(request.headers.get('Cookie'));
 
         return {
-            userHash: user
-                ? createHash('sha256').update(user.id).digest('hex')
-                : undefined,
+            requesterName: identity.requesterName,
+            userHash: identity.requesterHash,
         };
     });
 
@@ -73,8 +70,9 @@ export const loader = async ({ request }: ActionFunctionArgs) => {
 
 export default function Home() {
     const { userHash } = useLoaderData<typeof loader>();
-    const [viewMode, setViewMode] = useState<'requests' | 'history'>('requests');
+    const [viewMode, setViewMode] = useState<'requests' | 'history' | 'requestLogs'>('requests');
     const [visibleHistoryCount, setVisibleHistoryCount] = useState(10);
+    const [selectedRequester, setSelectedRequester] = useState<RequesterSelection | null>(null);
 
     const { musics, remoteStatus } = useMusicStore(
         useShallow(state => ({
@@ -154,9 +152,29 @@ export default function Home() {
     const filteredHistoryCount = historyItems.length;
     const visibleHistoryItems = historyItems.slice(0, visibleHistoryCount);
     const remainingHistoryCount = Math.max(filteredHistoryCount - visibleHistoryItems.length, 0);
+    const selectedRequesterQueue = useMemo(() => {
+        if (!selectedRequester?.requesterHash) return [];
+        return musics.filter(music => music.requesterHash === selectedRequester.requesterHash);
+    }, [musics, selectedRequester?.requesterHash]);
+    const handleRequesterNameChange = useCallback((requesterName: string) => {
+        setSelectedRequester(current => current ? { ...current, requesterName } : current);
+    }, []);
 
     return (
         <div className='flex flex-col w-full max-w-5xl gap-4 sm:gap-5 px-3 sm:px-4 mt-8 sm:mt-12 pb-6 sm:pb-8'>
+            <RequesterDetailDialog
+                isAdmin={isAdmin}
+                isDeleting={isSubmitting}
+                onDelete={handleDelete}
+                onRequesterNameChange={handleRequesterNameChange}
+                onOpenChange={open => {
+                    if (!open) setSelectedRequester(null);
+                }}
+                open={selectedRequester !== null}
+                queueMusics={selectedRequesterQueue}
+                requester={selectedRequester}
+                userHash={userHash}
+            />
             <fetcher.Form method='post' action='/api/music/add' id={form.id}>
                 <MusicForm
                     formId={form.id}
@@ -198,6 +216,8 @@ export default function Home() {
                         setVisibleHistoryCount={setVisibleHistoryCount}
                     />
                 )
+                : viewMode === 'requestLogs'
+                ? <RequestLogView setViewMode={setViewMode} />
                 : (
                     <>
                         <MusicTable
@@ -206,31 +226,51 @@ export default function Home() {
                             isAdmin={isAdmin}
                             isDeleting={isSubmitting}
                             onDelete={handleDelete}
+                            onRequesterClick={setSelectedRequester}
                             headerAction={
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            type='button'
-                                            variant='ghost'
-                                            size='icon'
-                                            aria-label='履歴'
-                                            className='h-9 w-9 p-0 rounded-md text-muted-foreground hover:bg-accent/30'
-                                            onClick={() => {
-                                                setViewMode('history');
-                                                setVisibleHistoryCount(10);
-                                                fetchHistory({
-                                                    from: from || undefined,
-                                                    query: query || undefined,
-                                                    sort,
-                                                    to: to || undefined,
-                                                });
-                                            }}
-                                        >
-                                            <HistoryIcon className='h-4 w-4' />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>履歴を見る</TooltipContent>
-                                </Tooltip>
+                                <>
+                                    {isAdmin && (
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    type='button'
+                                                    variant='ghost'
+                                                    size='icon'
+                                                    aria-label='リクエストログ'
+                                                    className='h-9 w-9 p-0 rounded-md text-muted-foreground hover:bg-accent/30'
+                                                    onClick={() => setViewMode('requestLogs')}
+                                                >
+                                                    <ClipboardList className='h-4 w-4' />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>リクエストログ</TooltipContent>
+                                        </Tooltip>
+                                    )}
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                type='button'
+                                                variant='ghost'
+                                                size='icon'
+                                                aria-label='履歴'
+                                                className='h-9 w-9 p-0 rounded-md text-muted-foreground hover:bg-accent/30'
+                                                onClick={() => {
+                                                    setViewMode('history');
+                                                    setVisibleHistoryCount(10);
+                                                    fetchHistory({
+                                                        from: from || undefined,
+                                                        query: query || undefined,
+                                                        sort,
+                                                        to: to || undefined,
+                                                    });
+                                                }}
+                                            >
+                                                <HistoryIcon className='h-4 w-4' />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>履歴を見る</TooltipContent>
+                                    </Tooltip>
+                                </>
                             }
                         />
                     </>

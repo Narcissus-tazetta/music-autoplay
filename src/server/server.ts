@@ -1,17 +1,19 @@
 import { SERVER_ENV } from '@/app/env.server';
 import { loginSession } from '@/app/sessions.server';
 import logger, { replaceConsoleWithLogger } from '@/server/logger';
-import type { ServerContext } from '@/shared/types/server';
+import { type ServerContext, serverContext } from '@/shared/types/server';
 import { createRequestHandler } from '@react-router/express';
 import express from 'express';
+import { RouterContextProvider } from 'react-router';
 import { bootstrap } from './bootstrap';
 import configureApp, { type ConfigureAppResult } from './configureApp';
 import { createAdminAuthenticator } from './middleware/adminAuth';
 import { createAdminRateLimiter } from './middleware/adminRateLimiter';
+import { getRequestLogService } from './requestLog/requestLogService';
 import { RateLimiterManager } from './services/rateLimiterManager';
 import { getConfig, safeNumber } from './utils/configUtils';
 
-const app = express();
+const app: express.Application = express();
 const config = getConfig();
 
 const adminUser = config.getString('ADMIN_USER') || SERVER_ENV.ADMIN_USER;
@@ -41,7 +43,7 @@ const server = app.listen(port, () => {
 server.keepAliveTimeout = 5000;
 server.headersTimeout = 6000;
 
-server.on('error', err => {
+server.on('error', (err: Error) => {
     if ((err as NodeJS.ErrnoException).code === 'EADDRINUSE') {
         logger.error(
             `Port ${port} is already in use. Please choose a different port or stop the existing process.`,
@@ -59,11 +61,7 @@ const viteDevServer = config.nodeEnv === 'production'
     ? null
     : await import('vite').then(vite =>
         vite.createServer({
-            optimizeDeps: {
-                include: ['socket.io-client', 'framer-motion', 'zustand'],
-            },
             server: {
-                hmr: false,
                 middlewareMode: true,
             },
         })
@@ -392,6 +390,46 @@ async function isAdminSession(req: express.Request): Promise<boolean> {
     return session.get('admin') === true;
 }
 
+const REQUEST_LOG_LIMIT_DEFAULT = 50;
+const REQUEST_LOG_LIMIT_MAX = 500;
+const REQUESTER_HASH_PATTERN = /^[a-f0-9]{64}$/i;
+const REQUESTER_HASH_PREFIX_PATTERN = /^[a-f0-9]{4,64}$/i;
+
+function clampRequestLogLimit(raw: unknown): number {
+    const value = typeof raw === 'number'
+        ? raw
+        : (typeof raw === 'string' ? Number.parseInt(raw, 10) : NaN);
+    if (!Number.isFinite(value)) return REQUEST_LOG_LIMIT_DEFAULT;
+    return Math.min(Math.max(value, 1), REQUEST_LOG_LIMIT_MAX);
+}
+
+function parseRequesterHashFilter(rawHash: unknown, rawPrefix: unknown): {
+    hashPrefix?: string;
+    requesterHash?: string;
+} {
+    const hash = typeof rawHash === 'string' ? rawHash.trim() : '';
+    if (REQUESTER_HASH_PATTERN.test(hash) || hash === 'external') return { requesterHash: hash };
+
+    const hashPrefix = typeof rawPrefix === 'string' ? rawPrefix.trim() : '';
+    if (REQUESTER_HASH_PREFIX_PATTERN.test(hashPrefix)) return { hashPrefix };
+
+    return {};
+}
+
+function getRequestLogQueryBody(raw: unknown): {
+    hashPrefix?: unknown;
+    limit?: unknown;
+    requesterHash?: unknown;
+} {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+    const body = raw as Record<string, unknown>;
+    return {
+        hashPrefix: body.hashPrefix,
+        limit: body.limit,
+        requesterHash: body.requesterHash,
+    };
+}
+
 app.get('/api/admin/diag/memory', (req, res) => {
     const handleDiag = async (): Promise<void> => {
         try {
@@ -463,15 +501,115 @@ app.get('/api/admin/diag/memory', (req, res) => {
     void handleDiag();
 });
 
+app.post('/api/admin/request-logs/query', express.json({ limit: '8kb' }), (req, res) => {
+    const handleRequestLogQuery = async (): Promise<void> => {
+        try {
+            res.setHeader('Cache-Control', 'no-store');
+            const isAdmin = await isAdminSession(req);
+            if (!isAdmin) {
+                res.status(401).json({ error: 'unauthorized', ok: false });
+                return;
+            }
+
+            const body = getRequestLogQueryBody(req.body);
+            const filter = parseRequesterHashFilter(body.requesterHash, body.hashPrefix);
+            if (!filter.requesterHash && !filter.hashPrefix) {
+                res.status(400).json({ ok: false, error: 'invalid_requester_hash' });
+                return;
+            }
+
+            const entries = await getRequestLogService().query({
+                ...filter,
+                limit: clampRequestLogLimit(body.limit),
+            });
+
+            res.json({ entries, ok: true });
+        } catch (error: unknown) {
+            logger.error('Error in /api/admin/request-logs/query endpoint', { error });
+            res.status(500).json({ ok: false, error: 'internal_error' });
+        }
+    };
+
+    void handleRequestLogQuery();
+});
+
+app.get('/api/admin/request-logs', (req, res) => {
+    const handleRequestLogs = async (): Promise<void> => {
+        try {
+            res.setHeader('Cache-Control', 'no-store');
+            const isAdmin = await isAdminSession(req);
+            if (!isAdmin) {
+                res.status(401).json({ error: 'unauthorized', ok: false });
+                return;
+            }
+
+            const limit = clampRequestLogLimit(req.query.limit);
+            const filter = parseRequesterHashFilter(req.query.hash, req.query.hashPrefix);
+
+            const entries = await getRequestLogService().query({
+                ...filter,
+                limit,
+            });
+
+            res.json({ entries, ok: true });
+        } catch (error: unknown) {
+            logger.error('Error in /api/admin/request-logs endpoint', { error });
+            res.status(500).json({ ok: false, error: 'internal_error' });
+        }
+    };
+
+    void handleRequestLogs();
+});
+
+app.get('/api/admin/request-logs/:hashPrefix', (req, res) => {
+    const handleUserLogs = async (): Promise<void> => {
+        try {
+            res.setHeader('Cache-Control', 'no-store');
+            const isAdmin = await isAdminSession(req);
+            if (!isAdmin) {
+                res.status(401).json({ error: 'unauthorized', ok: false });
+                return;
+            }
+
+            const hashPrefix = req.params.hashPrefix;
+            const filter = parseRequesterHashFilter(req.query.hash, hashPrefix);
+            if (!filter.requesterHash && !filter.hashPrefix) {
+                res.status(400).json({ ok: false, error: 'invalid_hash_prefix' });
+                return;
+            }
+
+            const limit = clampRequestLogLimit(req.query.limit);
+
+            const entries = await getRequestLogService().query({
+                ...filter,
+                limit,
+            });
+
+            res.json({ entries, hashPrefix, ok: true });
+        } catch (error: unknown) {
+            logger.error('Error in /api/admin/request-logs/:hashPrefix endpoint', { error });
+            res.status(500).json({ ok: false, error: 'internal_error' });
+        }
+    };
+
+    void handleUserLogs();
+});
+
 app.all(
     '*splat',
     createRequestHandler({
         build: configResult.buildValue,
-        getLoadContext: () =>
-            ({
-                httpRateLimiter: socketServer.getHttpRateLimiter(),
-                io: socketServer,
-            }) satisfies ServerContext,
+        getLoadContext: () => {
+            const contextProvider = new RouterContextProvider();
+            contextProvider.set(
+                serverContext,
+                {
+                    httpRateLimiter: socketServer.getHttpRateLimiter(),
+                    io: socketServer,
+                } satisfies ServerContext,
+            );
+            return contextProvider;
+        },
     }),
 );
 

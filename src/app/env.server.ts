@@ -62,6 +62,7 @@ const serverEnvSchema = z
         MONGODB_URI: z.string().optional(),
         MONGODB_DB_NAME: z.string().optional().default('musicReq'),
         MONGODB_COLLECTION: z.string().optional().default('musicRequests'),
+        MONGODB_REQUEST_LOG_COLLECTION: z.string().optional().default('requestLogs'),
         PERSISTENCE_PROVIDER: z
             .enum(['file', 'pg', 'mongo'])
             .optional()
@@ -222,6 +223,7 @@ export const SERVER_ENV = (() => {
         MONGODB_URI: process.env.MONGODB_URI,
         MONGODB_DB_NAME: process.env.MONGODB_DB_NAME,
         MONGODB_COLLECTION: process.env.MONGODB_COLLECTION,
+        MONGODB_REQUEST_LOG_COLLECTION: process.env.MONGODB_REQUEST_LOG_COLLECTION,
         PERSISTENCE_PROVIDER: process.env.PERSISTENCE_PROVIDER,
         GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
         GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,

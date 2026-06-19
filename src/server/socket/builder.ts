@@ -1,5 +1,6 @@
 import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
 import { createAdminHash, withErrorHandler } from '@/shared/utils/errors';
+import { createRequire } from 'node:module';
 import { getConfigService } from '../config/configService';
 import type ConfigService from '../config/configService';
 import type { Store } from '../persistence';
@@ -8,6 +9,8 @@ import { RateLimiterManager } from '../services/rateLimiterManager';
 import { WindowCloseManager } from '../services/windowCloseManager';
 import type { YouTubeService } from '../services/youtubeService';
 import ServiceResolver from '../utils/serviceResolver';
+
+const nodeRequire = createRequire(import.meta.url);
 
 export interface SocketServerConfig {
     youtubeService?: YouTubeService;
@@ -69,7 +72,7 @@ export class SocketServerBuilder {
             rateLimiterManager.register('http', httpRateLimiter);
             rateLimiterManager.scheduleCleanup();
 
-            const { container } = require('../di/container') as {
+            const { container } = nodeRequire('../di/container') as {
                 container: {
                     register: (token: string, factory: () => unknown) => void;
                 };

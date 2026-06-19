@@ -4,6 +4,7 @@ import { respondWithResult } from '@/shared/utils/httpResponse';
 import clsx from 'clsx';
 import type { LinksFunction, LoaderFunctionArgs } from 'react-router';
 import {
+    data as routerData,
     isRouteErrorResponse,
     Links,
     Meta,
@@ -15,6 +16,7 @@ import {
 } from 'react-router';
 import { PreventFlashOnWrongTheme, ThemeProvider, useTheme } from 'remix-themes';
 import { Header } from '~/components/ui/Header';
+import { ensureAnonymousIdCookie } from '~/requesterIdentity.server';
 import { themeSessionResolver, type UserSessionData } from '~/sessions.server';
 import { loginSession } from '~/sessions.server';
 import appCss from './App.css?url';
@@ -33,13 +35,15 @@ export const links: LinksFunction = () => [
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
     const res = await safeExecuteAsync(async () => {
+        const cookieHeader = request.headers.get('Cookie');
         const { getTheme } = await themeSessionResolver(request);
-        const session = await loginSession.getSession(
-            request.headers.get('Cookie'),
-        );
+        const session = await loginSession.getSession(cookieHeader);
         const user = session.get('user');
 
+        const { setCookieHeader } = await ensureAnonymousIdCookie(cookieHeader);
+
         return {
+            headers: setCookieHeader ? { 'Set-Cookie': setCookieHeader } : undefined,
             theme: getTheme(),
             user,
         };
@@ -62,7 +66,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
         return respondWithResult(makeErr({ code, message }));
     }
-    return res.value;
+
+    const { headers, theme, user } = res.value;
+    return routerData({ theme, user }, headers ? { headers } : undefined);
 };
 
 type LoaderResult =

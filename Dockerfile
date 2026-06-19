@@ -1,6 +1,9 @@
-FROM oven/bun:1 AS builder
+FROM node:24-bookworm-slim AS builder
 
 WORKDIR /app
+
+# Bun is used only as the package manager/test runner; React Router/Vite SSR runs on Node.
+RUN npm install -g bun@1.3.14
 
 # Copy manifest files first to leverage Docker cache
 COPY package.json bun.lock ./
@@ -18,7 +21,7 @@ COPY tsconfig.json vite.config.ts react-router.config.ts components.json ./
 ENV NODE_ENV=production
 RUN bun run build
 
-FROM oven/bun:1 AS runtime
+FROM node:24-bookworm-slim AS runtime
 
 WORKDIR /app
 
@@ -48,4 +51,4 @@ ENV NODE_ENV=production
 # Default in code is 3000, but Koyeb/Render may override via env.
 EXPOSE 3000
 
-CMD ["bun", "run", "start"]
+CMD ["./node_modules/.bin/tsx", "src/server/server.ts"]

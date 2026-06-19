@@ -20,6 +20,7 @@ export interface EventContext extends Record<string, unknown> {
     socketId: string;
     requestId?: string;
     connectionId?: string;
+    socket?: Socket;
 }
 
 export type AuthChecker = (context: AuthContext) => boolean | Promise<boolean>;
@@ -95,8 +96,10 @@ export function createSocketEventHandler<TPayload, TResponse>(
         : undefined;
 
     return (socket: Socket, context?: EventContext) => {
-        const ctx: EventContext = context ?? {
-            socketId: socket.id,
+        const ctx: EventContext = {
+            ...(context ?? { socketId: socket.id }),
+            socket,
+            socketId: context?.socketId ?? socket.id,
         };
 
         const log = context

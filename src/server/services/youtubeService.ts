@@ -10,6 +10,10 @@ import logger from '../logger';
 import { logSecurityEvent } from '../utils/securityLogger';
 import type CacheService from './cacheService';
 
+const convertDuration = typeof convertISO8601Duration === 'function'
+    ? convertISO8601Duration
+    : (convertISO8601Duration as unknown as { default: (value: string) => number }).default;
+
 export interface VideoDetails {
     title: string;
     channelTitle: string;
@@ -382,7 +386,7 @@ export class YouTubeService {
                     return err('動画の情報が取得できませんでした。');
                 }
 
-                const duration = convertISO8601Duration(durationRaw);
+                const duration = convertDuration(durationRaw);
                 const durationSecs = duration % 60;
                 const durationMins = Math.floor((duration / 60) % 60);
                 const durationHours = Math.floor(duration / 3600);

@@ -1,40 +1,20 @@
 import logger from '@/server/logger';
-import { getClientIP } from '@/server/utils/getClientIP';
 import { getMessage } from '@/shared/constants/messages';
 import { AddMusicSchema } from '@/shared/schemas/music';
-import type { ServerContext } from '@/shared/types/server';
+import { serverContext } from '@/shared/types/server';
 import { safeExecuteAsync } from '@/shared/utils/errors';
 import { parseWithZod } from '@conform-to/zod/v4';
-import { createHash, hash } from 'node:crypto';
 import type { ActionFunctionArgs } from 'react-router';
-import { loginSession } from '../../sessions.server';
-
-function getRateLimitKey(request: Request, cookie: string | null): string {
-    if (cookie) {
-        const sessionMatch = cookie.match(/__session=([^;]+)/);
-        if (sessionMatch)
-            return `session:${createHash('sha256').update(sessionMatch[1]).digest('hex').substring(0, 16)}`;
-        const themeMatch = cookie.match(/theme=([^;]+)/);
-        if (themeMatch) return `theme:${createHash('sha256').update(themeMatch[1]).digest('hex').substring(0, 16)}`;
-    }
-
-    const userAgent = request.headers.get('user-agent');
-    const accept = request.headers.get('accept');
-    const acceptLang = request.headers.get('accept-language');
-    const clientIP = getClientIP(request);
-
-    const fingerprint = `${clientIP}:${userAgent}:${accept}:${acceptLang}`;
-    return `fp:${createHash('sha256').update(fingerprint).digest('hex').substring(0, 16)}`;
-}
+import { getRateLimitKey, resolveRequesterIdentity } from '../../requesterIdentity.server';
 
 export const action = async ({
     request,
     context,
-}: ActionFunctionArgs<ServerContext>) => {
+}: ActionFunctionArgs) => {
+    const { httpRateLimiter, io } = context.get(serverContext);
     const cookie = request.headers.get('Cookie');
-    const session = await loginSession.getSession(cookie);
-    const rateLimitKey = getRateLimitKey(request, cookie);
-    const rateLimiter = context.httpRateLimiter;
+    const rateLimitKey = await getRateLimitKey(request, cookie);
+    const rateLimiter = httpRateLimiter;
 
     if (!rateLimiter.check(rateLimitKey)) {
         const oldestAttempt = rateLimiter.getOldestAttempt(rateLimitKey);
@@ -57,13 +37,9 @@ export const action = async ({
 
     if (submission.status !== 'success') return Response.json(submission.reply(), { status: 400 });
 
-    const user = session.get('user');
-    const requesterHash = user ? hash('sha256', user.id) : undefined;
-    const requesterName = user?.name ?? (user ? 'unknown' : 'guest');
+    const { requesterHash, requesterName } = await resolveRequesterIdentity(cookie);
 
-    const result = await safeExecuteAsync(() =>
-        context.io.addMusic(submission.value.url, requesterHash, requesterName)
-    );
+    const result = await safeExecuteAsync(() => io.addMusic(submission.value.url, requesterHash, requesterName));
 
     if (result.ok) {
         const replyOptions = result.value as { formErrors?: string[] };

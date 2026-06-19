@@ -1,4 +1,4 @@
-import { createCookieSessionStorage } from 'react-router';
+import { createCookie, createCookieSessionStorage } from 'react-router';
 import { createThemeSessionResolver } from 'remix-themes';
 import { SERVER_ENV } from '~/env.server';
 
@@ -37,4 +37,24 @@ export const loginSession = createCookieSessionStorage<{
         secure: isProduction,
         ...(isProduction ? { domain: 'music-auto-play.onrender.com' } : {}),
     },
+});
+
+export const anonymousIdCookie = createCookie('_anonId', {
+    httpOnly: true,
+    maxAge: 60 * 60 * 24 * 365,
+    path: '/',
+    sameSite: 'lax',
+    secrets: [SERVER_ENV.SESSION_SECRET],
+    secure: isProduction,
+    ...(isProduction ? { domain: 'music-auto-play.onrender.com' } : {}),
+});
+
+export const requesterDisplayNameCookie = createCookie('_requesterName', {
+    httpOnly: true,
+    maxAge: 60 * 60 * 24 * 365,
+    path: '/',
+    sameSite: 'lax',
+    secrets: [SERVER_ENV.SESSION_SECRET],
+    secure: isProduction,
+    ...(isProduction ? { domain: 'music-auto-play.onrender.com' } : {}),
 });

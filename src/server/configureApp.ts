@@ -8,14 +8,31 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ServerBuild } from 'react-router';
+import { getAllowedActionOrigins } from './reactRouter/actionOrigins';
 import { getConfig } from './utils/configUtils';
 
 export interface ConfigureAppResult {
     buildValue: ServerBuild | (() => Promise<ServerBuild>);
 }
 
+function withAllowedActionOrigins(build: ServerBuild, allowedActionOrigins: string[]): ServerBuild {
+    return {
+        ...build,
+        allowedActionOrigins,
+    };
+}
+
+function createBuildValue(
+    buildValue: ServerBuild | (() => Promise<ServerBuild>),
+    allowedActionOrigins: string[],
+): ServerBuild | (() => Promise<ServerBuild>) {
+    if (typeof buildValue === 'function')
+        return async () => withAllowedActionOrigins(await buildValue(), allowedActionOrigins);
+    return withAllowedActionOrigins(buildValue, allowedActionOrigins);
+}
+
 export async function configureApp(
-    app: express.Express,
+    app: express.Application,
     getIo: () => { emit: (...args: unknown[]) => void } | null,
     viteDevServer: {
         middlewares?: unknown;
@@ -339,6 +356,18 @@ export async function configureApp(
         logger.error('Failed to configure build value', errorDetail);
         throw new Error('Build configuration failed', { cause: error });
     }
+    const configuredPort = config.getNumber('PORT') ?? SERVER_ENV.PORT;
+    const allowedActionOrigins = getAllowedActionOrigins({
+        clientUrl: config.getString('CLIENT_URL') || SERVER_ENV.CLIENT_URL,
+        corsOrigins: config.getString('CORS_ORIGINS'),
+        nodeEnv: config.nodeEnv,
+        port: configuredPort,
+    });
+    buildValue = createBuildValue(buildValue, allowedActionOrigins);
+    logger.info('React Router action origins configured', {
+        allowedActionOrigins,
+        environment: config.nodeEnv,
+    });
     logger.info('App middleware configuration completed successfully');
     return { buildValue };
 }

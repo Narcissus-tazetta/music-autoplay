@@ -37,6 +37,7 @@ export interface C2S {
     addMusic?(
         url: string,
         requesterHash?: string,
+        requesterNameOrCb?: string | ((res: { formErrors?: string[] } | Record<string, unknown>) => void),
         cb?: (res: { formErrors?: string[] } | Record<string, unknown>) => void,
     ): void;
     removeMusic?(

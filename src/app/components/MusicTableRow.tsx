@@ -9,6 +9,7 @@ import { ChevronDown, Loader, MoreVertical, TrashIcon } from 'lucide-react';
 import { memo } from 'react';
 import { Button } from '~/components/ui/shadcn/button';
 import { Table } from '~/components/ui/shadcn/table';
+import type { RequesterSelection } from './RequesterDetailDialog';
 
 export interface MusicTableRowProps {
     music: Music;
@@ -17,6 +18,7 @@ export interface MusicTableRowProps {
     isAdmin: boolean;
     isDeleting?: boolean;
     onDelete: (id: string, isAdmin?: boolean) => void;
+    onRequesterClick?: (requester: RequesterSelection) => void;
     className?: string;
 }
 
@@ -35,6 +37,7 @@ export default function MusicTableRow({
     isAdmin,
     isDeleting = false,
     onDelete,
+    onRequesterClick,
     className,
 }: MusicTableRowProps) {
     const { isExpanded, canDelete, handleDelete, toggleExpanded } = useMusicRow({
@@ -49,6 +52,12 @@ export default function MusicTableRow({
         className ?? 'min-h-14 sm:h-14',
         'border-b border-border/30 hover:bg-accent/50 hover:border-border transition-colors',
     );
+    const handleRequesterClick = () => {
+        onRequesterClick?.({
+            ...(music.requesterHash ? { requesterHash: music.requesterHash } : {}),
+            requesterName: getRequesterDisplayName(music.requesterName),
+        });
+    };
 
     return (
         <>
@@ -175,9 +184,14 @@ export default function MusicTableRow({
                                             :
                                         </span>
                                     </div>
-                                    <span className='font-medium text-xs sm:text-sm'>
+                                    <Button
+                                        type='button'
+                                        variant='ghost'
+                                        className='h-auto min-h-0 px-1 py-0 text-xs sm:text-sm font-semibold text-left text-foreground hover:text-blue-500 dark:hover:text-purple-400'
+                                        onClick={handleRequesterClick}
+                                    >
                                         {getRequesterDisplayName(music.requesterName)}
-                                    </span>
+                                    </Button>
                                 </div>
                             </div>
                         </Table.Cell>

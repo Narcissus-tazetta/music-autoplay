@@ -12,6 +12,7 @@ import ServiceResolver from '../../utils/serviceResolver';
 import { TimerManager } from '../../utils/timerManager';
 import type { ConnectionHandlerFactory } from '../handlers/connectionHandler';
 import { SocketRuntime } from '../managers/runtime';
+import { registerSocketIdentityMiddleware } from '../middleware/socketIdentityMiddleware';
 import { createSocketIo } from './socketIo';
 
 export interface RuntimeOptions {
@@ -47,6 +48,7 @@ export async function initSocketServer(
     const created = createSocketIo(server);
     if (!created.io) throw new Error('failed to initialize socket.io');
     const io = created.io;
+    registerSocketIdentityMiddleware(io);
 
     const [persistedData, timerManager, configService] = await Promise.all([
         Promise.resolve(

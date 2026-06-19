@@ -1,8 +1,7 @@
 import { container } from '@/server/di/container';
 import logger from '@/server/logger';
-import { getClientIP } from '@/server/utils/getClientIP';
 import { RemoveMusicSchema } from '@/shared/schemas/music';
-import type { ServerContext } from '@/shared/types/server';
+import { serverContext } from '@/shared/types/server';
 import { safeExecuteAsync } from '@/shared/utils/errors';
 import { err as makeErr } from '@/shared/utils/errors/result-handlers';
 import { respondWithResult } from '@/shared/utils/httpResponse';
@@ -10,12 +9,14 @@ import { parseWithZod } from '@conform-to/zod/v4';
 import { createHash } from 'node:crypto';
 import type { ActionFunctionArgs } from 'react-router';
 import { SERVER_ENV } from '../../env.server';
+import { getRateLimitKey, resolveRequesterIdentity } from '../../requesterIdentity.server';
 import { loginSession } from '../../sessions.server';
 
 export const action = async ({
     request,
     context,
-}: ActionFunctionArgs<ServerContext>) => {
+}: ActionFunctionArgs) => {
+    const { httpRateLimiter, io } = context.get(serverContext);
     const formData = await request.formData();
     const submission = parseWithZod(formData, {
         schema: RemoveMusicSchema,
@@ -23,22 +24,22 @@ export const action = async ({
 
     if (submission.status !== 'success') return Response.json(submission.reply(), { status: 400 });
 
-    const session = await loginSession.getSession(request.headers.get('Cookie'));
-    const user = session.get('user') as { id?: string } | undefined;
+    const cookieHeader = request.headers.get('Cookie');
+    const session = await loginSession.getSession(cookieHeader);
     const isAdminSession = session.get('admin') === true;
 
-    const clientIP = getClientIP(request);
-    const rateLimiter = context.httpRateLimiter;
+    const rateLimiter = httpRateLimiter;
+    const rateLimitKey = await getRateLimitKey(request, cookieHeader);
 
-    if (!isAdminSession && !user?.id) {
-        if (!rateLimiter.tryConsume(clientIP)) {
-            const oldestAttempt = rateLimiter.getOldestAttempt(clientIP);
+    if (!isAdminSession) {
+        if (!rateLimiter.check(rateLimitKey)) {
+            const oldestAttempt = rateLimiter.getOldestAttempt(rateLimitKey);
             const retryAfter = typeof oldestAttempt === 'number'
                 ? Math.ceil((oldestAttempt + 60_000 - Date.now()) / 1000)
                 : 60;
             logger.warn('Rate limit exceeded', {
-                clientIP,
                 endpoint: '/api/music/remove',
+                rateLimitKey,
             });
             return Response.json(
                 {
@@ -49,17 +50,8 @@ export const action = async ({
         }
     }
 
-    if (!isAdminSession && !user?.id) {
-        return respondWithResult(
-            makeErr({
-                code: 'unauthorized',
-                message: 'ログインしていないため、楽曲を削除できません',
-            }),
-        );
-    }
-
     try {
-        let requesterHash: string;
+        let requesterHash: string | undefined;
 
         if (isAdminSession) {
             const cfg = container.getOptional('configService') as
@@ -80,21 +72,21 @@ export const action = async ({
             requesterHash = createHash('sha256').update(adminSecret).digest('hex');
             logger.info('Using admin hash for deletion');
         } else {
-            if (!user?.id) {
+            const identity = await resolveRequesterIdentity(cookieHeader);
+            if (!identity.requesterHash) {
                 return respondWithResult(
                     makeErr({
                         code: 'unauthorized',
-                        message: 'ユーザーIDが見つかりません',
+                        message: 'ログインしていないため、楽曲を削除できません',
                     }),
                 );
             }
-            requesterHash = createHash('sha256').update(user.id).digest('hex');
-            logger.info('Using user hash for deletion');
+            requesterHash = identity.requesterHash;
         }
 
         const result = await safeExecuteAsync(async () => {
             return await Promise.resolve(
-                context.io.removeMusic(submission.value.url, requesterHash),
+                io.removeMusic(submission.value.url, requesterHash!),
             );
         });
 
@@ -132,6 +124,7 @@ export const action = async ({
             }
         }
 
+        if (!isAdminSession) rateLimiter.consume(rateLimitKey);
         return Response.json({ data: value, success: true });
     } catch (error: unknown) {
         logger.error('楽曲削除エラー', { error });
@@ -143,5 +136,5 @@ export const action = async ({
 };
 
 export default function MusicRemove() {
-    return; // このルートはアクション専用のため UI をレンダリングしません
+    return;
 }
