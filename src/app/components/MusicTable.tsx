@@ -24,6 +24,11 @@ function MusicTableInner({
     onRequesterClick,
     headerAction,
 }: MusicTableProps) {
+    const hasAnyDeletableRow = isAdmin || (!!userHash && musics.some(music => music.requesterHash === userHash));
+    const actionColumnClass = hasAnyDeletableRow
+        ? 'w-24 text-right align-middle'
+        : 'w-12 sm:w-16 text-right align-middle';
+
     return (
         <Table className='overflow-hidden my-4 sm:my-6 table-fixed'>
             <Table.Header>
@@ -32,11 +37,7 @@ function MusicTableInner({
                         No.
                     </Table.Head>
                     <Table.Head className='text-sm sm:text-base'>楽曲名</Table.Head>
-                    <Table.Head
-                        className={headerAction
-                            ? 'w-24 text-right align-middle'
-                            : 'w-12 sm:w-16 text-right align-middle'}
-                    >
+                    <Table.Head className={actionColumnClass}>
                         {headerAction
                             ? <div className='flex items-center justify-end gap-1'>{headerAction}</div>
                             : <span className='sr-only'>操作</span>}
@@ -57,6 +58,7 @@ function MusicTableInner({
                                     isDeleting={isDeleting}
                                     onDelete={onDelete}
                                     onRequesterClick={onRequesterClick}
+                                    reserveDeleteSlot={hasAnyDeletableRow}
                                 />
                             ))
                         )

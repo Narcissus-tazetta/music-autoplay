@@ -12,6 +12,7 @@ export default [
     route('api/music/add', 'routes/api/music.add.tsx'),
     route('api/music/remove', 'routes/api/music.remove.tsx'),
     route('api/requester/name', 'routes/api/requester.name.tsx'),
+    route('api/search/furigana', 'routes/api/search.furigana.tsx'),
     route('api/assets', 'routes/api/assets.tsx'),
     route('api/settings', 'routes/api/settings.tsx'),
 

@@ -19,6 +19,7 @@ export interface MusicTableRowProps {
     isDeleting?: boolean;
     onDelete: (id: string, isAdmin?: boolean) => void;
     onRequesterClick?: (requester: RequesterSelection) => void;
+    reserveDeleteSlot?: boolean;
     className?: string;
 }
 
@@ -38,6 +39,7 @@ export default function MusicTableRow({
     isDeleting = false,
     onDelete,
     onRequesterClick,
+    reserveDeleteSlot = true,
     className,
 }: MusicTableRowProps) {
     const { isExpanded, canDelete, handleDelete, toggleExpanded } = useMusicRow({
@@ -105,7 +107,7 @@ export default function MusicTableRow({
                                 {isDeleting ? <Loader className='animate-spin' size={18} /> : <TrashIcon size={18} />}
                             </Button>
                         )}
-                        {!canDelete && (
+                        {!canDelete && reserveDeleteSlot && (
                             <Button
                                 variant='ghost'
                                 size='icon'

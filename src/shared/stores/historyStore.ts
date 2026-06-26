@@ -26,11 +26,9 @@ export const useHistoryStore = create<HistoryStore>((set, get) => {
         if (!socket) return;
         const state = get();
         const resolvedFrom = overrides?.from ?? state.from;
-        const resolvedQuery = overrides?.query ?? state.query;
         const resolvedTo = overrides?.to ?? state.to;
         const payload: HistoryQuery = {
             from: resolvedFrom.length > 0 ? resolvedFrom : undefined,
-            query: resolvedQuery.length > 0 ? resolvedQuery : undefined,
             sort: overrides?.sort ?? state.sort,
             to: resolvedTo.length > 0 ? resolvedTo : undefined,
         };

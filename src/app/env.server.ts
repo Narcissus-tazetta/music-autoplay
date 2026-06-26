@@ -194,6 +194,11 @@ const serverEnvSchema = z
         YOUTUBE_API_KEY: isTest
             ? z.string().default('test-youtube-api-key')
             : z.string().min(1, 'YOUTUBE_API_KEY is required'),
+        YAHOO_FURIGANA_ENDPOINT: z
+            .string()
+            .url()
+            .optional()
+            .default('https://classroom-enhancer.ibaragiakira2007.workers.dev'),
     })
     .strict();
 
@@ -254,6 +259,7 @@ export const SERVER_ENV = (() => {
         WINDOW_CLOSE_DEBOUNCE_MS: process.env.WINDOW_CLOSE_DEBOUNCE_MS,
         YOUTUBE_REQUEST_QUEUE_MAX: process.env.YOUTUBE_REQUEST_QUEUE_MAX,
         YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY,
+        YAHOO_FURIGANA_ENDPOINT: process.env.YAHOO_FURIGANA_ENDPOINT,
     });
 
     if (!parsed.success) {

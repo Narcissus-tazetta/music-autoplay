@@ -24,11 +24,12 @@ import { MemoizedHistoryTableRow } from './HistoryTableRow';
 
 export interface HistoryTableProps {
     items: HistoryItem[];
+    onRequesterFilter?: (value: string) => void;
     sort: import('@/shared/types/history').HistorySort;
     setSort: (value: import('@/shared/types/history').HistorySort) => void;
 }
 
-function HistoryTableInner({ items, sort, setSort }: HistoryTableProps) {
+function HistoryTableInner({ items, onRequesterFilter, sort, setSort }: HistoryTableProps) {
     const selectedSortColorClass = 'text-blue-500 dark:text-purple-400';
 
     return (
@@ -132,6 +133,7 @@ function HistoryTableInner({ items, sort, setSort }: HistoryTableProps) {
                                     key={item.id}
                                     item={item}
                                     index={index}
+                                    onRequesterFilter={onRequesterFilter}
                                 />
                             ))
                         )

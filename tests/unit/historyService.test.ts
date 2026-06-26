@@ -35,9 +35,19 @@ describe('HistoryService', () => {
     test('recordPlayed は同一IDを集約して再生回数を増やす', async () => {
         const service = await createService();
 
-        service.recordPlayed(makeMusic(), '2026-03-01T10:00:00.000Z');
+        service.recordPlayed(
+            makeMusic({
+                requesterHash: 'abc123def4567890abcdef1234567890abcdef1234567890abcdef1234567890',
+                requesterName: 'first requester',
+            }),
+            '2026-03-01T10:00:00.000Z',
+        );
         const updated = service.recordPlayed(
-            makeMusic({ title: 'song-a-updated' }),
+            makeMusic({
+                requesterHash: 'def4567890abcdef1234567890abcdef1234567890abcdef1234567890abc',
+                requesterName: 'latest requester',
+                title: 'song-a-updated',
+            }),
             '2026-03-01T11:00:00.000Z',
         );
 
@@ -45,6 +55,8 @@ describe('HistoryService', () => {
         expect(updated.title).toBe('song-a-updated');
         expect(updated.firstPlayedAt).toBe('2026-03-01T10:00:00.000Z');
         expect(updated.lastPlayedAt).toBe('2026-03-01T11:00:00.000Z');
+        expect(updated.requesterHashPrefix).toBe('def45678');
+        expect(updated.requesterName).toBe('latest requester');
     });
 
     test('query は newest / oldest / mostPlayed で正しく並び替える', async () => {
@@ -72,7 +84,13 @@ describe('HistoryService', () => {
             '2026-03-01T10:00:00.000Z',
         );
         service.recordPlayed(
-            makeMusic({ channelName: 'beta ch', id: 'bbbbbbbbbbb', title: 'beta song' }),
+            makeMusic({
+                channelName: 'beta ch',
+                id: 'bbbbbbbbbbb',
+                requesterHash: 'bbb2222222222222222222222222222222222222222222222222222222222222',
+                requesterName: 'DJ Beta',
+                title: 'beta song',
+            }),
             '2026-03-03T10:00:00.000Z',
         );
         service.recordPlayed(
@@ -81,10 +99,14 @@ describe('HistoryService', () => {
         );
 
         const byQuery = service.query({ query: 'beta' });
+        const byRequesterName = service.query({ query: 'dj beta' });
+        const byRequesterPrefix = service.query({ query: 'bbb22222' });
         const byFrom = service.query({ from: '2026-03-03' });
         const byTo = service.query({ to: '2026-03-03' });
 
         expect(byQuery.map(v => v.id)).toEqual(['bbbbbbbbbbb']);
+        expect(byRequesterName.map(v => v.id)).toEqual(['bbbbbbbbbbb']);
+        expect(byRequesterPrefix.map(v => v.id)).toEqual(['bbbbbbbbbbb']);
         expect(byFrom.map(v => v.id)).toEqual(['ccccccccccc', 'bbbbbbbbbbb']);
         expect(byTo.map(v => v.id)).toEqual(['bbbbbbbbbbb', 'aaaaaaaaaaa']);
     });

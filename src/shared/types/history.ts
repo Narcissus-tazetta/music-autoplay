@@ -9,6 +9,8 @@ export interface HistoryItem {
     playCount: number;
     firstPlayedAt: string;
     lastPlayedAt: string;
+    requesterHashPrefix?: string;
+    requesterName?: string;
 }
 
 export interface HistoryQuery {

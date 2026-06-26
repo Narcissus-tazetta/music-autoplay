@@ -1,4 +1,5 @@
 import useFormErrors from '@/app/hooks/useFormErrors';
+import { useHistoryJapaneseReadings } from '@/app/hooks/useHistoryJapaneseReadings';
 import { useMusicForm } from '@/app/hooks/useMusicForm';
 import usePlayingMusic from '@/app/hooks/usePlayingMusic';
 import { useSettingsSync } from '@/app/hooks/useSettingsSync';
@@ -12,7 +13,7 @@ import { respondWithResult } from '@/shared/utils/httpResponse';
 import { watchUrl } from '@/shared/utils/youtube';
 import { Button } from '@shadcn/ui/button';
 import { AnimatePresence } from 'framer-motion';
-import { ClipboardList, History as HistoryIcon } from 'lucide-react';
+import { History as HistoryIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLoaderData } from 'react-router';
 import type { ActionFunctionArgs } from 'react-router';
@@ -21,8 +22,8 @@ import HistoryView from '~/components/HistoryView';
 import { MusicForm } from '~/components/MusicForm';
 import { MusicTable } from '~/components/MusicTable';
 import { RequesterDetailDialog, type RequesterSelection } from '~/components/RequesterDetailDialog';
-import { RequestLogView } from '~/components/RequestLogView';
 import { resolveRequesterIdentity } from '~/requesterIdentity.server';
+import { historyItemMatchesSearch } from '~/utils/historySearchSuggestions';
 import { useAdminStore } from '../../shared/stores/adminStore';
 
 export const meta = () => [
@@ -70,7 +71,7 @@ export const loader = async ({ request }: ActionFunctionArgs) => {
 
 export default function Home() {
     const { userHash } = useLoaderData<typeof loader>();
-    const [viewMode, setViewMode] = useState<'requests' | 'history' | 'requestLogs'>('requests');
+    const [viewMode, setViewMode] = useState<'requests' | 'history'>('requests');
     const [visibleHistoryCount, setVisibleHistoryCount] = useState(10);
     const [selectedRequester, setSelectedRequester] = useState<RequesterSelection | null>(null);
 
@@ -128,13 +129,12 @@ export default function Home() {
         const timer = setTimeout(() => {
             fetchHistory({
                 from: from || undefined,
-                query: query || undefined,
                 sort,
                 to: to || undefined,
             });
         }, 180);
         return () => clearTimeout(timer);
-    }, [fetchHistory, from, query, sort, to, viewMode]);
+    }, [fetchHistory, from, sort, to, viewMode]);
 
     const handleDelete = useCallback(
         (id: string, asAdmin?: boolean) => {
@@ -149,8 +149,13 @@ export default function Home() {
         [fetcher],
     );
 
-    const filteredHistoryCount = historyItems.length;
-    const visibleHistoryItems = historyItems.slice(0, visibleHistoryCount);
+    const historySearchReadings = useHistoryJapaneseReadings(historyItems, viewMode === 'history');
+    const filteredHistoryItems = useMemo(
+        () => historyItems.filter(item => historyItemMatchesSearch(item, query, historySearchReadings)),
+        [historyItems, historySearchReadings, query],
+    );
+    const filteredHistoryCount = filteredHistoryItems.length;
+    const visibleHistoryItems = filteredHistoryItems.slice(0, visibleHistoryCount);
     const remainingHistoryCount = Math.max(filteredHistoryCount - visibleHistoryItems.length, 0);
     const selectedRequesterQueue = useMemo(() => {
         if (!selectedRequester?.requesterHash) return [];
@@ -202,6 +207,8 @@ export default function Home() {
                 ? (
                     <HistoryView
                         filteredHistoryCount={filteredHistoryCount}
+                        historyItems={historyItems}
+                        historySearchReadings={historySearchReadings}
                         visibleHistoryItems={visibleHistoryItems}
                         remainingHistoryCount={remainingHistoryCount}
                         query={query}
@@ -216,8 +223,6 @@ export default function Home() {
                         setVisibleHistoryCount={setVisibleHistoryCount}
                     />
                 )
-                : viewMode === 'requestLogs'
-                ? <RequestLogView setViewMode={setViewMode} />
                 : (
                     <>
                         <MusicTable
@@ -228,49 +233,29 @@ export default function Home() {
                             onDelete={handleDelete}
                             onRequesterClick={setSelectedRequester}
                             headerAction={
-                                <>
-                                    {isAdmin && (
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <Button
-                                                    type='button'
-                                                    variant='ghost'
-                                                    size='icon'
-                                                    aria-label='リクエストログ'
-                                                    className='h-9 w-9 p-0 rounded-md text-muted-foreground hover:bg-accent/30'
-                                                    onClick={() => setViewMode('requestLogs')}
-                                                >
-                                                    <ClipboardList className='h-4 w-4' />
-                                                </Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent>リクエストログ</TooltipContent>
-                                        </Tooltip>
-                                    )}
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button
-                                                type='button'
-                                                variant='ghost'
-                                                size='icon'
-                                                aria-label='履歴'
-                                                className='h-9 w-9 p-0 rounded-md text-muted-foreground hover:bg-accent/30'
-                                                onClick={() => {
-                                                    setViewMode('history');
-                                                    setVisibleHistoryCount(10);
-                                                    fetchHistory({
-                                                        from: from || undefined,
-                                                        query: query || undefined,
-                                                        sort,
-                                                        to: to || undefined,
-                                                    });
-                                                }}
-                                            >
-                                                <HistoryIcon className='h-4 w-4' />
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>履歴を見る</TooltipContent>
-                                    </Tooltip>
-                                </>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            type='button'
+                                            variant='ghost'
+                                            size='icon'
+                                            aria-label='履歴'
+                                            className='h-9 w-9 p-0 rounded-md text-muted-foreground hover:bg-accent/30'
+                                            onClick={() => {
+                                                setViewMode('history');
+                                                setVisibleHistoryCount(10);
+                                                fetchHistory({
+                                                    from: from || undefined,
+                                                    sort,
+                                                    to: to || undefined,
+                                                });
+                                            }}
+                                        >
+                                            <HistoryIcon className='h-4 w-4' />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>履歴を見る</TooltipContent>
+                                </Tooltip>
                             }
                         />
                     </>

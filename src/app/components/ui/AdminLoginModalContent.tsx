@@ -2,7 +2,7 @@ import { useAdminStore } from '@/shared/stores/adminStore';
 import { Alert } from '@shadcn/ui/alert';
 import { Button } from '@shadcn/ui/button';
 import { Input } from '@shadcn/ui/input';
-import { Key, Loader, User } from 'lucide-react';
+import { Key, Loader, ShieldCheck, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface AdminLoginModalContentProps {
@@ -91,12 +91,24 @@ export function AdminLoginModalContent({ onClose }: AdminLoginModalContentProps)
 
     if (isAdmin) {
         return (
-            <div className='flex flex-col gap-6'>
+            <div className='flex flex-col gap-4'>
                 <div className='flex flex-col gap-2'>
-                    <h2 className='text-2xl font-bold'>管理者としてログイン中</h2>
+                    <h2 className='text-lg sm:text-xl font-bold tracking-tight'>管理者としてログイン中</h2>
                     <p className='text-muted-foreground text-sm'>
                         管理者権限でログインしています
                     </p>
+                </div>
+
+                <div className='flex items-center gap-3 rounded-xl border border-border/40 bg-muted/20 p-3'>
+                    <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/40 bg-background/60'>
+                        <ShieldCheck className='h-5 w-5 text-blue-500 dark:text-blue-400' />
+                    </div>
+                    <div className='min-w-0'>
+                        <p className='text-sm font-semibold'>Admin mode</p>
+                        <p className='text-xs text-muted-foreground'>
+                            管理者削除とリクエスター詳細のログ確認を利用できます。
+                        </p>
+                    </div>
                 </div>
 
                 {error && (
@@ -105,23 +117,35 @@ export function AdminLoginModalContent({ onClose }: AdminLoginModalContentProps)
                     </Alert>
                 )}
 
-                <Button
-                    onClick={handleLogout}
-                    disabled={isLoading}
-                    variant='destructive'
-                    size='lg'
-                    className='h-12 text-base transition-opacity hover:opacity-80'
-                >
-                    {isLoading ? <Loader className='animate-spin h-4 w-4' /> : 'ログアウト'}
-                </Button>
+                <div className='flex flex-col-reverse gap-2 sm:flex-row sm:justify-end'>
+                    {onClose && (
+                        <Button
+                            type='button'
+                            onClick={onClose}
+                            disabled={isLoading}
+                            variant='outline'
+                            className='h-10 rounded-xl text-sm'
+                        >
+                            閉じる
+                        </Button>
+                    )}
+                    <Button
+                        onClick={handleLogout}
+                        disabled={isLoading}
+                        variant='destructive'
+                        className='h-10 rounded-xl text-sm transition-opacity hover:opacity-80'
+                    >
+                        {isLoading ? <Loader className='animate-spin h-4 w-4' /> : 'ログアウト'}
+                    </Button>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className='flex flex-col gap-6'>
+        <div className='flex flex-col gap-4'>
             <div className='flex flex-col gap-2'>
-                <h2 className='text-2xl font-bold'>管理者ログイン</h2>
+                <h2 className='text-lg sm:text-xl font-bold tracking-tight'>管理者ログイン</h2>
                 <p className='text-muted-foreground text-sm'>
                     管理者アカウントでログインしてください
                 </p>
@@ -133,7 +157,7 @@ export function AdminLoginModalContent({ onClose }: AdminLoginModalContentProps)
                 </Alert>
             )}
 
-            <form onSubmit={handleLogin} className='flex flex-col gap-4'>
+            <form onSubmit={handleLogin} className='flex flex-col gap-3'>
                 <div className='flex flex-col gap-2'>
                     <label htmlFor='username' className='text-sm font-medium'>
                         ユーザー名
@@ -147,7 +171,7 @@ export function AdminLoginModalContent({ onClose }: AdminLoginModalContentProps)
                         required
                         disabled={isLoading}
                         leftIcon={<User className='h-4 w-4 opacity-80' />}
-                        className='h-12 text-base'
+                        className='h-10 sm:h-11 rounded-xl text-sm sm:text-base'
                     />
                 </div>
 
@@ -164,15 +188,14 @@ export function AdminLoginModalContent({ onClose }: AdminLoginModalContentProps)
                         required
                         disabled={isLoading}
                         leftIcon={<Key className='h-4 w-4 opacity-80' />}
-                        className='h-12 text-base'
+                        className='h-10 sm:h-11 rounded-xl text-sm sm:text-base'
                     />
                 </div>
 
                 <Button
                     type='submit'
                     disabled={isLoading}
-                    size='lg'
-                    className='h-12 text-base'
+                    className='h-10 sm:h-11 rounded-xl text-sm sm:text-base'
                 >
                     {isLoading
                         ? (

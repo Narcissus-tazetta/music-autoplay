@@ -9,6 +9,7 @@ const HISTORY_RETENTION_MS = HISTORY_RETENTION_YEARS * 365 * 24 * 60 * 60 * 1000
 const YOUTUBE_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 const ISO_8601_DURATION_PATTERN = /^PT(?=\d)(\d+H)?(\d+M)?(\d+S)?$/;
 const HH_MM_SS_DURATION_PATTERN = /^\d{2}:\d{2}:\d{2}$/;
+const REQUESTER_HASH_PREFIX_LENGTH = 8;
 
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -42,6 +43,17 @@ function normalizePlayedAtIso(input?: string): string {
     const ms = Date.parse(input);
     if (!Number.isFinite(ms)) return new Date().toISOString();
     return new Date(ms).toISOString();
+}
+
+function normalizeRequesterName(input?: string): string | undefined {
+    const value = input?.trim();
+    return value ? value : undefined;
+}
+
+function normalizeRequesterHashPrefix(input?: string): string | undefined {
+    const value = input?.trim();
+    if (!value) return undefined;
+    return value.slice(0, REQUESTER_HASH_PREFIX_LENGTH);
 }
 
 export class HistoryService {
@@ -109,6 +121,8 @@ export class HistoryService {
                 duration: normalizedMusic.duration,
                 lastPlayedAt: nowIso,
                 playCount: existing.playCount + 1,
+                requesterHashPrefix: normalizeRequesterHashPrefix(normalizedMusic.requesterHash),
+                requesterName: normalizeRequesterName(normalizedMusic.requesterName),
                 title: normalizedMusic.title,
             };
             this.itemsById.set(normalizedMusic.id, next);
@@ -125,6 +139,8 @@ export class HistoryService {
             id: normalizedMusic.id,
             lastPlayedAt: nowIso,
             playCount: 1,
+            requesterHashPrefix: normalizeRequesterHashPrefix(normalizedMusic.requesterHash),
+            requesterName: normalizeRequesterName(normalizedMusic.requesterName),
             title: normalizedMusic.title,
         };
         this.itemsById.set(normalizedMusic.id, created);
@@ -146,7 +162,10 @@ export class HistoryService {
 
         if (q.length > 0) {
             rows = rows.filter(item => {
-                const target = `${item.title} ${item.channelName} ${item.id}`.toLowerCase();
+                const target = `${item.title} ${item.channelName} ${item.id} ${item.requesterName ?? ''} ${
+                    item.requesterHashPrefix ?? ''
+                }`
+                    .toLowerCase();
                 return target.includes(q);
             });
         }

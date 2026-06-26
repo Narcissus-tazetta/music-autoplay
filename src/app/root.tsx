@@ -16,7 +16,7 @@ import {
 } from 'react-router';
 import { PreventFlashOnWrongTheme, ThemeProvider, useTheme } from 'remix-themes';
 import { Header } from '~/components/ui/Header';
-import { ensureAnonymousIdCookie } from '~/requesterIdentity.server';
+import { ensureAnonymousIdCookie, resolveRequesterIdentity } from '~/requesterIdentity.server';
 import { themeSessionResolver, type UserSessionData } from '~/sessions.server';
 import { loginSession } from '~/sessions.server';
 import appCss from './App.css?url';
@@ -41,9 +41,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         const user = session.get('user');
 
         const { setCookieHeader } = await ensureAnonymousIdCookie(cookieHeader);
+        const identityCookieHeader = [
+            cookieHeader,
+            setCookieHeader?.split(';')[0],
+        ].filter(Boolean).join('; ');
+        const requesterIdentity = await resolveRequesterIdentity(identityCookieHeader);
 
         return {
             headers: setCookieHeader ? { 'Set-Cookie': setCookieHeader } : undefined,
+            requesterHash: requesterIdentity.requesterHash,
+            requesterName: requesterIdentity.requesterName,
             theme: getTheme(),
             user,
         };
@@ -67,12 +74,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         return respondWithResult(makeErr({ code, message }));
     }
 
-    const { headers, theme, user } = res.value;
-    return routerData({ theme, user }, headers ? { headers } : undefined);
+    const { headers, requesterHash, requesterName, theme, user } = res.value;
+    return routerData({ requesterHash, requesterName, theme, user }, headers ? { headers } : undefined);
 };
 
 type LoaderResult =
-    | { theme: string | null; user?: UserSessionData | undefined }
+    | { requesterHash?: string; requesterName?: string; theme: string | null; user?: UserSessionData | undefined }
     | undefined;
 
 function isLoaderData(data: unknown): data is LoaderResult {
@@ -123,10 +130,12 @@ export default function App() {
             : undefined);
 
     const userName = data?.user?.name;
+    const requesterHash = data?.requesterHash;
+    const requesterName = data?.requesterName;
 
     return (
         <>
-            <Header userName={userName} />
+            <Header requesterHash={requesterHash} requesterName={requesterName} userName={userName} />
             <div className='flex flex-col items-center min-h-screen'>
                 <Outlet />
             </div>

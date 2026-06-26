@@ -5,7 +5,7 @@ import type { HistoryItem } from '@/shared/types/history';
 import { watchUrl } from '@/shared/utils/youtube';
 import { Table } from '@shadcn/ui/table';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, Clock3, Loader, Radio, Repeat2 } from 'lucide-react';
+import { ChevronDown, Clock3, Loader, Radio, Repeat2, UserRound } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useFetcher } from 'react-router';
 import { Button } from '~/components/ui/shadcn/button';
@@ -14,6 +14,7 @@ export interface HistoryTableRowProps {
     item: HistoryItem;
     index: number;
     className?: string;
+    onRequesterFilter?: (value: string) => void;
 }
 
 const dateTimeFormatter = new Intl.DateTimeFormat('ja-JP', {
@@ -30,14 +31,40 @@ function formatDate(value: string): string {
     return dateTimeFormatter.format(parsed);
 }
 
+function formatRequester(item: HistoryItem): string | undefined {
+    const name = item.requesterName?.trim();
+    const hashPrefix = item.requesterHashPrefix?.trim();
+    const displayName = name && !isGeneratedAnonymousName(name) && name !== 'guest' ? name : undefined;
+    if (displayName && hashPrefix) return `${displayName} (${hashPrefix}...)`;
+    if (displayName) return displayName;
+    if (hashPrefix) return `${hashPrefix}...`;
+    return undefined;
+}
+
+function getRequesterFilterValue(item: HistoryItem): string | undefined {
+    const hashPrefix = item.requesterHashPrefix?.trim();
+    const name = item.requesterName?.trim();
+    if (hashPrefix) return hashPrefix;
+    if (name && !isGeneratedAnonymousName(name) && name !== 'guest') return name;
+    return undefined;
+}
+
+function isGeneratedAnonymousName(name: string): boolean {
+    return /^[0-9a-f-]{8}\.\.\.$/i.test(name);
+}
+
 function HistoryTableRow({
     item,
     index,
     className,
+    onRequesterFilter,
 }: HistoryTableRowProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const rerequestFetcher = useFetcher();
     const isRerequesting = rerequestFetcher.state !== 'idle';
+    const requester = formatRequester(item);
+    const channelName = item.channelName?.trim() || '不明';
+    const requesterFilterValue = getRequesterFilterValue(item);
 
     const inlineFeedback = useMusicSubmissionFeedback({ fetcher: rerequestFetcher });
 
@@ -53,6 +80,11 @@ function HistoryTableRow({
             method: 'post',
         });
     }, [item.id, rerequestFetcher]);
+
+    const handleRequesterFilter = useCallback(() => {
+        if (!requesterFilterValue) return;
+        onRequesterFilter?.(requesterFilterValue);
+    }, [onRequesterFilter, requesterFilterValue]);
 
     const mergedRowClass = cn(
         className ?? 'min-h-14 sm:h-14',
@@ -124,7 +156,7 @@ function HistoryTableRow({
                                     </div>
                                     <span className='inline-flex items-center gap-1 wrap-break-word text-xs sm:text-sm'>
                                         <Radio className='h-3.5 w-3.5' />
-                                        {item.channelName}
+                                        {channelName}
                                     </span>
                                 </div>
                                 <div className='flex items-center gap-2'>
@@ -170,6 +202,28 @@ function HistoryTableRow({
                                         className='inline-flex! w-auto! items-center rounded-full border border-border/40 bg-muted/20 px-2 py-0.5 text-[11px] text-foreground!'
                                     />
                                 </div>
+                                {requester && (
+                                    <div className='flex items-center gap-2'>
+                                        <div className='w-20 sm:w-24 shrink-0 flex items-center justify-between'>
+                                            <span className='text-muted-foreground font-medium text-left truncate text-xs sm:text-sm'>
+                                                リクエスター
+                                            </span>
+                                            <span className='text-muted-foreground font-medium text-right'>
+                                                :
+                                            </span>
+                                        </div>
+                                        <button
+                                            type='button'
+                                            onClick={handleRequesterFilter}
+                                            disabled={!requesterFilterValue}
+                                            aria-label={`${requester}で履歴を絞り込む`}
+                                            className='inline-flex min-w-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-xs sm:text-sm text-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none'
+                                        >
+                                            <UserRound className='h-3.5 w-3.5 shrink-0' />
+                                            <span className='truncate'>{requester}</span>
+                                        </button>
+                                    </div>
+                                )}
                                 <div className='pt-2'>
                                     <Button
                                         type='button'
