@@ -41,6 +41,9 @@ const AUTHORITATIVE_PLAYING_PROMOTION_MS = 3000;
 const AUTHORITATIVE_RESUME_EPSILON_SEC = 0.75;
 const EXTERNAL_VIDEO_TITLE_CACHE_TTL_MS = 10 * 60 * 1000;
 const EXTERNAL_VIDEO_TITLE_CACHE_MAX = 500;
+const HISTORY_PROGRESS_COMPLETION_REMAINING_SEC = 1;
+const HISTORY_REPLAY_RESET_MAX_CURRENT_SEC = 10;
+const HISTORY_REPLAY_RESET_MAX_PROGRESS_RATIO = 0.1;
 
 const isSameVideoOrUnknown = (
     current: RemoteStatus,
@@ -82,10 +85,17 @@ export function setupExtensionEventHandlers(
     void musicDB;
     const extensionSocketOn = extractSocketOn(socket);
     const socketContext = { socketId: socket.id };
+    const recordableMusicSnapshotByVideoId = new Map<string, Music>();
+    const historyCompletionRecordedAtByVideoId = new Map<string, number>();
 
-    const recordHistory = (music: Music | undefined, reason: string) => {
-        if (!music) return;
-        if (!canRecordHistory(music)) return;
+    const rememberRecordableMusic = (music: Music | undefined) => {
+        if (!music || !canRecordHistory(music)) return;
+        recordableMusicSnapshotByVideoId.set(music.id, music);
+    };
+
+    const recordHistory = (music: Music | undefined, reason: string): boolean => {
+        if (!music) return false;
+        if (!canRecordHistory(music)) return false;
         try {
             const historyItem = historyService.recordPlayed(music);
             const emitResult = emitter.emitHistoryAdded(historyItem);
@@ -96,13 +106,82 @@ export function setupExtensionEventHandlers(
                     reason,
                 });
             }
+            return true;
         } catch (error) {
             log.warn('history record failed', {
                 error,
                 musicId: music.id,
                 reason,
             });
+            return false;
         }
+    };
+
+    const recordCompletedHistory = (
+        videoId: string | undefined,
+        reason: string,
+        musicHint?: Music,
+    ): boolean => {
+        if (!videoId) return false;
+
+        const now = Date.now();
+        const lastRecorded = historyCompletionRecordedAtByVideoId.get(videoId);
+        if (lastRecorded) {
+            log.debug('history completion duplicate ignored', {
+                elapsed: now - lastRecorded,
+                reason,
+                videoId,
+            });
+            return false;
+        }
+
+        const music = musicHint ?? repository.get(videoId) ?? recordableMusicSnapshotByVideoId.get(videoId);
+        if (!music) {
+            log.debug('history completion skipped: music snapshot missing', { reason, videoId });
+            return false;
+        }
+
+        rememberRecordableMusic(music);
+        if (!recordHistory(music, reason)) return false;
+
+        historyCompletionRecordedAtByVideoId.set(videoId, now);
+        return true;
+    };
+
+    const isCompletionProgress = (currentTime: number, duration: number): boolean => (
+        duration > 0
+        && currentTime >= 0
+        && duration - currentTime <= HISTORY_PROGRESS_COMPLETION_REMAINING_SEC
+    );
+
+    const clearHistoryCompletionIfReplayStarted = (
+        videoId: string | undefined,
+        currentTime: number | undefined,
+        duration: number | undefined,
+        reason: string,
+    ): void => {
+        if (!videoId || !historyCompletionRecordedAtByVideoId.has(videoId)) return;
+        if (
+            typeof currentTime !== 'number'
+            || typeof duration !== 'number'
+            || duration <= 0
+            || !Number.isFinite(currentTime)
+            || !Number.isFinite(duration)
+        ) { return; }
+
+        const progressRatio = currentTime / duration;
+        const looksLikeReplay = currentTime <= HISTORY_REPLAY_RESET_MAX_CURRENT_SEC
+            || progressRatio <= HISTORY_REPLAY_RESET_MAX_PROGRESS_RATIO;
+        if (!looksLikeReplay) return;
+
+        historyCompletionRecordedAtByVideoId.delete(videoId);
+        log.debug('history completion reset for replay', {
+            currentTime,
+            duration,
+            progressRatio,
+            reason,
+            videoId,
+        });
     };
 
     socket.on('disconnect', reason => {
@@ -119,10 +198,12 @@ export function setupExtensionEventHandlers(
             }, 0);
             const cleanupBefore = {
                 authoritativeVideoState: authoritativeVideoState.size,
+                historyCompletionRecordedAtByVideoId: historyCompletionRecordedAtByVideoId.size,
                 lastAdSnapshotByVideoId: lastAdSnapshotByVideoId.size,
                 lastProgressSnapshotByVideoId: lastProgressSnapshotByVideoId.size,
                 pendingNextByTabId: pendingNextByTabId.size,
                 progressState: progressState.size,
+                recordableMusicSnapshotByVideoId: recordableMusicSnapshotByVideoId.size,
                 socketListenerEvents: socket.eventNames().map(name => String(name)).slice(0, 25),
                 socketListenersTotal: listenersBefore,
                 videoEndDebounce: videoEndDebounce.size,
@@ -131,11 +212,13 @@ export function setupExtensionEventHandlers(
             manager.update({ type: 'closed' }, 'extension_disconnect');
 
             authoritativeVideoState.clear();
+            historyCompletionRecordedAtByVideoId.clear();
             lastProgressSnapshotByVideoId.clear();
             lastAdSnapshotByVideoId.clear();
             videoEndDebounce.clear();
             pendingNextByTabId.clear();
             progressState.clear();
+            recordableMusicSnapshotByVideoId.clear();
             socket.removeAllListeners();
 
             const listenersAfter = socket.eventNames().reduce((sum, name) => {
@@ -148,10 +231,12 @@ export function setupExtensionEventHandlers(
 
             const cleanupAfter = {
                 authoritativeVideoState: authoritativeVideoState.size,
+                historyCompletionRecordedAtByVideoId: historyCompletionRecordedAtByVideoId.size,
                 lastAdSnapshotByVideoId: lastAdSnapshotByVideoId.size,
                 lastProgressSnapshotByVideoId: lastProgressSnapshotByVideoId.size,
                 pendingNextByTabId: pendingNextByTabId.size,
                 progressState: progressState.size,
+                recordableMusicSnapshotByVideoId: recordableMusicSnapshotByVideoId.size,
                 socketListenerEvents: socket.eventNames().map(name => String(name)).slice(0, 25),
                 socketListenersTotal: listenersAfter,
                 videoEndDebounce: videoEndDebounce.size,
@@ -351,9 +436,11 @@ export function setupExtensionEventHandlers(
                 if (url) {
                     const videoId = extractYoutubeId(url);
                     const music = videoId ? repository.get(videoId) : undefined;
+                    rememberRecordableMusic(music);
 
                     // Avoid leaving remoteStatus stuck in 'playing' if video_ended is missed.
                     if (videoId) {
+                        recordCompletedHistory(videoId, 'youtube_video_state:ended', music);
                         try {
                             manager.update(
                                 {
@@ -414,6 +501,7 @@ export function setupExtensionEventHandlers(
                     if (videoId) {
                         const localMusic = repository.get(videoId);
                         if (localMusic) {
+                            rememberRecordableMusic(localMusic);
                             match = {
                                 title: localMusic.title,
                                 url,
@@ -483,6 +571,14 @@ export function setupExtensionEventHandlers(
                     ?? progressSnapshot?.currentTime;
                 const mergedDuration = incomingDuration
                     ?? progressSnapshot?.duration;
+                if (state === 'playing') {
+                    clearHistoryCompletionIfReplayStarted(
+                        resolvedVideoId,
+                        mergedCurrentTime,
+                        mergedDuration,
+                        'youtube_video_state:playing',
+                    );
+                }
 
                 const remoteStatus: RemoteStatus = state === 'playing'
                     ? {
@@ -560,6 +656,7 @@ export function setupExtensionEventHandlers(
                     const preIdx = indexOfMusicById(preList, resolvedVideoId);
                     if (preIdx === -1) return;
                     const endedMusic = preList[preIdx];
+                    rememberRecordableMusic(endedMusic);
 
                     let nextId: string | undefined;
                     if (preList.length > 1) {
@@ -570,7 +667,7 @@ export function setupExtensionEventHandlers(
 
                     const rmRes = repository.remove(resolvedVideoId);
                     if (rmRes.ok) {
-                        recordHistory(endedMusic, 'paused_ended');
+                        recordCompletedHistory(resolvedVideoId, 'paused_ended', endedMusic);
                         emitter.emitMusicRemoved(resolvedVideoId);
                         emitter.emitUrlList(repository.buildCompatList());
                         repository.persistRemove(resolvedVideoId);
@@ -1017,8 +1114,10 @@ export function setupExtensionEventHandlers(
                 const preIndex = indexOfMusicById(preRemoveList, videoId);
                 let nextCandidateId: string | undefined;
                 const endedMusic = preIndex !== -1 ? preRemoveList[preIndex] : undefined;
+                rememberRecordableMusic(endedMusic);
 
                 if (preIndex === -1) {
+                    recordCompletedHistory(videoId, 'video_ended_missing_repository');
                     log.info('video_ended: ignored (video not in repository)', {
                         connectionId,
                         socketId: socket.id,
@@ -1042,7 +1141,7 @@ export function setupExtensionEventHandlers(
 
                 const removeResult = repository.remove(videoId);
                 if (removeResult.ok) {
-                    recordHistory(endedMusic, 'video_ended');
+                    recordCompletedHistory(videoId, 'video_ended', endedMusic);
                     const emitResult = emitter.emitMusicRemoved(videoId);
                     if (!emitResult.ok) {
                         log.warn('video_ended: failed to emit musicRemoved', {
@@ -1393,6 +1492,7 @@ export function setupExtensionEventHandlers(
             state.lastTime = currentTime;
 
             const music = repository.get(videoId);
+            rememberRecordableMusic(music);
             const progressPercent = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0;
 
             const stallThreshold = SERVER_ENV.PROGRESS_STALL_THRESHOLD_MS;
@@ -1460,6 +1560,11 @@ export function setupExtensionEventHandlers(
             };
             if (shouldReplaceProgressSnapshot(lastProgressSnapshotByVideoId.get(videoId), progressSnapshot))
                 lastProgressSnapshotByVideoId.set(videoId, progressSnapshot);
+
+            clearHistoryCompletionIfReplayStarted(videoId, currentTime, duration, eventName);
+
+            if (isAdvertisement !== true && isCompletionProgress(currentTime, duration))
+                recordCompletedHistory(videoId, `${eventName}:completion_progress`, music);
 
             const authoritative = authoritativeVideoState.get(videoId);
 
