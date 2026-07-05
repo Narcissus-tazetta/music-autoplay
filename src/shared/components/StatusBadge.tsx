@@ -2,6 +2,7 @@ import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
 import { searchUrl } from '@/shared/utils/youtube';
 import { motion } from 'framer-motion';
 import { memo, useEffect, useRef, useState } from 'react';
+import { STATUS_PANEL_MOTION, useInitialStatusReveal, useTransitioningHold } from '../hooks/usePlayerState';
 import { useSettingsStore } from '../stores/settingsStore';
 import { AudioPlayer } from './AudioPlayer';
 import { MusicTitleWithHover } from './MusicTitleWithHover';
@@ -22,7 +23,7 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
     const ytStatusVisible = settings.ytStatusVisible;
 
     const isAdvertisement = status?.type === 'playing' && status.isAdvertisement === true;
-    const isTransitioning = status?.type === 'paused' && status.isTransitioning === true;
+    const isTransitioning = useTransitioningHold(status);
     const isExternalVideo = status?.type === 'playing' && status.isExternalVideo === true;
     const dotClass = isAdvertisement
         ? 'bg-yellow-500'
@@ -75,10 +76,10 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
         <motion.div
             aria-live='polite'
             className={`${badgeBg} text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-1 rounded-md flex items-center gap-2 sm:gap-3 max-w-full`}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
+            initial={STATUS_PANEL_MOTION.initial}
+            animate={STATUS_PANEL_MOTION.animate}
+            exit={{ opacity: 0, y: -12 }}
+            transition={STATUS_PANEL_MOTION.transition}
         >
             {visibility === 'visible' && (
                 <span
@@ -189,14 +190,15 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
 function StatusBadgeInner({ status, music, mode }: StatusBadgeProps) {
     const settings = useSettingsStore();
     const resolvedMode = mode ?? settings.ytStatusMode;
-    const enrichedStatus = status?.type === 'paused' && !('currentTime' in status)
-            && typeof (status as any).lastProgressUpdate === 'number'
-        ? status
-        : status;
+    const revealedStatus = useInitialStatusReveal(status);
+    const enrichedStatus = revealedStatus?.type === 'paused' && !('currentTime' in revealedStatus)
+            && typeof (revealedStatus as any).lastProgressUpdate === 'number'
+        ? revealedStatus
+        : revealedStatus;
 
     if (resolvedMode === 'player') return <AudioPlayer key='player-mode' status={enrichedStatus} music={music} />;
 
-    return <StatusBadgeCompact key='compact-mode' status={status} music={music} />;
+    return <StatusBadgeCompact key='compact-mode' status={revealedStatus} music={music} />;
 }
 
 export const StatusBadge = memo(StatusBadgeInner);

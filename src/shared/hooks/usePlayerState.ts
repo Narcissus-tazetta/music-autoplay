@@ -158,12 +158,118 @@ export function useInterpolatedTime({
 
 type VisibilityState = 'visible' | 'hiding' | 'hidden';
 
-const FADE_OUT_DELAY = 0;
+const CLOSED_VISIBLE_MS = 30_000;
 const FADE_OUT_DURATION = 600;
+const STATUS_TRANSITION_HOLD_MS = 3000;
+const STATUS_INITIAL_REVEAL_DELAY_MS = 350;
+
+export const STATUS_PANEL_MOTION = {
+    animate: { opacity: 1, y: 0 },
+    initial: { opacity: 0, y: -12 },
+    transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as const },
+};
 
 interface UseVisibilityTimerParams {
     hasStatus: boolean;
     isClosed: boolean;
+}
+
+const TRANSITION_MIN_DISPLAY_MS = STATUS_TRANSITION_HOLD_MS;
+
+export function useInitialStatusReveal(status: RemoteStatus | null): RemoteStatus | null {
+    const [revealedStatus, setRevealedStatus] = useState<RemoteStatus | null>(null);
+    const hasRevealedRef = useRef(false);
+    const timerRef = useRef<number | null>(null);
+    const statusRef = useRef(status);
+    statusRef.current = status;
+
+    useEffect(() => () => {
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!status) {
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+                timerRef.current = null;
+            }
+            hasRevealedRef.current = false;
+            setRevealedStatus(null);
+            return;
+        }
+
+        if (hasRevealedRef.current) {
+            setRevealedStatus(status);
+            return;
+        }
+
+        if (timerRef.current) return;
+
+        timerRef.current = window.setTimeout(() => {
+            timerRef.current = null;
+            hasRevealedRef.current = true;
+            setRevealedStatus(statusRef.current);
+        }, STATUS_INITIAL_REVEAL_DELAY_MS);
+    }, [status]);
+
+    return revealedStatus;
+}
+
+export function useTransitioningHold(status: RemoteStatus | null): boolean {
+    const [show, setShow] = useState(false);
+    const releaseAtRef = useRef(0);
+    const timerRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        const clearTimer = (): void => {
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+                timerRef.current = null;
+            }
+        };
+
+        if (!status || status.type === 'closed') {
+            releaseAtRef.current = 0;
+            setShow(false);
+            clearTimer();
+            return clearTimer;
+        }
+
+        const isTransitioning = status.type === 'paused' && status.isTransitioning === true;
+
+        if (isTransitioning) {
+            releaseAtRef.current = Math.max(releaseAtRef.current, Date.now() + TRANSITION_MIN_DISPLAY_MS);
+            setShow(true);
+            clearTimer();
+            timerRef.current = window.setTimeout(() => {
+                timerRef.current = null;
+                if (Date.now() >= releaseAtRef.current) setShow(false);
+            }, releaseAtRef.current - Date.now());
+            return clearTimer;
+        }
+
+        if (Date.now() < releaseAtRef.current) {
+            setShow(true);
+            clearTimer();
+            timerRef.current = window.setTimeout(() => {
+                timerRef.current = null;
+                setShow(false);
+                releaseAtRef.current = 0;
+            }, releaseAtRef.current - Date.now());
+            return clearTimer;
+        }
+
+        setShow(false);
+        releaseAtRef.current = 0;
+        clearTimer();
+        return clearTimer;
+    }, [status]);
+
+    const isTransitioning = status?.type === 'paused' && status.isTransitioning === true;
+    return show || isTransitioning;
 }
 
 export function useVisibilityTimer({
@@ -188,7 +294,7 @@ export function useVisibilityTimer({
                     setVisibility('hidden');
                     timerRef.current = null;
                 }, FADE_OUT_DURATION);
-            }, FADE_OUT_DELAY);
+            }, CLOSED_VISIBLE_MS);
         } else {
             if (timerRef.current) {
                 clearTimeout(timerRef.current);

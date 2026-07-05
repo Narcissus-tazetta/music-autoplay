@@ -1332,6 +1332,22 @@ export function setupExtensionEventHandlers(
         }
     >();
 
+    const scanBatchForHistoryReplayReset = (updates: unknown[]): void => {
+        for (const u of updates) {
+            if (!isRecord(u)) continue;
+            const url = typeof u['url'] === 'string' ? u['url'] : undefined;
+            const videoId = url ? extractYoutubeId(url) ?? undefined : undefined;
+            const currentTime = typeof u['currentTime'] === 'number' ? u['currentTime'] : undefined;
+            const duration = typeof u['duration'] === 'number' ? u['duration'] : undefined;
+            clearHistoryCompletionIfReplayStarted(
+                videoId,
+                currentTime,
+                duration,
+                'progress_update_batch:replay_scan',
+            );
+        }
+    };
+
     const pickLatestProgressUpdate = (updates: unknown[]): unknown | null => {
         let best: unknown | null = null;
         let bestTimestamp = -Infinity;
@@ -1682,6 +1698,8 @@ export function setupExtensionEventHandlers(
             const updates = payload['updates'];
             if (!Array.isArray(updates)) return;
             // Reconnect batches can be large; only process the latest update to avoid transient state churn.
+            // Still scan the full batch so replay-start positions clear completion dedupe.
+            scanBatchForHistoryReplayReset(updates);
             const latest = pickLatestProgressUpdate(updates);
             if (latest) handleProgressUpdate(latest, 'progress_update_batch');
         },

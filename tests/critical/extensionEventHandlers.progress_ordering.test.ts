@@ -513,4 +513,89 @@ describe('progress ordering', () => {
         expect(progressUpdates[0].currentTime).toBe(12);
         expect(progressUpdates[0].lastProgressUpdate).toBe(base + 2000);
     });
+
+    test('progress_update_batch scans replay-start updates to reset completion dedupe', async () => {
+        const music = {
+            channelId: 'channel-1',
+            channelName: 'channel name',
+            duration: 'PT3M',
+            id: 'dQw4w9WgXcQ',
+            requestedAt: '2026-06-27T00:00:00.000Z',
+            requesterHash: 'requester-hash',
+            requesterName: 'guest',
+            title: 'Test Song',
+            url: 'https://youtu.be/dQw4w9WgXcQ',
+        };
+        const socket = createFakeSocket();
+        const repo = createFakeRepo([music]);
+        const emitter = createFakeEmitter();
+        const historyCalls: any[] = [];
+        const historyService = {
+            recordPlayed(playedMusic: any) {
+                historyCalls.push(playedMusic);
+                return {
+                    id: playedMusic.id,
+                    playCount: historyCalls.filter(call => call.id === playedMusic.id).length,
+                    title: playedMusic.title,
+                };
+            },
+        };
+        let current: any = { type: 'closed' };
+        const manager: any = {
+            update: (s: any) => {
+                current = s;
+            },
+            getCurrent: () => current,
+        };
+        const youtubeService: any = {};
+        const log: any = { debug() {}, info() {}, warn() {} };
+
+        (socket as any).id = 'test-socket-id';
+
+        setupExtensionEventHandlers(
+            socket as any,
+            log,
+            'conn',
+            new Map(),
+            manager,
+            repo as any,
+            emitter as any,
+            youtubeService,
+            historyService as any,
+        );
+
+        const base = Date.now();
+        const url = 'https://youtu.be/dQw4w9WgXcQ';
+        const progress = (currentTime: number, timestamp: number, seq: number) => ({
+            url,
+            currentTime,
+            duration: 100,
+            playbackRate: 1,
+            timestamp,
+            visibilityState: 'visible',
+            isBuffering: false,
+            seq,
+        });
+
+        socket.trigger('youtube_video_state', {
+            state: 'playing',
+            url,
+            timestamp: base,
+            seq: 1,
+        });
+        socket.trigger('progress_update', progress(99, base + 1000, 2));
+        await new Promise(resolve => setTimeout(resolve, 50));
+        expect(historyCalls.length).toBe(1);
+
+        socket.trigger('progress_update_batch', {
+            updates: [
+                progress(2, base + 2000, 3),
+                progress(99, base + 3000, 4),
+            ],
+        });
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        expect(historyCalls.length).toBe(2);
+        expect(historyCalls.every(call => call.id === 'dQw4w9WgXcQ')).toBe(true);
+    });
 });

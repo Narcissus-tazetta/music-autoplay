@@ -1,6 +1,12 @@
 import { cn } from '@/app/utils/cn';
 import { getSocket } from '@/app/utils/socketClient';
-import { useInterpolatedTime, useThumbnail, useVisibilityTimer } from '@/shared/hooks/usePlayerState';
+import {
+    STATUS_PANEL_MOTION,
+    useInterpolatedTime,
+    useThumbnail,
+    useTransitioningHold,
+    useVisibilityTimer,
+} from '@/shared/hooks/usePlayerState';
 import { useAdminStore } from '@/shared/stores/adminStore';
 import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
 import { useSettingsStore } from '@/shared/stores/settingsStore';
@@ -146,21 +152,30 @@ function AudioPlayerInner({
 
     const isAdvertisement = status?.type === 'playing' && status.isAdvertisement === true;
     const isExternalVideo = status?.type === 'playing' && status.isExternalVideo === true;
+    const isTransitioning = useTransitioningHold(status);
     const isPaused = status?.type === 'paused';
-    const pausedIndicator = isPaused || isEffectivelyPaused;
+    const pausedIndicator = !isTransitioning && (isPaused || isEffectivelyPaused);
 
-    const label = isAdvertisement ? '広告再生中' : pausedIndicator ? '停止中' : '再生中';
+    const label = isTransitioning
+        ? '次の動画に移動中...'
+        : isAdvertisement
+        ? '広告再生中'
+        : pausedIndicator
+        ? '停止中'
+        : '再生中';
 
     const progressBarColor = useMemo(
         () =>
-            isAdvertisement
+            isTransitioning
+                ? 'bg-blue-500'
+                : isAdvertisement
                 ? 'bg-yellow-500'
                 : isExternalVideo
                 ? 'bg-purple-500'
                 : pausedIndicator
                 ? 'bg-orange-600'
                 : 'bg-emerald-600',
-        [isAdvertisement, isExternalVideo, pausedIndicator],
+        [isAdvertisement, isExternalVideo, isTransitioning, pausedIndicator],
     );
 
     const timeTexts = useMemo(() => {
@@ -194,10 +209,13 @@ function AudioPlayerInner({
         <motion.div
             aria-live='polite'
             className='bg-gray-100 dark:bg-gray-900/10 rounded-lg p-3 sm:p-4 flex flex-row items-center gap-3 sm:gap-4 w-full min-w-70 sm:min-w-100 max-w-2xl shadow-sm'
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: visibility === 'visible' ? 1 : 0, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
+            initial={STATUS_PANEL_MOTION.initial}
+            animate={{
+                ...STATUS_PANEL_MOTION.animate,
+                opacity: visibility === 'visible' ? 1 : 0,
+            }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={STATUS_PANEL_MOTION.transition}
         >
             <a
                 href={href}
