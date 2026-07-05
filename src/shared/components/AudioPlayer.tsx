@@ -5,7 +5,6 @@ import {
     useInterpolatedTime,
     useThumbnail,
     useTransitioningHold,
-    useVisibilityTimer,
 } from '@/shared/hooks/usePlayerState';
 import { useAdminStore } from '@/shared/stores/adminStore';
 import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
@@ -144,10 +143,6 @@ function AudioPlayerInner({
         status,
         videoId,
     });
-    const visibility = useVisibilityTimer({
-        hasStatus: !!status,
-        isClosed: status?.type === 'closed',
-    });
     const thumbnail = useThumbnail(videoId);
 
     const isAdvertisement = status?.type === 'playing' && status.isAdvertisement === true;
@@ -196,7 +191,7 @@ function AudioPlayerInner({
         }
     }, []);
 
-    if (!status || !ytStatusVisible || visibility === 'hidden') return null;
+    if (!status || status.type === 'closed' || !ytStatusVisible) return null;
 
     const progressPercent = duration != undefined && duration > 0
         ? Math.min((localCurrentTime / duration) * 100, 100)
@@ -210,10 +205,7 @@ function AudioPlayerInner({
             aria-live='polite'
             className='bg-gray-100 dark:bg-gray-900/10 rounded-lg p-3 sm:p-4 flex flex-row items-center gap-3 sm:gap-4 w-full min-w-70 sm:min-w-100 max-w-2xl shadow-sm'
             initial={STATUS_PANEL_MOTION.initial}
-            animate={{
-                ...STATUS_PANEL_MOTION.animate,
-                opacity: visibility === 'visible' ? 1 : 0,
-            }}
+            animate={STATUS_PANEL_MOTION.animate}
             exit={{ opacity: 0, y: -12 }}
             transition={STATUS_PANEL_MOTION.transition}
         >

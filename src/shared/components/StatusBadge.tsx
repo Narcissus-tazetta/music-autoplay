@@ -1,10 +1,16 @@
 import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
 import { searchUrl } from '@/shared/utils/youtube';
 import { motion } from 'framer-motion';
-import { memo, useEffect, useRef, useState } from 'react';
-import { STATUS_PANEL_MOTION, useInitialStatusReveal, useTransitioningHold } from '../hooks/usePlayerState';
+import { memo, type ReactElement } from 'react';
+import {
+    STATUS_PANEL_MOTION,
+    useClosedNotificationVisibility,
+    useInitialStatusReveal,
+    useTransitioningHold,
+} from '../hooks/usePlayerState';
 import { useSettingsStore } from '../stores/settingsStore';
 import { AudioPlayer } from './AudioPlayer';
+import { ClosedStatusNotice } from './ClosedStatusNotice';
 import { MusicTitleWithHover } from './MusicTitleWithHover';
 
 interface StatusBadgeProps {
@@ -14,11 +20,7 @@ interface StatusBadgeProps {
     mode?: 'compact' | 'player';
 }
 
-type VisibilityState = 'visible' | 'hiding' | 'hidden';
-
 function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
-    const [visibility, setVisibility] = useState<VisibilityState>('visible');
-    const timerRef = useRef<number | null>(null);
     const settings = useSettingsStore();
     const ytStatusVisible = settings.ytStatusVisible;
 
@@ -38,39 +40,7 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
         : 'bg-gray-500';
     const badgeBg = 'bg-gray-100 dark:bg-gray-900/10';
 
-    useEffect(() => {
-        if (!status) {
-            setVisibility('hidden');
-            return;
-        }
-
-        if (status.type === 'closed') {
-            setVisibility('visible');
-            if (timerRef.current) clearTimeout(timerRef.current);
-            timerRef.current = window.setTimeout(() => {
-                setVisibility('hiding');
-                timerRef.current = window.setTimeout(() => {
-                    setVisibility('hidden');
-                    timerRef.current = null;
-                }, 600);
-            }, 30_000);
-        } else {
-            if (timerRef.current) {
-                clearTimeout(timerRef.current);
-                timerRef.current = null;
-            }
-            setVisibility('visible');
-        }
-
-        return () => {
-            if (timerRef.current) {
-                clearTimeout(timerRef.current);
-                timerRef.current = null;
-            }
-        };
-    }, [status]);
-
-    if (!status || !ytStatusVisible || visibility === 'hidden') return;
+    if (!status || !ytStatusVisible || status.type === 'closed') return;
 
     return (
         <motion.div
@@ -81,12 +51,10 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
             exit={{ opacity: 0, y: -12 }}
             transition={STATUS_PANEL_MOTION.transition}
         >
-            {visibility === 'visible' && (
-                <span
-                    className={`inline-block w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shrink-0 ${dotClass}`}
-                    aria-hidden
-                />
-            )}
+            <span
+                className={`inline-block w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shrink-0 ${dotClass}`}
+                aria-hidden
+            />
             {isAdvertisement
                 ? (
                     <span className='text-gray-800 dark:text-gray-100 font-medium text-xs sm:text-sm'>
@@ -114,7 +82,7 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
                             </span>
                         )
                         : (
-                            ((): React.ReactElement => {
+                            ((): ReactElement => {
                                 const musicTitle = status.musicTitle;
                                 const textColorClass = isExternalVideo
                                     ? 'text-white'
@@ -170,18 +138,10 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
                             })()
                         )
                 )
-                : status.type === 'paused'
-                ? (
+                : (
                     <span className='text-gray-800 dark:text-gray-100 text-xs sm:text-sm'>
                         一時停止中
                     </span>
-                )
-                : (
-                    visibility === 'visible' && (
-                        <span className='text-gray-800 dark:text-gray-100 text-xs sm:text-sm'>
-                            タブが閉じられました
-                        </span>
-                    )
                 )}
         </motion.div>
     );
@@ -190,11 +150,19 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
 function StatusBadgeInner({ status, music, mode }: StatusBadgeProps) {
     const settings = useSettingsStore();
     const resolvedMode = mode ?? settings.ytStatusMode;
+    const ytStatusVisible = settings.ytStatusVisible;
+    const closedVisibility = useClosedNotificationVisibility(status);
     const revealedStatus = useInitialStatusReveal(status);
     const enrichedStatus = revealedStatus?.type === 'paused' && !('currentTime' in revealedStatus)
             && typeof (revealedStatus as any).lastProgressUpdate === 'number'
         ? revealedStatus
         : revealedStatus;
+
+    if (!status || !ytStatusVisible) return null;
+
+    if (status.type === 'closed') return <ClosedStatusNotice key='closed-notice' visibility={closedVisibility} />;
+
+    if (!revealedStatus || revealedStatus.type === 'closed') return null;
 
     if (resolvedMode === 'player') return <AudioPlayer key='player-mode' status={enrichedStatus} music={music} />;
 

@@ -1,3 +1,8 @@
+import {
+    CLOSED_NOTIFICATION_VISIBLE_MS,
+    isActivePlaybackStatus,
+    shouldShowClosedNotification,
+} from '@/shared/hooks/usePlayerState';
 import type { RemoteStatus } from '@/shared/stores/musicStore';
 import { describe, expect, test } from 'bun:test';
 
@@ -29,6 +34,25 @@ describe('usePlayerState hooks', () => {
             type: 'closed',
         };
         expect(closedStatus.type).toBe('closed');
+    });
+
+    test('isActivePlaybackStatus identifies playing and paused only', () => {
+        expect(isActivePlaybackStatus('playing')).toBe(true);
+        expect(isActivePlaybackStatus('paused')).toBe(true);
+        expect(isActivePlaybackStatus('closed')).toBe(false);
+        expect(isActivePlaybackStatus(null)).toBe(false);
+    });
+
+    test('shouldShowClosedNotification only after active playback ends', () => {
+        expect(shouldShowClosedNotification(null, 'closed')).toBe(false);
+        expect(shouldShowClosedNotification('closed', 'closed')).toBe(false);
+        expect(shouldShowClosedNotification('playing', 'closed')).toBe(true);
+        expect(shouldShowClosedNotification('paused', 'closed')).toBe(true);
+        expect(shouldShowClosedNotification('playing', 'playing')).toBe(false);
+    });
+
+    test('closed notification duration is 12 seconds', () => {
+        expect(CLOSED_NOTIFICATION_VISIBLE_MS).toBe(12_000);
     });
 
     test('duration parsing logic for HH:MM:SS', () => {

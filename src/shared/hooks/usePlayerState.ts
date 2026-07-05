@@ -156,10 +156,24 @@ export function useInterpolatedTime({
     return { currentTime: displayTime, isEffectivelyPaused };
 }
 
-type VisibilityState = 'visible' | 'hiding' | 'hidden';
+export type VisibilityState = 'visible' | 'hiding' | 'hidden';
 
-const CLOSED_VISIBLE_MS = 30_000;
+export const CLOSED_NOTIFICATION_VISIBLE_MS = 12_000;
 const FADE_OUT_DURATION = 600;
+
+const ACTIVE_PLAYBACK_TYPES = new Set<RemoteStatus['type']>(['playing', 'paused']);
+
+export function isActivePlaybackStatus(type: RemoteStatus['type'] | null | undefined): boolean {
+    return type != null && ACTIVE_PLAYBACK_TYPES.has(type);
+}
+
+export function shouldShowClosedNotification(
+    previousType: RemoteStatus['type'] | null,
+    currentType: RemoteStatus['type'] | null | undefined,
+): boolean {
+    return currentType === 'closed' && isActivePlaybackStatus(previousType);
+}
+
 const STATUS_TRANSITION_HOLD_MS = 3000;
 const STATUS_INITIAL_REVEAL_DELAY_MS = 350;
 
@@ -168,11 +182,6 @@ export const STATUS_PANEL_MOTION = {
     initial: { opacity: 0, y: -12 },
     transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as const },
 };
-
-interface UseVisibilityTimerParams {
-    hasStatus: boolean;
-    isClosed: boolean;
-}
 
 const TRANSITION_MIN_DISPLAY_MS = STATUS_TRANSITION_HOLD_MS;
 
@@ -272,44 +281,54 @@ export function useTransitioningHold(status: RemoteStatus | null): boolean {
     return show || isTransitioning;
 }
 
-export function useVisibilityTimer({
-    hasStatus,
-    isClosed,
-}: UseVisibilityTimerParams): VisibilityState {
-    const [visibility, setVisibility] = useState<VisibilityState>('visible');
+export function useClosedNotificationVisibility(status: RemoteStatus | null): VisibilityState {
+    const [visibility, setVisibility] = useState<VisibilityState>('hidden');
+    const previousTypeRef = useRef<RemoteStatus['type'] | null>(null);
     const timerRef = useRef<number | null>(null);
 
     useEffect(() => {
-        if (!hasStatus) {
-            setVisibility('hidden');
-            return;
-        }
-
-        if (isClosed) {
-            setVisibility('visible');
-            if (timerRef.current) clearTimeout(timerRef.current);
-            timerRef.current = window.setTimeout(() => {
-                setVisibility('hiding');
-                timerRef.current = window.setTimeout(() => {
-                    setVisibility('hidden');
-                    timerRef.current = null;
-                }, FADE_OUT_DURATION);
-            }, CLOSED_VISIBLE_MS);
-        } else {
-            if (timerRef.current) {
-                clearTimeout(timerRef.current);
-                timerRef.current = null;
-            }
-            setVisibility('visible');
-        }
-
-        return () => {
+        const clearTimers = (): void => {
             if (timerRef.current) {
                 clearTimeout(timerRef.current);
                 timerRef.current = null;
             }
         };
-    }, [hasStatus, isClosed]);
+
+        if (!status) {
+            previousTypeRef.current = null;
+            clearTimers();
+            setVisibility('hidden');
+            return clearTimers;
+        }
+
+        if (status.type !== 'closed') {
+            previousTypeRef.current = status.type;
+            clearTimers();
+            setVisibility('hidden');
+            return clearTimers;
+        }
+
+        const shouldNotify = shouldShowClosedNotification(previousTypeRef.current, status.type);
+        previousTypeRef.current = 'closed';
+
+        if (!shouldNotify) {
+            clearTimers();
+            setVisibility('hidden');
+            return clearTimers;
+        }
+
+        setVisibility('visible');
+        clearTimers();
+        timerRef.current = window.setTimeout(() => {
+            setVisibility('hiding');
+            timerRef.current = window.setTimeout(() => {
+                setVisibility('hidden');
+                timerRef.current = null;
+            }, FADE_OUT_DURATION);
+        }, CLOSED_NOTIFICATION_VISIBLE_MS);
+
+        return clearTimers;
+    }, [status]);
 
     return visibility;
 }
