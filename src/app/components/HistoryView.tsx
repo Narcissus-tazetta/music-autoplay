@@ -6,7 +6,11 @@ import { Input } from '@shadcn/ui/input';
 import { ArrowLeft, History as HistoryIcon, Search } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { HistoryTable } from '~/components/HistoryTable';
-import { getHistorySearchSuggestions, type HistorySearchReadings } from '~/utils/historySearchSuggestions';
+import {
+    getHistorySearchSuggestions,
+    hasHistorySearchSuggestions,
+    type HistorySearchReadings,
+} from '~/utils/historySearchSuggestions';
 
 export interface HistoryViewProps {
     filteredHistoryCount: number;
@@ -48,7 +52,7 @@ export function HistoryView({
         [historyItems, historySearchReadings, query],
     );
     const visibleHistorySearchSuggestions = historySearchSuggestions.slice(0, 6);
-    const shouldShowHistorySuggestions = query.trim().length > 0 && visibleHistorySearchSuggestions.length > 0;
+    const showHistorySearchSuggestions = hasHistorySearchSuggestions(query, visibleHistorySearchSuggestions.length);
     const handleRequesterFilter = useCallback(
         (value: string) => {
             setQuery(value);
@@ -92,7 +96,7 @@ export function HistoryView({
                 <Card.Content className='px-4 py-4 sm:px-6 sm:py-5'>
                     <div className='flex flex-col gap-4'>
                         <div className='grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.8fr)]'>
-                            <div className='space-y-2'>
+                            <div className='group/search space-y-2'>
                                 <p className='text-xs font-medium text-muted-foreground'>検索</p>
                                 <Input
                                     value={query}
@@ -101,13 +105,14 @@ export function HistoryView({
                                     leftIcon={<Search className='h-4 w-4' />}
                                     className='h-11 rounded-xl border-border/40 bg-muted/20'
                                 />
-                                {shouldShowHistorySuggestions && (
-                                    <div className='flex flex-wrap items-center gap-2 pt-1'>
+                                {showHistorySearchSuggestions && (
+                                    <div className='hidden flex-wrap items-center gap-2 pt-1 group-focus-within/search:flex'>
                                         <span className='text-[11px] text-muted-foreground'>候補</span>
                                         {visibleHistorySearchSuggestions.map(value => (
                                             <button
                                                 key={value}
                                                 type='button'
+                                                onMouseDown={e => e.preventDefault()}
                                                 onClick={() => setQuery(value)}
                                                 className='rounded-full border border-border/40 bg-muted/30 px-2.5 py-1 text-xs text-foreground transition-colors hover:bg-accent'
                                             >

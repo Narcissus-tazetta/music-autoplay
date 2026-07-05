@@ -28,6 +28,18 @@ export function getHistorySearchSuggestions(
     return candidates.slice(0, 12);
 }
 
+export function hasHistorySearchSuggestions(query: string, suggestionCount: number): boolean {
+    return query.trim().length > 0 && suggestionCount > 0;
+}
+
+export function shouldShowHistorySearchSuggestions(
+    query: string,
+    suggestionCount: number,
+    isSearchFocused: boolean,
+): boolean {
+    return isSearchFocused && hasHistorySearchSuggestions(query, suggestionCount);
+}
+
 export function historyItemMatchesSearch(
     item: HistoryItem,
     query: string,
