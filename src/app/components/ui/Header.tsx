@@ -1,5 +1,6 @@
 import { useAuth } from '@/app/hooks/useAuth';
 import { useAdminStore } from '@/shared/stores/adminStore';
+import { useHomeViewStore } from '@/shared/stores/homeViewStore';
 import { Alert } from '@shadcn/ui/alert';
 import { Button } from '@shadcn/ui/button';
 import { Dialog } from '@shadcn/ui/dialog';
@@ -7,7 +8,7 @@ import { Input } from '@shadcn/ui/input';
 import { Sheet } from '@shadcn/ui/sheet';
 import { Crown, HelpCircle, KeyRoundIcon, Loader, Pencil, SlidersHorizontalIcon } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
-import { Form, Link, useFetcher } from 'react-router';
+import { Form, Link, useFetcher, useLocation } from 'react-router';
 import { AdminLoginModalContent } from '~/components/ui/AdminLoginModalContent';
 import { Settings } from '~/components/ui/Settings';
 import { DropdownMenu } from '~/components/ui/shadcn/dropdown-menu';
@@ -35,6 +36,8 @@ export interface HeaderProps {
 const HeaderInner = ({ requesterHash, requesterName, userName }: HeaderProps) => {
     const { showLogout, handleLogout } = useAuth(userName);
     const { isAdmin } = useAdminStore();
+    const resetToRequests = useHomeViewStore(state => state.resetToRequests);
+    const location = useLocation();
     const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false);
     const LAST_INDEX_OFFSET = 1;
 
@@ -43,6 +46,9 @@ const HeaderInner = ({ requesterHash, requesterName, userName }: HeaderProps) =>
             <Link
                 className='text-xl sm:text-2xl font-bold font-[Dancing_Script] pl-2 sm:pl-4 truncate'
                 to='/'
+                onClick={() => {
+                    if (location.pathname === '/') resetToRequests();
+                }}
             >
                 Music Autoplay
             </Link>
@@ -55,11 +61,7 @@ const HeaderInner = ({ requesterHash, requesterName, userName }: HeaderProps) =>
                 <div className='hidden sm:block'>
                     <Dialog open={isAdminDialogOpen} onOpenChange={setIsAdminDialogOpen}>
                         <Dialog.Trigger asChild>
-                            <Button
-                                variant='ghost'
-                                size='icon'
-                                className='h-9 w-9 sm:h-10 sm:w-10'
-                            >
+                            <Button variant='ghost' size='icon' className='h-9 w-9 sm:h-10 sm:w-10'>
                                 {isAdmin
                                     ? <Crown className='h-4 w-4 sm:h-5 sm:w-5 text-blue-500 dark:text-blue-400' />
                                     : <KeyRoundIcon className='h-4 w-4 sm:h-5 sm:w-5' />}
@@ -96,12 +98,7 @@ const HeaderInner = ({ requesterHash, requesterName, userName }: HeaderProps) =>
                     }
                     return (
                         <Form action='/auth/login' method='post'>
-                            <Button
-                                type='submit'
-                                variant='outline'
-                                size='sm'
-                                className='text-xs sm:text-sm'
-                            >
+                            <Button type='submit' variant='outline' size='sm' className='text-xs sm:text-sm'>
                                 <span className='hidden sm:inline'>Googleでログイン</span>
                                 <span className='sm:hidden'>LOGIN</span>
                             </Button>
@@ -111,11 +108,7 @@ const HeaderInner = ({ requesterHash, requesterName, userName }: HeaderProps) =>
                 <HeaderDisplayNameEditor requesterHash={requesterHash} requesterName={requesterName} />
                 <Sheet>
                     <Sheet.Trigger asChild>
-                        <Button
-                            variant='outline'
-                            size='icon'
-                            className='h-9 w-9 sm:h-10 sm:w-10'
-                        >
+                        <Button variant='outline' size='icon' className='h-9 w-9 sm:h-10 sm:w-10'>
                             <SlidersHorizontalIcon className='h-4 w-4 sm:h-5 sm:w-5' />
                         </Button>
                     </Sheet.Trigger>
@@ -154,20 +147,12 @@ const HeaderInner = ({ requesterHash, requesterName, userName }: HeaderProps) =>
                                             <DropdownMenu.Content>
                                                 <DropdownMenu.Group>
                                                     <DropdownMenu.Item>
-                                                        <a
-                                                            href={dev.slack}
-                                                            target='_blank'
-                                                            rel='noopener noreferrer'
-                                                        >
+                                                        <a href={dev.slack} target='_blank' rel='noopener noreferrer'>
                                                             Slack
                                                         </a>
                                                     </DropdownMenu.Item>
                                                     <DropdownMenu.Item>
-                                                        <a
-                                                            href={dev.github}
-                                                            target='_blank'
-                                                            rel='noopener noreferrer'
-                                                        >
+                                                        <a href={dev.github} target='_blank' rel='noopener noreferrer'>
                                                             GitHub
                                                         </a>
                                                     </DropdownMenu.Item>
@@ -193,13 +178,7 @@ function displayRequesterName(requesterName?: string, requesterHash?: string): s
     return '--------...';
 }
 
-function HeaderDisplayNameEditor({
-    requesterHash,
-    requesterName,
-}: {
-    requesterHash?: string;
-    requesterName?: string;
-}) {
+function HeaderDisplayNameEditor({ requesterHash, requesterName }: { requesterHash?: string; requesterName?: string }) {
     const displayName = displayRequesterName(requesterName, requesterHash);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [draftName, setDraftName] = useState(displayName);
@@ -294,7 +273,9 @@ function HeaderDisplayNameEditor({
                                             <span className='sr-only'>保存中...</span>
                                         </>
                                     )
-                                    : '保存'}
+                                    : (
+                                        '保存'
+                                    )}
                             </Button>
                         </displayNameFetcher.Form>
                     </div>

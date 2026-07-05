@@ -25,6 +25,7 @@ import { RequesterDetailDialog, type RequesterSelection } from '~/components/Req
 import { resolveRequesterIdentity } from '~/requesterIdentity.server';
 import { historyItemMatchesSearch } from '~/utils/historySearchSuggestions';
 import { useAdminStore } from '../../shared/stores/adminStore';
+import { useHomeViewStore } from '../../shared/stores/homeViewStore';
 
 export const meta = () => [
     { title: '楽曲リクエストフォーム' },
@@ -48,19 +49,11 @@ export const loader = async ({ request }: ActionFunctionArgs) => {
         const errVal = res.error as unknown;
         let message = 'loader error';
         let code: string | undefined = undefined;
-        if (
-            errVal
-            && typeof errVal === 'object'
-            && 'message' in (errVal as Record<string, unknown>)
-        ) {
+        if (errVal && typeof errVal === 'object' && 'message' in (errVal as Record<string, unknown>)) {
             const m = (errVal as Record<string, unknown>).message;
             if (typeof m === 'string') message = m;
         }
-        if (
-            errVal
-            && typeof errVal === 'object'
-            && 'code' in (errVal as Record<string, unknown>)
-        ) {
+        if (errVal && typeof errVal === 'object' && 'code' in (errVal as Record<string, unknown>)) {
             const c = (errVal as Record<string, unknown>).code;
             if (typeof c === 'string') code = c;
         }
@@ -71,7 +64,12 @@ export const loader = async ({ request }: ActionFunctionArgs) => {
 
 export default function Home() {
     const { userHash } = useLoaderData<typeof loader>();
-    const [viewMode, setViewMode] = useState<'requests' | 'history'>('requests');
+    const { viewMode, setViewMode } = useHomeViewStore(
+        useShallow(state => ({
+            setViewMode: state.setViewMode,
+            viewMode: state.viewMode,
+        })),
+    );
     const [visibleHistoryCount, setVisibleHistoryCount] = useState(10);
     const [selectedRequester, setSelectedRequester] = useState<RequesterSelection | null>(null);
 
@@ -162,7 +160,7 @@ export default function Home() {
         return musics.filter(music => music.requesterHash === selectedRequester.requesterHash);
     }, [musics, selectedRequester?.requesterHash]);
     const handleRequesterNameChange = useCallback((requesterName: string) => {
-        setSelectedRequester(current => current ? { ...current, requesterName } : current);
+        setSelectedRequester(current => (current ? { ...current, requesterName } : current));
     }, []);
 
     return (
@@ -193,13 +191,7 @@ export default function Home() {
 
             <div className='w-full mt-2 sm:mt-4 flex justify-center'>
                 <AnimatePresence mode='wait'>
-                    {remoteStatus && (
-                        <StatusBadge
-                            mode={ytStatusMode}
-                            status={remoteStatus}
-                            music={playingMusic}
-                        />
-                    )}
+                    {remoteStatus && <StatusBadge mode={ytStatusMode} status={remoteStatus} music={playingMusic} />}
                 </AnimatePresence>
             </div>
 

@@ -49,10 +49,13 @@ export function HistoryView({
     );
     const visibleHistorySearchSuggestions = historySearchSuggestions.slice(0, 6);
     const shouldShowHistorySuggestions = query.trim().length > 0 && visibleHistorySearchSuggestions.length > 0;
-    const handleRequesterFilter = useCallback((value: string) => {
-        setQuery(value);
-        setVisibleHistoryCount(10);
-    }, [setQuery, setVisibleHistoryCount]);
+    const handleRequesterFilter = useCallback(
+        (value: string) => {
+            setQuery(value);
+            setVisibleHistoryCount(10);
+        },
+        [setQuery, setVisibleHistoryCount],
+    );
 
     return (
         <div className='space-y-4'>
@@ -65,10 +68,7 @@ export function HistoryView({
                         <div className='space-y-2'>
                             <div className='flex flex-wrap items-center gap-2'>
                                 <Card.Title className='text-lg sm:text-xl'>再生履歴</Card.Title>
-                                <Badge
-                                    variant='secondary'
-                                    className='rounded-full px-2.5 py-1 text-[11px] sm:text-xs'
-                                >
+                                <Badge variant='secondary' className='rounded-full px-2.5 py-1 text-[11px] sm:text-xs'>
                                     {filteredHistoryCount}件
                                 </Badge>
                             </div>
@@ -154,9 +154,8 @@ export function HistoryView({
                                     className='rounded-xl px-4 h-10'
                                     onClick={() => setVisibleHistoryCount(visibleHistoryItems.length + 10)}
                                 >
-                                    もっと表示する{remainingHistoryCount > 10
-                                        ? `（+10件）`
-                                        : `（残り${remainingHistoryCount}件）`}
+                                    もっと表示する
+                                    {remainingHistoryCount > 10 ? `（+10件）` : `（残り${remainingHistoryCount}件）`}
                                 </Button>
                             </div>
                         )}
