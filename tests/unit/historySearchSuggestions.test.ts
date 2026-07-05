@@ -1,4 +1,9 @@
-import { getHistorySearchSuggestions, historyItemMatchesSearch } from '@/app/utils/historySearchSuggestions';
+import {
+    getHistorySearchSuggestions,
+    hasHistorySearchSuggestions,
+    historyItemMatchesSearch,
+    shouldShowHistorySearchSuggestions,
+} from '@/app/utils/historySearchSuggestions';
 import type { HistoryItem } from '@/shared/types/history';
 import { describe, expect, test } from 'bun:test';
 
@@ -59,6 +64,19 @@ describe('getHistorySearchSuggestions', () => {
         expect(historyItemMatchesSearch(item, 'yonezu', readings)).toBe(true);
         expect(historyItemMatchesSearch(item, 'kanden', readings)).toBe(true);
         expect(getHistorySearchSuggestions([item], 'kan', readings)).toContain('かんでん');
+    });
+
+    test('候補表示条件: クエリと候補件数', () => {
+        expect(hasHistorySearchSuggestions('yor', 3)).toBe(true);
+        expect(hasHistorySearchSuggestions('yor', 0)).toBe(false);
+        expect(hasHistorySearchSuggestions('   ', 3)).toBe(false);
+    });
+
+    test('検索欄にフォーカスがある間だけ候補を表示する', () => {
+        expect(shouldShowHistorySearchSuggestions('yor', 3, true)).toBe(true);
+        expect(shouldShowHistorySearchSuggestions('yor', 3, false)).toBe(false);
+        expect(shouldShowHistorySearchSuggestions('yor', 0, true)).toBe(false);
+        expect(shouldShowHistorySearchSuggestions('   ', 3, true)).toBe(false);
     });
 
     test('匿名自動名は検索候補に出さずhash prefixで検索できる', () => {
