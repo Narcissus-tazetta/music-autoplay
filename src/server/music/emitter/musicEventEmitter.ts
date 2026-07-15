@@ -86,6 +86,20 @@ export class MusicEventEmitter {
         }
     }
 
+    emitQueueReordered(musics: Music[]): Result<void, HandlerError> {
+        try {
+            this.emitFn('queueReordered', musics, {
+                context: {
+                    operation: 'queueReordered',
+                },
+            });
+
+            return ok(undefined);
+        } catch (error: unknown) {
+            return err(toHandlerError(error));
+        }
+    }
+
     emitHistoryAdded(item: HistoryItem): Result<void, HandlerError> {
         try {
             this.emitFn('historyAdded', item, {

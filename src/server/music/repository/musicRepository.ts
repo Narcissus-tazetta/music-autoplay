@@ -31,9 +31,42 @@ export class MusicRepository {
         return -1;
     }
 
-    add(music: Music): Result<void, HandlerError> {
+    // Ordering is encoded in the Map's insertion order, so positional changes rebuild it.
+    private setEntryOrder(entries: Array<[string, Music]>): void {
+        this.musicDB.clear();
+        for (const [key, value] of entries) this.musicDB.set(key, value);
+    }
+
+    add(music: Music, atIndex?: number): Result<void, HandlerError> {
         try {
-            this.musicDB.set(music.id, music);
+            if (atIndex == undefined) {
+                this.musicDB.set(music.id, music);
+                return ok(undefined);
+            }
+            const entries = [...this.musicDB.entries()];
+            const clamped = Math.max(0, Math.min(atIndex, entries.length));
+            entries.splice(clamped, 0, [music.id, music]);
+            this.setEntryOrder(entries);
+            return ok(undefined);
+        } catch (error: unknown) {
+            return err(toHandlerError(error));
+        }
+    }
+
+    /**
+     * Moves `id` directly after `afterId` (INSERT_AT_FRONT moves it to the front).
+     * An anchor that already left the queue falls back to the front, matching
+     * the insertAfterId fallback in MusicService.addMusic.
+     */
+    reorder(id: string, afterId: string): Result<void, HandlerError> {
+        try {
+            const music = this.musicDB.get(id);
+            if (!music) return err(toHandlerError(new Error(`music not found: ${id}`)));
+            if (afterId === id) return ok(undefined);
+            const entries = [...this.musicDB.entries()].filter(([key]) => key !== id);
+            const anchorIndex = entries.findIndex(([key]) => key === afterId);
+            entries.splice(anchorIndex + 1, 0, [id, music]);
+            this.setEntryOrder(entries);
             return ok(undefined);
         } catch (error: unknown) {
             return err(toHandlerError(error));
@@ -62,9 +95,9 @@ export class MusicRepository {
         }
     }
 
-    async persistAdd(music: Music): Promise<Result<void, HandlerError>> {
+    async persistAdd(music: Music, atIndex?: number): Promise<Result<void, HandlerError>> {
         try {
-            await persistAdd(this.fileStore, music);
+            await persistAdd(this.fileStore, music, atIndex);
             return ok(undefined);
         } catch (error: unknown) {
             return err(toHandlerError(error));
@@ -74,6 +107,17 @@ export class MusicRepository {
     persistRemove(id: string): Result<void, HandlerError> {
         try {
             void persistRemove(this.fileStore, id);
+            return ok(undefined);
+        } catch (error: unknown) {
+            return err(toHandlerError(error));
+        }
+    }
+
+    persistReorder(): Result<void, HandlerError> {
+        try {
+            if (!this.fileStore.reorder)
+                return err(toHandlerError(new Error('current store does not support persisting reorder')));
+            void this.fileStore.reorder(this.list());
             return ok(undefined);
         } catch (error: unknown) {
             return err(toHandlerError(error));

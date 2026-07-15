@@ -1,4 +1,5 @@
 import { getMessage } from '@/shared/constants/messages';
+import { INSERT_AT_END, INSERT_AT_FRONT } from '@/shared/schemas/music';
 import type { Music } from '@/shared/stores/musicStore';
 import type { HandlerError } from '@/shared/utils/errors';
 import type { Result } from '@/shared/utils/errors/result-handlers';
@@ -15,10 +16,18 @@ export interface AddMusicRequest {
     url: string;
     requesterHash?: string;
     requesterName?: string;
+    insertAfterId?: string;
 }
 
 export interface RemoveMusicRequest {
     url: string;
+    requesterHash?: string;
+}
+
+export interface ReorderMusicRequest {
+    id: string;
+    /** Anchor id to place `id` after; INSERT_AT_FRONT moves it to the front. */
+    afterId: string;
     requesterHash?: string;
 }
 
@@ -33,7 +42,7 @@ export class MusicService {
     async addMusic(
         request: AddMusicRequest,
     ): Promise<Result<Music, HandlerError>> {
-        const { url, requesterHash, requesterName } = request;
+        const { url, requesterHash, requesterName, insertAfterId } = request;
 
         const resolveResult = await this.resolver.resolve(url);
         if (!resolveResult.ok) return err(resolveResult.error);
@@ -63,7 +72,16 @@ export class MusicService {
             title: meta.title,
         };
 
-        const addResult = this.repository.add(music);
+        // If the anchor already left the queue (e.g. it finished playing before this request
+        // arrived), fall back to the front rather than the end: the requester picked it to
+        // jump the queue, so silently appending to the end would invert their intent.
+        const atIndex = insertAfterId === INSERT_AT_FRONT
+            ? 0
+            : insertAfterId != undefined && insertAfterId !== INSERT_AT_END
+            ? Math.max(0, this.repository.getPosition(insertAfterId) + 1)
+            : undefined;
+
+        const addResult = this.repository.add(music, atIndex);
         if (!addResult.ok) return err(addResult.error);
 
         logger.info('music added', {
@@ -80,6 +98,19 @@ export class MusicService {
             });
         }
 
+        // musicAdded only carries the music itself, so clients that append it to the end of
+        // their local list would misplace it. Follow up with the authoritative order whenever
+        // it wasn't simply appended.
+        if (atIndex != undefined) {
+            const reorderEmitResult = this.emitter.emitQueueReordered(this.repository.list());
+            if (!reorderEmitResult.ok) {
+                logger.warn('failed to emit queueReordered event after insert', {
+                    error: reorderEmitResult.error,
+                    musicId: music.id,
+                });
+            }
+        }
+
         const urlListEmitResult = this.emitter.emitUrlList(
             this.repository.buildCompatList(),
         );
@@ -91,7 +122,7 @@ export class MusicService {
 
         this.emitter.logMusicAddedMetric(music);
 
-        const persistResult = await this.repository.persistAdd(music);
+        const persistResult = await this.repository.persistAdd(music, atIndex);
         if (!persistResult.ok) {
             logger.warn('failed to persist music', {
                 error: persistResult.error,
@@ -182,6 +213,67 @@ export class MusicService {
         }
 
         return ok(undefined);
+    }
+
+    async reorderMusic(
+        request: ReorderMusicRequest,
+    ): Promise<Result<Music[], HandlerError>> {
+        const { id, afterId, requesterHash } = request;
+
+        const existing = this.repository.get(id);
+        if (!existing) {
+            return err({
+                code: 'NOT_FOUND',
+                message: getMessage('ERROR_NOT_FOUND'),
+            });
+        }
+
+        const canReorder = this.auth.canRemoveMusic(
+            requesterHash,
+            existing.requesterHash,
+        );
+        if (!canReorder.ok) return err(canReorder.error);
+
+        if (!canReorder.value) {
+            return err({
+                code: 'FORBIDDEN',
+                message: getMessage('ERROR_REORDER_FORBIDDEN'),
+            });
+        }
+
+        const reorderResult = this.repository.reorder(id, afterId);
+        if (!reorderResult.ok) return err(reorderResult.error);
+
+        logger.info('music reordered', { afterId, id, requesterHash });
+
+        const orderedList = this.repository.list();
+
+        const emitResult = this.emitter.emitQueueReordered(orderedList);
+        if (!emitResult.ok) {
+            logger.warn('failed to emit queueReordered event', {
+                error: emitResult.error,
+                musicId: id,
+            });
+        }
+
+        const urlListEmitResult = this.emitter.emitUrlList(
+            this.repository.buildCompatList(),
+        );
+        if (!urlListEmitResult.ok) {
+            logger.warn('failed to emit url_list event', {
+                error: urlListEmitResult.error,
+            });
+        }
+
+        const persistResult = this.repository.persistReorder();
+        if (!persistResult.ok) {
+            logger.warn('failed to persist music reorder', {
+                error: persistResult.error,
+                musicId: id,
+            });
+        }
+
+        return ok(orderedList);
     }
 
     listMusics(): Music[] {

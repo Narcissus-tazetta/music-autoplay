@@ -3,6 +3,7 @@ export type MessageKey =
     | 'ERROR_ALREADY_EXISTS'
     | 'ERROR_NOT_FOUND'
     | 'ERROR_FORBIDDEN'
+    | 'ERROR_REORDER_FORBIDDEN'
     | 'ERROR_ADD_FAILED';
 
 const MESSAGES = {
@@ -10,6 +11,7 @@ const MESSAGES = {
     ERROR_ALREADY_EXISTS: (position: number) => `この楽曲はすでに${position}番目に登録されています`,
     ERROR_FORBIDDEN: 'この楽曲を削除する権限がありません',
     ERROR_NOT_FOUND: 'この楽曲は登録されていません',
+    ERROR_REORDER_FORBIDDEN: 'この楽曲を並び替える権限がありません',
     SUCCESS_ADDED: '楽曲を追加しました',
 } as const;
 

@@ -4,6 +4,14 @@ import { Input } from '@shadcn/ui/input';
 import { Link as LinkIcon, Loader, Send } from 'lucide-react';
 import { memo } from 'react';
 
+export interface InsertAfterOption {
+    readonly id: string;
+    readonly title: string;
+    readonly isPlaying?: boolean;
+    readonly isFront?: boolean;
+    readonly isEnd?: boolean;
+}
+
 interface MusicFormProps {
     readonly formId: string;
     readonly urlFieldName: string;
@@ -11,6 +19,9 @@ interface MusicFormProps {
     readonly isSubmitting: boolean;
     readonly canSubmit: boolean;
     readonly retryAfter?: number;
+    readonly insertAfterFieldName?: string;
+    readonly insertAfterOptions?: readonly InsertAfterOption[];
+    readonly showInsertAfterField?: boolean;
 }
 
 function MusicFormInner({
@@ -20,6 +31,9 @@ function MusicFormInner({
     isSubmitting,
     canSubmit,
     retryAfter = 0,
+    insertAfterFieldName,
+    insertAfterOptions,
+    showInsertAfterField = false,
 }: MusicFormProps) {
     const isRateLimited = retryAfter > 0;
     return (
@@ -40,6 +54,29 @@ function MusicFormInner({
                             {urlFieldErrors[0]}
                         </p>
                     )}
+
+                    {showInsertAfterField && insertAfterFieldName && insertAfterOptions && insertAfterOptions.length > 0
+                        && (
+                            <select
+                                name={insertAfterFieldName}
+                                form={formId}
+                                defaultValue={(insertAfterOptions.find(o => o.isEnd)
+                                    ?? insertAfterOptions[insertAfterOptions.length - 1])?.id}
+                                className='border-input dark:bg-input/30 flex h-11 sm:h-10 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-sm sm:text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]'
+                            >
+                                {insertAfterOptions.map(option => (
+                                    <option key={option.id} value={option.id}>
+                                        {option.isFront
+                                            ? '一番最初に追加'
+                                            : option.isEnd
+                                            ? '一番最後に追加'
+                                            : option.isPlaying
+                                            ? `▶ ${option.title}（再生中）の次に追加`
+                                            : `${option.title} の次に追加`}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
 
                     {isRateLimited && (
                         <p className='text-sm text-orange-500 font-medium'>

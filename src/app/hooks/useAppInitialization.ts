@@ -1,3 +1,4 @@
+import type { SessionRole } from '@/shared/stores/adminStore';
 import { useAdminStore } from '@/shared/stores/adminStore';
 import type { Music } from '@/shared/stores/musicStore';
 import normalizeApiResponse from '@/shared/utils/api';
@@ -22,8 +23,10 @@ export function useAppInitialization(): void {
             try {
                 const res = await fetch('/api/admin/status');
                 if (res.ok) {
-                    const data = await res.json() as { isAdmin?: boolean };
-                    if (data.isAdmin === true) useAdminStore.getState().setIsAdmin(true);
+                    const data = await res.json() as { isAdmin?: boolean; roles?: unknown };
+                    const roles = Array.isArray(data.roles) ? [...data.roles as SessionRole[]] : [];
+                    if (data.isAdmin === true && !roles.includes('admin')) roles.push('admin');
+                    if (roles.length > 0) useAdminStore.getState().setRoles(roles);
                 }
             } catch {
                 if (import.meta.env.DEV) console.debug('admin status check failed');

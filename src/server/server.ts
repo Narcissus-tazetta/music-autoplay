@@ -1,5 +1,11 @@
 import { SERVER_ENV } from '@/app/env.server';
-import { loginSession } from '@/app/sessions.server';
+import {
+    getSessionRoles,
+    hasPathfinderAccess as sessionHasPathfinderAccess,
+    isAdminSession as sessionIsAdmin,
+    loginSession,
+    type SessionRole,
+} from '@/app/sessions.server';
 import logger, { replaceConsoleWithLogger } from '@/server/logger';
 import { type ServerContext, serverContext } from '@/shared/types/server';
 import { createRequestHandler } from '@react-router/express';
@@ -20,6 +26,13 @@ const adminUser = config.getString('ADMIN_USER') || SERVER_ENV.ADMIN_USER;
 const adminPassword = config.getString('ADMIN_PASSWORD') || SERVER_ENV.ADMIN_PASSWORD;
 const adminAuthenticator = createAdminAuthenticator(adminUser, adminPassword);
 const adminRateLimiter = createAdminRateLimiter(3, 60 * 1000);
+
+const pathfinderUser = config.getString('PATHFINDER_USER') || SERVER_ENV.PATHFINDER_USER;
+const pathfinderPassword = config.getString('PATHFINDER_PASSWORD') || SERVER_ENV.PATHFINDER_PASSWORD;
+// The pathfinder role is opt-in: without credentials configured, its login is simply disabled.
+const pathfinderAuthenticator = pathfinderUser && pathfinderPassword
+    ? createAdminAuthenticator(pathfinderUser, pathfinderPassword)
+    : undefined;
 
 const portCandidate = config.getNumber('PORT');
 const port = typeof portCandidate === 'number' && !Number.isNaN(portCandidate)
@@ -306,9 +319,10 @@ app.post('/api/admin/login', express.json(), (req, res) => {
                 return;
             }
 
-            const isValid = adminAuthenticator.authenticate(username, password);
+            const isAdminValid = adminAuthenticator.authenticate(username, password);
+            const isPathfinderValid = pathfinderAuthenticator?.authenticate(username, password) ?? false;
 
-            if (!isValid) {
+            if (!isAdminValid && !isPathfinderValid) {
                 adminRateLimiter.recordFailure(rateLimitKey);
                 logger.info('Admin login failed', { ip: rateLimitKey });
                 res.status(401).json({ isAdmin: false });
@@ -319,13 +333,20 @@ app.post('/api/admin/login', express.json(), (req, res) => {
 
             const cookieHeader = req.headers.cookie ?? '';
             const session = await loginSession.getSession(cookieHeader);
-            session.set('admin', true);
+            const roleSet = new Set(getSessionRoles(session));
+            if (isAdminValid) {
+                roleSet.add('admin');
+                session.set('admin', true);
+            }
+            if (isPathfinderValid) roleSet.add('pathfinder');
+            const roles = [...roleSet];
+            session.set('roles', roles);
 
             const setCookieHeader = await loginSession.commitSession(session);
             res.setHeader('Set-Cookie', setCookieHeader);
 
-            logger.info('Admin login successful', { username });
-            res.json({ isAdmin: true });
+            logger.info('Admin login successful', { roles, username });
+            res.json({ isAdmin: roles.includes('admin'), roles });
         } catch (error: unknown) {
             logger.error('Error in /api/admin/login endpoint', { error });
             res.status(500).json({ isAdmin: false });
@@ -340,13 +361,29 @@ app.post('/api/admin/logout', express.json(), (req, res) => {
         try {
             const cookieHeader = req.headers.cookie ?? '';
             const session = await loginSession.getSession(cookieHeader);
+            const body = req.body as Record<string, unknown>;
+            const requestedRole: SessionRole | undefined = body.role === 'admin' || body.role === 'pathfinder'
+                ? body.role
+                : undefined;
+
+            // A specific role logs out only that role, keeping the others signed in;
+            // omitting it clears every role (used when the session itself is discarded).
+            const remaining = requestedRole
+                ? getSessionRoles(session).filter(r => r !== requestedRole)
+                : [];
             session.unset('admin');
+            session.unset('roles');
+            if (remaining.length > 0) {
+                session.set('roles', remaining);
+                if (remaining.includes('admin')) session.set('admin', true);
+            }
 
             const setCookieHeader = await loginSession.commitSession(session);
             res.setHeader('Set-Cookie', setCookieHeader);
 
-            logger.info('Admin logout successful');
-            res.json({ isAdmin: false });
+            const roles = getSessionRoles(await loginSession.getSession(setCookieHeader));
+            logger.info('Admin logout successful', { role: requestedRole ?? 'all', remainingRoles: roles });
+            res.json({ isAdmin: roles.includes('admin'), roles });
         } catch (error: unknown) {
             logger.error('Error in /api/admin/logout endpoint', { error });
             res.status(500).json({ isAdmin: false });
@@ -361,8 +398,10 @@ app.get('/api/admin/status', (req, res) => {
         try {
             const cookieHeader = req.headers.cookie ?? '';
             const session = await loginSession.getSession(cookieHeader);
-            const isAdmin = session.get('admin') === true;
-            res.json({ isAdmin });
+            // getSessionRoles back-fills 'admin' for sessions created before roles existed,
+            // so pre-deploy admin logins see their role features without re-authenticating.
+            const roles = getSessionRoles(session);
+            res.json({ isAdmin: roles.includes('admin'), roles });
         } catch (error: unknown) {
             logger.error('Error in /api/admin/status endpoint', { error });
             res.status(500).json({ isAdmin: false });
@@ -385,9 +424,13 @@ const requireAdminSecret = () => {
 };
 
 async function isAdminSession(req: express.Request): Promise<boolean> {
-    const cookieHeader = req.headers.cookie ?? '';
-    const session = await loginSession.getSession(cookieHeader);
-    return session.get('admin') === true;
+    const session = await loginSession.getSession(req.headers.cookie ?? '');
+    return sessionIsAdmin(session);
+}
+
+async function hasPathfinderAccess(req: express.Request): Promise<boolean> {
+    const session = await loginSession.getSession(req.headers.cookie ?? '');
+    return sessionHasPathfinderAccess(session);
 }
 
 const REQUEST_LOG_LIMIT_DEFAULT = 50;
@@ -505,8 +548,8 @@ app.post('/api/admin/request-logs/query', express.json({ limit: '8kb' }), (req, 
     const handleRequestLogQuery = async (): Promise<void> => {
         try {
             res.setHeader('Cache-Control', 'no-store');
-            const isAdmin = await isAdminSession(req);
-            if (!isAdmin) {
+            const canAccess = await hasPathfinderAccess(req);
+            if (!canAccess) {
                 res.status(401).json({ error: 'unauthorized', ok: false });
                 return;
             }
@@ -537,8 +580,8 @@ app.get('/api/admin/request-logs', (req, res) => {
     const handleRequestLogs = async (): Promise<void> => {
         try {
             res.setHeader('Cache-Control', 'no-store');
-            const isAdmin = await isAdminSession(req);
-            if (!isAdmin) {
+            const canAccess = await hasPathfinderAccess(req);
+            if (!canAccess) {
                 res.status(401).json({ error: 'unauthorized', ok: false });
                 return;
             }
@@ -565,8 +608,8 @@ app.get('/api/admin/request-logs/:hashPrefix', (req, res) => {
     const handleUserLogs = async (): Promise<void> => {
         try {
             res.setHeader('Cache-Control', 'no-store');
-            const isAdmin = await isAdminSession(req);
-            if (!isAdmin) {
+            const canAccess = await hasPathfinderAccess(req);
+            if (!canAccess) {
                 res.status(401).json({ error: 'unauthorized', ok: false });
                 return;
             }

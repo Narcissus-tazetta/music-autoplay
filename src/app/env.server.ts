@@ -37,6 +37,20 @@ const serverEnvSchema = z
         ADMIN_USER: isTest
             ? z.string().default('admin')
             : z.string().min(1, 'ADMIN_USER is required'),
+        // Optional: when PATHFINDER_USER/PATHFINDER_PASSWORD are absent the pathfinder login is disabled,
+        // so existing deployments keep booting without new env vars.
+        PATHFINDER_PASSWORD: isTest
+            ? z.string().default('password123')
+            : z.string()
+                .min(12, 'PATHFINDER_PASSWORD must be at least 12 characters')
+                .regex(/[a-z]/, 'PATHFINDER_PASSWORD must contain at least one lowercase letter')
+                .regex(/[A-Z]/, 'PATHFINDER_PASSWORD must contain at least one uppercase letter')
+                .regex(/[0-9]/, 'PATHFINDER_PASSWORD must contain at least one digit')
+                .regex(/[^A-Za-z0-9]/, 'PATHFINDER_PASSWORD must contain at least one special character')
+                .optional(),
+        PATHFINDER_USER: isTest
+            ? z.string().default('pathfinder')
+            : z.string().min(1).optional(),
         ALLOW_EXTENSION_ORIGINS: z.preprocess(v => {
             if (v == undefined || v === '') return undefined;
             if (typeof v === 'string') return v === 'true' ? true : (v === 'false' ? false : undefined);
@@ -218,6 +232,8 @@ export const SERVER_ENV = (() => {
         ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
         ADMIN_SECRET: process.env.ADMIN_SECRET,
         ADMIN_USER: process.env.ADMIN_USER,
+        PATHFINDER_PASSWORD: process.env.PATHFINDER_PASSWORD,
+        PATHFINDER_USER: process.env.PATHFINDER_USER,
         ALLOW_EXTENSION_ORIGINS: process.env.ALLOW_EXTENSION_ORIGINS,
         CLIENT_URL: process.env.CLIENT_URL,
         CORS_ORIGINS: process.env.CORS_ORIGINS,

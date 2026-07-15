@@ -5,10 +5,11 @@ import type { Store } from './types';
 export async function persistAdd(
     store: Store | undefined,
     music: Music,
+    atIndex?: number,
 ): Promise<void> {
     if (!store || typeof store.add !== 'function') return;
     try {
-        const res = store.add(music);
+        const res = store.add(music, atIndex);
         if (res && typeof (res as { then?: unknown }).then === 'function') await res;
     } catch (error) {
         try {

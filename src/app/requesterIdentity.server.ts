@@ -1,6 +1,12 @@
 import { getClientIP } from '@/server/utils/getClientIP';
 import { createHash, randomUUID } from 'node:crypto';
-import { anonymousIdCookie, loginSession, requesterDisplayNameCookie, type UserSessionData } from '~/sessions.server';
+import {
+    anonymousIdCookie,
+    type LoginSession,
+    loginSession,
+    requesterDisplayNameCookie,
+    type UserSessionData,
+} from '~/sessions.server';
 
 export interface RequesterIdentity {
     requesterHash?: string;
@@ -59,8 +65,10 @@ function resolveAnonymousIdentity(anonId: string, displayName: string | null): R
 
 export async function resolveRequesterIdentity(
     cookieHeader: string | null | undefined,
+    preloadedSession?: LoginSession,
 ): Promise<RequesterIdentity> {
-    const session = await loginSession.getSession(cookieHeader);
+    // Callers that already parsed the session cookie pass it in to avoid a second HMAC verify.
+    const session = preloadedSession ?? await loginSession.getSession(cookieHeader);
     const user = session.get('user');
     const displayName = await parseRequesterDisplayName(cookieHeader);
     if (user) return resolveOAuthIdentity(user, displayName);

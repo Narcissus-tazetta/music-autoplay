@@ -6,6 +6,7 @@ import { safeExecuteAsync } from '@/shared/utils/errors';
 import { parseWithZod } from '@conform-to/zod/v4';
 import type { ActionFunctionArgs } from 'react-router';
 import { getRateLimitKey, resolveRequesterIdentity } from '../../requesterIdentity.server';
+import { hasPathfinderAccess, loginSession } from '../../sessions.server';
 
 export const action = async ({
     request,
@@ -37,9 +38,13 @@ export const action = async ({
 
     if (submission.status !== 'success') return Response.json(submission.reply(), { status: 400 });
 
-    const { requesterHash, requesterName } = await resolveRequesterIdentity(cookie);
+    const session = await loginSession.getSession(cookie);
+    const { requesterHash, requesterName } = await resolveRequesterIdentity(cookie, session);
+    const insertAfterId = hasPathfinderAccess(session) ? submission.value.insertAfterId : undefined;
 
-    const result = await safeExecuteAsync(() => io.addMusic(submission.value.url, requesterHash, requesterName));
+    const result = await safeExecuteAsync(() =>
+        io.addMusic(submission.value.url, requesterHash, requesterName, insertAfterId)
+    );
 
     if (result.ok) {
         const replyOptions = result.value as { formErrors?: string[] };

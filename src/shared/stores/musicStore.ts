@@ -453,6 +453,9 @@ export const useMusicStore = create<MusicStore>(set => {
                         musics: state.musics.filter(music => music.id !== musicId),
                     }));
                 })
+                .on('queueReordered', (musics: Music[]) => {
+                    set({ musics });
+                })
                 .on('remoteStatusUpdated', (incomingState: RemoteStatusWithMeta) => {
                     handleRemoteStatusUpdate(incomingState);
                 })

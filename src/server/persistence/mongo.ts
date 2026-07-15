@@ -15,6 +15,8 @@ type MusicDoc = Music & {
     _id: string;
     createdAt?: Date;
     updatedAt?: Date;
+    /** Queue position; docs written before positional inserts existed fall back to createdAt order. */
+    order?: number;
 };
 
 export class MongoStore {
@@ -79,14 +81,22 @@ export class MongoStore {
             .find({}, { sort: { createdAt: 1, _id: 1 } })
             .toArray();
 
-        return docs.map(d => {
-            const { _id, ...rest } = d;
-            const id = typeof rest.id === 'string' && rest.id.length > 0 ? rest.id : _id;
-            return Object.assign(rest as Record<string, unknown>, { id }) as unknown as Music;
-        });
+        // Legacy docs have no `order`; their createdAt rank doubles as the position so
+        // they interleave stably with docs written after reordering was introduced.
+        return docs
+            .map((d, createdAtRank) => ({
+                doc: d,
+                position: typeof d.order === 'number' ? d.order : createdAtRank,
+            }))
+            .toSorted((a, b) => a.position - b.position)
+            .map(({ doc }) => {
+                const { _id, order: _order, ...rest } = doc;
+                const id = typeof rest.id === 'string' && rest.id.length > 0 ? rest.id : _id;
+                return Object.assign(rest as Record<string, unknown>, { id }) as unknown as Music;
+            });
     }
 
-    async add(m: Music): Promise<void> {
+    async add(m: Music, order?: number): Promise<void> {
         const col = await this.getCollection();
         await col.updateOne(
             { _id: m.id },
@@ -94,12 +104,27 @@ export class MongoStore {
                 $set: {
                     ...m,
                     updatedAt: new Date(),
+                    ...(order != undefined ? { order } : {}),
                 },
                 $setOnInsert: {
                     createdAt: new Date(),
                 },
             },
             { upsert: true },
+        );
+    }
+
+    /** Persists the queue order by stamping each doc with its index. */
+    async reorderAll(musics: Music[]): Promise<void> {
+        if (musics.length === 0) return;
+        const col = await this.getCollection();
+        await col.bulkWrite(
+            musics.map((m, index) => ({
+                updateOne: {
+                    filter: { _id: m.id },
+                    update: { $set: { order: index, updatedAt: new Date() } },
+                },
+            })),
         );
     }
 
@@ -148,14 +173,7 @@ export class MongoHybridStore implements Store {
         return this.current.items;
     }
 
-    addSync(m: Music) {
-        this.current.items = this.current.items || [];
-        const idx = this.current.items.findIndex(x => x.id === m.id);
-        if (idx !== -1) this.current.items[idx] = m;
-        else this.current.items.push(m);
-        this.current.lastUpdated = new Date().toISOString();
-
-        const p = this.mongo.add(m).catch(error => logger.warn('MongoHybridStore: failed to add', { error }));
+    private trackWrite(p: Promise<unknown>): void {
         this.pendingWrites.push(p);
         if (this.pendingWrites.length > 100) {
             logger.warn('MongoHybridStore: pendingWrites exceeds threshold', {
@@ -167,19 +185,62 @@ export class MongoHybridStore implements Store {
         });
     }
 
-    add(m: Music): void | Promise<void> {
-        this.addSync(m);
+    addSync(m: Music, atIndex?: number) {
+        this.current.items = this.current.items || [];
+        const idx = this.current.items.findIndex(x => x.id === m.id);
+        if (idx !== -1) {
+            this.current.items[idx] = m;
+            this.current.lastUpdated = new Date().toISOString();
+            this.trackWrite(
+                this.mongo.add(m, idx).catch(error => logger.warn('MongoHybridStore: failed to add', { error })),
+            );
+            return;
+        }
+        if (atIndex != undefined) {
+            const items = this.current.items;
+            const clamped = Math.max(0, Math.min(atIndex, items.length));
+            items.splice(clamped, 0, m);
+            this.current.lastUpdated = new Date().toISOString();
+            // A mid-queue insert shifts every following position, so restamp the whole order.
+            this.trackWrite(
+                this.mongo.add(m)
+                    .then(() => this.mongo.reorderAll(items))
+                    .catch(error => logger.warn('MongoHybridStore: failed to add at index', { error })),
+            );
+            return;
+        }
+        this.current.items.push(m);
+        this.current.lastUpdated = new Date().toISOString();
+        this.trackWrite(
+            this.mongo.add(m, this.current.items.length - 1)
+                .catch(error => logger.warn('MongoHybridStore: failed to add', { error })),
+        );
+    }
+
+    add(m: Music, atIndex?: number): void | Promise<void> {
+        this.addSync(m, atIndex);
+    }
+
+    reorderSync(musics: Music[]) {
+        this.current.items = [...musics];
+        this.current.lastUpdated = new Date().toISOString();
+        this.trackWrite(
+            this.mongo.reorderAll(this.current.items)
+                .catch(error => logger.warn('MongoHybridStore: failed to reorder', { error })),
+        );
+    }
+
+    reorder(musics: Music[]): void | Promise<void> {
+        this.reorderSync(musics);
     }
 
     removeSync(id: string) {
         this.current.items = (this.current.items || []).filter(x => x.id !== id);
         this.current.lastUpdated = new Date().toISOString();
 
-        const p = this.mongo.remove(id).catch(error => logger.warn('MongoHybridStore: failed to remove', { error }));
-        this.pendingWrites.push(p);
-        void p.finally(() => {
-            this.pendingWrites = this.pendingWrites.filter(x => x !== p);
-        });
+        this.trackWrite(
+            this.mongo.remove(id).catch(error => logger.warn('MongoHybridStore: failed to remove', { error })),
+        );
     }
 
     remove(id: string): void | Promise<void> {
@@ -189,11 +250,9 @@ export class MongoHybridStore implements Store {
     clearSync() {
         this.current = { items: [], lastUpdated: new Date().toISOString() };
 
-        const p = this.mongo.clear().catch(error => logger.warn('MongoHybridStore: failed to clear', { error }));
-        this.pendingWrites.push(p);
-        void p.finally(() => {
-            this.pendingWrites = this.pendingWrites.filter(x => x !== p);
-        });
+        this.trackWrite(
+            this.mongo.clear().catch(error => logger.warn('MongoHybridStore: failed to clear', { error })),
+        );
     }
 
     clear(): void {

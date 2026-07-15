@@ -6,7 +6,11 @@ export const YouTubeId = z
     .max(20)
     .refine(s => /^[A-Za-z0-9_-]+$/.test(s), 'Invalid YouTube id');
 
+export const INSERT_AT_FRONT = '__front__';
+export const INSERT_AT_END = '__end__';
+
 export const AddMusicSchema = z.object({
+    insertAfterId: z.union([YouTubeId, z.literal(INSERT_AT_FRONT), z.literal(INSERT_AT_END)]).optional(),
     requesterHash: z.string().optional(),
     requesterName: z.string().optional(),
     url: z
@@ -16,6 +20,13 @@ export const AddMusicSchema = z.object({
         .refine(u => /(?:youtube\.com\/watch\?v=|youtu\.be\/)/.test(u), {
             message: '有効なYouTubeのURLではありません',
         }),
+});
+
+// Anchor-based on purpose: an index computed on the client goes stale the moment another
+// user mutates the queue, while "move after song X" stays meaningful under concurrency.
+export const ReorderMusicSchema = z.object({
+    afterId: z.union([YouTubeId, z.literal(INSERT_AT_FRONT)]),
+    id: YouTubeId,
 });
 
 export const RemoveMusicSchema = z.object({
@@ -57,6 +68,7 @@ export const YouTubeResolveResultSchema = z.discriminatedUnion('ok', [
 
 export type AddMusicInput = z.infer<typeof AddMusicSchema>;
 export type RemoveMusicInput = z.infer<typeof RemoveMusicSchema>;
+export type ReorderMusicInput = z.infer<typeof ReorderMusicSchema>;
 export type YouTubeMeta = z.infer<typeof YouTubeMetaSchema>;
 export type Music = z.infer<typeof MusicSchema>;
 export type YouTubeResolveResult = z.infer<typeof YouTubeResolveResultSchema>;

@@ -4,8 +4,8 @@ import { MusicTitleWithHover } from '@/shared/components';
 import type { Music } from '@/shared/stores/musicStore';
 import { formatDuration, formatRequestedAt } from '@/shared/utils/format';
 import { channelUrl } from '@/shared/utils/youtube';
-import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, Loader, MoreVertical, TrashIcon } from 'lucide-react';
+import { AnimatePresence, motion, Reorder, useDragControls } from 'framer-motion';
+import { ChevronDown, GripVertical, Loader, MoreVertical, TrashIcon } from 'lucide-react';
 import { memo } from 'react';
 import { Button } from '~/components/ui/shadcn/button';
 import { Table } from '~/components/ui/shadcn/table';
@@ -20,6 +20,11 @@ export interface MusicTableRowProps {
     onDelete: (id: string, isAdmin?: boolean) => void;
     onRequesterClick?: (requester: RequesterSelection) => void;
     reserveDeleteSlot?: boolean;
+    canDrag?: boolean;
+    onDragStart?: () => void;
+    onDragEnd?: (id: string) => void;
+    /** Moves this row one position up (-1) or down (+1); used by the grip's arrow keys. */
+    onKeyboardMove?: (id: string, delta: -1 | 1) => void;
     className?: string;
 }
 
@@ -40,6 +45,10 @@ export default function MusicTableRow({
     onDelete,
     onRequesterClick,
     reserveDeleteSlot = true,
+    canDrag = false,
+    onDragStart,
+    onDragEnd,
+    onKeyboardMove,
     className,
 }: MusicTableRowProps) {
     const { isExpanded, canDelete, handleDelete, toggleExpanded } = useMusicRow({
@@ -49,6 +58,7 @@ export default function MusicTableRow({
         requesterHash: music.requesterHash,
         userHash,
     });
+    const dragControls = useDragControls();
 
     const mergedRowClass = cn(
         className ?? 'min-h-14 sm:h-14',
@@ -63,14 +73,19 @@ export default function MusicTableRow({
 
     return (
         <>
-            <Table.Row
-                as={motion.tr}
+            <Reorder.Item
+                as='tr'
+                data-slot='table-row'
+                value={music}
+                dragListener={false}
+                dragControls={dragControls}
+                onDragStart={onDragStart}
+                onDragEnd={() => onDragEnd?.(music.id)}
                 className={mergedRowClass}
                 initial={{ opacity: 0, x: -100 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -100 }}
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
-                layout
             >
                 <Table.Cell className='text-center py-3 sm:py-2'>
                     <p className='font-bold text-sm sm:text-base'>{index + 1}</p>
@@ -80,6 +95,22 @@ export default function MusicTableRow({
                 </Table.Cell>
                 <Table.Cell className='py-2'>
                     <div className='flex items-center justify-end gap-0.5 sm:gap-1'>
+                        {canDrag && (
+                            <div
+                                role='button'
+                                tabIndex={0}
+                                aria-label={`${music.title} を並び替え（矢印キーで移動）`}
+                                className='h-10 w-10 sm:h-8 sm:w-8 touch-target flex items-center justify-center cursor-grab active:cursor-grabbing text-muted-foreground rounded-md focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50'
+                                onPointerDown={e => dragControls.start(e)}
+                                onKeyDown={e => {
+                                    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+                                    e.preventDefault();
+                                    onKeyboardMove?.(music.id, e.key === 'ArrowUp' ? -1 : 1);
+                                }}
+                            >
+                                <GripVertical size={18} />
+                            </div>
+                        )}
                         <Button
                             variant='ghost'
                             size='icon'
@@ -120,7 +151,7 @@ export default function MusicTableRow({
                         )}
                     </div>
                 </Table.Cell>
-            </Table.Row>
+            </Reorder.Item>
             <AnimatePresence initial={false}>
                 {isExpanded && (
                     <Table.Row

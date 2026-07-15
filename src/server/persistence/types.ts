@@ -7,9 +7,10 @@ export interface PersistFile {
 
 export interface Store {
     load(): Music[];
-    add(m: Music): void | Promise<void>;
+    add(m: Music, atIndex?: number): void | Promise<void>;
     remove(id: string): void | Promise<void>;
     clear(): void;
     flush?(): Promise<void>;
     closeSync?(): void;
+    reorder?(musics: Music[]): void | Promise<void>;
 }

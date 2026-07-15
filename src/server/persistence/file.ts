@@ -120,12 +120,15 @@ export class FileStore implements Store {
         return this.current.items;
     }
 
-    addSync(m: Music) {
+    addSync(m: Music, atIndex?: number) {
         if (!this.current) this.current = this.readFileSafeSync();
         this.current.items = this.current.items || [];
         const idx = this.current.items.findIndex(x => x.id === m.id);
         if (idx !== -1) this.current.items[idx] = m;
-        else this.current.items.push(m);
+        else if (atIndex != undefined) {
+            const clamped = Math.max(0, Math.min(atIndex, this.current.items.length));
+            this.current.items.splice(clamped, 0, m);
+        } else { this.current.items.push(m); }
         this.current.lastUpdated = new Date().toISOString();
         this.scheduleFlush();
     }
@@ -141,8 +144,15 @@ export class FileStore implements Store {
         this.scheduleFlush();
     }
 
-    add(m: Music): void | Promise<void> {
-        this.addSync(m);
+    reorderSync(musics: Music[]) {
+        if (!this.current) this.current = this.readFileSafeSync();
+        this.current.items = musics;
+        this.current.lastUpdated = new Date().toISOString();
+        this.scheduleFlush();
+    }
+
+    add(m: Music, atIndex?: number): void | Promise<void> {
+        this.addSync(m, atIndex);
     }
 
     remove(id: string): void | Promise<void> {
@@ -151,6 +161,10 @@ export class FileStore implements Store {
 
     clear(): void {
         this.clearSync();
+    }
+
+    reorder(musics: Music[]): void | Promise<void> {
+        this.reorderSync(musics);
     }
 
     async flush() {

@@ -5,8 +5,10 @@ import usePlayingMusic from '@/app/hooks/usePlayingMusic';
 import { useSettingsSync } from '@/app/hooks/useSettingsSync';
 import { useUiActionExecutor } from '@/app/hooks/useUiActionExecutor';
 import { StatusBadge, Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components';
+import { INSERT_AT_END, INSERT_AT_FRONT } from '@/shared/schemas/music';
 import { useHistoryStore } from '@/shared/stores/historyStore';
 import { useMusicStore } from '@/shared/stores/musicStore';
+import { normalizeApiResponse } from '@/shared/utils/api';
 import { safeExecuteAsync } from '@/shared/utils/errors';
 import { err as makeErr } from '@/shared/utils/errors/result-handlers';
 import { respondWithResult } from '@/shared/utils/httpResponse';
@@ -19,6 +21,7 @@ import { useLoaderData } from 'react-router';
 import type { ActionFunctionArgs } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
 import HistoryView from '~/components/HistoryView';
+import type { InsertAfterOption } from '~/components/MusicForm';
 import { MusicForm } from '~/components/MusicForm';
 import { MusicTable } from '~/components/MusicTable';
 import { RequesterDetailDialog, type RequesterSelection } from '~/components/RequesterDetailDialog';
@@ -26,6 +29,9 @@ import { resolveRequesterIdentity } from '~/requesterIdentity.server';
 import { historyItemMatchesSearch } from '~/utils/historySearchSuggestions';
 import { useAdminStore } from '../../shared/stores/adminStore';
 import { useHomeViewStore } from '../../shared/stores/homeViewStore';
+
+// Stable reference so the memoized MusicForm doesn't re-render on every queue update.
+const EMPTY_INSERT_OPTIONS: InsertAfterOption[] = [];
 
 export const meta = () => [
     { title: '楽曲リクエストフォーム' },
@@ -72,6 +78,8 @@ export default function Home() {
     );
     const [visibleHistoryCount, setVisibleHistoryCount] = useState(10);
     const [selectedRequester, setSelectedRequester] = useState<RequesterSelection | null>(null);
+    const [reorderResyncToken, setReorderResyncToken] = useState(0);
+    const [reorderError, setReorderError] = useState<string | null>(null);
 
     const { musics, remoteStatus } = useMusicStore(
         useShallow(state => ({
@@ -82,6 +90,7 @@ export default function Home() {
     const { ytStatusMode } = useSettingsSync();
     const playingMusic = usePlayingMusic(musics, remoteStatus);
     const isAdmin = useAdminStore(s => s.isAdmin);
+    const hasPathfinderAccess = useAdminStore(s => s.hasPathfinderAccess);
     const { fetcher, form, fields, isSubmitting, canSubmit, retryAfter } = useMusicForm();
     const { parsedAction } = useFormErrors(fetcher.data);
     const {
@@ -147,6 +156,42 @@ export default function Home() {
         [fetcher],
     );
 
+    const handleReorder = useCallback(
+        (id: string, afterId: string) => {
+            // Deliberately bypasses the shared `fetcher` used by add/delete: reusing it would
+            // route a reorder response through the add-music success/error toast logic and
+            // would flip `isSubmitting` (disabling the add form and every row's delete button)
+            // for the duration of the drag's network request.
+            const formData = new FormData();
+            formData.append('id', id);
+            formData.append('afterId', afterId);
+            void (async () => {
+                let errorMessage: string | null = null;
+                try {
+                    const response = await fetch('/api/music/reorder', {
+                        body: formData,
+                        method: 'POST',
+                    });
+                    const normalized = await normalizeApiResponse(response);
+                    if (!normalized.success) errorMessage = normalized.error.message;
+                } catch {
+                    errorMessage = '';
+                }
+                if (errorMessage != null) {
+                    setReorderResyncToken(n => n + 1);
+                    setReorderError(errorMessage || '楽曲の並び替えに失敗しました');
+                }
+            })();
+        },
+        [],
+    );
+
+    useEffect(() => {
+        if (!reorderError) return;
+        const timer = setTimeout(() => setReorderError(null), 5000);
+        return () => clearTimeout(timer);
+    }, [reorderError]);
+
     const historySearchReadings = useHistoryJapaneseReadings(historyItems, viewMode === 'history');
     const filteredHistoryItems = useMemo(
         () => historyItems.filter(item => historyItemMatchesSearch(item, query, historySearchReadings)),
@@ -159,6 +204,17 @@ export default function Home() {
         if (!selectedRequester?.requesterHash) return [];
         return musics.filter(music => music.requesterHash === selectedRequester.requesterHash);
     }, [musics, selectedRequester?.requesterHash]);
+    const insertAfterOptions = useMemo(() => {
+        if (!hasPathfinderAccess || musics.length === 0) return EMPTY_INSERT_OPTIONS;
+        const ordered = playingMusic
+            ? [playingMusic, ...musics.filter(m => m.id !== playingMusic.id)]
+            : musics;
+        return [
+            { id: INSERT_AT_FRONT, isFront: true, title: '' },
+            ...ordered.map(m => ({ id: m.id, isPlaying: m.id === playingMusic?.id, title: m.title })),
+            { id: INSERT_AT_END, isEnd: true, title: '' },
+        ];
+    }, [hasPathfinderAccess, musics, playingMusic]);
     const handleRequesterNameChange = useCallback((requesterName: string) => {
         setSelectedRequester(current => (current ? { ...current, requesterName } : current));
     }, []);
@@ -167,6 +223,7 @@ export default function Home() {
         <div className='flex flex-col w-full max-w-5xl gap-4 sm:gap-5 px-3 sm:px-4 mt-8 sm:mt-12 pb-6 sm:pb-8'>
             <RequesterDetailDialog
                 isAdmin={isAdmin}
+                canViewLogs={hasPathfinderAccess}
                 isDeleting={isSubmitting}
                 onDelete={handleDelete}
                 onRequesterNameChange={handleRequesterNameChange}
@@ -186,6 +243,9 @@ export default function Home() {
                     isSubmitting={isSubmitting}
                     canSubmit={canSubmit}
                     retryAfter={retryAfter}
+                    insertAfterFieldName={fields.insertAfterId.name}
+                    insertAfterOptions={insertAfterOptions}
+                    showInsertAfterField={hasPathfinderAccess}
                 />
             </fetcher.Form>
 
@@ -217,12 +277,20 @@ export default function Home() {
                 )
                 : (
                     <>
+                        {reorderError && (
+                            <p className='text-sm text-destructive font-medium text-center' role='alert'>
+                                {reorderError}
+                            </p>
+                        )}
                         <MusicTable
                             musics={musics}
                             userHash={userHash}
                             isAdmin={isAdmin}
+                            canReorder={hasPathfinderAccess}
                             isDeleting={isSubmitting}
                             onDelete={handleDelete}
+                            onReorder={handleReorder}
+                            reorderResyncToken={reorderResyncToken}
                             onRequesterClick={setSelectedRequester}
                             headerAction={
                                 <Tooltip>

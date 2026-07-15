@@ -218,8 +218,10 @@ export class SocketServerInstance {
         url: string,
         requesterHash?: string,
         requesterName?: string,
+        insertAfterId?: string,
     ): Promise<ReplyOptions> {
         const result = await this.getMusicService().addMusic({
+            insertAfterId,
             requesterHash,
             requesterName,
             url,
@@ -232,6 +234,20 @@ export class SocketServerInstance {
         const result = await this.getMusicService().removeMusic({
             requesterHash,
             url,
+        });
+        if (result.ok) return {};
+        return { formErrors: [result.error.message] };
+    }
+
+    async reorderMusic(
+        id: string,
+        afterId: string,
+        requesterHash: string,
+    ): Promise<ReplyOptions> {
+        const result = await this.getMusicService().reorderMusic({
+            afterId,
+            id,
+            requesterHash,
         });
         if (result.ok) return {};
         return { formErrors: [result.error.message] };

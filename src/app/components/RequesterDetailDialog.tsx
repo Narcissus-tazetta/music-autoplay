@@ -18,6 +18,8 @@ export interface RequesterSelection {
 
 export interface RequesterDetailDialogProps {
     isAdmin: boolean;
+    /** Whether the viewer may see the requester's request logs (admin and pathfinder roles). */
+    canViewLogs?: boolean;
     isDeleting?: boolean;
     onRequesterNameChange?: (requesterName: string) => void;
     onDelete: (id: string, asAdmin?: boolean) => void;
@@ -35,6 +37,7 @@ const requesterDisplayName = (requester?: RequesterSelection | null): string => 
 
 export function RequesterDetailDialog({
     isAdmin,
+    canViewLogs = false,
     isDeleting = false,
     onRequesterNameChange,
     onDelete,
@@ -74,7 +77,7 @@ export function RequesterDetailDialog({
     }, [displayNameFetcher.data, onRequesterNameChange]);
 
     useEffect(() => {
-        if (!open || !isAdmin || !requesterHash) {
+        if (!open || !canViewLogs || !requesterHash) {
             setLogs([]);
             setLogError(null);
             setIsLoadingLogs(false);
@@ -114,7 +117,7 @@ export function RequesterDetailDialog({
 
         void fetchLogs();
         return () => controller.abort();
-    }, [hashPrefix, isAdmin, open, requesterHash]);
+    }, [canViewLogs, hashPrefix, open, requesterHash]);
 
     const latestLogAt = useMemo(() => {
         if (logs.length === 0) return undefined;
@@ -247,7 +250,7 @@ export function RequesterDetailDialog({
                                 />
                             </section>
 
-                            {isAdmin && (
+                            {canViewLogs && (
                                 <section className='space-y-2'>
                                     <div className='flex flex-wrap items-center justify-between gap-2'>
                                         <div>

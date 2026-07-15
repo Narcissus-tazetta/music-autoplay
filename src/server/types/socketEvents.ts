@@ -51,6 +51,7 @@ export interface EventMap {
     // server -> client (emit)
     musicAdded: [payload: unknown];
     musicRemoved: [id: string];
+    queueReordered: [payload: unknown];
     historyAdded: [item: HistoryItem];
     remoteStatusUpdated: [RemoteStatus];
     initMusics: [Array<Music & { url: string }>];

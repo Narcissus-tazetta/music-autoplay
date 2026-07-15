@@ -1,5 +1,5 @@
 import logger from '@/server/logger';
-import { RemoveMusicSchema } from '@/shared/schemas/music';
+import { ReorderMusicSchema } from '@/shared/schemas/music';
 import { serverContext } from '@/shared/types/server';
 import { safeExecuteAsync } from '@/shared/utils/errors';
 import { err as makeErr } from '@/shared/utils/errors/result-handlers';
@@ -13,7 +13,7 @@ import {
     resolveActingRequesterHash,
 } from '../../musicAction.server';
 import { getRateLimitKey } from '../../requesterIdentity.server';
-import { isAdminSession, loginSession } from '../../sessions.server';
+import { hasPathfinderAccess, isAdminSession, loginSession } from '../../sessions.server';
 
 export const action = async ({
     request,
@@ -22,7 +22,7 @@ export const action = async ({
     const { httpRateLimiter, io } = context.get(serverContext);
     const formData = await request.formData();
     const submission = parseWithZod(formData, {
-        schema: RemoveMusicSchema,
+        schema: ReorderMusicSchema,
     });
 
     if (submission.status !== 'success') return Response.json(submission.reply(), { status: 400 });
@@ -31,10 +31,20 @@ export const action = async ({
     const session = await loginSession.getSession(cookieHeader);
     const isAdmin = isAdminSession(session);
 
-    const rateLimitKey = await getRateLimitKey(request, cookieHeader);
+    if (!hasPathfinderAccess(session)) {
+        return respondWithResult(
+            makeErr({
+                code: 'unauthorized',
+                message: '並び替え権限がありません',
+            }),
+        );
+    }
+
+    // Own bucket ("reorder:" prefix): drags must not drain the add/remove budget.
+    const rateLimitKey = `reorder:${await getRateLimitKey(request, cookieHeader)}`;
 
     if (!isAdmin) {
-        const limited = rateLimitExceededResponse(httpRateLimiter, rateLimitKey, '/api/music/remove');
+        const limited = rateLimitExceededResponse(httpRateLimiter, rateLimitKey, '/api/music/reorder');
         if (limited) return limited;
     }
 
@@ -42,16 +52,17 @@ export const action = async ({
         const acting = await resolveActingRequesterHash(
             cookieHeader,
             isAdmin,
-            'ログインしていないため、楽曲を削除できません',
+            'ログインしていないため、楽曲を並び替えできません',
             session,
         );
         if (!acting.ok) return acting.response;
-        if (isAdmin) logger.info('Using admin hash for deletion');
 
-        const result = await safeExecuteAsync(() => io.removeMusic(submission.value.url, acting.requesterHash));
+        const result = await safeExecuteAsync(() =>
+            io.reorderMusic(submission.value.id, submission.value.afterId, acting.requesterHash)
+        );
 
         if (!result.ok) {
-            logger.error('楽曲削除エラー', { error: result.error });
+            logger.error('楽曲並び替えエラー', { error: result.error });
             return respondWithResult(makeErr({ message: extractHandlerErrorMessage(result.error) }));
         }
 
@@ -61,14 +72,14 @@ export const action = async ({
         if (!isAdmin) httpRateLimiter.consume(rateLimitKey);
         return Response.json({ data: result.value, success: true });
     } catch (error: unknown) {
-        logger.error('楽曲削除エラー', { error });
+        logger.error('楽曲並び替えエラー', { error });
         return Response.json(
-            { error: '楽曲の削除に失敗しました', success: false },
+            { error: '楽曲の並び替えに失敗しました', success: false },
             { status: 500 },
         );
     }
 };
 
-export default function MusicRemove() {
+export default function MusicReorder() {
     return;
 }

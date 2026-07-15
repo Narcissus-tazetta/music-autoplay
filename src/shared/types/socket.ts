@@ -4,6 +4,7 @@ import type { HistoryItem, HistoryQuery } from '@/shared/types/history';
 export interface S2C {
     musicAdded(music: Music): void;
     musicRemoved(musicId: string): void;
+    queueReordered(musics: Music[]): void;
     historyAdded(history: HistoryItem): void;
     remoteStatusUpdated(state: RemoteStatus): void;
     initMusics?(musics: (Music & { url: string })[]): void;
