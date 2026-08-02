@@ -126,8 +126,8 @@ export function RequesterDetailDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <Dialog.Content className='max-w-2xl'>
-                <Dialog.Header>
+            <Dialog.Content className='flex max-h-[85vh] max-w-2xl flex-col overflow-hidden'>
+                <Dialog.Header className='shrink-0'>
                     <div className='flex items-start gap-3'>
                         <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border/40 bg-muted/40'>
                             <UserRound className='h-5 w-5' />
@@ -155,7 +155,7 @@ export function RequesterDetailDialog({
                         </Card>
                     )
                     : (
-                        <div className='space-y-4'>
+                        <div className='min-h-0 flex-1 space-y-4 overflow-y-auto pr-1'>
                             <div className='grid grid-cols-1 gap-3 sm:grid-cols-3'>
                                 <Card className='gap-1 p-4'>
                                     <p className='text-xs text-muted-foreground'>匿名ID</p>
@@ -298,7 +298,7 @@ function RequesterMusicTable({
         return <p className='rounded-lg border p-4 text-sm text-muted-foreground'>現在キュー内にはありません。</p>;
 
     return (
-        <Table>
+        <Table className='table-fixed'>
             <Table.Header>
                 <Table.Row>
                     <Table.Head>曲名</Table.Head>
@@ -312,8 +312,8 @@ function RequesterMusicTable({
                     return (
                         <Table.Row key={music.id}>
                             <Table.Cell className='min-w-0 whitespace-normal'>
-                                <p className='line-clamp-2 text-sm font-medium'>{music.title}</p>
-                                <p className='text-xs text-muted-foreground'>{music.channelName}</p>
+                                <p className='line-clamp-2 wrap-break-word text-sm font-medium'>{music.title}</p>
+                                <p className='wrap-break-word text-xs text-muted-foreground'>{music.channelName}</p>
                             </Table.Cell>
                             <Table.Cell className='text-xs text-muted-foreground'>
                                 {formatRequestedAt(music.requestedAt)}
@@ -348,7 +348,7 @@ function RequestLogTable({ logs }: { logs: MaskedRequestLogEntry[] }) {
         return <p className='rounded-lg border p-4 text-sm text-muted-foreground'>ログがありません。</p>;
 
     return (
-        <Table>
+        <Table className='table-fixed'>
             <Table.Header>
                 <Table.Row>
                     <Table.Head>曲名</Table.Head>
@@ -359,8 +359,8 @@ function RequestLogTable({ logs }: { logs: MaskedRequestLogEntry[] }) {
                 {logs.map(log => (
                     <Table.Row key={log.id}>
                         <Table.Cell className='min-w-0 whitespace-normal'>
-                            <p className='line-clamp-2 text-sm font-medium'>{log.title}</p>
-                            <p className='font-mono text-xs text-muted-foreground'>{log.musicId}</p>
+                            <p className='line-clamp-2 wrap-break-word text-sm font-medium'>{log.title}</p>
+                            <p className='font-mono text-xs wrap-break-word text-muted-foreground'>{log.musicId}</p>
                         </Table.Cell>
                         <Table.Cell className='whitespace-nowrap text-xs text-muted-foreground'>
                             {new Date(log.requestedAt).toLocaleString('ja-JP')}
