@@ -8,8 +8,8 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ServerBuild } from 'react-router';
+import { isProduction } from './config';
 import { getAllowedActionOrigins } from './reactRouter/actionOrigins';
-import { getConfig } from './utils/configUtils';
 
 export interface ConfigureAppResult {
     buildValue: ServerBuild | (() => Promise<ServerBuild>);
@@ -164,11 +164,14 @@ export async function configureApp(
             (viteDevServer as { middlewares: express.RequestHandler }).middlewares,
         );
     } else {
+        // Vite emits content-hashed filenames under /assets, so a new build produces new URLs.
+        // `immutable` with maxAge 0 contradicted itself and made browsers revalidate every asset
+        // on every navigation.
         app.use(
             '/assets',
             express.static('build/client/assets', {
                 immutable: true,
-                maxAge: '0',
+                maxAge: '1y',
             }),
         );
     }
@@ -182,11 +185,9 @@ export async function configureApp(
         }),
     );
 
-    const config = getConfig();
     try {
-        const rawSocketPath = config.getString('SOCKET_PATH');
-        const socketPath = rawSocketPath.length > 0 ? rawSocketPath : SERVER_ENV.SOCKET_PATH;
-        if (config.nodeEnv !== 'production') {
+        const socketPath = SERVER_ENV.SOCKET_PATH;
+        if (!isProduction) {
             const prefixes = [
                 ...new Set(
                     [socketPath, '/socket.io', '/api/socket.io'].filter(Boolean),
@@ -245,9 +246,8 @@ export async function configureApp(
     app.get('/diagnostics/socket', (req, res) => {
         try {
             const origin = req.headers.origin;
-            const diagConfig = getConfig();
-            const socketPath = diagConfig.getString('SOCKET_PATH');
-            const allowExtensionOrigins = diagConfig.getString('ALLOW_EXTENSION_ORIGINS') === 'true';
+            const socketPath = SERVER_ENV.SOCKET_PATH;
+            const allowExtensionOrigins = SERVER_ENV.ALLOW_EXTENSION_ORIGINS === true;
             res.json({
                 allowExtensionOrigins,
                 debug: {
@@ -300,16 +300,15 @@ export async function configureApp(
         }
     });
     {
-        const morganConfig = getConfig();
-        const morganFormat = morganConfig.getString('MORGAN_FORMAT');
-        const skipSocketIo = morganConfig.getString('MORGAN_LOG_SOCKETIO') !== 'true';
+        const morganFormat = SERVER_ENV.MORGAN_FORMAT;
+        const skipSocketIo = SERVER_ENV.MORGAN_LOG_SOCKETIO !== true;
         app.use(
             morgan(morganFormat, {
                 skip: (req: express.Request) => {
                     if (!skipSocketIo) return false;
                     try {
                         const reqPath = req.path ? req.path : req.url || '';
-                        const socketPrefix = morganConfig.getString('SOCKET_PATH');
+                        const socketPrefix = SERVER_ENV.SOCKET_PATH;
                         return (
                             reqPath.startsWith('/socket.io') || reqPath.startsWith(socketPrefix)
                         );
@@ -356,17 +355,16 @@ export async function configureApp(
         logger.error('Failed to configure build value', errorDetail);
         throw new Error('Build configuration failed', { cause: error });
     }
-    const configuredPort = config.getNumber('PORT') ?? SERVER_ENV.PORT;
     const allowedActionOrigins = getAllowedActionOrigins({
-        clientUrl: config.getString('CLIENT_URL') || SERVER_ENV.CLIENT_URL,
-        corsOrigins: config.getString('CORS_ORIGINS'),
-        nodeEnv: config.nodeEnv,
-        port: configuredPort,
+        clientUrl: SERVER_ENV.CLIENT_URL,
+        corsOrigins: SERVER_ENV.CORS_ORIGINS,
+        nodeEnv: SERVER_ENV.NODE_ENV,
+        port: SERVER_ENV.PORT,
     });
     buildValue = createBuildValue(buildValue, allowedActionOrigins);
     logger.info('React Router action origins configured', {
         allowedActionOrigins,
-        environment: config.nodeEnv,
+        environment: SERVER_ENV.NODE_ENV,
     });
     logger.info('App middleware configuration completed successfully');
     return { buildValue };

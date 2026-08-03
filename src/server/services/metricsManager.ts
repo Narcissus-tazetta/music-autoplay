@@ -1,7 +1,7 @@
 import type { Metrics } from '../bootstrap';
 import logger from '../logger';
 
-class MetricsManager {
+export class MetricsManager {
     private metrics: Metrics;
 
     constructor() {
@@ -38,4 +38,5 @@ class MetricsManager {
     }
 }
 
-export default MetricsManager;
+/** Single process-wide instance; the DI container previously handed out this same object. */
+export const metricsManager = new MetricsManager();

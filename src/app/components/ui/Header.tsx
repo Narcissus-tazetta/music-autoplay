@@ -35,7 +35,7 @@ export interface HeaderProps {
 
 const HeaderInner = ({ requesterHash, requesterName, userName }: HeaderProps) => {
     const { showLogout, handleLogout } = useAuth(userName);
-    const { isAdmin } = useAdminStore();
+    const isAdmin = useAdminStore(state => state.isAdmin);
     const resetToRequests = useHomeViewStore(state => state.resetToRequests);
     const location = useLocation();
     const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false);

@@ -5,7 +5,6 @@ import DOMPurify from 'dompurify';
 import { google } from 'googleapis';
 import { JSDOM } from 'jsdom';
 import { SERVER_ENV } from '~/env.server';
-import type ConfigService from '../config/configService';
 import logger from '../logger';
 import { logSecurityEvent } from '../utils/securityLogger';
 import type CacheService from './cacheService';
@@ -59,14 +58,8 @@ export class YouTubeService {
     private domPurify: ReturnType<typeof DOMPurify>;
     private cacheSizeProvider: () => number;
 
-    constructor(
-        apiKey?: string,
-        configService?: ConfigService,
-        cacheService?: CacheService,
-    ) {
-        const key = apiKey
-            ?? configService?.getString('YOUTUBE_API_KEY')
-            ?? SERVER_ENV.YOUTUBE_API_KEY;
+    constructor(apiKey?: string, cacheService?: CacheService) {
+        const key = apiKey ?? SERVER_ENV.YOUTUBE_API_KEY;
         if (!key || (typeof key === 'string' && key.trim().length === 0)) {
             logger.warn(
                 'YouTube API key is not configured; some metadata lookups may fail',
@@ -74,8 +67,7 @@ export class YouTubeService {
         }
         this.youtube = google.youtube({ auth: key, version: 'v3' });
         this.cacheSizeProvider = () => this.cache.size;
-        const configuredQueueMax = configService?.getNumber('YOUTUBE_REQUEST_QUEUE_MAX');
-        if (typeof configuredQueueMax === 'number' && configuredQueueMax > 0) this.requestQueueMax = configuredQueueMax;
+        if (SERVER_ENV.YOUTUBE_REQUEST_QUEUE_MAX > 0) this.requestQueueMax = SERVER_ENV.YOUTUBE_REQUEST_QUEUE_MAX;
         this.cleanupTimer = setInterval(
             () => {
                 this.cleanupExpired();

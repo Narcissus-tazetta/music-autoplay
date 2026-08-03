@@ -1,8 +1,8 @@
 import { withErrorHandler } from '@/shared/utils/errors';
 import type { Request } from 'express';
 import { SERVER_ENV } from '~/env.server';
+import { isProduction } from '../../config';
 import logger from '../../logger';
-import { getConfig } from '../../utils/configUtils';
 import { logCorsViolation } from '../../utils/securityLogger';
 
 export interface CorsConfig {
@@ -11,38 +11,24 @@ export interface CorsConfig {
     allowExtensionOrigins: boolean;
 }
 
-const safeBool = (v: unknown, fallback = false): boolean => {
-    if (typeof v === 'boolean') return v;
-    if (typeof v === 'string') return v === 'true';
-    return fallback;
-};
-
 export const buildCorsConfig = (): CorsConfig => {
-    const config = getConfig();
-    const corsRaw = config.getString('CORS_ORIGINS') || SERVER_ENV.CLIENT_URL;
+    const corsRaw = SERVER_ENV.CORS_ORIGINS || SERVER_ENV.CLIENT_URL;
     const safeCorsRaw = corsRaw || '';
     const origins = (safeCorsRaw || '')
         .split(',')
         .map((s: string) => s.trim())
         .filter(Boolean);
 
-    const isDev = config.nodeEnv !== 'production';
-    const port = config.getNumber('PORT') || SERVER_ENV.PORT;
+    const isDev = !isProduction;
+    const port = SERVER_ENV.PORT;
 
     if (isDev) {
         const currentOrigin = `http://localhost:${port}`;
         if (!origins.includes(currentOrigin)) origins.push(currentOrigin);
     }
-    const allowAllOrigins = isDev && origins.length === 0 && config.nodeEnv !== 'production';
+    const allowAllOrigins = isDev && origins.length === 0;
 
-    const allowExtensionOrigins = config.nodeEnv === 'production'
-        ? false
-        : safeBool(
-            config.getString('ALLOW_EXTENSION_ORIGINS')
-                || SERVER_ENV.ALLOW_EXTENSION_ORIGINS
-                || false,
-            false,
-        );
+    const allowExtensionOrigins = isProduction ? false : (SERVER_ENV.ALLOW_EXTENSION_ORIGINS ?? false);
 
     if (
         allowExtensionOrigins
@@ -51,11 +37,11 @@ export const buildCorsConfig = (): CorsConfig => {
         origins.push('chrome-extension://');
     }
 
-    if (config.nodeEnv !== 'production') {
+    if (!isProduction) {
         logger.info('SocketServerInstance CORS config', {
             allowAllOrigins,
             allowExtensionOrigins,
-            environment: config.nodeEnv,
+            environment: SERVER_ENV.NODE_ENV,
             origins,
         });
     }

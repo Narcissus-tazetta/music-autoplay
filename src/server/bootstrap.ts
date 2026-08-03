@@ -6,21 +6,15 @@ declare global {
         }
         | undefined;
 }
-import { MongoClient } from 'mongodb';
-import { getConfigService } from './config/configService';
-import { container } from './di/container';
-import { HistoryMongoHybridStore, HistoryMongoStore } from './history/historyMongoStore';
-import { getHistoryService, HistoryService, setHistoryService } from './history/historyService';
+import { SERVER_ENV } from '@/app/env.server';
+import { getHistoryService, type HistoryService } from './history/historyService';
 import logger from './logger';
 import type { Store } from './persistence';
-import { FileStore, MongoHybridStore, MongoStore, PgHybridStore, PgStore } from './persistence';
-import { RequestLogMongoHybridStore, RequestLogMongoStore } from './requestLog/requestLogMongoStore';
-import { RequestLogService, setRequestLogService } from './requestLog/requestLogService';
+import { createPersistence, registerPersistenceSingletons } from './persistence/provider';
+import type { RequestLogService } from './requestLog/requestLogService';
 import CacheService from './services/cacheService';
-import ErrorService from './services/errorService';
-import MetricsManager from './services/metricsManager';
+import { MetricsManager, metricsManager } from './services/metricsManager';
 import { RateLimiterManager } from './services/rateLimiterManager';
-import retry from './services/retryService';
 import { YouTubeService } from './services/youtubeService';
 import { SocketServerInstance } from './socket';
 export interface Metrics {
@@ -37,108 +31,18 @@ export interface BootstrapResult {
 }
 
 export async function bootstrap(): Promise<BootstrapResult> {
-    const configService = getConfigService();
-    const errorService = new ErrorService();
     const cacheService = new CacheService();
 
-    const persistenceProvider = (configService.getString(
-        'PERSISTENCE_PROVIDER',
-        'file',
-    ) ?? 'file') as 'file' | 'pg' | 'mongo';
+    const persistence = await createPersistence();
+    registerPersistenceSingletons(persistence);
+    const fileStore: Store = persistence.store;
+    const historyService: HistoryService = persistence.historyService;
+    const requestLogService: RequestLogService = persistence.requestLogService;
+    const closeDb = persistence.close;
 
-    let fileStore: Store;
-    let closeDb: (() => Promise<void>) | undefined;
-    let historyService: HistoryService;
-    let requestLogService: RequestLogService;
-
-    if (persistenceProvider === 'mongo') {
-        const uri = configService.getString('MONGODB_URI');
-        if (!uri) throw new Error('PERSISTENCE_PROVIDER=mongo requires MONGODB_URI');
-        const dbName = configService.getString('MONGODB_DB_NAME', 'musicReq') ?? 'musicReq';
-        const collectionName = configService.getString('MONGODB_COLLECTION', 'musicRequests')
-            ?? 'musicRequests';
-        const requestLogCollectionName = configService.getString(
-            'MONGODB_REQUEST_LOG_COLLECTION',
-            'requestLogs',
-        ) ?? 'requestLogs';
-        const client = new MongoClient(uri, {
-            serverSelectionTimeoutMS: 5_000,
-        });
-
-        const mongo = new MongoStore({ uri, collectionName, dbName, client });
-        await mongo.initialize();
-        const initial = await mongo.loadAll();
-        fileStore = new MongoHybridStore(mongo, initial);
-
-        const historyMongo = new HistoryMongoStore({
-            uri,
-            dbName,
-            collectionName: 'history',
-            client,
-        });
-        await historyMongo.initialize();
-        const historyInitial = await historyMongo.loadAll();
-        historyService = new HistoryService(new HistoryMongoHybridStore(historyMongo, historyInitial));
-        setHistoryService(historyService);
-
-        const requestLogMongo = new RequestLogMongoStore({
-            uri,
-            dbName,
-            collectionName: requestLogCollectionName,
-            client,
-        });
-        await requestLogMongo.initialize();
-        const requestLogInitial = await requestLogMongo.loadAll();
-        requestLogService = new RequestLogService(
-            new RequestLogMongoHybridStore(requestLogMongo, requestLogInitial),
-        );
-        setRequestLogService(requestLogService);
-
-        closeDb = async () => {
-            await Promise.all([mongo.close(), historyMongo.close(), requestLogMongo.close()]);
-            await client.close();
-        };
-
-        logger.info('persistence provider: mongo', {
-            dbName,
-            collectionName,
-            historyCollection: 'history',
-            requestLogCollection: requestLogCollectionName,
-        });
-    } else if (persistenceProvider === 'pg') {
-        const pg = new PgStore();
-        await pg.initialize();
-        const initial = await pg.loadAll();
-        fileStore = new PgHybridStore(pg, initial);
-        closeDb = () => pg.close();
-        historyService = new HistoryService();
-        setHistoryService(historyService);
-        requestLogService = new RequestLogService();
-        setRequestLogService(requestLogService);
-
-        logger.info('persistence provider: pg');
-    } else {
-        fileStore = new FileStore();
-        historyService = new HistoryService();
-        setHistoryService(historyService);
-        requestLogService = new RequestLogService();
-        setRequestLogService(requestLogService);
-        logger.info('persistence provider: file');
-    }
-
-    const youtubeService = new YouTubeService(undefined, configService, cacheService);
-    const metricsManager = new MetricsManager();
+    const youtubeService = new YouTubeService(undefined, cacheService);
 
     const socketServer = new SocketServerInstance(youtubeService, fileStore);
-
-    container.register('fileStore', () => fileStore);
-    container.register('socketServer', () => socketServer);
-    container.register('youtubeService', () => youtubeService);
-    container.register('configService', () => configService);
-    container.register('errorService', () => errorService);
-    container.register('cacheService', () => cacheService);
-    container.register('retryService', () => retry);
-    container.register('metricsManager', () => metricsManager);
 
     const appShutdownHandlers: (() => Promise<void> | void)[] = [];
     appShutdownHandlers.push(async () => {
@@ -192,8 +96,8 @@ export async function bootstrap(): Promise<BootstrapResult> {
         }
     });
 
-    const diagEnabled = configService.getBoolean('DIAG_MEM_ENABLED', true);
-    const diagIntervalMs = configService.getNumber('DIAG_MEM_LOG_INTERVAL_MS', 30_000) ?? 30_000;
+    const diagEnabled = SERVER_ENV.DIAG_MEM_ENABLED;
+    const diagIntervalMs = SERVER_ENV.DIAG_MEM_LOG_INTERVAL_MS;
     const processWithInternals = process as NodeJS.Process & {
         _getActiveHandles?: () => unknown[];
         _getActiveRequests?: () => unknown[];

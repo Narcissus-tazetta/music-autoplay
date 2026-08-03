@@ -63,7 +63,3 @@ async function getFurigana(text: string): Promise<string> {
         return '';
     }
 }
-
-export default function SearchFuriganaRoute() {
-    return null;
-}

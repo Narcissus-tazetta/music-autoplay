@@ -30,7 +30,3 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         },
     );
 };
-
-export default function RequesterNameRoute() {
-    return null;
-}

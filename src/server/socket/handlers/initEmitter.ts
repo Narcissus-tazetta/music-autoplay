@@ -1,9 +1,8 @@
 import { withErrorHandler } from '@/shared/utils/errors';
 import type { Socket } from 'socket.io';
-import type ConfigService from '../../config/configService';
+import { isProduction } from '../../config';
 import type { AppLogger } from '../../logger';
 import type { MusicService } from '../../music/musicService';
-import ServiceResolver from '../../utils/serviceResolver';
 
 export function emitInitialData(
     socket: Socket,
@@ -14,12 +13,7 @@ export function emitInitialData(
         const compatList = getMusicService().buildCompatList();
         socket.emit('initMusics', compatList);
         socket.emit('url_list', compatList);
-        const resolver = ServiceResolver.getInstance();
-        const configService = resolver.resolve<ConfigService>('configService');
-        let nodeEnv = 'development';
-        if (configService && typeof configService.getString === 'function')
-            nodeEnv = configService.getString('NODE_ENV') ?? 'development';
-        if (nodeEnv !== 'production') {
+        if (!isProduction) {
             log.debug('emitted init events to socket', {
                 count: compatList.length,
                 socketId: socket.id,

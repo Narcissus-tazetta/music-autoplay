@@ -1,54 +1,53 @@
-import { useSettingsStore } from '@/shared/stores/settingsStore';
 import type { YtStatusMode } from '@/shared/stores/settingsStore';
+import { useSettingsStore } from '@/shared/stores/settingsStore';
 import { useEffect, useRef } from 'react';
 
+/**
+ * Mirrors the three synced settings to the server whenever one of them changes.
+ *
+ * Each value is read through its own selector: subscribing to the whole store meant every
+ * unrelated settings write re-rendered every consumer of this hook.
+ */
 export function useSettingsSync() {
-    const settings = useSettingsStore();
-    const ytStatusVisible = settings.ytStatusVisible;
-    const setYtStatusVisible = settings.setYtStatusVisible;
-    const ytStatusMode: YtStatusMode = settings.ytStatusMode;
-    const setYtStatusMode = settings.setYtStatusMode;
-    const ytAdminControlsEnabled = settings.ytAdminControlsEnabled;
-    const setYtAdminControlsEnabled = settings.setYtAdminControlsEnabled;
-    const loadFromServer = settings.loadFromServer;
-    const syncToServer = settings.syncToServer;
+    const ytStatusVisible = useSettingsStore(s => s.ytStatusVisible);
+    const ytStatusMode = useSettingsStore(s => s.ytStatusMode);
+    const ytAdminControlsEnabled = useSettingsStore(s => s.ytAdminControlsEnabled);
+    const setYtStatusVisible = useSettingsStore(s => s.setYtStatusVisible);
+    const setYtStatusMode = useSettingsStore(s => s.setYtStatusMode);
+    const setYtAdminControlsEnabled = useSettingsStore(s => s.setYtAdminControlsEnabled);
+    const loadFromServer = useSettingsStore(s => s.loadFromServer);
+    const syncToServer = useSettingsStore(s => s.syncToServer);
 
     const hasLoadedRef = useRef(false);
-    const prevValueRef = useRef(ytStatusVisible);
-    const prevModeRef = useRef<YtStatusMode>(ytStatusMode);
-    const prevAdminControlsEnabledRef = useRef(ytAdminControlsEnabled);
+    const previousRef = useRef({ ytAdminControlsEnabled, ytStatusMode, ytStatusVisible });
 
     useEffect(() => {
+        const current = { ytAdminControlsEnabled, ytStatusMode, ytStatusVisible };
+
+        // First run adopts the current values and pulls the server copy instead of pushing.
         if (!hasLoadedRef.current) {
             hasLoadedRef.current = true;
-            prevValueRef.current = ytStatusVisible;
-            prevAdminControlsEnabledRef.current = ytAdminControlsEnabled;
-            if (typeof loadFromServer === 'function') loadFromServer();
+            previousRef.current = current;
+            loadFromServer?.();
             return;
         }
 
-        if (prevValueRef.current !== ytStatusVisible) {
-            prevValueRef.current = ytStatusVisible;
-            if (typeof syncToServer === 'function') syncToServer();
-        }
+        const previous = previousRef.current;
+        const changed = (Object.keys(current) as (keyof typeof current)[])
+            .some(key => previous[key] !== current[key]);
 
-        if (prevModeRef.current !== ytStatusMode) {
-            prevModeRef.current = ytStatusMode;
-            if (typeof syncToServer === 'function') syncToServer();
+        if (changed) {
+            previousRef.current = current;
+            syncToServer?.();
         }
-
-        if (prevAdminControlsEnabledRef.current !== ytAdminControlsEnabled) {
-            prevAdminControlsEnabledRef.current = ytAdminControlsEnabled;
-            if (typeof syncToServer === 'function') syncToServer();
-        }
-    }, [loadFromServer, syncToServer, ytAdminControlsEnabled, ytStatusVisible, ytStatusMode]);
+    }, [loadFromServer, syncToServer, ytAdminControlsEnabled, ytStatusMode, ytStatusVisible]);
 
     return {
         setYtAdminControlsEnabled,
         setYtStatusMode,
         setYtStatusVisible,
         ytAdminControlsEnabled,
-        ytStatusMode,
+        ytStatusMode: ytStatusMode as YtStatusMode,
         ytStatusVisible,
     };
 }

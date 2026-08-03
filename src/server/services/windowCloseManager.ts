@@ -63,5 +63,3 @@ export class WindowCloseManager {
         this.lastEventAt.clear();
     }
 }
-
-export default WindowCloseManager;

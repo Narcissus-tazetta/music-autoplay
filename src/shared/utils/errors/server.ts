@@ -38,32 +38,11 @@ export function createServerErrorReply(error?: unknown): ReplyOptions {
     return createErrorReply('内部サーバーエラーが発生しました', 'INTERNAL_ERROR');
 }
 
-export function createSuccessReply(): SuccessReply {
-    return {};
-}
-
 export function createAuthErrorReply(customMessage?: string): ReplyOptions {
     return createErrorReply(
         customMessage || 'この操作を実行する権限がありません',
         'UNAUTHORIZED',
     );
-}
-
-export function createNotFoundReply(
-    resource: string = 'リソース',
-): ReplyOptions {
-    return createErrorReply(`${resource}が見つかりませんでした`, 'NOT_FOUND');
-}
-
-export function createDuplicateReply(
-    resource: string,
-    details?: string,
-): ReplyOptions {
-    const message = details
-        ? `${resource}はすでに${details}に登録されています`
-        : `${resource}はすでに登録されています`;
-
-    return createErrorReply(message, 'DUPLICATE');
 }
 
 export function createRateLimitReply(retryAfter?: number): ReplyOptions {
@@ -90,69 +69,4 @@ export function isSuccessReply(reply: ReplyOptions): boolean {
     const hasFieldErrors = fieldErrors && Object.keys(fieldErrors).length > 0;
 
     return !hasFormErrors && !hasFieldErrors;
-}
-
-export function isErrorReply(reply: ReplyOptions): boolean {
-    return !isSuccessReply(reply);
-}
-
-export function extractReplyErrors(reply: ReplyOptions): string[] {
-    const errors: string[] = [];
-
-    const formErrors = (reply as { formErrors?: string[] }).formErrors;
-    if (Array.isArray(formErrors)) errors.push(...formErrors);
-
-    const fieldErrors = (reply as { fieldErrors?: Record<string, string[]> })
-        .fieldErrors;
-    if (fieldErrors) {
-        for (const fieldErrs of Object.values(fieldErrors)) if (Array.isArray(fieldErrs)) errors.push(...fieldErrs);
-    }
-
-    return errors;
-}
-
-export function mapErrorToCode(error: unknown): string {
-    const info = extractErrorInfo(error);
-
-    if (info.code) return info.code;
-
-    const msg = info.message.toLowerCase();
-
-    if (
-        msg.includes('権限')
-        || msg.includes('permission')
-        || msg.includes('unauthorized')
-        || msg.includes('forbidden')
-    ) {
-        return 'UNAUTHORIZED';
-    }
-
-    if (
-        msg.includes('invalid')
-        || msg.includes('不正')
-        || msg.includes('validation')
-        || msg.includes('検証')
-    ) {
-        return 'VALIDATION_ERROR';
-    }
-
-    if (msg.includes('not found') || msg.includes('見つかりません')) return 'NOT_FOUND';
-
-    if (
-        msg.includes('duplicate')
-        || msg.includes('すでに')
-        || msg.includes('既に')
-    ) {
-        return 'DUPLICATE';
-    }
-
-    if (
-        msg.includes('network')
-        || msg.includes('connection')
-        || msg.includes('timeout')
-    ) {
-        return 'NETWORK_ERROR';
-    }
-
-    return 'INTERNAL_ERROR';
 }

@@ -1,16 +1,14 @@
-import { SERVER_ENV } from '@/app/env.server';
 import type { Music } from '@/shared/stores/musicStore';
 import type { Server as HttpServer } from 'node:http';
 import type { Server as IOServer } from 'socket.io';
-import type ConfigService from '../../config/configService';
+import { socketConfig } from '../../config';
 import logger from '../../logger';
 import type { Store } from '../../persistence';
+import type { RateLimiter } from '../../services/rateLimiter';
 import { WindowCloseManager } from '../../services/windowCloseManager';
 import { YouTubeService } from '../../services/youtubeService';
-import { safeNumber } from '../../utils/configUtils';
-import ServiceResolver from '../../utils/serviceResolver';
 import { TimerManager } from '../../utils/timerManager';
-import type { ConnectionHandlerFactory } from '../handlers/connectionHandler';
+import { makeConnectionHandler } from '../handlers/connectionHandler';
 import { SocketRuntime } from '../managers/runtime';
 import { registerSocketIdentityMiddleware } from '../middleware/socketIdentityMiddleware';
 import { createSocketIo } from './socketIo';
@@ -28,100 +26,75 @@ export interface InitSocketServerResult {
     runtime: SocketRuntime;
     socketPath: string;
 }
+
 export async function initSocketServer(
     server: HttpServer,
     deps: {
         musicDB: Map<string, Music>;
-        fileStore?: Store;
+        fileStore: Store;
+        opts: RuntimeOptions;
         youtubeService?: YouTubeService;
         adminHash?: string;
-        opts: RuntimeOptions;
+        rateLimiter?: RateLimiter;
+        // SocketServerInstance owns these: it reports their stats via getDiagnostics() and
+        // tears them down in close(). Creating separate ones here left those calls pointing
+        // at idle objects while the real timers kept running.
+        timerManager?: TimerManager;
+        windowCloseManager?: WindowCloseManager;
     },
 ): Promise<InitSocketServerResult> {
-    const { musicDB, fileStore, youtubeService, adminHash, opts } = deps;
-
-    const serviceResolver = ServiceResolver.getInstance();
-    const effectiveFileStore = fileStore ?? serviceResolver.resolve<Store>('fileStore');
-    const effectiveYoutube = youtubeService ?? serviceResolver.resolve<YouTubeService>('youtubeService');
-    const effectiveAdminHash = adminHash ?? serviceResolver.resolve<string>('adminHash');
+    const { adminHash, fileStore, musicDB, opts, rateLimiter } = deps;
 
     const created = createSocketIo(server);
     if (!created.io) throw new Error('failed to initialize socket.io');
     const io = created.io;
     registerSocketIdentityMiddleware(io);
 
-    const [persistedData, timerManager, configService] = await Promise.all([
-        Promise.resolve(
-            (() => {
-                try {
-                    const persisted = effectiveFileStore ? effectiveFileStore.load() : [];
-                    return persisted;
-                } catch (error) {
-                    logger.warn('failed to restore persisted musics', { error: error });
-                    return [];
-                }
-            })(),
-        ),
-        Promise.resolve(new TimerManager()),
-        Promise.resolve(serviceResolver.resolve<ConfigService>('configService')),
-    ]);
-
+    const persistedData = (() => {
+        try {
+            return fileStore.load();
+        } catch (error) {
+            logger.warn('failed to restore persisted musics', { error: error });
+            return [];
+        }
+    })();
     for (const m of persistedData) musicDB.set(m.id, m);
     logger.info('restored persisted musics', { count: persistedData.length });
 
-    const windowCloseDebounce = safeNumber(
-        configService?.getNumber('WINDOW_CLOSE_DEBOUNCE_MS'),
-        safeNumber(SERVER_ENV.WINDOW_CLOSE_DEBOUNCE_MS, 500),
-    );
-    const windowCloseManager = new WindowCloseManager(windowCloseDebounce);
-
-    const yt = effectiveYoutube ?? new YouTubeService();
-    if (!effectiveFileStore) throw new Error('fileStore is required (register it in DI or pass it via deps)');
-    const fsToUse = effectiveFileStore;
+    const timerManager = deps.timerManager ?? new TimerManager();
+    const windowCloseManager = deps.windowCloseManager ?? new WindowCloseManager(socketConfig.windowCloseDebounce);
+    const youtubeService = deps.youtubeService ?? new YouTubeService();
 
     const runtime = new SocketRuntime(
         () => io,
         musicDB,
-        yt,
-        fsToUse,
+        youtubeService,
+        fileStore,
         timerManager,
         windowCloseManager,
         opts,
     );
 
-    const mod = (await import('../handlers/connectionHandler')) as Partial<{
-        default: ConnectionHandlerFactory;
-        makeConnectionHandler: ConnectionHandlerFactory;
-    }>;
-    const makeConnectionHandler: ConnectionHandlerFactory = mod.default
-        ?? (mod.makeConnectionHandler as ConnectionHandlerFactory);
-
-    const socketConfig = configService?.getSocketConfig() ?? {
-        rateLimitMaxAttempts: 10,
-        rateLimitWindowMs: 60_000,
-    };
-
-    const handler = makeConnectionHandler({
-        adminHash: effectiveAdminHash ?? '',
-        createManager: () => runtime.createManager(),
-        fileStore: fsToUse,
-        getIo: () => io,
-        getManager: () => runtime.getManager(),
-        getMusicService: () => runtime.getMusicService(),
-        musicDB,
-        rateLimitConfig: {
-            maxAttempts: socketConfig.rateLimitMaxAttempts,
-            windowMs: socketConfig.rateLimitWindowMs,
-        },
-        rateLimiter: serviceResolver.resolve('rateLimiter'),
-        timerManager,
-        windowCloseManager,
-        youtubeService: yt,
-    });
-
-    io.on('connection', handler);
+    io.on(
+        'connection',
+        makeConnectionHandler({
+            adminHash: adminHash ?? '',
+            createManager: () => runtime.createManager(),
+            fileStore,
+            getIo: () => io,
+            getManager: () => runtime.getManager(),
+            getMusicService: () => runtime.getMusicService(),
+            musicDB,
+            rateLimitConfig: {
+                maxAttempts: socketConfig.rateLimitMaxAttempts,
+                windowMs: socketConfig.rateLimitWindowMs,
+            },
+            rateLimiter,
+            timerManager,
+            windowCloseManager,
+            youtubeService,
+        }),
+    );
 
     return { io, runtime, socketPath: created.socketPath };
 }
-
-export default initSocketServer;

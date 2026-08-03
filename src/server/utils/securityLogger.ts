@@ -86,23 +86,6 @@ export function logAuthFailure(
     );
 }
 
-export function logInvalidUrl(
-    req: Request | IncomingMessage,
-    url: string,
-    reason: string,
-): void {
-    logSecurityEvent(
-        {
-            message: `Invalid URL rejected: ${reason}`,
-            metadata: { reason, url },
-            severity: 'medium',
-            source: 'url_validation',
-            type: 'invalid_url',
-        },
-        req,
-    );
-}
-
 export function logRateLimit(
     req: Request | IncomingMessage,
     endpoint: string,

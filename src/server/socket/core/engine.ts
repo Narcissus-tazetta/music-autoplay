@@ -2,14 +2,8 @@ import logger from '@/server/logger';
 import { isObject } from '@/shared/utils/typeGuards';
 import type { Server as HttpServer } from 'node:http';
 import { SERVER_ENV } from '~/env.server';
-import { getConfig } from '../../utils/configUtils';
+import { isProduction } from '../../config';
 import type { EngineLike, RequestLike } from '../types';
-
-const safeBool = (v: unknown, fallback = false) => {
-    if (typeof v === 'boolean') return v;
-    if (typeof v === 'string') return v === 'true';
-    return fallback;
-};
 
 export function getOriginFromReq(req: unknown): string | undefined {
     try {
@@ -84,8 +78,6 @@ export function registerEngineAugmentations(
     engine: unknown,
     socketPath: string,
 ): void {
-    const config = getConfig();
-
     try {
         if (!isObject(engine)) return;
 
@@ -98,14 +90,10 @@ export function registerEngineAugmentations(
                 (headers: Record<string, string>, req: unknown) => {
                     try {
                         const incomingOrigin = getOriginFromReq(req);
-                        const corsRaw = config.getString('CORS_ORIGINS') || '';
-                        const clientUrl = config.getString('CLIENT_URL');
-                        const allowAllOrigins = config.nodeEnv !== 'production' && !(corsRaw || clientUrl);
-                        const allowExtensionOrigins = safeBool(
-                            config.getString('ALLOW_EXTENSION_ORIGINS')
-                                || SERVER_ENV.ALLOW_EXTENSION_ORIGINS,
-                            false,
-                        );
+                        const corsRaw = SERVER_ENV.CORS_ORIGINS || '';
+                        const clientUrl = SERVER_ENV.CLIENT_URL;
+                        const allowAllOrigins = !isProduction && !(corsRaw || clientUrl);
+                        const allowExtensionOrigins = SERVER_ENV.ALLOW_EXTENSION_ORIGINS ?? false;
                         let setOrigin: string | undefined;
                         if (
                             typeof incomingOrigin === 'string'
@@ -124,7 +112,7 @@ export function registerEngineAugmentations(
                                     .filter(Boolean);
                                 if (origins.includes(incomingOrigin)) setOrigin = incomingOrigin;
                             }
-                        } else if (config.nodeEnv !== 'production') {
+                        } else if (!isProduction) {
                             setOrigin = 'null';
                         }
 
@@ -134,7 +122,7 @@ export function registerEngineAugmentations(
                             headers['Vary'] = 'Origin';
                         } else if (
                             typeof incomingOrigin === 'undefined'
-                            && config.nodeEnv === 'production'
+                            && isProduction
                         ) {
                             const reqUrlForLog = isObject(req)
                                     && typeof (req as { url?: unknown }).url === 'string'
@@ -197,7 +185,7 @@ export function registerEngineAugmentations(
                             typeof incomingOrigin !== 'string'
                             || incomingOrigin.trim().length === 0
                         ) {
-                            if (config.nodeEnv !== 'production') {
+                            if (!isProduction) {
                                 try {
                                     const setHeader = (res as Record<string, unknown>)[
                                         'setHeader'
@@ -232,7 +220,7 @@ export function registerEngineAugmentations(
                                 );
                             }
                         }
-                        if (config.nodeEnv !== 'production') {
+                        if (!isProduction) {
                             try {
                                 const rh = reqObj.headers;
                                 logger.info('engine http request for socket path', {

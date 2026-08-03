@@ -66,5 +66,3 @@ export class SettingsStore {
 }
 
 export const defaultSettingsStore = new SettingsStore();
-
-export default SettingsStore;

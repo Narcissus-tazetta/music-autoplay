@@ -46,9 +46,8 @@ describe('MusicRepository ordering', () => {
         repo.add(makeMusic('b'));
         repo.add(makeMusic('c'));
 
-        const result = repo.reorder('a', 'b');
+        repo.reorder('a', 'b');
 
-        expect(result.ok).toBe(true);
         expect(repo.list().map(m => m.id)).toEqual(['b', 'a', 'c']);
     });
 
@@ -58,9 +57,8 @@ describe('MusicRepository ordering', () => {
         repo.add(makeMusic('b'));
         repo.add(makeMusic('c'));
 
-        const result = repo.reorder('c', INSERT_AT_FRONT);
+        repo.reorder('c', INSERT_AT_FRONT);
 
-        expect(result.ok).toBe(true);
         expect(repo.list().map(m => m.id)).toEqual(['c', 'a', 'b']);
     });
 
@@ -70,9 +68,8 @@ describe('MusicRepository ordering', () => {
         repo.add(makeMusic('b'));
         repo.add(makeMusic('c'));
 
-        const result = repo.reorder('c', 'gone');
+        repo.reorder('c', 'gone');
 
-        expect(result.ok).toBe(true);
         expect(repo.list().map(m => m.id)).toEqual(['c', 'a', 'b']);
     });
 
@@ -81,18 +78,18 @@ describe('MusicRepository ordering', () => {
         repo.add(makeMusic('a'));
         repo.add(makeMusic('b'));
 
-        const result = repo.reorder('a', 'a');
+        repo.reorder('a', 'a');
 
-        expect(result.ok).toBe(true);
         expect(repo.list().map(m => m.id)).toEqual(['a', 'b']);
     });
 
-    it('reorder() returns an error for an unknown id', () => {
+    it('reorder() leaves the queue untouched for an unknown id', () => {
         const repo = new MusicRepository(new Map(), undefined as never);
         repo.add(makeMusic('a'));
+        repo.add(makeMusic('b'));
 
-        const result = repo.reorder('missing', INSERT_AT_FRONT);
+        repo.reorder('missing', INSERT_AT_FRONT);
 
-        expect(result.ok).toBe(false);
+        expect(repo.list().map(m => m.id)).toEqual(['a', 'b']);
     });
 });

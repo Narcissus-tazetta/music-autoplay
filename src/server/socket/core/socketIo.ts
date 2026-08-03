@@ -2,7 +2,7 @@ import logger from '@/server/logger';
 import type { Server as HttpServer } from 'node:http';
 import { Server } from 'socket.io';
 import { SERVER_ENV } from '~/env.server';
-import { container } from '../../di/container';
+import { isProduction } from '../../config';
 import { buildCorsConfig, makeOriginChecker } from './cors';
 import { attachUpgradeRewrite, registerEngineAugmentations } from './engine';
 
@@ -12,16 +12,7 @@ export interface CreatedIo {
 }
 
 export const createSocketIo = (server: HttpServer): CreatedIo => {
-    const cfg = container.getOptional('configService') as
-        | {
-            getString?(key: string): string;
-            getBoolean?(key: string, fallback?: boolean): boolean;
-        }
-        | undefined;
-    const rawSocketPath = cfg?.getString?.('SOCKET_PATH') ?? SERVER_ENV.SOCKET_PATH;
-    const socketPath = typeof rawSocketPath === 'string' && rawSocketPath.length > 0
-        ? rawSocketPath
-        : '/api/socket.io';
+    const socketPath = SERVER_ENV.SOCKET_PATH || '/api/socket.io';
     const candidatePrefixes = [
         ...new Set([socketPath, '/socket.io', '/api/socket.io'].filter(Boolean)),
     ];
@@ -32,15 +23,9 @@ export const createSocketIo = (server: HttpServer): CreatedIo => {
     }
 
     const { origins, allowAllOrigins, allowExtensionOrigins } = buildCorsConfig();
-    const socketHttpCompression = cfg?.getBoolean?.('SOCKET_HTTP_COMPRESSION', SERVER_ENV.NODE_ENV !== 'production')
-        ?? SERVER_ENV.SOCKET_HTTP_COMPRESSION
-        ?? (SERVER_ENV.NODE_ENV !== 'production');
-    const socketPerMessageDeflate = cfg?.getBoolean?.('SOCKET_PERMESSAGE_DEFLATE', SERVER_ENV.NODE_ENV !== 'production')
-        ?? SERVER_ENV.SOCKET_PERMESSAGE_DEFLATE
-        ?? (SERVER_ENV.NODE_ENV !== 'production');
-    const socketWebsocketOnly = cfg?.getBoolean?.('SOCKET_WEBSOCKET_ONLY', false)
-        ?? SERVER_ENV.SOCKET_WEBSOCKET_ONLY
-        ?? false;
+    const socketHttpCompression = SERVER_ENV.SOCKET_HTTP_COMPRESSION ?? !isProduction;
+    const socketPerMessageDeflate = SERVER_ENV.SOCKET_PERMESSAGE_DEFLATE ?? !isProduction;
+    const socketWebsocketOnly = SERVER_ENV.SOCKET_WEBSOCKET_ONLY ?? false;
     const transports: ('polling' | 'websocket')[] = socketWebsocketOnly
         ? ['websocket']
         : ['polling', 'websocket'];
@@ -107,5 +92,3 @@ export const createSocketIo = (server: HttpServer): CreatedIo => {
         return { io: null, socketPath };
     }
 };
-
-export default createSocketIo;

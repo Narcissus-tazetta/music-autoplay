@@ -61,43 +61,11 @@ export async function safeExecuteAsync<T>(
     }
 }
 
-export function resultToThrow<T>(result: Result<T, HandlerError>): T {
-    if (result.ok) return result.value;
-
-    const handlerError = result.error;
-    const error = new Error(handlerError.message);
-    const errorWithExtras = error as Error & { code?: string; meta?: unknown };
-    if (handlerError.code) errorWithExtras.code = handlerError.code;
-    if (handlerError.meta) errorWithExtras.meta = handlerError.meta;
-
-    throw errorWithExtras;
-}
-
-export function resultOr<T>(
-    result: Result<T, HandlerError>,
-    defaultValue: T,
-): T {
-    return result.ok ? result.value : defaultValue;
-}
-export function resultOrUndefined<T>(
-    result: Result<T, HandlerError>,
-): T | undefined {
-    return result.ok ? result.value : undefined;
-}
-
 export function mapResult<T, U, E>(
     result: Result<T, E>,
     fn: (value: T) => U,
 ): Result<U, E> {
     if (result.ok) return ok(fn(result.value));
-    return result;
-}
-
-export function mapError<T, E, F>(
-    result: Result<T, E>,
-    fn: (error: E) => F,
-): Result<T, F> {
-    if (!result.ok) return err(fn(result.error));
     return result;
 }
 
@@ -118,22 +86,6 @@ export function combineResults<T, E>(results: Result<T, E>[]): Result<T[], E> {
     }
 
     return ok(values);
-}
-
-export function collectOks<T, E>(results: Result<T, E>[]): T[] {
-    const values: T[] = [];
-
-    for (const result of results) if (result.ok) values.push(result.value);
-
-    return values;
-}
-
-export function collectErrors<T, E>(results: Result<T, E>[]): E[] {
-    const errors: E[] = [];
-
-    for (const result of results) if (!result.ok) errors.push(result.error);
-
-    return errors;
 }
 
 export function isOk<T, E>(

@@ -2,13 +2,10 @@ import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
 import type { HistoryQuery } from '@/shared/types/history';
 import type { HistoryService } from '../../history/historyService';
 import logger from '../../logger';
-import type MetricsManager from '../../services/metricsManager';
-import ServiceResolver from '../../utils/serviceResolver';
+import { metricsManager } from '../../services/metricsManager';
 import { createSocketEventHandler } from './eventHandler';
 
 export function createGetAllMusicsHandler(musicDB: Map<string, Music>) {
-    const metricsManager = ServiceResolver.getInstance().resolve<MetricsManager>('metricsManager');
-
     return createSocketEventHandler({
         event: 'getAllMusics',
         handler(_payload: unknown, context: { socketId: string }): Music[] {
@@ -18,13 +15,13 @@ export function createGetAllMusicsHandler(musicDB: Map<string, Music>) {
             try {
                 const list = [...musicDB.values()];
 
-                if (metricsManager) metricsManager.updateRpcGetAllMusics(Date.now() - start, hasError);
+                metricsManager.updateRpcGetAllMusics(Date.now() - start, hasError);
 
                 return list;
             } catch (error: unknown) {
                 hasError = true;
 
-                if (metricsManager) metricsManager.updateRpcGetAllMusics(Date.now() - start, hasError);
+                metricsManager.updateRpcGetAllMusics(Date.now() - start, hasError);
 
                 logger.error('getAllMusics handler error', {
                     error,

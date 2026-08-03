@@ -27,7 +27,9 @@ const ROLE_ICONS: Record<SessionRole, typeof ShieldCheck> = {
 };
 
 export function AdminLoginModalContent({ onClose }: AdminLoginModalContentProps) {
-    const { roles, setRoles, logout } = useAdminStore();
+    const roles = useAdminStore(state => state.roles);
+    const setRoles = useAdminStore(state => state.setRoles);
+    const logout = useAdminStore(state => state.logout);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');

@@ -1,5 +1,5 @@
 import type { RemoteStatus } from '@/shared/stores/musicStore';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface UseInterpolatedTimeParams {
     status: RemoteStatus | null;
@@ -11,8 +11,8 @@ interface UseInterpolatedTimeParams {
 interface Anchor {
     time: number;
     perf: number;
+    /** 0 while buffering/stalled, so interpolation freezes without a separate flag. */
     rate: number;
-    buffering: boolean;
 }
 
 export function useInterpolatedTime({
@@ -23,7 +23,9 @@ export function useInterpolatedTime({
     currentTime: number;
     isEffectivelyPaused: boolean;
 } {
-    const initialTime = (() => {
+    // Lazy initialiser: this only feeds the first render, but as a plain expression it was
+    // recomputed on every render for nothing.
+    const [displayTime, setDisplayTime] = useState(() => {
         if ((status?.type === 'playing' || status?.type === 'paused') && typeof status.currentTime === 'number')
             return status.currentTime;
         if (status?.type === 'paused' && typeof status.duration === 'number') return status.duration;
@@ -38,27 +40,65 @@ export function useInterpolatedTime({
         }
 
         return 0;
-    })();
-    const [displayTime, setDisplayTime] = useState(initialTime);
+    });
     const [isEffectivelyPaused, setIsEffectivelyPaused] = useState(false);
     const rafRef = useRef<number | null>(null);
     const anchorRef = useRef<Anchor | null>(null);
     const lastVideoIdRef = useRef<string>('');
     const isPausedRef = useRef(false);
-    const delayMsRef = useRef(0);
-    const lastTimeRef = useRef(0);
+    const durationRef = useRef(duration);
+
+    // Kept in an effect for the same reason as useInitialStatusReveal below: a render that
+    // React discards must not leave the ref describing it.
+    useEffect(() => {
+        durationRef.current = duration;
+    }, [duration]);
 
     useEffect(() => {
         if (videoId && videoId !== lastVideoIdRef.current) {
             lastVideoIdRef.current = videoId;
             anchorRef.current = null;
-            delayMsRef.current = 0;
-            lastTimeRef.current = 0;
             setDisplayTime(0);
             setIsEffectivelyPaused(false);
             isPausedRef.current = false;
         }
     }, [videoId]);
+
+    // Single owner of the animation frame loop. The body used to be duplicated verbatim inside
+    // the status effect below, with both copies writing the same rafRef - so a duration change
+    // could tear down one loop while the other was still scheduling frames.
+    const startLoop = useCallback(() => {
+        if (rafRef.current !== null || isPausedRef.current) return;
+
+        const animate = () => {
+            if (isPausedRef.current) {
+                rafRef.current = null;
+                return;
+            }
+
+            // Stop rather than reschedule when there's nothing to interpolate yet (e.g. before
+            // the first status arrives, or a 'playing' status without currentTime) - scheduling
+            // unconditionally here would spin an rAF callback every frame doing no work. The
+            // status effect calls startLoop() again once an anchor is set, so this resumes on
+            // its own.
+            const anchor = anchorRef.current;
+            if (!anchor) {
+                rafRef.current = null;
+                return;
+            }
+
+            rafRef.current = requestAnimationFrame(animate);
+
+            const elapsed = (performance.now() - anchor.perf) / 1000;
+            let time = anchor.time + elapsed * anchor.rate;
+            const currentDuration = durationRef.current;
+            if (currentDuration) time = Math.min(time, currentDuration);
+
+            setDisplayTime(time);
+        };
+
+        rafRef.current = requestAnimationFrame(animate);
+    }, []);
 
     useEffect(() => {
         if (!status || status.type === 'closed') {
@@ -75,13 +115,7 @@ export function useInterpolatedTime({
         if (status.type === 'paused') {
             isPausedRef.current = true;
             if (typeof status.currentTime === 'number') {
-                anchorRef.current = {
-                    buffering: false,
-                    perf: performance.now(),
-                    rate: 0,
-                    time: status.currentTime,
-                };
-                lastTimeRef.current = status.currentTime;
+                anchorRef.current = { perf: performance.now(), rate: 0, time: status.currentTime };
                 setDisplayTime(status.currentTime);
             }
             setIsEffectivelyPaused(true);
@@ -89,69 +123,33 @@ export function useInterpolatedTime({
         }
 
         if (status.type === 'playing' && typeof status.currentTime === 'number') {
-            const wasPaused = isPausedRef.current;
             isPausedRef.current = false;
             const rate = status.playbackRate ?? 1;
             const buffering = status.isBuffering ?? false;
             const stalled = status.consecutiveStalls ? status.consecutiveStalls > 0 : false;
 
             anchorRef.current = {
-                buffering,
                 perf: performance.now(),
                 rate: buffering || stalled ? 0 : rate,
                 time: status.currentTime,
             };
-            lastTimeRef.current = status.currentTime;
             setDisplayTime(status.currentTime);
             setIsEffectivelyPaused(buffering || stalled);
 
-            if (wasPaused && !rafRef.current) {
-                const animate = () => {
-                    if (isPausedRef.current) {
-                        rafRef.current = null;
-                        return;
-                    }
-                    rafRef.current = requestAnimationFrame(animate);
-                    const anchor = anchorRef.current;
-                    if (!anchor) return;
-                    const elapsed = (performance.now() - anchor.perf) / 1000;
-                    let time = anchor.time + elapsed * anchor.rate;
-                    if (duration) time = Math.min(time, duration);
-                    setDisplayTime(time);
-                };
-                rafRef.current = requestAnimationFrame(animate);
-            }
+            // The loop below owns the rAF handle; resuming from pause just needs it restarted.
+            startLoop();
         }
-    }, [status, duration]);
+    }, [status, startLoop]);
 
     useEffect(() => {
-        const animate = () => {
-            if (isPausedRef.current) {
-                rafRef.current = null;
-                return;
-            }
-
-            rafRef.current = requestAnimationFrame(animate);
-
-            const anchor = anchorRef.current;
-            if (!anchor) return;
-
-            const elapsed = (performance.now() - anchor.perf) / 1000;
-            let time = anchor.time + elapsed * anchor.rate;
-            if (duration) time = Math.min(time, duration);
-
-            setDisplayTime(time);
-        };
-
-        if (!isPausedRef.current) rafRef.current = requestAnimationFrame(animate);
-
+        startLoop();
         return () => {
-            if (rafRef.current) {
+            if (rafRef.current !== null) {
                 cancelAnimationFrame(rafRef.current);
                 rafRef.current = null;
             }
         };
-    }, [duration]);
+    }, [startLoop]);
 
     return { currentTime: displayTime, isEffectivelyPaused };
 }
@@ -190,7 +188,12 @@ export function useInitialStatusReveal(status: RemoteStatus | null): RemoteStatu
     const hasRevealedRef = useRef(false);
     const timerRef = useRef<number | null>(null);
     const statusRef = useRef(status);
-    statusRef.current = status;
+
+    // Assigning statusRef during render is not safe under concurrent rendering: React may
+    // render without committing, leaving the ref describing a render that never happened.
+    useEffect(() => {
+        statusRef.current = status;
+    });
 
     useEffect(() => () => {
         if (timerRef.current) {

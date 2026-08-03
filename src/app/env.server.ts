@@ -228,55 +228,14 @@ export const SERVER_ENV = (() => {
         );
     }
 
-    const parsed = serverEnvSchema.safeParse({
-        ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
-        ADMIN_SECRET: process.env.ADMIN_SECRET,
-        ADMIN_USER: process.env.ADMIN_USER,
-        PATHFINDER_PASSWORD: process.env.PATHFINDER_PASSWORD,
-        PATHFINDER_USER: process.env.PATHFINDER_USER,
-        ALLOW_EXTENSION_ORIGINS: process.env.ALLOW_EXTENSION_ORIGINS,
-        CLIENT_URL: process.env.CLIENT_URL,
-        CORS_ORIGINS: process.env.CORS_ORIGINS,
-        DATABASE_URL: process.env.DATABASE_URL,
-        DIAG_MEM_ENABLED: process.env.DIAG_MEM_ENABLED,
-        DIAG_MEM_LOG_INTERVAL_MS: process.env.DIAG_MEM_LOG_INTERVAL_MS,
-        DIAG_MEM_REQUIRE_ADMIN_SECRET: process.env.DIAG_MEM_REQUIRE_ADMIN_SECRET,
-        MONGODB_URI: process.env.MONGODB_URI,
-        MONGODB_DB_NAME: process.env.MONGODB_DB_NAME,
-        MONGODB_COLLECTION: process.env.MONGODB_COLLECTION,
-        MONGODB_REQUEST_LOG_COLLECTION: process.env.MONGODB_REQUEST_LOG_COLLECTION,
-        PERSISTENCE_PROVIDER: process.env.PERSISTENCE_PROVIDER,
-        GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
-        GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
-        ENABLE_HTTP_COMPRESSION: process.env.ENABLE_HTTP_COMPRESSION,
-        LOG_LEVEL: process.env.LOG_LEVEL,
-        MORGAN_FORMAT: process.env.MORGAN_FORMAT,
-        MORGAN_LOG_SOCKETIO: process.env.MORGAN_LOG_SOCKETIO,
-        NODE_ENV: process.env.NODE_ENV,
-        PORT: process.env.PORT,
-        PROGRESS_COOLDOWN_MS: process.env.PROGRESS_COOLDOWN_MS,
-        PROGRESS_MIN_DELTA_SEC: process.env.PROGRESS_MIN_DELTA_SEC,
-        PROGRESS_STALL_COUNT: process.env.PROGRESS_STALL_COUNT,
-        PROGRESS_STALL_THRESHOLD_MS: process.env.PROGRESS_STALL_THRESHOLD_MS,
-        RATE_LIMIT_MAX_ATTEMPTS: process.env.RATE_LIMIT_MAX_ATTEMPTS,
-        RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS,
-        REMOTE_STATUS_DEBOUNCE_MS: process.env.REMOTE_STATUS_DEBOUNCE_MS,
-        REMOTE_STATUS_GRACE_MS: process.env.REMOTE_STATUS_GRACE_MS,
-        REMOTE_STATUS_INACTIVITY_MS: process.env.REMOTE_STATUS_INACTIVITY_MS,
-        REMOTE_STATUS_INACTIVITY_MS_PAUSED: process.env.REMOTE_STATUS_INACTIVITY_MS_PAUSED,
-        SESSION_SECRET: process.env.SESSION_SECRET,
-        SHUTDOWN_TIMEOUT_MS: process.env.SHUTDOWN_TIMEOUT_MS,
-        SOCKET_PATH: process.env.SOCKET_PATH,
-        SOCKET_HTTP_COMPRESSION: process.env.SOCKET_HTTP_COMPRESSION,
-        SOCKET_PERMESSAGE_DEFLATE: process.env.SOCKET_PERMESSAGE_DEFLATE,
-        SOCKET_WEBSOCKET_ONLY: process.env.SOCKET_WEBSOCKET_ONLY,
-        SOCKET_EVENT_LOG_ENABLED: process.env.SOCKET_EVENT_LOG_ENABLED,
-        SOCKET_EVENT_LOG_SAMPLE_RATE: process.env.SOCKET_EVENT_LOG_SAMPLE_RATE,
-        WINDOW_CLOSE_DEBOUNCE_MS: process.env.WINDOW_CLOSE_DEBOUNCE_MS,
-        YOUTUBE_REQUEST_QUEUE_MAX: process.env.YOUTUBE_REQUEST_QUEUE_MAX,
-        YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY,
-        YAHOO_FURIGANA_ENDPOINT: process.env.YAHOO_FURIGANA_ENDPOINT,
-    });
+    // Derive the input from the schema itself. Hand-listing the keys previously let
+    // REMOTE_STATUS_INACTIVITY_MS_PLAYING fall out of the object, silently pinning it
+    // to its default; picking from the shape makes that class of drift impossible.
+    const parsed = serverEnvSchema.safeParse(
+        Object.fromEntries(
+            Object.keys(serverEnvSchema.shape).map(key => [key, process.env[key]]),
+        ),
+    );
 
     if (!parsed.success) {
         const allErrors = Object.values(parsed.error.flatten().fieldErrors)

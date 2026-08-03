@@ -2,11 +2,11 @@ import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
 import type { Socket } from 'socket.io';
 import type { Server as IOServer } from 'socket.io';
 import { getHistoryService } from '../../history/historyService';
+import type { MusicService } from '../../music/musicService';
 import type { Store } from '../../persistence';
 import type { RateLimiter } from '../../services/rateLimiter';
 import type { YouTubeService } from '../../services/youtubeService';
 import type { EmitOptions } from '../../utils/safeEmit';
-import ServiceResolver from '../../utils/serviceResolver';
 import type { SocketManager } from '../managers/manager';
 import { registerBatchHandlers } from './eventHandler';
 import { createMusicHandlers } from './musicHandlers';
@@ -28,6 +28,8 @@ export interface HandlerDeps {
     fileStore?: Store;
     isAdmin: (h?: string) => boolean;
     adminHash?: string;
+    /** Shared instance owned by SocketRuntime; see musicHandlers' Deps.musicService. */
+    musicService?: MusicService;
     rateLimiter?: RateLimiter;
     rateLimitConfig?: {
         maxAttempts: number;
@@ -40,8 +42,6 @@ export function registerSocketHandlers(
     ctx: { socketId: string; connectionId: string; requestId?: string },
     deps: HandlerDeps,
 ) {
-    const resolver = ServiceResolver.getInstance();
-
     const getAllMusicsHandler = createGetAllMusicsHandler(deps.musicDB);
     const getHistoryHandler = createGetHistoryHandler(getHistoryService());
 
@@ -61,8 +61,7 @@ export function registerSocketHandlers(
         }
     }
 
-    const youtubeService = deps.youtubeService ?? resolver.resolve<YouTubeService>('youtubeService');
-    const fileStore = deps.fileStore ?? resolver.resolve<Store>('fileStore');
+    const { fileStore, youtubeService } = deps;
 
     if (!youtubeService || !fileStore) throw new Error('youtubeService and fileStore are required');
 
@@ -71,6 +70,7 @@ export function registerSocketHandlers(
         io: deps.io,
         isAdmin: deps.isAdmin,
         musicDB: deps.musicDB,
+        musicService: deps.musicService,
         rateLimiter: deps.rateLimiter,
         youtubeService,
     });

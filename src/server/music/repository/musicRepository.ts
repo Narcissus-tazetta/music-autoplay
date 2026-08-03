@@ -4,10 +4,16 @@ import { toHandlerError } from '@/shared/utils/errors';
 import type { Result } from '@/shared/utils/errors/result-handlers';
 import { err, ok } from '@/shared/utils/errors/result-handlers';
 import { watchUrl } from '@/shared/utils/youtube';
-import logger from '../../logger';
 import type { Store } from '../../persistence';
 import { persistAdd, persistRemove } from '../../persistence/storeHelpers';
 
+/**
+ * Ordered view over the in-memory music map.
+ *
+ * The mutating methods below operate on a Map and cannot throw, so they return plain values;
+ * they used to be wrapped in try/catch returning `Result<void, HandlerError>`, which every
+ * caller then had to unwrap. Only the persist* methods, which touch the store, keep a Result.
+ */
 export class MusicRepository {
     constructor(
         private musicDB: Map<string, Music>,
@@ -37,20 +43,15 @@ export class MusicRepository {
         for (const [key, value] of entries) this.musicDB.set(key, value);
     }
 
-    add(music: Music, atIndex?: number): Result<void, HandlerError> {
-        try {
-            if (atIndex == undefined) {
-                this.musicDB.set(music.id, music);
-                return ok(undefined);
-            }
-            const entries = [...this.musicDB.entries()];
-            const clamped = Math.max(0, Math.min(atIndex, entries.length));
-            entries.splice(clamped, 0, [music.id, music]);
-            this.setEntryOrder(entries);
-            return ok(undefined);
-        } catch (error: unknown) {
-            return err(toHandlerError(error));
+    add(music: Music, atIndex?: number): void {
+        if (atIndex == undefined) {
+            this.musicDB.set(music.id, music);
+            return;
         }
+        const entries = [...this.musicDB.entries()];
+        const clamped = Math.max(0, Math.min(atIndex, entries.length));
+        entries.splice(clamped, 0, [music.id, music]);
+        this.setEntryOrder(entries);
     }
 
     /**
@@ -58,28 +59,17 @@ export class MusicRepository {
      * An anchor that already left the queue falls back to the front, matching
      * the insertAfterId fallback in MusicService.addMusic.
      */
-    reorder(id: string, afterId: string): Result<void, HandlerError> {
-        try {
-            const music = this.musicDB.get(id);
-            if (!music) return err(toHandlerError(new Error(`music not found: ${id}`)));
-            if (afterId === id) return ok(undefined);
-            const entries = [...this.musicDB.entries()].filter(([key]) => key !== id);
-            const anchorIndex = entries.findIndex(([key]) => key === afterId);
-            entries.splice(anchorIndex + 1, 0, [id, music]);
-            this.setEntryOrder(entries);
-            return ok(undefined);
-        } catch (error: unknown) {
-            return err(toHandlerError(error));
-        }
+    reorder(id: string, afterId: string): void {
+        const music = this.musicDB.get(id);
+        if (!music || afterId === id) return;
+        const entries = [...this.musicDB.entries()].filter(([key]) => key !== id);
+        const anchorIndex = entries.findIndex(([key]) => key === afterId);
+        entries.splice(anchorIndex + 1, 0, [id, music]);
+        this.setEntryOrder(entries);
     }
 
-    remove(id: string): Result<void, HandlerError> {
-        try {
-            this.musicDB.delete(id);
-            return ok(undefined);
-        } catch (error: unknown) {
-            return err(toHandlerError(error));
-        }
+    remove(id: string): void {
+        this.musicDB.delete(id);
     }
 
     list(): Music[] {
@@ -87,12 +77,7 @@ export class MusicRepository {
     }
 
     buildCompatList(): (Music & { url: string })[] {
-        try {
-            return this.list().map(m => Object.assign({}, m, { url: watchUrl(m.id) }));
-        } catch (error: unknown) {
-            logger.debug('MusicRepository.buildCompatList failed', { error });
-            return [];
-        }
+        return this.list().map(m => Object.assign({}, m, { url: watchUrl(m.id) }));
     }
 
     async persistAdd(music: Music, atIndex?: number): Promise<Result<void, HandlerError>> {

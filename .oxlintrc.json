@@ -1,5 +1,9 @@
 {
-  "plugins": ["unicorn", "typescript", "oxc"],
+  "plugins": [
+    "unicorn",
+    "typescript",
+    "oxc"
+  ],
   "categories": {
     "correctness": "error",
     "perf": "warn",
@@ -10,7 +14,8 @@
     "no-ternary": "off",
     "curly": "off",
     "no-underscore-dangle": "off",
-    "unicorn/consistent-function-scoping": "off"
+    "unicorn/consistent-function-scoping": "off",
+    "no-async-endpoint-handlers": "off"
   },
   "settings": {
     "jsx-a11y": {
@@ -43,7 +48,11 @@
   "ignorePatterns": [],
   "overrides": [
     {
-      "files": ["tests/**", "**/*.test.ts", "**/*.test.tsx"],
+      "files": [
+        "tests/**",
+        "**/*.test.ts",
+        "**/*.test.tsx"
+      ],
       "rules": {
         "unicorn/consistent-function-scoping": "off",
         "no-await-in-loop": "off"

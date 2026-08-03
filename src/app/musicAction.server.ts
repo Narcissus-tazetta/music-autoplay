@@ -1,4 +1,3 @@
-import { container } from '@/server/di/container';
 import logger from '@/server/logger';
 import type { RateLimiter } from '@/server/services/rateLimiter';
 import { err as makeErr } from '@/shared/utils/errors/result-handlers';
@@ -44,15 +43,7 @@ export async function resolveActingRequesterHash(
     session?: LoginSession,
 ): Promise<ActingRequesterHash> {
     if (isAdmin) {
-        const cfg = container.getOptional('configService') as
-            | { getString?(key: string): string }
-            | undefined;
-        let adminSecret: string | undefined;
-        try {
-            adminSecret = cfg?.getString?.('ADMIN_SECRET') ?? SERVER_ENV.ADMIN_SECRET;
-        } catch {
-            adminSecret = SERVER_ENV.ADMIN_SECRET;
-        }
+        const adminSecret = SERVER_ENV.ADMIN_SECRET;
         if (!adminSecret) {
             logger.warn('Admin music action requested but ADMIN_SECRET is not configured');
             return { ok: false, response: respondWithResult(makeErr({ message: 'unauthorized' })) };

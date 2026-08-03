@@ -5,6 +5,7 @@ import { serverContext } from '@/shared/types/server';
 import { safeExecuteAsync } from '@/shared/utils/errors';
 import { parseWithZod } from '@conform-to/zod/v4';
 import type { ActionFunctionArgs } from 'react-router';
+import { rateLimitExceededResponse } from '../../musicAction.server';
 import { getRateLimitKey, resolveRequesterIdentity } from '../../requesterIdentity.server';
 import { hasPathfinderAccess, loginSession } from '../../sessions.server';
 
@@ -17,20 +18,10 @@ export const action = async ({
     const rateLimitKey = await getRateLimitKey(request, cookie);
     const rateLimiter = httpRateLimiter;
 
-    if (!rateLimiter.check(rateLimitKey)) {
-        const oldestAttempt = rateLimiter.getOldestAttempt(rateLimitKey);
-        const retryAfter = typeof oldestAttempt === 'number'
-            ? Math.ceil((oldestAttempt + 60_000 - Date.now()) / 1000)
-            : 60;
-        logger.warn('Rate limit exceeded', {
-            endpoint: '/api/music/add',
-            rateLimitKey,
-        });
-        return Response.json(
-            { error: 'レート制限を超えました。しばらくしてから再試行してください。' },
-            { headers: { 'Retry-After': retryAfter.toString() }, status: 429 },
-        );
-    }
+    // Shared with music.remove / music.reorder: this route inlined its own copy of the
+    // same 429 response.
+    const limited = rateLimitExceededResponse(rateLimiter, rateLimitKey, '/api/music/add');
+    if (limited) return limited;
 
     const submission = parseWithZod(await request.formData(), {
         schema: AddMusicSchema,
@@ -71,7 +62,3 @@ export const action = async ({
         { status: 500 },
     );
 };
-
-export default function MusicAdd() {
-    return;
-}

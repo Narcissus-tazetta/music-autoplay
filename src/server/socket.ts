@@ -6,7 +6,6 @@ import { isObject } from '@/shared/utils/typeGuards';
 import type { Server as HttpServer } from 'node:http';
 import type { Server } from 'socket.io';
 import type { Server as IOServer } from 'socket.io';
-import { container } from './di/container';
 import logger from './logger';
 import type { MusicService } from './music/musicService';
 import { createMusicService } from './music/musicServiceFactory';
@@ -15,7 +14,7 @@ import type { RateLimiter } from './services/rateLimiter';
 import { RateLimiterManager } from './services/rateLimiterManager';
 import type { WindowCloseManager } from './services/windowCloseManager';
 import type { YouTubeService } from './services/youtubeService';
-import { createSocketServerBuilder } from './socket/builder';
+import { createSocketServerComponents } from './socket/components';
 import type { SocketManager } from './socket/managers/manager';
 import type { SocketRuntime } from './socket/managers/runtime';
 import type { ReplyOptions } from './socket/types';
@@ -72,16 +71,13 @@ export class SocketServerInstance {
         }
     }
 
-    constructor(
-        youtubeService?: YouTubeService,
-        fileStore?: Store,
-    ) {
-        const components = createSocketServerBuilder()
-            .withYouTubeService(youtubeService)
-            .withFileStore(fileStore)
-            .withMusicDB(this.musicDB)
-            .withRemoteStatus(this.remoteStatus)
-            .build();
+    constructor(youtubeService: YouTubeService, fileStore: Store) {
+        const components = createSocketServerComponents({
+            fileStore,
+            musicDB: this.musicDB,
+            remoteStatus: this.remoteStatus,
+            youtubeService,
+        });
 
         this.youtubeService = components.youtubeService;
         this.fileStore = components.fileStore;
@@ -96,11 +92,6 @@ export class SocketServerInstance {
         this.remoteStatusInactivityMs = components.socketConfig.remoteStatusInactivityMs;
         this.remoteStatusInactivityMsPlaying = components.socketConfig.remoteStatusInactivityMsPlaying;
         this.remoteStatusInactivityMsPaused = components.socketConfig.remoteStatusInactivityMsPaused;
-        try {
-            container.register('socketServer', () => this);
-        } catch (error) {
-            void error;
-        }
     }
     async init(server: HttpServer): Promise<void> {
         if (this.io) return;
@@ -117,6 +108,7 @@ export class SocketServerInstance {
             adminHash: this.adminHash,
             fileStore: this.fileStore,
             musicDB: this.musicDB,
+            rateLimiter: this.rateLimiter,
             opts: {
                 debounceMs: this.remoteStatusDebounceMs,
                 graceMs: this.remoteStatusGraceMs,
@@ -124,6 +116,8 @@ export class SocketServerInstance {
                 inactivityMsPlaying: this.remoteStatusInactivityMsPlaying,
                 inactivityMsPaused: this.remoteStatusInactivityMsPaused,
             },
+            timerManager: this.timerManager,
+            windowCloseManager: this.windowCloseManager,
             youtubeService: this.youtubeService,
         });
         logger.info('initSocketServer completed');

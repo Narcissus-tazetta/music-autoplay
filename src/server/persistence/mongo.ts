@@ -275,5 +275,3 @@ export class MongoHybridStore implements Store {
             });
     }
 }
-
-export default MongoHybridStore;
