@@ -2,7 +2,7 @@ import { safeLog } from '@/server/logger';
 import { getStructuredClone, isObject } from '@/shared/utils/typeGuards';
 import type { HeaderSnapshot, RequestLike, SocketLike } from './types';
 
-export function deepCloneForLog(v: unknown): unknown {
+function deepCloneForLog(v: unknown): unknown {
     try {
         const sc = getStructuredClone();
         if (typeof sc === 'function') return sc(v);

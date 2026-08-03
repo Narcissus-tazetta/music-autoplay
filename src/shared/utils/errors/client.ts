@@ -117,37 +117,6 @@ export function extractErrorMessage(
     return joined.length > maxLen ? joined.slice(0, maxLen) + '…' : joined;
 }
 
-export function formatErrorForDisplay(
-    error: unknown,
-    fallback?: string,
-): string {
-    const message = extractErrorMessage(error);
-
-    if (message) return message;
-
-    const info = extractErrorInfo(error);
-    if (info.message && isUserMessage(info.message)) return info.message;
-
-    return fallback || 'エラーが発生しました';
-}
-
-export function formatMultipleErrors(
-    errors: unknown[],
-    opts?: FormatOptions,
-): string {
-    const messages: string[] = [];
-
-    for (const error of errors) {
-        const msg = extractErrorMessage(error, opts);
-        if (msg) messages.push(msg);
-    }
-
-    if (messages.length === 0) return '複数のエラーが発生しました';
-
-    const { joinWith = '\n' } = opts ?? {};
-    return messages.join(joinWith);
-}
-
 export function extractApiError(response: unknown): string | undefined {
     if (!response) return undefined;
 
@@ -161,45 +130,4 @@ export function extractApiError(response: unknown): string | undefined {
     if (isRecord(response) && typeof response.message === 'string') return response.message;
 
     return extractErrorMessage(response);
-}
-
-export function isApiErrorResponse(response: unknown): boolean {
-    if (!isRecord(response)) return false;
-
-    if (response.success === false) return true;
-
-    if (response.error !== undefined) return true;
-
-    if (typeof response.status === 'number' && response.status >= 400) return true;
-
-    return false;
-}
-
-export function getDetailedErrorInfo(error: unknown): string {
-    const info = extractErrorInfo(error);
-
-    const parts: string[] = [];
-
-    if (info.message) parts.push(`Message: ${info.message}`);
-
-    if (info.code) parts.push(`Code: ${info.code}`);
-
-    if (info.meta) {
-        try {
-            parts.push(`Meta: ${JSON.stringify(info.meta, undefined, 2)}`);
-        } catch {
-            parts.push(`Meta: [unserializable]`);
-        }
-    }
-
-    if (info.stack) parts.push(`Stack:\n${info.stack}`);
-
-    return parts.join('\n\n');
-}
-
-export function logErrorForDev(context: string, error: unknown): void {
-    if (import.meta.env.DEV) {
-        console.error(`🔴 Error: ${context}`);
-        console.error(getDetailedErrorInfo(error));
-    }
 }

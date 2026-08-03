@@ -100,7 +100,3 @@ export const action = async ({ request }: LoaderFunctionArgs) => {
         status: 200,
     });
 };
-
-export default function Route() {
-    return; // このルートはアクション専用のため UI をレンダリングしません
-}

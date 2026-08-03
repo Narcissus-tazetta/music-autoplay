@@ -71,7 +71,3 @@ export const action = async ({
         { status: 500 },
     );
 };
-
-export default function MusicAdd() {
-    return;
-}

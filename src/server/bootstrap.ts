@@ -17,10 +17,8 @@ import { FileStore, MongoHybridStore, MongoStore, PgHybridStore, PgStore } from 
 import { RequestLogMongoHybridStore, RequestLogMongoStore } from './requestLog/requestLogMongoStore';
 import { RequestLogService, setRequestLogService } from './requestLog/requestLogService';
 import CacheService from './services/cacheService';
-import ErrorService from './services/errorService';
 import MetricsManager from './services/metricsManager';
 import { RateLimiterManager } from './services/rateLimiterManager';
-import retry from './services/retryService';
 import { YouTubeService } from './services/youtubeService';
 import { SocketServerInstance } from './socket';
 export interface Metrics {
@@ -38,7 +36,6 @@ export interface BootstrapResult {
 
 export async function bootstrap(): Promise<BootstrapResult> {
     const configService = getConfigService();
-    const errorService = new ErrorService();
     const cacheService = new CacheService();
 
     const persistenceProvider = (configService.getString(
@@ -132,12 +129,8 @@ export async function bootstrap(): Promise<BootstrapResult> {
     const socketServer = new SocketServerInstance(youtubeService, fileStore);
 
     container.register('fileStore', () => fileStore);
-    container.register('socketServer', () => socketServer);
     container.register('youtubeService', () => youtubeService);
     container.register('configService', () => configService);
-    container.register('errorService', () => errorService);
-    container.register('cacheService', () => cacheService);
-    container.register('retryService', () => retry);
     container.register('metricsManager', () => metricsManager);
 
     const appShutdownHandlers: (() => Promise<void> | void)[] = [];

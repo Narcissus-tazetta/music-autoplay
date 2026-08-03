@@ -27,10 +27,6 @@ export function isError(v: unknown): v is Error {
     return v instanceof Error;
 }
 
-export function isStackTrace(str: string): boolean {
-    return /^\s*at\s+/m.test(str) || /^\s*\w+Error:/m.test(str);
-}
-
 export function extractErrorInfo(error: unknown): ErrorInfo {
     if (isError(error)) {
         let code: string | undefined = undefined;
@@ -132,11 +128,6 @@ export function safeString(val: unknown): string {
     }
 }
 
-export function errorToString(error: unknown): string {
-    const info = extractErrorInfo(error);
-    return info.message;
-}
-
 export function normalizeWrapOptions(
     contextOrOpts?: string | WrapOptions,
 ): NormalizedWrapOptions {
@@ -158,59 +149,4 @@ export function normalizeWrapOptions(
         returnOnError: opts.returnOnError || 'undefined',
         silent: opts.silent || false,
     };
-}
-
-export function isAuthorizationError(error: unknown): boolean {
-    const info = extractErrorInfo(error);
-    const msg = info.message.toLowerCase();
-    const code = info.code?.toUpperCase();
-
-    return (
-        code === 'UNAUTHORIZED'
-        || code === 'FORBIDDEN'
-        || code === 'PERMISSION_DENIED'
-        || msg.includes('権限')
-        || msg.includes('authorization')
-        || msg.includes('permission')
-        || msg.includes('forbidden')
-        || msg.includes('unauthorized')
-    );
-}
-
-export function isValidationError(error: unknown): boolean {
-    const info = extractErrorInfo(error);
-    const code = info.code?.toUpperCase();
-
-    return (
-        code === 'VALIDATION_ERROR'
-        || code === 'INVALID_INPUT'
-        || code === 'BAD_REQUEST'
-    );
-}
-
-export function isNotFoundError(error: unknown): boolean {
-    const info = extractErrorInfo(error);
-    const msg = info.message.toLowerCase();
-    const code = info.code?.toUpperCase();
-
-    return (
-        code === 'NOT_FOUND'
-        || msg.includes('not found')
-        || msg.includes('見つかりません')
-    );
-}
-
-export function isNetworkError(error: unknown): boolean {
-    const info = extractErrorInfo(error);
-    const code = info.code?.toUpperCase();
-    const msg = info.message.toLowerCase();
-
-    return (
-        code === 'ECONNREFUSED'
-        || code === 'ENOTFOUND'
-        || code === 'ETIMEDOUT'
-        || code === 'NETWORK_ERROR'
-        || msg.includes('network')
-        || msg.includes('connection')
-    );
 }

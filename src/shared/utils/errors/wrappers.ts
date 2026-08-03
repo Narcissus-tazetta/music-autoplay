@@ -23,10 +23,6 @@ export const defaultLogger: Logger = {
 
 let globalLogger: Logger = defaultLogger;
 
-export function setErrorLogger(logger: Logger): void {
-    globalLogger = logger;
-}
-
 export function getErrorLogger(): Logger {
     return globalLogger;
 }
@@ -114,38 +110,3 @@ export function wrapAsync<T extends unknown[], R>(
 }
 
 export const withAsyncErrorHandler = wrapAsync;
-
-export function handleAsyncError(
-    operation: string,
-    context?: Record<string, unknown>,
-): (error: unknown) => void {
-    return (error: unknown) => {
-        const errorInfo = extractErrorInfo(error);
-        const logger = globalLogger;
-
-        logger.warn(`${operation} failed`, {
-            error: sanitizeErrorForLog(errorInfo),
-            ...context,
-        });
-    };
-}
-
-export const trySync = <T>(fn: () => T): [T, null] | [null, unknown] => {
-    try {
-        const result = fn();
-        return [result, null];
-    } catch (error: unknown) {
-        return [null, error];
-    }
-};
-
-export const tryAsync = async <T>(
-    fn: () => Promise<T>,
-): Promise<[T, null] | [null, unknown]> => {
-    try {
-        const result = await fn();
-        return [result, null];
-    } catch (error: unknown) {
-        return [null, error];
-    }
-};

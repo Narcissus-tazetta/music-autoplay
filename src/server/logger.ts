@@ -317,14 +317,6 @@ function installProcessHandlers(opts?: { exitOnUncaught?: boolean }) {
 export default logger;
 export { installProcessHandlers, replaceConsoleWithLogger, withContext };
 
-export function logInfo(
-    message: string,
-    ctx: AppLogMeta = {},
-    meta: AppLogMeta = {},
-) {
-    logger.info(message, normalizeMeta({ ...ctx, ...meta }));
-}
-
 function normalizeMeta(meta: AppLogMeta): AppLogMeta {
     const out: AppLogMeta = {};
     for (const k of Object.keys(meta)) {
