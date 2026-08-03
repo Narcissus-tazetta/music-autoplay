@@ -38,10 +38,12 @@ async function query(filter: HashFilter, limit: unknown) {
  */
 export const requestLogsRouter: Router = Router();
 
-requestLogsRouter.use(requirePathfinder, (_req, res, next) => {
+// Set before the auth guard: the pre-split handlers set no-store first, so the 401 response
+// carried it too. Keeping that ordering avoids any intermediary caching an auth decision.
+requestLogsRouter.use((_req, res, next) => {
     res.setHeader('Cache-Control', 'no-store');
     next();
-});
+}, requirePathfinder);
 
 requestLogsRouter.post('/query', express.json({ limit: '8kb' }), async (req, res) => {
     const body = (req.body && typeof req.body === 'object' && !Array.isArray(req.body)

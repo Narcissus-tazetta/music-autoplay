@@ -1,5 +1,5 @@
 import { SERVER_ENV } from '@/app/env.server';
-import { Router } from 'express';
+import { type RequestHandler, Router } from 'express';
 import { requireAdmin } from '../middleware/requireRole';
 import { metricsManager } from '../services/metricsManager';
 import { RateLimiterManager } from '../services/rateLimiterManager';
@@ -36,12 +36,18 @@ export function createDiagnosticsRouter({ socketServer, youtubeService }: Diagno
         });
     });
 
-    router.get('/admin/diag/memory', requireAdmin, (req, res) => {
+    // The feature flag is checked ahead of the auth guard so a disabled endpoint looks absent
+    // to everyone. Returning 401 first would tell an anonymous caller that the route exists.
+    // This also preserves the response codes the endpoint had before the router split.
+    const requireDiagnosticsEnabled: RequestHandler = (_req, res, next) => {
         if (!SERVER_ENV.DIAG_MEM_ENABLED) {
             res.status(404).json({ error: 'disabled', ok: false });
             return;
         }
+        next();
+    };
 
+    router.get('/admin/diag/memory', requireDiagnosticsEnabled, requireAdmin, (req, res) => {
         if (SERVER_ENV.DIAG_MEM_REQUIRE_ADMIN_SECRET) {
             const headerSecret = req.headers['x-admin-secret'];
             if (typeof headerSecret !== 'string' || headerSecret !== SERVER_ENV.ADMIN_SECRET) {

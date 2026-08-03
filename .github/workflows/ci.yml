@@ -27,3 +27,46 @@ jobs:
         run: bun test
       - name: Build
         run: bun run build
+
+  docker:
+    # The runtime image installs with --production, so a dependency listed under
+    # devDependencies by mistake only shows up here - not in the job above.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build image
+        run: docker build -t music-autoplay:ci .
+      - name: Boot the container and hit the health check
+        env:
+          # Throwaway values: env.server.ts validates these at import time.
+          ADMIN_PASSWORD: Ci-Password-1!
+          ADMIN_SECRET: ci-admin-secret-that-is-long-enough-32
+          ADMIN_USER: ci-admin
+          GOOGLE_CLIENT_ID: ci-google-client-id
+          GOOGLE_CLIENT_SECRET: ci-google-client-secret
+          SESSION_SECRET: ci-session-secret-that-is-long-enough
+          YOUTUBE_API_KEY: ci-youtube-api-key
+        run: |
+          docker run -d --name app -p 3000:3000 \
+            -e NODE_ENV=production \
+            -e PORT=3000 \
+            -e CLIENT_URL=http://localhost:3000 \
+            -e ADMIN_USER -e ADMIN_PASSWORD -e ADMIN_SECRET \
+            -e SESSION_SECRET -e YOUTUBE_API_KEY \
+            -e GOOGLE_CLIENT_ID -e GOOGLE_CLIENT_SECRET \
+            music-autoplay:ci
+
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/api/metrics >/dev/null; then
+              echo "server is up"
+              curl -sI http://localhost:3000/ | head -1
+              docker rm -f app
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "server did not become healthy" >&2
+          docker logs app >&2
+          docker rm -f app
+          exit 1

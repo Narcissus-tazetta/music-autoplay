@@ -18,7 +18,9 @@ ENV NODE_ENV=production
 RUN bun run build
 
 # Reinstall without dev dependencies so only runtime packages reach the image.
-RUN rm -rf node_modules && bun install --frozen-lockfile --production
+# --ignore-scripts is required: the `prepare` script runs husky, which is a devDependency and
+# is therefore absent here, and bun would fail the install with exit 127.
+RUN rm -rf node_modules && bun install --frozen-lockfile --production --ignore-scripts
 
 
 FROM node:24-bookworm-slim AS runtime

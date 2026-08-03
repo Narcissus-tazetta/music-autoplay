@@ -666,41 +666,39 @@ export function setupExtensionEventHandlers(
                     }
 
                     repository.remove(resolvedVideoId);
-                    {
-                        recordCompletedHistory(resolvedVideoId, 'paused_ended', endedMusic);
-                        emitter.emitMusicRemoved(resolvedVideoId);
-                        emitter.emitUrlList(repository.buildCompatList());
-                        repository.persistRemove(resolvedVideoId);
+                    recordCompletedHistory(resolvedVideoId, 'paused_ended', endedMusic);
+                    emitter.emitMusicRemoved(resolvedVideoId);
+                    emitter.emitUrlList(repository.buildCompatList());
+                    repository.persistRemove(resolvedVideoId);
 
-                        const postList = repository.list();
-                        if (postList.length === 0) {
-                            socket.emit('no_next_video', { tabId: -1 });
-                            manager.update({ type: 'closed' }, 'paused_100_no_next');
-                            log.info('paused+100%: no next video', { videoId: resolvedVideoId });
-                        } else {
-                            const nextIdx = nextId ? indexOfMusicById(postList, nextId) : -1;
-                            const nextMusic = nextIdx >= 0 ? postList[nextIdx] : postList[0];
-                            if (nextMusic) {
-                                const nextUrl = watchUrl(nextMusic.id);
-                                socket.emit('next_video_navigate', {
-                                    nextUrl,
-                                    videoId: nextMusic.id,
-                                    tabId: -1,
-                                });
-                                manager.update(
-                                    {
-                                        type: 'paused',
-                                        isTransitioning: true,
-                                        musicId: nextMusic.id,
-                                        musicTitle: nextMusic.title,
-                                    },
-                                    'paused_100_navigate',
-                                );
-                                log.info('paused+100%: auto-navigate', {
-                                    from: resolvedVideoId,
-                                    to: nextMusic.id,
-                                });
-                            }
+                    const postList = repository.list();
+                    if (postList.length === 0) {
+                        socket.emit('no_next_video', { tabId: -1 });
+                        manager.update({ type: 'closed' }, 'paused_100_no_next');
+                        log.info('paused+100%: no next video', { videoId: resolvedVideoId });
+                    } else {
+                        const nextIdx = nextId ? indexOfMusicById(postList, nextId) : -1;
+                        const nextMusic = nextIdx >= 0 ? postList[nextIdx] : postList[0];
+                        if (nextMusic) {
+                            const nextUrl = watchUrl(nextMusic.id);
+                            socket.emit('next_video_navigate', {
+                                nextUrl,
+                                videoId: nextMusic.id,
+                                tabId: -1,
+                            });
+                            manager.update(
+                                {
+                                    type: 'paused',
+                                    isTransitioning: true,
+                                    musicId: nextMusic.id,
+                                    musicTitle: nextMusic.title,
+                                },
+                                'paused_100_navigate',
+                            );
+                            log.info('paused+100%: auto-navigate', {
+                                from: resolvedVideoId,
+                                to: nextMusic.id,
+                            });
                         }
                     }
                 }
@@ -735,38 +733,36 @@ export function setupExtensionEventHandlers(
 
                 if (repository.has(videoId)) {
                     repository.remove(videoId);
-                    {
-                        const emitResult = emitter.emitMusicRemoved(videoId);
-                        if (!emitResult.ok) {
-                            log.warn('delete_url: failed to emit musicRemoved', {
-                                error: emitResult.error,
-                                videoId,
-                            });
-                        }
-
-                        const urlListEmitResult = emitter.emitUrlList(
-                            repository.buildCompatList(),
-                        );
-                        if (!urlListEmitResult.ok) {
-                            log.warn('delete_url: failed to emit url_list', {
-                                error: urlListEmitResult.error,
-                            });
-                        }
-
-                        const persistResult = repository.persistRemove(videoId);
-                        if (!persistResult.ok) {
-                            log.warn('delete_url: failed to persist removal', {
-                                error: persistResult.error,
-                                videoId,
-                            });
-                        }
-                        log.info('delete_url: music removed', {
-                            connectionId,
-                            socketId: socket.id,
-                            url,
+                    const emitResult = emitter.emitMusicRemoved(videoId);
+                    if (!emitResult.ok) {
+                        log.warn('delete_url: failed to emit musicRemoved', {
+                            error: emitResult.error,
                             videoId,
                         });
                     }
+
+                    const urlListEmitResult = emitter.emitUrlList(
+                        repository.buildCompatList(),
+                    );
+                    if (!urlListEmitResult.ok) {
+                        log.warn('delete_url: failed to emit url_list', {
+                            error: urlListEmitResult.error,
+                        });
+                    }
+
+                    const persistResult = repository.persistRemove(videoId);
+                    if (!persistResult.ok) {
+                        log.warn('delete_url: failed to persist removal', {
+                            error: persistResult.error,
+                            videoId,
+                        });
+                    }
+                    log.info('delete_url: music removed', {
+                        connectionId,
+                        socketId: socket.id,
+                        url,
+                        videoId,
+                    });
                 } else {
                     log.debug('delete_url: video not in database', {
                         socketId: socket.id,
@@ -1135,32 +1131,30 @@ export function setupExtensionEventHandlers(
                 });
 
                 repository.remove(videoId);
-                {
-                    recordCompletedHistory(videoId, 'video_ended', endedMusic);
-                    const emitResult = emitter.emitMusicRemoved(videoId);
-                    if (!emitResult.ok) {
-                        log.warn('video_ended: failed to emit musicRemoved', {
-                            error: emitResult.error,
-                            videoId,
-                        });
-                    }
+                recordCompletedHistory(videoId, 'video_ended', endedMusic);
+                const emitResult = emitter.emitMusicRemoved(videoId);
+                if (!emitResult.ok) {
+                    log.warn('video_ended: failed to emit musicRemoved', {
+                        error: emitResult.error,
+                        videoId,
+                    });
+                }
 
-                    const urlListEmitResult = emitter.emitUrlList(
-                        repository.buildCompatList(),
-                    );
-                    if (!urlListEmitResult.ok) {
-                        log.warn('video_ended: failed to emit url_list', {
-                            error: urlListEmitResult.error,
-                        });
-                    }
+                const urlListEmitResult = emitter.emitUrlList(
+                    repository.buildCompatList(),
+                );
+                if (!urlListEmitResult.ok) {
+                    log.warn('video_ended: failed to emit url_list', {
+                        error: urlListEmitResult.error,
+                    });
+                }
 
-                    const persistResult = repository.persistRemove(videoId);
-                    if (!persistResult.ok) {
-                        log.warn('video_ended: failed to persist removal', {
-                            error: persistResult.error,
-                            videoId,
-                        });
-                    }
+                const persistResult = repository.persistRemove(videoId);
+                if (!persistResult.ok) {
+                    log.warn('video_ended: failed to persist removal', {
+                        error: persistResult.error,
+                        videoId,
+                    });
                 }
             } catch (error) {
                 log.warn('video_ended: failed to process', {
@@ -1808,39 +1802,37 @@ export function setupExtensionEventHandlers(
                 };
 
                 repository.add(music);
-                {
-                    const emitResult = emitter.emitMusicAdded(music);
-                    if (!emitResult.ok) {
-                        log.warn('external_music_add: failed to emit musicAdded', {
-                            error: emitResult.error,
-                            videoId,
-                        });
-                    }
-
-                    const urlListEmitResult = emitter.emitUrlList(
-                        repository.buildCompatList(),
-                    );
-                    if (!urlListEmitResult.ok) {
-                        log.warn('external_music_add: failed to emit url_list', {
-                            error: urlListEmitResult.error,
-                        });
-                    }
-
-                    const persistResult = await repository.persistAdd(music);
-                    if (!persistResult.ok) {
-                        log.warn('external_music_add: failed to persist', {
-                            error: persistResult.error,
-                            videoId,
-                        });
-                    }
-
-                    log.info('external_music_add: music added', {
-                        connectionId,
-                        socketId: socket.id,
-                        title: music.title,
+                const emitResult = emitter.emitMusicAdded(music);
+                if (!emitResult.ok) {
+                    log.warn('external_music_add: failed to emit musicAdded', {
+                        error: emitResult.error,
                         videoId,
                     });
                 }
+
+                const urlListEmitResult = emitter.emitUrlList(
+                    repository.buildCompatList(),
+                );
+                if (!urlListEmitResult.ok) {
+                    log.warn('external_music_add: failed to emit url_list', {
+                        error: urlListEmitResult.error,
+                    });
+                }
+
+                const persistResult = await repository.persistAdd(music);
+                if (!persistResult.ok) {
+                    log.warn('external_music_add: failed to persist', {
+                        error: persistResult.error,
+                        videoId,
+                    });
+                }
+
+                log.info('external_music_add: music added', {
+                    connectionId,
+                    socketId: socket.id,
+                    title: music.title,
+                    videoId,
+                });
             } catch (error) {
                 log.warn('external_music_add: failed to process', {
                     error: error,

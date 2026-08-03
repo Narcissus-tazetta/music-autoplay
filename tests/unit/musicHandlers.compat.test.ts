@@ -3,9 +3,8 @@ import type { YouTubeService } from '@/server/services/youtubeService';
 import { createMusicHandlers } from '@/server/socket/handlers/musicHandlers';
 import type { Music } from '@/shared/stores/musicStore';
 import { ok } from '@/shared/utils/errors/result-handlers';
-import { afterEach, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { Socket } from 'socket.io';
-import { resetMusicService } from '../../src/server/music/musicServiceFactory';
 
 type RegisteredHandler = (...args: unknown[]) => void;
 
@@ -60,10 +59,6 @@ function waitForReply(handler: RegisteredHandler, ...args: unknown[]) {
 }
 
 describe('musicHandlers Socket.IO compatibility', () => {
-    afterEach(() => {
-        resetMusicService();
-    });
-
     test('addMusic は旧 url + requesterHash + requesterName payload を受け付ける', async () => {
         const { deps, musicDB } = createDeps();
         const { handlers, socket } = createSocket();

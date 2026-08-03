@@ -27,6 +27,12 @@ interface Deps {
     fileStore: Store;
     isAdmin?: (requesterHash?: string) => boolean;
     rateLimiter?: RateLimiter;
+    /**
+     * The MusicService to use. SocketRuntime owns one instance for the whole server and
+     * passes it in, so every connection shares it. When omitted (standalone tests) a fresh
+     * one is built from the deps below.
+     */
+    musicService?: MusicService;
 }
 
 const SocketAddMusicSchema = z.preprocess(input => {
@@ -67,7 +73,7 @@ export function createMusicHandlers(deps: Deps): {
         emitFn = () => false;
     }
 
-    const musicService: MusicService = createMusicService({
+    const musicService: MusicService = deps.musicService ?? createMusicService({
         emitFn,
         fileStore,
         musicDB,

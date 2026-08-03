@@ -11,8 +11,8 @@ interface UseInterpolatedTimeParams {
 interface Anchor {
     time: number;
     perf: number;
+    /** 0 while buffering/stalled, so interpolation freezes without a separate flag. */
     rate: number;
-    buffering: boolean;
 }
 
 export function useInterpolatedTime({
@@ -107,12 +107,7 @@ export function useInterpolatedTime({
         if (status.type === 'paused') {
             isPausedRef.current = true;
             if (typeof status.currentTime === 'number') {
-                anchorRef.current = {
-                    buffering: false,
-                    perf: performance.now(),
-                    rate: 0,
-                    time: status.currentTime,
-                };
+                anchorRef.current = { perf: performance.now(), rate: 0, time: status.currentTime };
                 setDisplayTime(status.currentTime);
             }
             setIsEffectivelyPaused(true);
@@ -126,7 +121,6 @@ export function useInterpolatedTime({
             const stalled = status.consecutiveStalls ? status.consecutiveStalls > 0 : false;
 
             anchorRef.current = {
-                buffering,
                 perf: performance.now(),
                 rate: buffering || stalled ? 0 : rate,
                 time: status.currentTime,

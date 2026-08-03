@@ -212,6 +212,8 @@ export function makeConnectionHandler(
                     emit: (ev: string, payload: unknown, opts?: EmitOptions) => handlerEmitter.emit(ev, payload, opts),
                     fileStore: deps.fileStore,
                     io: deps.getIo(),
+                    // Reuse the runtime's single MusicService rather than building one per connection.
+                    musicService: deps.getMusicService(),
                     isAdmin: (h?: string) => {
                         try {
                             return !!(h && h === deps.adminHash);
