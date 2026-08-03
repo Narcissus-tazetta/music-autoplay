@@ -336,5 +336,3 @@ export function makeConnectionHandler(
         });
     };
 }
-
-export default makeConnectionHandler;

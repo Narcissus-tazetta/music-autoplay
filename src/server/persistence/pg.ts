@@ -89,5 +89,3 @@ export class PgStore {
         return;
     }
 }
-
-export default PgStore;

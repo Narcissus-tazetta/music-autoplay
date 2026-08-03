@@ -20,5 +20,3 @@ export function getMessage(key: MessageKey, ...args: unknown[]): string {
     if (typeof v === 'function') return (v as (...a: unknown[]) => string)(...args);
     return v as string;
 }
-
-export default MESSAGES;

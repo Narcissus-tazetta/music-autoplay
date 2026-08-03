@@ -34,6 +34,7 @@ storybook-static/
 *.tsbuildinfo
 
 # Testing
+test-results/
 coverage/
 .nyc_output/
 junit.xml

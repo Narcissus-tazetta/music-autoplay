@@ -92,5 +92,3 @@ export const createSocketIo = (server: HttpServer): CreatedIo => {
         return { io: null, socketPath };
     }
 };
-
-export default createSocketIo;

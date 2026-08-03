@@ -98,5 +98,3 @@ export async function initSocketServer(
 
     return { io, runtime, socketPath: created.socketPath };
 }
-
-export default initSocketServer;

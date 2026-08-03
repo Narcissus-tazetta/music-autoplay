@@ -38,7 +38,5 @@ export class MetricsManager {
     }
 }
 
-export default MetricsManager;
-
 /** Single process-wide instance; the DI container previously handed out this same object. */
 export const metricsManager = new MetricsManager();

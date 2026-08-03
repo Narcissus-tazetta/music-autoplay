@@ -164,11 +164,14 @@ export async function configureApp(
             (viteDevServer as { middlewares: express.RequestHandler }).middlewares,
         );
     } else {
+        // Vite emits content-hashed filenames under /assets, so a new build produces new URLs.
+        // `immutable` with maxAge 0 contradicted itself and made browsers revalidate every asset
+        // on every navigation.
         app.use(
             '/assets',
             express.static('build/client/assets', {
                 immutable: true,
-                maxAge: '0',
+                maxAge: '1y',
             }),
         );
     }

@@ -7,14 +7,11 @@ declare global {
         | undefined;
 }
 import { SERVER_ENV } from '@/app/env.server';
-import { MongoClient } from 'mongodb';
-import { HistoryMongoHybridStore, HistoryMongoStore } from './history/historyMongoStore';
-import { getHistoryService, HistoryService, setHistoryService } from './history/historyService';
+import { getHistoryService, type HistoryService } from './history/historyService';
 import logger from './logger';
 import type { Store } from './persistence';
-import { FileStore, MongoHybridStore, MongoStore, PgHybridStore, PgStore } from './persistence';
-import { RequestLogMongoHybridStore, RequestLogMongoStore } from './requestLog/requestLogMongoStore';
-import { RequestLogService, setRequestLogService } from './requestLog/requestLogService';
+import { createPersistence, registerPersistenceSingletons } from './persistence/provider';
+import type { RequestLogService } from './requestLog/requestLogService';
 import CacheService from './services/cacheService';
 import { MetricsManager, metricsManager } from './services/metricsManager';
 import { RateLimiterManager } from './services/rateLimiterManager';
@@ -36,83 +33,12 @@ export interface BootstrapResult {
 export async function bootstrap(): Promise<BootstrapResult> {
     const cacheService = new CacheService();
 
-    const persistenceProvider = SERVER_ENV.PERSISTENCE_PROVIDER;
-
-    let fileStore: Store;
-    let closeDb: (() => Promise<void>) | undefined;
-    let historyService: HistoryService;
-    let requestLogService: RequestLogService;
-
-    if (persistenceProvider === 'mongo') {
-        const uri = SERVER_ENV.MONGODB_URI;
-        if (!uri) throw new Error('PERSISTENCE_PROVIDER=mongo requires MONGODB_URI');
-        const dbName = SERVER_ENV.MONGODB_DB_NAME;
-        const collectionName = SERVER_ENV.MONGODB_COLLECTION;
-        const requestLogCollectionName = SERVER_ENV.MONGODB_REQUEST_LOG_COLLECTION;
-        const client = new MongoClient(uri, {
-            serverSelectionTimeoutMS: 5_000,
-        });
-
-        const mongo = new MongoStore({ uri, collectionName, dbName, client });
-        await mongo.initialize();
-        const initial = await mongo.loadAll();
-        fileStore = new MongoHybridStore(mongo, initial);
-
-        const historyMongo = new HistoryMongoStore({
-            uri,
-            dbName,
-            collectionName: 'history',
-            client,
-        });
-        await historyMongo.initialize();
-        const historyInitial = await historyMongo.loadAll();
-        historyService = new HistoryService(new HistoryMongoHybridStore(historyMongo, historyInitial));
-        setHistoryService(historyService);
-
-        const requestLogMongo = new RequestLogMongoStore({
-            uri,
-            dbName,
-            collectionName: requestLogCollectionName,
-            client,
-        });
-        await requestLogMongo.initialize();
-        const requestLogInitial = await requestLogMongo.loadAll();
-        requestLogService = new RequestLogService(
-            new RequestLogMongoHybridStore(requestLogMongo, requestLogInitial),
-        );
-        setRequestLogService(requestLogService);
-
-        closeDb = async () => {
-            await Promise.all([mongo.close(), historyMongo.close(), requestLogMongo.close()]);
-            await client.close();
-        };
-
-        logger.info('persistence provider: mongo', {
-            dbName,
-            collectionName,
-            historyCollection: 'history',
-            requestLogCollection: requestLogCollectionName,
-        });
-    } else if (persistenceProvider === 'pg') {
-        const pg = new PgStore();
-        await pg.initialize();
-        const initial = await pg.loadAll();
-        fileStore = new PgHybridStore(pg, initial);
-        closeDb = () => pg.close();
-        historyService = new HistoryService();
-        setHistoryService(historyService);
-        requestLogService = new RequestLogService();
-        setRequestLogService(requestLogService);
-
-        logger.info('persistence provider: pg');
-    } else {
-        fileStore = new FileStore();
-        historyService = new HistoryService();
-        setHistoryService(historyService);
-        requestLogService = new RequestLogService();
-        setRequestLogService(requestLogService);
-        logger.info('persistence provider: file');
-    }
+    const persistence = await createPersistence();
+    registerPersistenceSingletons(persistence);
+    const fileStore: Store = persistence.store;
+    const historyService: HistoryService = persistence.historyService;
+    const requestLogService: RequestLogService = persistence.requestLogService;
+    const closeDb = persistence.close;
 
     const youtubeService = new YouTubeService(undefined, cacheService);
 
