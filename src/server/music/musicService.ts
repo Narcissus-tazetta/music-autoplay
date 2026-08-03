@@ -81,8 +81,7 @@ export class MusicService {
             ? Math.max(0, this.repository.getPosition(insertAfterId) + 1)
             : undefined;
 
-        const addResult = this.repository.add(music, atIndex);
-        if (!addResult.ok) return err(addResult.error);
+        this.repository.add(music, atIndex);
 
         logger.info('music added', {
             id: music.id,
@@ -177,8 +176,7 @@ export class MusicService {
             });
         }
 
-        const removeResult = this.repository.remove(id);
-        if (!removeResult.ok) return err(removeResult.error);
+        this.repository.remove(id);
 
         logger.info('music removed', {
             id,
@@ -241,8 +239,7 @@ export class MusicService {
             });
         }
 
-        const reorderResult = this.repository.reorder(id, afterId);
-        if (!reorderResult.ok) return err(reorderResult.error);
+        this.repository.reorder(id, afterId);
 
         logger.info('music reordered', { afterId, id, requesterHash });
 

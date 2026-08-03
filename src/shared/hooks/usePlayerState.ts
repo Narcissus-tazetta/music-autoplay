@@ -47,7 +47,12 @@ export function useInterpolatedTime({
     const lastVideoIdRef = useRef<string>('');
     const isPausedRef = useRef(false);
     const durationRef = useRef(duration);
-    durationRef.current = duration;
+
+    // Kept in an effect for the same reason as useInitialStatusReveal below: a render that
+    // React discards must not leave the ref describing it.
+    useEffect(() => {
+        durationRef.current = duration;
+    }, [duration]);
 
     useEffect(() => {
         if (videoId && videoId !== lastVideoIdRef.current) {

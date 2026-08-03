@@ -665,8 +665,8 @@ export function setupExtensionEventHandlers(
                         nextId = preList[nIdx].id;
                     }
 
-                    const rmRes = repository.remove(resolvedVideoId);
-                    if (rmRes.ok) {
+                    repository.remove(resolvedVideoId);
+                    {
                         recordCompletedHistory(resolvedVideoId, 'paused_ended', endedMusic);
                         emitter.emitMusicRemoved(resolvedVideoId);
                         emitter.emitUrlList(repository.buildCompatList());
@@ -734,8 +734,8 @@ export function setupExtensionEventHandlers(
                 }
 
                 if (repository.has(videoId)) {
-                    const removeResult = repository.remove(videoId);
-                    if (removeResult.ok) {
+                    repository.remove(videoId);
+                    {
                         const emitResult = emitter.emitMusicRemoved(videoId);
                         if (!emitResult.ok) {
                             log.warn('delete_url: failed to emit musicRemoved', {
@@ -764,11 +764,6 @@ export function setupExtensionEventHandlers(
                             connectionId,
                             socketId: socket.id,
                             url,
-                            videoId,
-                        });
-                    } else {
-                        log.warn('delete_url: failed to remove music', {
-                            error: removeResult.error,
                             videoId,
                         });
                     }
@@ -1139,8 +1134,8 @@ export function setupExtensionEventHandlers(
                     createdAt: Date.now(),
                 });
 
-                const removeResult = repository.remove(videoId);
-                if (removeResult.ok) {
+                repository.remove(videoId);
+                {
                     recordCompletedHistory(videoId, 'video_ended', endedMusic);
                     const emitResult = emitter.emitMusicRemoved(videoId);
                     if (!emitResult.ok) {
@@ -1166,13 +1161,6 @@ export function setupExtensionEventHandlers(
                             videoId,
                         });
                     }
-                } else {
-                    log.warn('video_ended: failed to remove music', {
-                        error: removeResult.error,
-                        videoId,
-                    });
-                    pendingNextByTabId.delete(tabId);
-                    return;
                 }
             } catch (error) {
                 log.warn('video_ended: failed to process', {
@@ -1819,8 +1807,8 @@ export function setupExtensionEventHandlers(
                     title: videoDetails.title,
                 };
 
-                const addResult = repository.add(music);
-                if (addResult.ok) {
+                repository.add(music);
+                {
                     const emitResult = emitter.emitMusicAdded(music);
                     if (!emitResult.ok) {
                         log.warn('external_music_add: failed to emit musicAdded', {
@@ -1850,11 +1838,6 @@ export function setupExtensionEventHandlers(
                         connectionId,
                         socketId: socket.id,
                         title: music.title,
-                        videoId,
-                    });
-                } else {
-                    log.warn('external_music_add: failed to add music', {
-                        error: addResult.error,
                         videoId,
                     });
                 }
