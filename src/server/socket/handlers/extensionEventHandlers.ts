@@ -1,17 +1,20 @@
-import type { Music } from '@/shared/stores/musicStore';
-import type { Socket } from 'socket.io';
 import { getHistoryService, type HistoryService } from '../../history/historyService';
-import type { AppLogger } from '../../logger';
-import type { MusicEventEmitter } from '../../music/emitter/musicEventEmitter';
-import type { MusicRepository } from '../../music/repository/musicRepository';
-import type { YouTubeService } from '../../services/youtubeService';
-import type { SocketManager } from '../managers/manager';
-import { createEventRegistrar, createExtensionContextBase, type ExtensionContext } from './extensionHandlerContext';
+import {
+    createEventRegistrar,
+    createExtensionContextBase,
+    type ExtensionContext,
+    type ExtensionHandlerDeps,
+} from './extensionHandlerContext';
 import { createHistoryRecorder } from './historyRecording';
 import { registerPlaybackHandlers } from './playbackHandlers';
 import { registerProgressHandlers } from './progressHandlers';
 import { registerQueueHandlers } from './queueHandlers';
 import { registerVideoStateHandlers } from './videoStateHandlers';
+
+/** historyService はテストからの差し替え用。省略時はプロセス共有のものを使う。 */
+export type SetupExtensionEventHandlersDeps =
+    & Omit<ExtensionHandlerDeps, 'historyService'>
+    & { historyService?: HistoryService };
 
 const countSocketListeners = (ctx: ExtensionContext): number =>
     ctx.socket.eventNames().reduce((sum, name) => {
@@ -119,27 +122,10 @@ const registerSessionHandlers = (ctx: ExtensionContext): void => {
  * distributed as a signed CRX, so event names, payload shapes and callback
  * arities are a frozen contract — only the internal wiring lives here.
  */
-export function setupExtensionEventHandlers(
-    socket: Socket,
-    log: AppLogger,
-    connectionId: string,
-    musicDB: Map<string, Music>,
-    manager: SocketManager,
-    repository: MusicRepository,
-    emitter: MusicEventEmitter,
-    youtubeService: YouTubeService,
-    historyService: HistoryService = getHistoryService(),
-) {
-    void musicDB;
+export function setupExtensionEventHandlers(deps: SetupExtensionEventHandlersDeps) {
     const base = createExtensionContextBase({
-        connectionId,
-        emitter,
-        historyService,
-        log,
-        manager,
-        repository,
-        socket,
-        youtubeService,
+        ...deps,
+        historyService: deps.historyService ?? getHistoryService(),
     });
     const ctx: ExtensionContext = { ...base, history: createHistoryRecorder(base) };
 

@@ -45,16 +45,15 @@ describe('move_next_video / move_prev_video handlers', () => {
         const youtubeService: any = {};
         const log: any = { info() {}, warn() {}, debug() {} };
 
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
             log,
-            'conn',
-            new Map(),
             manager,
-            repo as any,
-            emitter as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-        );
+        });
 
         socket.trigger('move_next_video', { url: 'https://youtu.be/AAAaaaAAA00', tabId: 1 });
         await new Promise(res => setTimeout(res, 0));
@@ -105,16 +104,15 @@ describe('move_next_video / move_prev_video handlers', () => {
         const youtubeService: any = {};
         const log: any = { info() {}, warn() {}, debug() {} };
 
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
             log,
-            'conn',
-            new Map(),
             manager,
-            repo as any,
-            emitter as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-        );
+        });
 
         socket.trigger('move_prev_video', { url: 'https://youtu.be/AAAaaaAAA00', tabId: 2 });
         await new Promise(res => setTimeout(res, 0));

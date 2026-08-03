@@ -36,16 +36,15 @@ describe('ad_state_changed sequences', () => {
         const youtubeService: any = {};
         const log: any = { info() {}, warn() {}, debug() {} };
 
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
             log,
-            'conn',
-            new Map(),
             manager,
-            repo as any,
-            emitter as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-        );
+        });
 
         socket.trigger('ad_state_changed', { url: 'https://youtu.be/AAAaaaAAA00', isAd: true, timestamp: Date.now() });
         await new Promise(res => setTimeout(res, 0));

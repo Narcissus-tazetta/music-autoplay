@@ -23,16 +23,15 @@ describe('progress ordering', () => {
 
         (socket as any).id = 'test-socket-id';
 
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
             log,
-            'conn',
-            new Map(),
             manager,
-            repo as any,
-            emitter as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-        );
+        });
 
         const base = Date.now();
         socket.trigger('youtube_video_state', {
@@ -84,16 +83,15 @@ describe('progress ordering', () => {
 
         (socket as any).id = 'test-socket-id';
 
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
             log,
-            'conn',
-            new Map(),
             manager,
-            repo as any,
-            emitter as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-        );
+        });
 
         const ts = Date.now();
         socket.trigger('youtube_video_state', {
@@ -142,16 +140,15 @@ describe('progress ordering', () => {
 
         (socket as any).id = 'test-socket-id';
 
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
             log,
-            'conn',
-            new Map(),
             manager,
-            repo as any,
-            emitter as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-        );
+        });
 
         const base = Date.now();
         socket.trigger('youtube_video_state', {
@@ -210,16 +207,15 @@ describe('progress ordering', () => {
 
         (socket as any).id = 'test-socket-id';
 
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
             log,
-            'conn',
-            new Map(),
             manager,
-            repo as any,
-            emitter as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-        );
+        });
 
         const realDateNow = Date.now;
         try {
@@ -321,16 +317,15 @@ describe('progress ordering', () => {
 
         (socket as any).id = 'test-socket-id';
 
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
             log,
-            'conn',
-            new Map(),
             manager,
-            repo as any,
-            emitter as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-        );
+        });
 
         const base = Date.now();
         socket.trigger('progress_update_batch', {
@@ -396,16 +391,15 @@ describe('progress ordering', () => {
 
         (socket as any).id = 'test-socket-id';
 
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
             log,
-            'conn',
-            new Map(),
             manager,
-            repo as any,
-            emitter as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-        );
+        });
 
         const realDateNow = Date.now;
         try {
@@ -460,16 +454,15 @@ describe('progress ordering', () => {
 
         (socket as any).id = 'test-socket-id';
 
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
             log,
-            'conn',
-            new Map(),
             manager,
-            repo as any,
-            emitter as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-        );
+        });
 
         const base = Date.now();
         socket.trigger('youtube_video_state', {
@@ -552,17 +545,16 @@ describe('progress ordering', () => {
 
         (socket as any).id = 'test-socket-id';
 
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
+            historyService: historyService as any,
             log,
-            'conn',
-            new Map(),
             manager,
-            repo as any,
-            emitter as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-            historyService as any,
-        );
+        });
 
         const base = Date.now();
         const url = 'https://youtu.be/dQw4w9WgXcQ';
