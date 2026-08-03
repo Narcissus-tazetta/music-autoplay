@@ -5,7 +5,7 @@ import util from 'node:util';
 import stripAnsi from 'strip-ansi';
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
-import { getConfigService } from './config/configService';
+import { loggingConfig } from './config';
 import { extractMetaFields, normalizeMetaForPrint } from './loggerMeta';
 export interface SerializedError {
     message: string;
@@ -65,8 +65,7 @@ export interface AppLogger {
     debug: AppLogFn;
 }
 
-const configService = getConfigService();
-const logConfig = configService.getLoggingConfig();
+const logConfig = loggingConfig;
 const isDev = logConfig.isDev;
 const isProd = !isDev;
 const configuredLogLevel = logConfig.level;

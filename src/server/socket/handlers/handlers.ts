@@ -6,7 +6,6 @@ import type { Store } from '../../persistence';
 import type { RateLimiter } from '../../services/rateLimiter';
 import type { YouTubeService } from '../../services/youtubeService';
 import type { EmitOptions } from '../../utils/safeEmit';
-import ServiceResolver from '../../utils/serviceResolver';
 import type { SocketManager } from '../managers/manager';
 import { registerBatchHandlers } from './eventHandler';
 import { createMusicHandlers } from './musicHandlers';
@@ -40,8 +39,6 @@ export function registerSocketHandlers(
     ctx: { socketId: string; connectionId: string; requestId?: string },
     deps: HandlerDeps,
 ) {
-    const resolver = ServiceResolver.getInstance();
-
     const getAllMusicsHandler = createGetAllMusicsHandler(deps.musicDB);
     const getHistoryHandler = createGetHistoryHandler(getHistoryService());
 
@@ -61,8 +58,7 @@ export function registerSocketHandlers(
         }
     }
 
-    const youtubeService = deps.youtubeService ?? resolver.resolve<YouTubeService>('youtubeService');
-    const fileStore = deps.fileStore ?? resolver.resolve<Store>('fileStore');
+    const { fileStore, youtubeService } = deps;
 
     if (!youtubeService || !fileStore) throw new Error('youtubeService and fileStore are required');
 

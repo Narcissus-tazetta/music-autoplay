@@ -2,7 +2,6 @@ import { SERVER_ENV } from '@/app/env.server';
 import logger from '@/server/logger';
 import type { Music } from '@/shared/stores/musicStore';
 import { Pool } from 'pg';
-import { container } from '../di/container';
 
 interface DbMusicRow {
     id: string;
@@ -17,23 +16,9 @@ interface DbMusicRow {
 export class PgStore {
     private pool: Pool;
     constructor(connectionString?: string) {
-        const cfg = container.getOptional('configService') as
-            | { getString?(key: string): string }
-            | undefined;
-        const cfgVal = cfg?.getString?.('DATABASE_URL');
-        const envVal = typeof SERVER_ENV.DATABASE_URL === 'string'
-                && SERVER_ENV.DATABASE_URL.length > 0
-            ? SERVER_ENV.DATABASE_URL
-            : undefined;
+        const conn = connectionString || SERVER_ENV.DATABASE_URL || undefined;
 
-        const conn: string | undefined = connectionString
-            ?? (typeof cfgVal === 'string' && cfgVal.length > 0 ? cfgVal : envVal);
-
-        if (!conn) {
-            logger.warn(
-                'PgStore: no DATABASE_URL provided via args or ConfigService; falling back to SERVER_ENV or Pool defaults',
-            );
-        }
+        if (!conn) logger.warn('PgStore: no DATABASE_URL configured; falling back to Pool defaults');
 
         this.pool = new Pool({
             connectionString: conn,

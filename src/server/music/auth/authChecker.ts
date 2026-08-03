@@ -1,10 +1,9 @@
+import { SERVER_ENV } from '@/app/env.server';
 import type { HandlerError } from '@/shared/utils/errors';
 import { toHandlerError } from '@/shared/utils/errors';
 import type { Result } from '@/shared/utils/errors/result-handlers';
 import { err, ok } from '@/shared/utils/errors/result-handlers';
 import { createHash, timingSafeEqual } from 'node:crypto';
-import type ConfigService from '../../config/configService';
-import ServiceResolver from '../../utils/serviceResolver';
 
 export interface AuthContext {
     requesterHash?: string;
@@ -25,19 +24,7 @@ export class AuthChecker {
     }
 
     private initializeAdminSecret(adminSecret?: string): void {
-        let secret = adminSecret;
-
-        if (!secret) {
-            try {
-                const resolver = ServiceResolver.getInstance();
-                const configService = resolver.resolve<ConfigService>('configService');
-
-                if (configService && typeof configService.getString === 'function')
-                    secret = configService.getString('ADMIN_SECRET') ?? undefined;
-            } catch {
-                secret = undefined;
-            }
-        }
+        const secret = adminSecret ?? SERVER_ENV.ADMIN_SECRET;
 
         if (secret && secret.trim().length > 0) {
             try {

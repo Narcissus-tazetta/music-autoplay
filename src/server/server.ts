@@ -12,35 +12,31 @@ import { createRequestHandler } from '@react-router/express';
 import express from 'express';
 import { RouterContextProvider } from 'react-router';
 import { bootstrap } from './bootstrap';
+import { isProduction, isTest } from './config';
 import configureApp, { type ConfigureAppResult } from './configureApp';
 import { createAdminAuthenticator } from './middleware/adminAuth';
 import { createAdminRateLimiter } from './middleware/adminRateLimiter';
 import { getRequestLogService } from './requestLog/requestLogService';
 import { RateLimiterManager } from './services/rateLimiterManager';
-import { getConfig, safeNumber } from './utils/configUtils';
 import { logAuthFailure, logRateLimit, logSuspiciousRequest } from './utils/securityLogger';
 
 const app: express.Application = express();
-const config = getConfig();
 
-const adminUser = config.getString('ADMIN_USER') || SERVER_ENV.ADMIN_USER;
-const adminPassword = config.getString('ADMIN_PASSWORD') || SERVER_ENV.ADMIN_PASSWORD;
+const adminUser = SERVER_ENV.ADMIN_USER;
+const adminPassword = SERVER_ENV.ADMIN_PASSWORD;
 const adminAuthenticator = createAdminAuthenticator(adminUser, adminPassword);
 const adminRateLimiter = createAdminRateLimiter(3, 60 * 1000);
 
-const pathfinderUser = config.getString('PATHFINDER_USER') || SERVER_ENV.PATHFINDER_USER;
-const pathfinderPassword = config.getString('PATHFINDER_PASSWORD') || SERVER_ENV.PATHFINDER_PASSWORD;
+const pathfinderUser = SERVER_ENV.PATHFINDER_USER;
+const pathfinderPassword = SERVER_ENV.PATHFINDER_PASSWORD;
 // The pathfinder role is opt-in: without credentials configured, its login is simply disabled.
 const pathfinderAuthenticator = pathfinderUser && pathfinderPassword
     ? createAdminAuthenticator(pathfinderUser, pathfinderPassword)
     : undefined;
 
-const portCandidate = config.getNumber('PORT');
-const port = typeof portCandidate === 'number' && !Number.isNaN(portCandidate)
-    ? portCandidate
-    : safeNumber(SERVER_ENV.PORT, 3000);
+const port = SERVER_ENV.PORT;
 
-if (config.nodeEnv !== 'test') {
+if (!isTest) {
     replaceConsoleWithLogger();
     // Without this, an unhandled rejection kills the process with nothing in the winston logs.
     installProcessHandlers();
@@ -53,7 +49,7 @@ const {
 } = await bootstrap();
 
 const server = app.listen(port, () => {
-    const envName = config.nodeEnv;
+    const envName = SERVER_ENV.NODE_ENV;
     logger.info(
         `Server[${envName}] running at ${port} | ${new Date().toLocaleString('ja-JP')}`,
     );
@@ -75,7 +71,7 @@ server.on('error', (err: Error) => {
 
 await socketServer.init(server);
 
-const viteDevServer = config.nodeEnv === 'production'
+const viteDevServer = isProduction
     ? null
     : await import('vite').then(vite =>
         vite.createServer({
@@ -94,11 +90,7 @@ async function gracefulShutdown() {
     }
     isShuttingDown = true;
 
-    const shutdownTimeoutCandidate = config.getNumber('SHUTDOWN_TIMEOUT_MS');
-    const shutdownTimeout = typeof shutdownTimeoutCandidate === 'number'
-            && !Number.isNaN(shutdownTimeoutCandidate)
-        ? shutdownTimeoutCandidate
-        : safeNumber(SERVER_ENV.SHUTDOWN_TIMEOUT_MS, 5000);
+    const shutdownTimeout = SERVER_ENV.SHUTDOWN_TIMEOUT_MS;
     const forceExit = () => {
         logger.error('graceful shutdown timeout, forcing exit');
         process.exit(1);
@@ -235,9 +227,9 @@ app.get('/api/metrics', (req, res) => {
 
 app.get('/api/socket-info', (req, res) => {
     try {
-        const socketPath = config.getString('SOCKET_PATH');
+        const socketPath = SERVER_ENV.SOCKET_PATH;
 
-        const corsRaw = config.getString('CORS_ORIGINS');
+        const corsRaw = SERVER_ENV.CORS_ORIGINS;
         const corsOrigins = (corsRaw || '')
             .split(',')
             .map((s: string) => s.trim())
@@ -301,7 +293,7 @@ app.post('/api/admin/login', express.json(), (req, res) => {
             }
 
             const origin = req.headers.origin || req.headers.referer;
-            const clientUrl = config.getString('CLIENT_URL') || SERVER_ENV.CLIENT_URL;
+            const clientUrl = SERVER_ENV.CLIENT_URL;
             const allowedOrigin = new URL(clientUrl).origin;
 
             if (!origin) {
@@ -420,17 +412,8 @@ app.get('/api/admin/status', (req, res) => {
     void handleStatus();
 });
 
-const toBoolean = (raw: string, fallback: boolean): boolean => {
-    const lower = raw.toLowerCase();
-    if (lower === 'true' || lower === '1' || lower === 'yes') return true;
-    if (lower === 'false' || lower === '0' || lower === 'no') return false;
-    return fallback;
-};
-
-const isDiagnosticsEnabled = () => toBoolean(config.getString('DIAG_MEM_ENABLED'), true);
-const requireAdminSecret = () => {
-    return toBoolean(config.getString('DIAG_MEM_REQUIRE_ADMIN_SECRET'), false);
-};
+const isDiagnosticsEnabled = () => SERVER_ENV.DIAG_MEM_ENABLED;
+const requireAdminSecret = () => SERVER_ENV.DIAG_MEM_REQUIRE_ADMIN_SECRET;
 
 async function isAdminSession(req: express.Request): Promise<boolean> {
     const session = await loginSession.getSession(req.headers.cookie ?? '');
@@ -497,7 +480,7 @@ app.get('/api/admin/diag/memory', (req, res) => {
 
             if (requireAdminSecret()) {
                 const headerSecret = req.headers['x-admin-secret'];
-                const adminSecret = config.getString('ADMIN_SECRET');
+                const adminSecret = SERVER_ENV.ADMIN_SECRET;
                 if (
                     typeof headerSecret !== 'string'
                     || headerSecret.length === 0
@@ -666,7 +649,7 @@ app.all(
 );
 
 logger.info('All middleware and routes registered successfully', {
-    environment: config.nodeEnv,
+    environment: SERVER_ENV.NODE_ENV,
     port,
     timestamp: new Date().toISOString(),
 });

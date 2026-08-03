@@ -6,9 +6,8 @@ declare global {
         }
         | undefined;
 }
+import { SERVER_ENV } from '@/app/env.server';
 import { MongoClient } from 'mongodb';
-import { getConfigService } from './config/configService';
-import { container } from './di/container';
 import { HistoryMongoHybridStore, HistoryMongoStore } from './history/historyMongoStore';
 import { getHistoryService, HistoryService, setHistoryService } from './history/historyService';
 import logger from './logger';
@@ -17,7 +16,7 @@ import { FileStore, MongoHybridStore, MongoStore, PgHybridStore, PgStore } from 
 import { RequestLogMongoHybridStore, RequestLogMongoStore } from './requestLog/requestLogMongoStore';
 import { RequestLogService, setRequestLogService } from './requestLog/requestLogService';
 import CacheService from './services/cacheService';
-import MetricsManager from './services/metricsManager';
+import { MetricsManager, metricsManager } from './services/metricsManager';
 import { RateLimiterManager } from './services/rateLimiterManager';
 import { YouTubeService } from './services/youtubeService';
 import { SocketServerInstance } from './socket';
@@ -35,13 +34,9 @@ export interface BootstrapResult {
 }
 
 export async function bootstrap(): Promise<BootstrapResult> {
-    const configService = getConfigService();
     const cacheService = new CacheService();
 
-    const persistenceProvider = (configService.getString(
-        'PERSISTENCE_PROVIDER',
-        'file',
-    ) ?? 'file') as 'file' | 'pg' | 'mongo';
+    const persistenceProvider = SERVER_ENV.PERSISTENCE_PROVIDER;
 
     let fileStore: Store;
     let closeDb: (() => Promise<void>) | undefined;
@@ -49,15 +44,11 @@ export async function bootstrap(): Promise<BootstrapResult> {
     let requestLogService: RequestLogService;
 
     if (persistenceProvider === 'mongo') {
-        const uri = configService.getString('MONGODB_URI');
+        const uri = SERVER_ENV.MONGODB_URI;
         if (!uri) throw new Error('PERSISTENCE_PROVIDER=mongo requires MONGODB_URI');
-        const dbName = configService.getString('MONGODB_DB_NAME', 'musicReq') ?? 'musicReq';
-        const collectionName = configService.getString('MONGODB_COLLECTION', 'musicRequests')
-            ?? 'musicRequests';
-        const requestLogCollectionName = configService.getString(
-            'MONGODB_REQUEST_LOG_COLLECTION',
-            'requestLogs',
-        ) ?? 'requestLogs';
+        const dbName = SERVER_ENV.MONGODB_DB_NAME;
+        const collectionName = SERVER_ENV.MONGODB_COLLECTION;
+        const requestLogCollectionName = SERVER_ENV.MONGODB_REQUEST_LOG_COLLECTION;
         const client = new MongoClient(uri, {
             serverSelectionTimeoutMS: 5_000,
         });
@@ -123,15 +114,9 @@ export async function bootstrap(): Promise<BootstrapResult> {
         logger.info('persistence provider: file');
     }
 
-    const youtubeService = new YouTubeService(undefined, configService, cacheService);
-    const metricsManager = new MetricsManager();
+    const youtubeService = new YouTubeService(undefined, cacheService);
 
     const socketServer = new SocketServerInstance(youtubeService, fileStore);
-
-    container.register('fileStore', () => fileStore);
-    container.register('youtubeService', () => youtubeService);
-    container.register('configService', () => configService);
-    container.register('metricsManager', () => metricsManager);
 
     const appShutdownHandlers: (() => Promise<void> | void)[] = [];
     appShutdownHandlers.push(async () => {
@@ -185,8 +170,8 @@ export async function bootstrap(): Promise<BootstrapResult> {
         }
     });
 
-    const diagEnabled = configService.getBoolean('DIAG_MEM_ENABLED', true);
-    const diagIntervalMs = configService.getNumber('DIAG_MEM_LOG_INTERVAL_MS', 30_000) ?? 30_000;
+    const diagEnabled = SERVER_ENV.DIAG_MEM_ENABLED;
+    const diagIntervalMs = SERVER_ENV.DIAG_MEM_LOG_INTERVAL_MS;
     const processWithInternals = process as NodeJS.Process & {
         _getActiveHandles?: () => unknown[];
         _getActiveRequests?: () => unknown[];
