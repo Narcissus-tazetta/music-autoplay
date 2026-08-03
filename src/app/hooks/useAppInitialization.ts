@@ -1,9 +1,14 @@
 import type { SessionRole } from '@/shared/stores/adminStore';
 import { useAdminStore } from '@/shared/stores/adminStore';
 import type { Music } from '@/shared/stores/musicStore';
+import { useMusicStore } from '@/shared/stores/musicStore';
+import { useSettingsStore } from '@/shared/stores/settingsStore';
 import normalizeApiResponse from '@/shared/utils/api';
 import { parseApiErrorForUI } from '@/shared/utils/apiUi';
 import { useEffect } from 'react';
+import { z } from 'zod';
+
+const SettingsSchema = z.object({ ytStatusVisible: z.boolean().optional() }).passthrough();
 
 const isMusic = (v: unknown): v is Music => {
     if (!v || typeof v !== 'object') return false;
@@ -32,22 +37,16 @@ export function useAppInitialization(): void {
                 if (import.meta.env.DEV) console.debug('admin status check failed');
             }
 
-            const { useMusicStore } = await import('@/shared/stores/musicStore');
             const store = useMusicStore.getState();
             try {
                 const resp = await fetch('/api/settings');
                 if (resp.ok && resp.status === 200) {
                     const rawData: unknown = await resp.json();
-                    const { z } = await import('zod');
-                    const SettingsSchema = z
-                        .object({ ytStatusVisible: z.boolean().optional() })
-                        .passthrough();
                     const parsed = SettingsSchema.safeParse(rawData);
                     if (
                         parsed.success
                         && typeof parsed.data.ytStatusVisible === 'boolean'
                     ) {
-                        const { useSettingsStore } = await import('@/shared/stores/settingsStore');
                         useSettingsStore
                             .getState()
                             .setYtStatusVisible(parsed.data.ytStatusVisible);

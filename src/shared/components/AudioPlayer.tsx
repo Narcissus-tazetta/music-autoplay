@@ -104,10 +104,9 @@ function AudioPlayerInner({
     status,
     music,
 }: AudioPlayerProps): ReactElement | null {
-    const settings = useSettingsStore();
     const isAdmin = useAdminStore(s => s.isAdmin);
-    const ytStatusVisible = settings.ytStatusVisible;
-    const ytAdminControlsEnabled = settings.ytAdminControlsEnabled;
+    const ytStatusVisible = useSettingsStore(s => s.ytStatusVisible);
+    const ytAdminControlsEnabled = useSettingsStore(s => s.ytAdminControlsEnabled);
 
     const videoId = (status?.type === 'playing' && (status.musicId || status.videoId))
         || (status?.type === 'paused' && (status.musicId || status.videoId))

@@ -21,8 +21,7 @@ interface StatusBadgeProps {
 }
 
 function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
-    const settings = useSettingsStore();
-    const ytStatusVisible = settings.ytStatusVisible;
+    const ytStatusVisible = useSettingsStore(s => s.ytStatusVisible);
 
     const isAdvertisement = status?.type === 'playing' && status.isAdvertisement === true;
     const isTransitioning = useTransitioningHold(status);
@@ -148,9 +147,9 @@ function StatusBadgeCompact({ status, music }: Omit<StatusBadgeProps, 'mode'>) {
 }
 
 function StatusBadgeInner({ status, music, mode }: StatusBadgeProps) {
-    const settings = useSettingsStore();
-    const resolvedMode = mode ?? settings.ytStatusMode;
-    const ytStatusVisible = settings.ytStatusVisible;
+    const ytStatusMode = useSettingsStore(s => s.ytStatusMode);
+    const ytStatusVisible = useSettingsStore(s => s.ytStatusVisible);
+    const resolvedMode = mode ?? ytStatusMode;
     const closedVisibility = useClosedNotificationVisibility(status);
     const revealedStatus = useInitialStatusReveal(status);
     const enrichedStatus = revealedStatus?.type === 'paused' && !('currentTime' in revealedStatus)
