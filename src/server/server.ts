@@ -6,7 +6,7 @@ import {
     loginSession,
     type SessionRole,
 } from '@/app/sessions.server';
-import logger, { replaceConsoleWithLogger } from '@/server/logger';
+import logger, { installProcessHandlers, replaceConsoleWithLogger } from '@/server/logger';
 import { type ServerContext, serverContext } from '@/shared/types/server';
 import { createRequestHandler } from '@react-router/express';
 import express from 'express';
@@ -18,6 +18,7 @@ import { createAdminRateLimiter } from './middleware/adminRateLimiter';
 import { getRequestLogService } from './requestLog/requestLogService';
 import { RateLimiterManager } from './services/rateLimiterManager';
 import { getConfig, safeNumber } from './utils/configUtils';
+import { logAuthFailure, logRateLimit, logSuspiciousRequest } from './utils/securityLogger';
 
 const app: express.Application = express();
 const config = getConfig();
@@ -39,7 +40,11 @@ const port = typeof portCandidate === 'number' && !Number.isNaN(portCandidate)
     ? portCandidate
     : safeNumber(SERVER_ENV.PORT, 3000);
 
-if (config.nodeEnv !== 'test') replaceConsoleWithLogger();
+if (config.nodeEnv !== 'test') {
+    replaceConsoleWithLogger();
+    // Without this, an unhandled rejection kills the process with nothing in the winston logs.
+    installProcessHandlers();
+}
 const {
     appShutdownHandlers,
     socketServer,
@@ -269,7 +274,7 @@ app.post('/api/admin/login', express.json(), (req, res) => {
             const rateLimitKey = typeof clientIp === 'string' ? clientIp : clientIp[0] || 'unknown';
             if (adminRateLimiter.isLocked(rateLimitKey)) {
                 const retryAfter = adminRateLimiter.getRetryAfterSeconds(rateLimitKey);
-                logger.info('Admin login attempt from rate-limited IP', { ip: rateLimitKey });
+                logRateLimit(req, '/api/admin/login', 3);
                 res.status(429).json({
                     isAdmin: false,
                     error: 'リクエストが多すぎます。しばらく後に再試行してください。',
@@ -287,6 +292,10 @@ app.post('/api/admin/login', express.json(), (req, res) => {
             const MAX_CREDENTIAL_LENGTH = 256;
             if (username.length > MAX_CREDENTIAL_LENGTH || password.length > MAX_CREDENTIAL_LENGTH) {
                 adminRateLimiter.recordFailure(rateLimitKey);
+                logSuspiciousRequest(req, 'oversized admin credentials', {
+                    passwordLength: password.length,
+                    usernameLength: username.length,
+                });
                 res.status(400).json({ isAdmin: false, error: 'ユーザー名またはパスワードが長すぎます' });
                 return;
             }
@@ -297,7 +306,7 @@ app.post('/api/admin/login', express.json(), (req, res) => {
 
             if (!origin) {
                 adminRateLimiter.recordFailure(rateLimitKey);
-                logger.warn('CSRF protection: Missing origin header');
+                logSuspiciousRequest(req, 'admin login without an Origin header');
                 res.status(403).json({
                     isAdmin: false,
                     error: 'オリジンヘッダーが見つかりません',
@@ -308,9 +317,9 @@ app.post('/api/admin/login', express.json(), (req, res) => {
             const requestOrigin = origin.startsWith('http') ? new URL(origin).origin : origin;
             if (requestOrigin !== allowedOrigin) {
                 adminRateLimiter.recordFailure(rateLimitKey);
-                logger.warn('Potential CSRF attack: Cross-origin admin login attempt', {
-                    origin: requestOrigin,
+                logSuspiciousRequest(req, 'cross-origin admin login attempt', {
                     expected: allowedOrigin,
+                    origin: requestOrigin,
                 });
                 res.status(403).json({
                     isAdmin: false,
@@ -324,7 +333,7 @@ app.post('/api/admin/login', express.json(), (req, res) => {
 
             if (!isAdminValid && !isPathfinderValid) {
                 adminRateLimiter.recordFailure(rateLimitKey);
-                logger.info('Admin login failed', { ip: rateLimitKey });
+                logAuthFailure(req, 'invalid admin credentials', username);
                 res.status(401).json({ isAdmin: false });
                 return;
             }

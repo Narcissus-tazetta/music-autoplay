@@ -36,6 +36,11 @@ export async function initSocketServer(
         youtubeService?: YouTubeService;
         adminHash?: string;
         opts: RuntimeOptions;
+        // SocketServerInstance owns these: it reports their stats via getDiagnostics() and
+        // tears them down in close(). Creating separate ones here left those calls pointing
+        // at idle objects while the real timers kept running.
+        timerManager?: TimerManager;
+        windowCloseManager?: WindowCloseManager;
     },
 ): Promise<InitSocketServerResult> {
     const { musicDB, fileStore, youtubeService, adminHash, opts } = deps;
@@ -43,37 +48,36 @@ export async function initSocketServer(
     const serviceResolver = ServiceResolver.getInstance();
     const effectiveFileStore = fileStore ?? serviceResolver.resolve<Store>('fileStore');
     const effectiveYoutube = youtubeService ?? serviceResolver.resolve<YouTubeService>('youtubeService');
-    const effectiveAdminHash = adminHash ?? serviceResolver.resolve<string>('adminHash');
+    // No 'adminHash' token is ever registered, so the old container fallback here always
+    // resolved to undefined. The caller is the only real source.
+    const effectiveAdminHash = adminHash;
 
     const created = createSocketIo(server);
     if (!created.io) throw new Error('failed to initialize socket.io');
     const io = created.io;
     registerSocketIdentityMiddleware(io);
 
-    const [persistedData, timerManager, configService] = await Promise.all([
-        Promise.resolve(
-            (() => {
-                try {
-                    const persisted = effectiveFileStore ? effectiveFileStore.load() : [];
-                    return persisted;
-                } catch (error) {
-                    logger.warn('failed to restore persisted musics', { error: error });
-                    return [];
-                }
-            })(),
-        ),
-        Promise.resolve(new TimerManager()),
-        Promise.resolve(serviceResolver.resolve<ConfigService>('configService')),
-    ]);
+    const persistedData = (() => {
+        try {
+            return effectiveFileStore ? effectiveFileStore.load() : [];
+        } catch (error) {
+            logger.warn('failed to restore persisted musics', { error: error });
+            return [];
+        }
+    })();
+    const configService = serviceResolver.resolve<ConfigService>('configService');
+    const timerManager = deps.timerManager ?? new TimerManager();
 
     for (const m of persistedData) musicDB.set(m.id, m);
     logger.info('restored persisted musics', { count: persistedData.length });
 
-    const windowCloseDebounce = safeNumber(
-        configService?.getNumber('WINDOW_CLOSE_DEBOUNCE_MS'),
-        safeNumber(SERVER_ENV.WINDOW_CLOSE_DEBOUNCE_MS, 500),
-    );
-    const windowCloseManager = new WindowCloseManager(windowCloseDebounce);
+    const windowCloseManager = deps.windowCloseManager
+        ?? new WindowCloseManager(
+            safeNumber(
+                configService?.getNumber('WINDOW_CLOSE_DEBOUNCE_MS'),
+                safeNumber(SERVER_ENV.WINDOW_CLOSE_DEBOUNCE_MS, 500),
+            ),
+        );
 
     const yt = effectiveYoutube ?? new YouTubeService();
     if (!effectiveFileStore) throw new Error('fileStore is required (register it in DI or pass it via deps)');

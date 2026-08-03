@@ -1,0 +1,5 @@
+[test]
+# tests/setup.ts seeds the env vars that env.server.ts validates at import time.
+# Without this preload the file never ran, and tests only passed because the zod
+# schema carries isTest defaults for the same keys.
+preload = ["./tests/setup.ts"]

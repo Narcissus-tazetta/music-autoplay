@@ -8,29 +8,23 @@ export class ServiceContainer {
         this.factories.set(token, factory);
     }
 
+    // `has` rather than a truthiness check: a factory returning 0/''/false is a legitimate
+    // instance, and testing the value re-ran the factory on every lookup.
     get(token: string): unknown {
-        let instance = this.instances.get(token);
-        if (!instance) {
-            const factory = this.factories.get(token);
-            if (factory) {
-                instance = factory();
-                this.instances.set(token, instance);
-            } else {
-                throw new Error(`Service "${token}" not found in container`);
-            }
-        }
+        if (this.instances.has(token)) return this.instances.get(token);
+        const factory = this.factories.get(token);
+        if (!factory) throw new Error(`Service "${token}" not found in container`);
+        const instance = factory();
+        this.instances.set(token, instance);
         return instance;
     }
 
     getOptional(token: string): unknown {
-        let instance = this.instances.get(token);
-        if (!instance) {
-            const factory = this.factories.get(token);
-            if (factory) {
-                instance = factory();
-                this.instances.set(token, instance);
-            }
-        }
+        if (this.instances.has(token)) return this.instances.get(token);
+        const factory = this.factories.get(token);
+        if (!factory) return undefined;
+        const instance = factory();
+        this.instances.set(token, instance);
         return instance;
     }
 

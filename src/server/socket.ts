@@ -124,6 +124,8 @@ export class SocketServerInstance {
                 inactivityMsPlaying: this.remoteStatusInactivityMsPlaying,
                 inactivityMsPaused: this.remoteStatusInactivityMsPaused,
             },
+            timerManager: this.timerManager,
+            windowCloseManager: this.windowCloseManager,
             youtubeService: this.youtubeService,
         });
         logger.info('initSocketServer completed');
