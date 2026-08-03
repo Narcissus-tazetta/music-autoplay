@@ -86,6 +86,31 @@ describe('RateLimiterManager', () => {
                 manager.scheduleCleanup();
             }).not.toThrow();
         });
+
+        test('is idempotent: a second call does not start a competing timer chain', () => {
+            // Without the idempotency guard, this second call would overwrite cleanupTimerId
+            // with a new Timeout, leaving the first chain running with nothing able to cancel
+            // it via stopCleanup() (which only tracks the most recently assigned id).
+            manager.scheduleCleanup();
+            const managerAny = manager as unknown as { cleanupTimerId: unknown };
+            const firstTimerId = managerAny.cleanupTimerId;
+
+            manager.scheduleCleanup();
+
+            expect(managerAny.cleanupTimerId).toBe(firstTimerId);
+        });
+
+        test('can be rescheduled after stopCleanup()', () => {
+            manager.scheduleCleanup();
+            const managerAny = manager as unknown as { cleanupTimerId: unknown };
+            const firstTimerId = managerAny.cleanupTimerId;
+
+            manager.stopCleanup();
+            manager.scheduleCleanup();
+
+            expect(managerAny.cleanupTimerId).not.toBe(firstTimerId);
+            expect(managerAny.cleanupTimerId).toBeDefined();
+        });
     });
 
     describe('stopCleanup', () => {

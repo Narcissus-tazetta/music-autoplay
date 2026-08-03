@@ -76,10 +76,18 @@ export function useInterpolatedTime({
                 return;
             }
 
-            rafRef.current = requestAnimationFrame(animate);
-
+            // Stop rather than reschedule when there's nothing to interpolate yet (e.g. before
+            // the first status arrives, or a 'playing' status without currentTime) - scheduling
+            // unconditionally here would spin an rAF callback every frame doing no work. The
+            // status effect calls startLoop() again once an anchor is set, so this resumes on
+            // its own.
             const anchor = anchorRef.current;
-            if (!anchor) return;
+            if (!anchor) {
+                rafRef.current = null;
+                return;
+            }
+
+            rafRef.current = requestAnimationFrame(animate);
 
             const elapsed = (performance.now() - anchor.perf) / 1000;
             let time = anchor.time + elapsed * anchor.rate;

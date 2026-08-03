@@ -36,6 +36,11 @@ export class RateLimiterManager {
     }
 
     scheduleCleanup(): void {
+        // Idempotent: without this guard, a second call (e.g. a second
+        // createSocketServerComponents()) would start a concurrent timer chain that
+        // stopCleanup() can never reach, since it only tracks the most recently assigned id.
+        if (this.cleanupTimerId !== undefined) return;
+
         const scheduleNext = (): void => {
             const now = Date.now();
             const nextCleanupTime = this.getNextCleanupTime(now);
