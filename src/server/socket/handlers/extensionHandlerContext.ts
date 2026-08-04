@@ -1,4 +1,4 @@
-import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
+import type { Music, RemoteStatus } from '@/shared/types/music';
 import { isRecord } from '@/shared/utils/typeGuards';
 import { watchUrl } from '@/shared/utils/youtube';
 import type { Socket } from 'socket.io';

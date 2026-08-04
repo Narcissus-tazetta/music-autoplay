@@ -1,5 +1,5 @@
 import { INSERT_AT_FRONT } from '@/shared/schemas/music';
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 import { Table } from '@shadcn/ui/table';
 import { AnimatePresence, Reorder } from 'framer-motion';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';

@@ -1,4 +1,4 @@
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 import type { ExtensionContextBase, HistoryRecorder } from './extensionHandlerContext';
 
 const HISTORY_PROGRESS_COMPLETION_REMAINING_SEC = 1;

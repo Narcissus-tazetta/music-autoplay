@@ -1,4 +1,4 @@
-import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
+import type { Music, RemoteStatus } from '@/shared/types/music';
 import { searchUrl } from '@/shared/utils/youtube';
 import { motion } from 'framer-motion';
 import { memo, type ReactElement } from 'react';

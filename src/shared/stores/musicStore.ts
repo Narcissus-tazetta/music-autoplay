@@ -1,3 +1,4 @@
+import type { Music, RemoteStatus } from '@/shared/types/music';
 import type { RemoteStatusWithMeta } from '@/shared/types/remoteStatus';
 import type { C2S, S2C } from '@/shared/types/socket';
 import type { Socket } from 'socket.io-client';
@@ -8,47 +9,6 @@ const SEEK_THRESHOLD = 5;
 const REMOTE_STATUS_POLL_INTERVAL_MS = 10_000;
 const SYNC_FETCH_MIN_INTERVAL_MS = 1_500;
 const REMOTE_STATUS_EVENT_GRACE_MS = 2_000;
-
-export type RemoteStatus =
-    | {
-        type: 'playing';
-        musicTitle: string;
-        musicId?: string;
-        isAdvertisement?: boolean;
-        adTimestamp?: number;
-        isExternalVideo?: boolean;
-        videoId?: string;
-        currentTime?: number;
-        duration?: number;
-        progressPercent?: number;
-        lastProgressUpdate?: number;
-        consecutiveStalls?: number;
-        playbackRate?: number;
-        isBuffering?: boolean;
-    }
-    | {
-        type: 'paused';
-        musicTitle?: string;
-        musicId?: string;
-        videoId?: string;
-        isTransitioning?: boolean;
-        currentTime?: number;
-        duration?: number;
-        playbackRate?: number;
-    }
-    | {
-        type: 'closed';
-    };
-export interface Music {
-    title: string;
-    channelName: string;
-    channelId: string;
-    id: string;
-    duration: string;
-    requesterHash?: string;
-    requesterName?: string;
-    requestedAt?: string;
-}
 
 interface MusicStore {
     musics: Music[];

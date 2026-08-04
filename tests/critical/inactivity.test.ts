@@ -1,9 +1,9 @@
+import type { RemoteStatus } from '@/shared/types/music';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { WindowCloseManager } from '../../src/server/services/windowCloseManager';
 import { SocketManager } from '../../src/server/socket/managers/manager';
 import type { EmitFn, ManagerConfig } from '../../src/server/socket/managers/manager';
 import { TimerManager } from '../../src/server/utils/timerManager';
-import type { RemoteStatus } from '../../src/shared/stores/musicStore';
 
 describe('SocketManager inactivity behavior', () => {
     let manager: SocketManager;

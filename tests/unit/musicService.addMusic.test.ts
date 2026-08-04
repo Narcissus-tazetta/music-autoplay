@@ -3,7 +3,7 @@ import { MusicEventEmitter } from '@/server/music/emitter/musicEventEmitter';
 import { MusicService } from '@/server/music/musicService';
 import { MusicRepository } from '@/server/music/repository/musicRepository';
 import type { YouTubeResolver } from '@/server/music/resolver/youtubeResolver';
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 import { ok } from '@/shared/utils/errors/result-handlers';
 import { describe, expect, it } from 'bun:test';
 

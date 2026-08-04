@@ -1,5 +1,5 @@
 import { maskRequesterHash } from '@/app/requesterIdentity.server';
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 import type {
     MaskedRequestLogEntry,
     RequestLogEntry,

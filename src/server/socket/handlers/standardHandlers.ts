@@ -1,5 +1,5 @@
-import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
 import type { HistoryQuery } from '@/shared/types/history';
+import type { Music, RemoteStatus } from '@/shared/types/music';
 import type { HistoryService } from '../../history/historyService';
 import logger from '../../logger';
 import { metricsManager } from '../../services/metricsManager';

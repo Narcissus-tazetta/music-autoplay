@@ -1,4 +1,4 @@
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 import path from 'node:path';
 import { JsonFileStore } from './jsonFileStore';
 import type { PersistFile, Store } from './types';

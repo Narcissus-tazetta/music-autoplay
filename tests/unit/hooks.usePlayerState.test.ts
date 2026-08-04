@@ -3,7 +3,7 @@ import {
     isActivePlaybackStatus,
     shouldShowClosedNotification,
 } from '@/shared/hooks/usePlayerState';
-import type { RemoteStatus } from '@/shared/stores/musicStore';
+import type { RemoteStatus } from '@/shared/types/music';
 import { describe, expect, test } from 'bun:test';
 
 describe('usePlayerState hooks', () => {

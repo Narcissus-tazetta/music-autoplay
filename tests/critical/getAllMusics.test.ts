@@ -1,6 +1,6 @@
+import type { Music } from '@/shared/types/music';
 import type { Socket } from 'socket.io';
 import { createGetAllMusicsHandler } from '../../src/server/socket/handlers/standardHandlers';
-import type { Music } from '../../src/shared/stores/musicStore';
 import { describe, expect, it } from '../bunTestCompat';
 
 describe('getAllMusics', () => {

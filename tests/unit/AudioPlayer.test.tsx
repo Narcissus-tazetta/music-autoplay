@@ -1,4 +1,4 @@
-import type { RemoteStatus } from '@/shared/stores/musicStore';
+import type { RemoteStatus } from '@/shared/types/music';
 import { formatSecondsToTime } from '@/shared/utils/format';
 import { describe, expect, test } from 'bun:test';
 

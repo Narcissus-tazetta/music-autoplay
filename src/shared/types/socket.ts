@@ -1,5 +1,5 @@
-import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
 import type { HistoryItem, HistoryQuery } from '@/shared/types/history';
+import type { Music, RemoteStatus } from '@/shared/types/music';
 
 export interface S2C {
     musicAdded(music: Music): void;

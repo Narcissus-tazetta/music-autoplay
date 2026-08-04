@@ -1,6 +1,6 @@
+import type { RemoteStatus } from '@/shared/types/music';
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { StateReconciler } from '../../src/server/services/stateReconciler';
-import type { RemoteStatus } from '../../src/shared/stores/musicStore';
 
 describe('StateReconciler', () => {
     let reconciler: StateReconciler;

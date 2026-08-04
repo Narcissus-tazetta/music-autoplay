@@ -1,7 +1,7 @@
 import { HistoryService } from '@/server/history/historyService';
 import type { HistoryPersistFile, HistoryStore } from '@/server/history/historyStore';
-import type { Music } from '@/shared/stores/musicStore';
 import type { HistoryItem } from '@/shared/types/history';
+import type { Music } from '@/shared/types/music';
 import { describe, expect, test } from 'bun:test';
 
 const makeMusic = (overrides?: Partial<Music>): Music => ({

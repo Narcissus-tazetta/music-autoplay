@@ -1,7 +1,7 @@
 import type { Store } from '@/server/persistence';
 import type { YouTubeService } from '@/server/services/youtubeService';
 import { createMusicHandlers } from '@/server/socket/handlers/musicHandlers';
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 import { ok } from '@/shared/utils/errors/result-handlers';
 import { describe, expect, test } from 'bun:test';
 import type { Socket } from 'socket.io';

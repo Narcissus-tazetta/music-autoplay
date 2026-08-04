@@ -1,5 +1,5 @@
 import { cn } from '@/app/utils/cn';
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 import { watchUrl } from '@/shared/utils/youtube';
 import { memo, useState } from 'react';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from './index';

@@ -1,6 +1,6 @@
 import { RequestLogFileStore } from '@/server/requestLog/requestLogFileStore';
 import { RequestLogService, resetRequestLogService } from '@/server/requestLog/requestLogService';
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 import type { RequestLogEntry, RequestLogStore } from '@/shared/types/requestLog';
 import { afterEach, describe, expect, test } from 'bun:test';
 import fs from 'node:fs/promises';

@@ -1,4 +1,4 @@
-import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
+import type { Music, RemoteStatus } from '@/shared/types/music';
 import type { C2S, S2C } from '@/shared/types/socket';
 import type { Server as HttpServer } from 'node:http';
 import type { Server } from 'socket.io';

@@ -1,5 +1,5 @@
 import logger from '@/server/logger';
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 import { MongoConnection, type MongoConnectionOptions } from './mongoConnection';
 import type { PersistFile, Store } from './types';
 

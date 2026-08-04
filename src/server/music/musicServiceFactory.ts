@@ -1,4 +1,4 @@
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 import type { Store } from '../persistence';
 import type { YouTubeService } from '../services/youtubeService';
 import { AuthChecker } from './auth/authChecker';

@@ -1,4 +1,4 @@
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 import { withErrorHandler } from '@/shared/utils/errors';
 import { randomUUID } from 'node:crypto';
 import type { Socket } from 'socket.io';

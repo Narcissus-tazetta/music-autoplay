@@ -1,7 +1,7 @@
 import { useMusicRow } from '@/app/hooks/useMusicRow';
 import { cn } from '@/app/utils/cn';
 import { MusicTitleWithHover } from '@/shared/components';
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 import { formatDuration, formatRequestedAt } from '@/shared/utils/format';
 import { channelUrl } from '@/shared/utils/youtube';
 import { AnimatePresence, motion, Reorder, useDragControls } from 'framer-motion';

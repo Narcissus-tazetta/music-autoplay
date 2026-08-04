@@ -1,4 +1,4 @@
-import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
+import type { Music, RemoteStatus } from '@/shared/types/music';
 import { createAdminHash } from '@/shared/utils/errors';
 import { SERVER_ENV } from '~/env.server';
 import { socketConfig } from '../config';

@@ -1,4 +1,4 @@
-import type { RemoteStatus } from '@/shared/stores/musicStore';
+import type { RemoteStatus } from '@/shared/types/music';
 
 export function isRemoteStatusEqual(a: RemoteStatus, b: RemoteStatus): boolean {
     if (a.type !== b.type) return false;

@@ -7,8 +7,8 @@ import {
     useTransitioningHold,
 } from '@/shared/hooks/usePlayerState';
 import { useAdminStore } from '@/shared/stores/adminStore';
-import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
 import { useSettingsStore } from '@/shared/stores/settingsStore';
+import type { Music, RemoteStatus } from '@/shared/types/music';
 import { formatSecondsToTime } from '@/shared/utils/format';
 import { watchUrl } from '@/shared/utils/youtube';
 import { Button } from '@shadcn/ui/button';

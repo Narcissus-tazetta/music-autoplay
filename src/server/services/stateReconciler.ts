@@ -1,4 +1,4 @@
-import type { RemoteStatus } from '@/shared/stores/musicStore';
+import type { RemoteStatus } from '@/shared/types/music';
 import logger from '../logger';
 
 export interface ReconcilerConfig {

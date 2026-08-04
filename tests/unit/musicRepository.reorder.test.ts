@@ -1,6 +1,6 @@
 import { MusicRepository } from '@/server/music/repository/musicRepository';
 import { INSERT_AT_FRONT } from '@/shared/schemas/music';
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 import { describe, expect, it } from 'bun:test';
 
 function makeMusic(id: string): Music {

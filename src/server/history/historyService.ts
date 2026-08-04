@@ -1,7 +1,7 @@
 import { HistoryFileStore } from '@/server/history/historyFileStore';
 import type { HistoryStore } from '@/server/history/historyStore';
-import type { Music } from '@/shared/stores/musicStore';
 import type { HistoryItem, HistoryQuery, HistorySort } from '@/shared/types/history';
+import type { Music } from '@/shared/types/music';
 import logger from '../logger';
 
 const HISTORY_RETENTION_YEARS = 3;

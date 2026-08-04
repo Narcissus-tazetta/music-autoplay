@@ -1,4 +1,4 @@
-import type { RemoteStatus } from '@/shared/stores/musicStore';
+import type { RemoteStatus } from '@/shared/types/music';
 import { randomUUID } from 'node:crypto';
 import logger from '../../logger';
 import { StateReconciler } from '../../services/stateReconciler';

@@ -1,4 +1,4 @@
-import type { RemoteStatus } from '@/shared/stores/musicStore';
+import type { RemoteStatus } from '@/shared/types/music';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface UseInterpolatedTimeParams {
