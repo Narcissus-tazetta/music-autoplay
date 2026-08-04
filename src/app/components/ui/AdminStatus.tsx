@@ -1,7 +1,7 @@
 import { MdAdminPanelSettings } from 'react-icons/md';
 import { useAdminStore } from '../../../shared/stores/adminStore';
 
-export const AdminStatus = () => {
+const AdminStatus = () => {
     const isAdmin = useAdminStore(s => s.isAdmin);
 
     if (!isAdmin) return;

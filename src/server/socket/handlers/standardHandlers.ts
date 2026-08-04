@@ -36,21 +36,12 @@ export function createGetAllMusicsHandler(musicDB: Map<string, Music>) {
     });
 }
 
-type RemoteStatusSupplier = RemoteStatus | (() => RemoteStatus);
-
-export function createGetRemoteStatusHandler(
-    remoteStatusOrSupplier: RemoteStatusSupplier,
-) {
+export function createGetRemoteStatusHandler(getRemoteStatus: () => RemoteStatus) {
     return createSocketEventHandler({
         event: 'getRemoteStatus',
         handler(): RemoteStatus {
             try {
-                if (typeof remoteStatusOrSupplier === 'function') {
-                    const fn = remoteStatusOrSupplier as () => RemoteStatus;
-                    return fn();
-                } else {
-                    return remoteStatusOrSupplier;
-                }
+                return getRemoteStatus();
             } catch (error: unknown) {
                 logger.warn('getRemoteStatus handler failed', { error });
                 return { type: 'closed' };

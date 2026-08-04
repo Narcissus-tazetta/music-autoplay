@@ -6,10 +6,6 @@ export function isRecord(v: unknown): v is Record<string, unknown> {
     return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
-export function isThenable(v: unknown): v is Promise<unknown> {
-    return isObject(v) && typeof v.then === 'function';
-}
-
 export function hasOwnProperty(
     obj: Record<string, unknown>,
     key: string,

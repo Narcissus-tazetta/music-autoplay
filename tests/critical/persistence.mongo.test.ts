@@ -73,4 +73,37 @@ describe('MongoStore persistence basic operations', () => {
         await store.flush?.();
         await mongo.close();
     });
+
+    // Production hands the same MongoClient to the music, history and request-log stores
+    // (see persistence/provider.ts) and closes it once at the end. A store must therefore
+    // never close a client it did not create, or the siblings sharing it break.
+    it('close() leaves a caller-supplied client open for the stores sharing it', async () => {
+        const { MongoClient } = await import('mongodb');
+        const client = new MongoClient(uri, { serverSelectionTimeoutMS: 5_000 });
+
+        const a = new MongoStore({ client, collectionName: 'shared_a', dbName: 'testdb', uri });
+        const b = new MongoStore({ client, collectionName: 'shared_b', dbName: 'testdb', uri });
+        await a.initialize();
+        await b.initialize();
+
+        await a.add({ id: 'a1', title: 'A' } as any);
+        await a.close();
+
+        // b still shares the client, so it must remain usable after a.close().
+        await b.add({ id: 'b1', title: 'B' } as any);
+        expect((await b.loadAll()).map(m => m.id)).toEqual(['b1']);
+        expect((await a.loadAll()).map(m => m.id)).toEqual(['a1']);
+
+        await b.close();
+        await client.close();
+    });
+
+    it('close() does close a client the store created itself', async () => {
+        const owned = new MongoStore({ collectionName: 'owned', dbName: 'testdb', uri });
+        await owned.initialize();
+        await owned.close();
+
+        // The pool is gone, so further use must fail rather than silently reconnect.
+        await expect(owned.loadAll()).rejects.toThrow();
+    });
 });

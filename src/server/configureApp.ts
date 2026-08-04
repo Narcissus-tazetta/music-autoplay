@@ -10,6 +10,8 @@ import path from 'node:path';
 import type { ServerBuild } from 'react-router';
 import { isProduction } from './config';
 import { getAllowedActionOrigins } from './reactRouter/actionOrigins';
+import { metricsManager } from './services/metricsManager';
+import type { SocketServerInstance } from './socket';
 
 export interface ConfigureAppResult {
     buildValue: ServerBuild | (() => Promise<ServerBuild>);
@@ -33,7 +35,7 @@ function createBuildValue(
 
 export async function configureApp(
     app: express.Application,
-    getIo: () => { emit: (...args: unknown[]) => void } | null,
+    getIo: () => SocketServerInstance | null,
     viteDevServer: {
         middlewares?: unknown;
         ssrLoadModule?: (s: string) => Promise<unknown>;
@@ -269,34 +271,16 @@ export async function configureApp(
             res.status(500).json({ error: safe, ok: false });
         }
     });
-    app.get('/api/musics', (req, res) => {
+    app.get('/api/musics', (_req, res) => {
+        const start = Date.now();
         try {
-            const ioObj = getIo();
-            if (
-                ioObj
-                && typeof (ioObj as Record<string, unknown>).musicDB !== 'undefined'
-            ) {
-                const musicDB = (ioObj as Record<string, unknown>).musicDB;
-                if (musicDB && musicDB instanceof Map) {
-                    try {
-                        const list = [...musicDB.values()];
-                        res.json({ musics: list, ok: true });
-                        return;
-                    } catch (error) {
-                        logger.debug('/api/musics: failed to serialize musicDB', {
-                            error: error,
-                        });
-                    }
-                }
-            }
-            res.json({ musics: [], ok: true });
+            const musics = [...(getIo()?.musicDB.values() ?? [])];
+            metricsManager.updateApiMusics(Date.now() - start);
+            res.json({ musics, ok: true });
         } catch (error) {
-            const safe = typeof error === 'string'
-                ? error
-                : (error instanceof Error
-                    ? error.message
-                    : JSON.stringify(error));
-            res.status(500).json({ error: safe, ok: false });
+            metricsManager.updateApiMusics(Date.now() - start, true);
+            logger.error('/api/musics failed', { error });
+            res.status(500).json({ error: 'internal error', ok: false });
         }
     });
     {

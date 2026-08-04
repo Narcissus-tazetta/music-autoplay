@@ -326,22 +326,6 @@ function normalizeMeta(meta: AppLogMeta): AppLogMeta {
     return out;
 }
 
-export function logWarn(
-    message: string,
-    ctx: AppLogMeta = {},
-    meta: AppLogMeta = {},
-) {
-    logger.warn(message, normalizeMeta({ ...ctx, ...meta }));
-}
-
-export function logError(
-    message: string,
-    ctx: AppLogMeta = {},
-    meta: AppLogMeta = {},
-) {
-    logger.error(message, normalizeMeta({ ...ctx, ...meta }));
-}
-
 export function logMetric(
     name: string,
     ctx: AppLogMeta = {},

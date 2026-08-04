@@ -5,6 +5,7 @@ import { useMusicStore } from '@/shared/stores/musicStore';
 import { useSettingsStore } from '@/shared/stores/settingsStore';
 import normalizeApiResponse from '@/shared/utils/api';
 import { parseApiErrorForUI } from '@/shared/utils/apiUi';
+import { runParsedApiError } from '@/shared/utils/runUiAction';
 import { useEffect } from 'react';
 import { z } from 'zod';
 
@@ -87,12 +88,7 @@ export function useAppInitialization(): void {
                                 );
                             }
 
-                            try {
-                                const mod = await import('@/shared/utils/uiActionExecutor');
-                                mod.executeParsedApiError(parsed, { conformFields: undefined });
-                            } catch (error) {
-                                if (import.meta.env.DEV) console.error('uiActionExecutor failed', error);
-                            }
+                            await runParsedApiError(parsed);
 
                             if (parsed.kind === 'unauthorized') return;
                         } catch (error) {

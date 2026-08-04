@@ -167,6 +167,10 @@ export function createSocketEventHandler<TPayload, TResponse>(
                 }
             }
 
+            // Without a validator the raw payload is handed through as-is; the cast is the
+            // caller's assertion that the event's wire format matches TPayload.
+            let handlerPayload = payload as TPayload;
+
             if (config.validator) {
                 const validation = config.validator.safeParse(payload);
 
@@ -184,63 +188,35 @@ export function createSocketEventHandler<TPayload, TResponse>(
                     return;
                 }
 
-                try {
-                    const result = await config.handler(validation.data, ctx);
+                handlerPayload = validation.data;
+            }
 
-                    if (rateLimiter && rateLimitKey) rateLimiter.consume(rateLimitKey);
+            try {
+                const result = await config.handler(handlerPayload, ctx);
 
-                    if (config.logResponse) {
-                        log.debug(`socket event response: ${config.event}`, {
-                            result,
-                            socketId: ctx.socketId,
-                        });
-                    }
+                if (rateLimiter && rateLimitKey) rateLimiter.consume(rateLimitKey);
 
-                    if (callback) callback(result as ReplyOptions);
-                } catch (error: unknown) {
-                    log.error(`handler error: ${config.event}`, {
-                        error,
+                if (config.logResponse) {
+                    log.debug(`socket event response: ${config.event}`, {
+                        result,
                         socketId: ctx.socketId,
                     });
-
-                    const reply = createServerErrorReply(error);
-                    if (callback) callback(reply);
                 }
-            } else {
-                try {
-                    const result = await config.handler(payload as TPayload, ctx);
 
-                    if (rateLimiter && rateLimitKey) rateLimiter.consume(rateLimitKey);
+                if (callback) callback(result as ReplyOptions);
+            } catch (error: unknown) {
+                log.error(`handler error: ${config.event}`, {
+                    error,
+                    socketId: ctx.socketId,
+                });
 
-                    if (config.logResponse) {
-                        log.debug(`socket event response: ${config.event}`, {
-                            result,
-                            socketId: ctx.socketId,
-                        });
-                    }
-
-                    if (callback) callback(result as ReplyOptions);
-                } catch (error: unknown) {
-                    log.error(`handler error: ${config.event}`, {
-                        error,
-                        socketId: ctx.socketId,
-                    });
-
-                    const reply = createServerErrorReply(error);
-                    if (callback) callback(reply);
-                }
+                const reply = createServerErrorReply(error);
+                if (callback) callback(reply);
             }
         }, `socket:${config.event}`);
 
         socket.on(config.event, wrappedHandler);
     };
-}
-
-export function createTypedSocketEventHandler<
-    TPayload extends Record<string, unknown>,
-    TResponse,
->(config: EventHandlerConfig<TPayload, TResponse>) {
-    return createSocketEventHandler(config);
 }
 
 export interface BatchEventHandlerConfig {

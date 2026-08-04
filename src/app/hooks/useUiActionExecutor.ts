@@ -1,4 +1,5 @@
 import type { UiAction } from '@/shared/utils/apiUi';
+import { runUiAction } from '@/shared/utils/runUiAction';
 import { useEffect, useRef } from 'react';
 
 interface UseUiActionExecutorOptions {
@@ -26,19 +27,8 @@ export function useUiActionExecutor({
         lastParsedActionRef.current = parsedAction;
         hasExecutedRef.current = true;
 
-        void (async () => {
-            try {
-                const mod = await import('@/shared/utils/uiActionExecutor');
-                try {
-                    mod.executeUiAction(parsedAction, {
-                        conformFields: conformFields as Record<string, unknown> | undefined,
-                    });
-                } catch (error) {
-                    if (import.meta.env.DEV) console.debug('uiActionExecutor.executeUiAction failed', error);
-                }
-            } catch (error) {
-                if (import.meta.env.DEV) console.debug('dynamic import uiActionExecutor failed', error);
-            }
-        })();
+        void runUiAction(parsedAction, {
+            conformFields: conformFields as Record<string, unknown> | undefined,
+        });
     }, [parsedAction, conformFields]);
 }

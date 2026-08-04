@@ -1,4 +1,6 @@
 import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
+import { isRecord } from '@/shared/utils/typeGuards';
+import { watchUrl } from '@/shared/utils/youtube';
 import type { Socket } from 'socket.io';
 import type { HistoryService } from '../../history/historyService';
 import type { AppLogger } from '../../logger';
@@ -138,6 +140,131 @@ export const isSameVideoOrUnknown = (
 export const indexOfMusicById = (musicList: Music[], id: string): number => {
     for (let i = 0; i < musicList.length; i++) if (musicList[i].id === id) return i;
     return -1;
+};
+
+/** The queue is a loop: the entry after the last one is the first one. */
+export const nextIndexWithWrap = (musicList: Music[], index: number): number => (index + 1) % musicList.length;
+
+/**
+ * Pulls the `{ url, tabId }` pair every extension playback event carries, logging and
+ * returning null on anything malformed. tabId 0 is rejected along with the missing case —
+ * Chrome never assigns it, so the handlers have always treated it as absent.
+ */
+export const extractUrlAndTabId = (
+    payload: unknown,
+    eventName: string,
+    log: AppLogger,
+): { url: string; tabId: number } | null => {
+    if (!isRecord(payload)) {
+        log.debug(`${eventName}: invalid payload`, { payload });
+        return null;
+    }
+
+    const url = typeof payload['url'] === 'string' ? payload['url'] : undefined;
+    const tabId = typeof payload['tabId'] === 'number' ? payload['tabId'] : undefined;
+
+    if (!url) {
+        log.debug(`${eventName}: no url provided`, { payload });
+        return null;
+    }
+    if (!tabId) {
+        log.debug(`${eventName}: no tabId provided`, { payload });
+        return null;
+    }
+
+    return { tabId, url };
+};
+
+/**
+ * Drops a video from the queue, tells every client, then persists — in that order, so a
+ * slow disk write never delays the UI. Each step is independent: a failure is logged and
+ * the rest still run.
+ */
+export const removeMusicAndBroadcast = (ctx: ExtensionContext, videoId: string, eventName: string): void => {
+    const { emitter, log, repository } = ctx;
+
+    repository.remove(videoId);
+
+    const removedResult = emitter.emitMusicRemoved(videoId);
+    if (!removedResult.ok)
+        log.warn(`${eventName}: failed to emit musicRemoved`, { error: removedResult.error, videoId });
+
+    const urlListResult = emitter.emitUrlList(repository.buildCompatList());
+    if (!urlListResult.ok) log.warn(`${eventName}: failed to emit url_list`, { error: urlListResult.error });
+
+    const persistResult = repository.persistRemove(videoId);
+    if (!persistResult.ok) log.warn(`${eventName}: failed to persist removal`, { error: persistResult.error, videoId });
+};
+
+/** The add counterpart of removeMusicAndBroadcast. */
+export const addMusicAndBroadcast = async (
+    ctx: ExtensionContext,
+    music: Music,
+    eventName: string,
+): Promise<void> => {
+    const { emitter, log, repository } = ctx;
+
+    repository.add(music);
+
+    const addedResult = emitter.emitMusicAdded(music);
+    if (!addedResult.ok)
+        log.warn(`${eventName}: failed to emit musicAdded`, { error: addedResult.error, videoId: music.id });
+
+    const urlListResult = emitter.emitUrlList(repository.buildCompatList());
+    if (!urlListResult.ok) log.warn(`${eventName}: failed to emit url_list`, { error: urlListResult.error });
+
+    const persistResult = await repository.persistAdd(music);
+    if (!persistResult.ok)
+        log.warn(`${eventName}: failed to persist`, { error: persistResult.error, videoId: music.id });
+};
+
+/** Points the extension's tab at `music` and marks the session as transitioning to it. */
+export const navigateToVideo = (
+    ctx: ExtensionContext,
+    opts: { music: Music; tabId: number; from: string; reason: string; logMessage: string },
+): void => {
+    const { connectionId, log, manager, socket } = ctx;
+    const { music, tabId, from, reason, logMessage } = opts;
+    const nextUrl = watchUrl(music.id);
+
+    socket.emit('next_video_navigate', { nextUrl, tabId, videoId: music.id });
+
+    manager.update(
+        {
+            isTransitioning: true,
+            musicId: music.id,
+            musicTitle: music.title,
+            type: 'paused',
+        },
+        reason,
+    );
+
+    log.info(logMessage, {
+        connectionId,
+        from,
+        nextUrl,
+        socketId: socket.id,
+        tabId,
+        to: music.id,
+    });
+};
+
+/** Tells the extension the queue is exhausted and parks the session. */
+export const reportNoNextVideo = (
+    ctx: ExtensionContext,
+    opts: { tabId: number; videoId: string; reason: string; logMessage: string },
+): void => {
+    const { connectionId, log, manager, socket } = ctx;
+
+    socket.emit('no_next_video', { tabId: opts.tabId });
+    manager.update({ type: 'closed' }, opts.reason);
+
+    log.info(opts.logMessage, {
+        connectionId,
+        socketId: socket.id,
+        tabId: opts.tabId,
+        videoId: opts.videoId,
+    });
 };
 
 export const shouldReplaceProgressSnapshot = (

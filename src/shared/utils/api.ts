@@ -1,14 +1,28 @@
 import { hasOwnProperty } from './typeGuards';
 
+/**
+ * The canonical API envelope types. `apiUi.ts` used to declare its own `ApiError` and
+ * `NormalizedApiResponse` with different shapes under the same names; both now live here
+ * so there is one definition to reason about.
+ */
 export interface ApiSuccess<T = unknown> {
     success: true;
     data: T;
 }
+
+/** The error payload carried inside a failed response. */
 export interface ApiError {
-    success: false;
-    error: { code?: string; message: string; details?: unknown };
+    code?: string | null;
+    message: string;
+    details?: unknown;
 }
-export type NormalizedApiResponse<T> = ApiSuccess<T> | ApiError;
+
+export interface ApiFailure {
+    success: false;
+    error: ApiError;
+}
+
+export type NormalizedApiResponse<T> = ApiSuccess<T> | ApiFailure;
 
 function isNormalizedResponse(
     v: unknown,

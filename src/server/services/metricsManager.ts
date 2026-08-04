@@ -1,5 +1,4 @@
 import type { Metrics } from '../bootstrap';
-import logger from '../logger';
 
 export class MetricsManager {
     private metrics: Metrics;
@@ -9,7 +8,6 @@ export class MetricsManager {
             apiMusics: { calls: 0, errors: 0, totalMs: 0 },
             rpcGetAllMusics: { calls: 0, errors: 0, totalMs: 0 },
         };
-        globalThis.__simpleMetrics = this.metrics;
     }
 
     updateApiMusics(duration: number, hasError: boolean = false): void {
@@ -26,15 +24,6 @@ export class MetricsManager {
 
     getMetrics(): Readonly<Metrics> {
         return { ...this.metrics };
-    }
-
-    logMetrics(): void {
-        logger.info('Current metrics', { metrics: this.getMetrics() });
-    }
-
-    resetMetrics(): void {
-        this.metrics.apiMusics = { calls: 0, errors: 0, totalMs: 0 };
-        this.metrics.rpcGetAllMusics = { calls: 0, errors: 0, totalMs: 0 };
     }
 }
 

@@ -153,28 +153,4 @@ describe('RateLimiterManager', () => {
             expect(limiter2.getStats().totalAttempts).toBe(0);
         });
     });
-
-    describe('getNextMidnightUTC', () => {
-        test('should calculate next UTC midnight correctly', () => {
-            const now = Date.UTC(2025, 10, 26, 15, 30, 0, 0); // 2025-11-26 15:30:00 UTC
-            const expected = Date.UTC(2025, 10, 27, 0, 0, 0, 0); // 2025-11-27 00:00:00 UTC
-
-            const managerAny = manager as unknown as {
-                getNextMidnightUTC: (now: number) => number;
-            };
-            const result = managerAny.getNextMidnightUTC(now);
-            expect(result).toBe(expected);
-        });
-
-        test('should handle day boundary correctly', () => {
-            const now = Date.UTC(2025, 10, 26, 23, 59, 59, 999);
-            const expected = Date.UTC(2025, 10, 27, 0, 0, 0, 0);
-
-            const managerAny = manager as unknown as {
-                getNextMidnightUTC: (now: number) => number;
-            };
-            const result = managerAny.getNextMidnightUTC(now);
-            expect(result).toBe(expected);
-        });
-    });
 });

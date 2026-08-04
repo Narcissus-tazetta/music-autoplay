@@ -88,8 +88,9 @@ export const normalizeYoutubeMeta = (
 
     if (!title || !channelTitle || !channelId) return null;
     let finalDuration: string | undefined = undefined;
+    // ISO8601 は raw.contentDetails 由来のときだけ HH:MM:SS へ変換する。
+    // 呼び出し元が明示的に渡した duration 文字列はそのまま通す。
     let durationFromRaw = false;
-    if (typeof m.duration === 'string') durationFromRaw = false;
     if (typeof durationRaw === 'string' && m.raw && typeof m.raw === 'object') {
         const rawObj = m.raw as Record<string, unknown>;
         if (rawObj.contentDetails && typeof rawObj.contentDetails === 'object') durationFromRaw = true;

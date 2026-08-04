@@ -116,18 +116,3 @@ export function extractErrorMessage(
     const joined = userMessages.join(joinWith);
     return joined.length > maxLen ? joined.slice(0, maxLen) + '…' : joined;
 }
-
-export function extractApiError(response: unknown): string | undefined {
-    if (!response) return undefined;
-
-    if (isRecord(response) && response.success === false) {
-        const error = response.error;
-        if (error) return extractErrorMessage(error);
-    }
-
-    if (isRecord(response) && response.error) return extractErrorMessage(response.error);
-
-    if (isRecord(response) && typeof response.message === 'string') return response.message;
-
-    return extractErrorMessage(response);
-}

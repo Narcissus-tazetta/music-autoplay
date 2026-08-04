@@ -47,12 +47,6 @@ export class AdminRateLimiter {
 
         return Math.ceil((record.lockedUntil - now) / 1000);
     }
-
-    cleanup(): void {
-        const now = Date.now();
-        for (const [username, record] of this.attempts.entries())
-            if (record.lockedUntil && now >= record.lockedUntil) this.attempts.delete(username);
-    }
 }
 
 export function createAdminRateLimiter(

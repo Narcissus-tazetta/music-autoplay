@@ -15,9 +15,9 @@ export interface PersistenceBundle {
 /**
  * Picks the persistence backend named by PERSISTENCE_PROVIDER.
  *
- * The mongodb and pg drivers are pulled in with `await import` rather than a top-level
- * import: the barrel used to re-export every store, so booting with the default `file`
- * provider still loaded MongoClient and pg.Pool into memory.
+ * The mongodb driver is pulled in with `await import` rather than a top-level import:
+ * the barrel used to re-export every store, so booting with the default `file` provider
+ * still loaded MongoClient into memory.
  */
 export async function createPersistence(): Promise<PersistenceBundle> {
     const provider = SERVER_ENV.PERSISTENCE_PROVIDER;
@@ -74,21 +74,6 @@ export async function createPersistence(): Promise<PersistenceBundle> {
             },
             historyService,
             requestLogService,
-            store,
-        };
-    }
-
-    if (provider === 'pg') {
-        const [{ PgStore }, { PgHybridStore }] = await Promise.all([import('./pg'), import('./hybrid')]);
-        const pg = new PgStore();
-        await pg.initialize();
-        const store = new PgHybridStore(pg, await pg.loadAll());
-
-        logger.info('persistence provider: pg');
-        return {
-            close: () => pg.close(),
-            historyService: new HistoryService(),
-            requestLogService: new RequestLogService(),
             store,
         };
     }

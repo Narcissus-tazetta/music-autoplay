@@ -73,22 +73,3 @@ export function createAdminAuthenticator(
 ): AdminAuthenticator {
     return new AdminAuthenticator({ username, password });
 }
-
-export function parseBasicAuth(
-    authHeader: string,
-): { username: string; password: string } | null {
-    try {
-        const parts = authHeader.split(' ');
-        if (parts.length !== 2 || parts[0] !== 'Basic') return null;
-
-        const decoded = Buffer.from(parts[1], 'base64').toString('utf-8');
-        const colonIndex = decoded.indexOf(':');
-        if (colonIndex === -1) return null;
-        const username = decoded.slice(0, colonIndex);
-        const password = decoded.slice(colonIndex + 1);
-        if (!username || !password) return null;
-        return { username, password };
-    } catch {
-        return null;
-    }
-}

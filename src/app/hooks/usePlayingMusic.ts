@@ -1,6 +1,6 @@
 import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
 
-export function usePlayingMusic(musics: Music[], remoteStatus: RemoteStatus | null): Music | undefined {
+function usePlayingMusic(musics: Music[], remoteStatus: RemoteStatus | null): Music | undefined {
     if (!remoteStatus) return undefined;
     if (remoteStatus.type !== 'playing' && remoteStatus.type !== 'paused') return undefined;
 

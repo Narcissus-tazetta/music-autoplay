@@ -30,7 +30,7 @@ export interface HistoryViewProps {
     setVisibleHistoryCount: (n: number) => void;
 }
 
-export function HistoryView({
+function HistoryView({
     filteredHistoryCount,
     historyItems,
     historySearchReadings = {},

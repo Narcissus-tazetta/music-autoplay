@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { usePlayingMusic } from '../../src/app/hooks/usePlayingMusic';
+import usePlayingMusic from '../../src/app/hooks/usePlayingMusic';
 import type { Music, RemoteStatus } from '../../src/shared/stores/musicStore';
 
 describe('usePlayingMusic hook', () => {

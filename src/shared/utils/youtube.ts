@@ -47,9 +47,6 @@ export const extractYoutubeId = (url: string): string | null => {
     }
 };
 
-export const YOUTUBE_PATTERN =
-    /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/ ]{11})/i;
-
 export const watchUrl = (id: string) => `https://www.youtube.com/watch?v=${id}`;
 export const channelUrl = (channelId: string) => `https://www.youtube.com/channel/${channelId}`;
 export const shortUrl = (id: string) => `https://youtu.be/${id}`;

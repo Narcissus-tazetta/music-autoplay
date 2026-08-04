@@ -59,14 +59,3 @@ export function createAdminHash(secretCandidate: unknown): string {
 
     return createHash('sha256').update(secretString).digest('hex');
 }
-
-export function isSuccessReply(reply: ReplyOptions): boolean {
-    const formErrors = (reply as { formErrors?: string[] }).formErrors;
-    const fieldErrors = (reply as { fieldErrors?: Record<string, string[]> })
-        .fieldErrors;
-
-    const hasFormErrors = Array.isArray(formErrors) && formErrors.length > 0;
-    const hasFieldErrors = fieldErrors && Object.keys(fieldErrors).length > 0;
-
-    return !hasFormErrors && !hasFieldErrors;
-}

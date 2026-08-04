@@ -68,10 +68,3 @@ export function respondWithResult<T>(
         status: 500,
     });
 }
-
-export function respondJsonOk(data: unknown): Response {
-    return new Response(JSON.stringify({ data, success: true }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 200,
-    });
-}

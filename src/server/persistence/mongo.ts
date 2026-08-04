@@ -1,15 +1,9 @@
 import logger from '@/server/logger';
 import type { Music } from '@/shared/stores/musicStore';
-import { MongoClient } from 'mongodb';
-import type { Collection, Db } from 'mongodb';
+import { MongoConnection, type MongoConnectionOptions } from './mongoConnection';
 import type { PersistFile, Store } from './types';
 
-export interface MongoStoreOptions {
-    uri: string;
-    dbName: string;
-    collectionName: string;
-    client?: MongoClient;
-}
+export type MongoStoreOptions = MongoConnectionOptions;
 
 type MusicDoc = Music & {
     _id: string;
@@ -19,50 +13,8 @@ type MusicDoc = Music & {
     order?: number;
 };
 
-export class MongoStore {
-    private client: MongoClient;
-    private dbName: string;
-    private collectionName: string;
-    private ownsClient: boolean;
-
-    private connected: Promise<MongoClient> | null = null;
-
-    constructor(opts: MongoStoreOptions) {
-        this.dbName = opts.dbName;
-        this.collectionName = opts.collectionName;
-
-        if (opts.client) {
-            this.client = opts.client;
-            this.ownsClient = false;
-        } else {
-            // Official driver pattern: keep a single MongoClient and reuse it.
-            // We keep one per store instance; bootstrap creates just one.
-            this.client = new MongoClient(opts.uri, {
-                serverSelectionTimeoutMS: 5_000,
-            });
-            this.ownsClient = true;
-        }
-    }
-
-    private async ensureConnected(): Promise<void> {
-        if (!this.connected) {
-            this.connected = this.client.connect().catch(error => {
-                this.connected = null;
-                throw error;
-            });
-        }
-        await this.connected;
-    }
-
-    private async getDb(): Promise<Db> {
-        await this.ensureConnected();
-        return this.client.db(this.dbName);
-    }
-
-    private async getCollection(): Promise<Collection<MusicDoc>> {
-        const db = await this.getDb();
-        return db.collection<MusicDoc>(this.collectionName);
-    }
+export class MongoStore extends MongoConnection<MusicDoc> {
+    protected readonly label = 'MongoStore';
 
     async initialize(): Promise<void> {
         const col = await this.getCollection();
@@ -142,15 +94,6 @@ export class MongoStore {
         // Intentional no-op: writes are immediate.
         await Promise.resolve();
         return;
-    }
-
-    async close(): Promise<void> {
-        if (!this.ownsClient) return;
-        try {
-            await this.client.close();
-        } catch (error) {
-            logger.warn('MongoStore: client.close failed', { error });
-        }
     }
 }
 

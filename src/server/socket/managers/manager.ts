@@ -52,12 +52,7 @@ export class SocketManager {
             this.timerManager.clear('inactivity');
             this.stateReconciler.reset();
             try {
-                if (
-                    typeof (this.timerManager as { clearAll?: unknown }).clearAll
-                        === 'function'
-                ) {
-                    this.timerManager.clearAll();
-                }
+                this.timerManager.clearAll();
             } catch (error) {
                 logger.warn('SocketManager failed to clearAll timers', { error: error });
             }

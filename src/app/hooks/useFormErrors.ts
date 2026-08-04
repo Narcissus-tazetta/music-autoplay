@@ -92,7 +92,7 @@ const extractApiError = (data: UnknownRecord): FormErrorResult | null => {
     };
 };
 
-export const useFormErrors = (fetcherData: unknown): FormErrorResult => {
+const useFormErrors = (fetcherData: unknown): FormErrorResult => {
     const deepData = extractDeepestData(fetcherData);
 
     if (!isRecord(deepData)) return EMPTY_RESULT;
