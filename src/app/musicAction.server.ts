@@ -33,7 +33,7 @@ export function rateLimitExceededResponse(
     );
 }
 
-export type ActingRequesterHash =
+type ActingRequesterHash =
     | { ok: true; requesterHash: string }
     | { ok: false; response: Response };
 
@@ -42,7 +42,7 @@ export type ActingRequesterHash =
  * as sha256(ADMIN_SECRET) (the hash AuthChecker treats as all-powerful), everyone else
  * as their own identity hash.
  */
-export async function resolveActingRequesterHash(
+async function resolveActingRequesterHash(
     cookieHeader: string | null,
     isAdmin: boolean,
     unauthorizedMessage: string,
@@ -67,7 +67,7 @@ export async function resolveActingRequesterHash(
     return { ok: true, requesterHash: identity.requesterHash };
 }
 
-export function extractHandlerErrorMessage(errVal: unknown): string {
+function extractHandlerErrorMessage(errVal: unknown): string {
     if (typeof errVal === 'string') return errVal;
     if (errVal && typeof errVal === 'object' && 'message' in (errVal as Record<string, unknown>)) {
         const m = (errVal as Record<string, unknown>).message;
@@ -81,7 +81,7 @@ export function extractHandlerErrorMessage(errVal: unknown): string {
 }
 
 /** Maps a service ReplyOptions carrying formErrors to a 403 response, or null when it succeeded. */
-export function replyOptionsErrorResponse(value: unknown): Response | null {
+function replyOptionsErrorResponse(value: unknown): Response | null {
     if (typeof value !== 'object' || value == undefined) return null;
     const fe = (value as Record<string, unknown>).formErrors;
     if (!Array.isArray(fe) || fe.length === 0) return null;

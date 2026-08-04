@@ -5,7 +5,7 @@ import { SERVER_ENV } from '~/env.server';
 import { isProduction } from '../../config';
 import type { EngineLike, RequestLike } from '../types';
 
-export function getOriginFromReq(req: unknown): string | undefined {
+function getOriginFromReq(req: unknown): string | undefined {
     try {
         if (!isObject(req)) return undefined;
         const headers = (req as RequestLike).headers;
