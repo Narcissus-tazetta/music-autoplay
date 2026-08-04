@@ -1,7 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, test } from 'bun:test';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, test } from 'bun:test';
 import { jest } from 'bun:test';
 
-export { afterEach, beforeEach, describe, expect, it, test };
+export { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, test };
 export const vi = {
     advanceTimersByTime: (ms: number) => (jest as any).advanceTimersByTime(ms),
     clearAllMocks: () => {

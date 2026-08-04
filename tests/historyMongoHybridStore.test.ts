@@ -41,4 +41,32 @@ describe('HistoryMongoHybridStore', () => {
         expect(mongo.upserted).toEqual(['a', 'b']);
         expect(mongo.removed).toEqual(['a']);
     });
+
+    test('Mongo書き込みが全て失敗してもインメモリ状態は保たれる', async () => {
+        const failing = {
+            remove: () => Promise.reject(new Error('mongo down')),
+            upsert: () => Promise.reject(new Error('mongo down')),
+        };
+        const store = new HistoryMongoHybridStore(failing as never, []);
+
+        store.upsert(makeItem('a'));
+        store.upsert(makeItem('b'));
+        store.remove('a');
+
+        // 失敗は握り潰される。flush は投げずに解決しなければならない。
+        await expect(store.flush()).resolves.toBeUndefined();
+        expect(store.load().items.map(v => v.id)).toEqual(['b']);
+    });
+
+    test('closeSync は保留中の書き込みを流し切り、例外を投げない', async () => {
+        // プロセス終了時に走る経路。ここで throw すると履歴の書き込みが失われる。
+        const mongo = new MockHistoryMongoStore();
+        const store = new HistoryMongoHybridStore(mongo as never, []);
+
+        store.upsert(makeItem('a'));
+        expect(() => store.closeSync()).not.toThrow();
+
+        await store.flush();
+        expect(mongo.upserted).toEqual(['a']);
+    });
 });
