@@ -1,8 +1,8 @@
-import { AuthChecker } from '@/server/music/auth/authChecker';
-import { MusicEventEmitter } from '@/server/music/emitter/musicEventEmitter';
+import { AuthChecker } from '@/server/music/authChecker';
+import { MusicEventEmitter } from '@/server/music/musicEventEmitter';
+import { MusicRepository } from '@/server/music/musicRepository';
 import { MusicService } from '@/server/music/musicService';
-import { MusicRepository } from '@/server/music/repository/musicRepository';
-import type { YouTubeResolver } from '@/server/music/resolver/youtubeResolver';
+import type { YouTubeResolver } from '@/server/music/youtubeResolver';
 import type { Music } from '@/shared/types/music';
 import { ok } from '@/shared/utils/errors/result-handlers';
 import { describe, expect, it } from 'bun:test';

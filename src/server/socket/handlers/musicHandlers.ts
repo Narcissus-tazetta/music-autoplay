@@ -6,7 +6,7 @@ import type { Socket } from 'socket.io';
 import type { Server } from 'socket.io';
 import { z } from 'zod';
 import { withContext } from '../../logger';
-import type { EmitFn } from '../../music/emitter/musicEventEmitter';
+import type { EmitFn } from '../../music/musicEventEmitter';
 import type { MusicService } from '../../music/musicService';
 import { createMusicService } from '../../music/musicServiceFactory';
 import type { Store } from '../../persistence';

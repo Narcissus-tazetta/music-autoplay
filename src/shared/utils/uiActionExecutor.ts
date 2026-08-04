@@ -1,6 +1,6 @@
 import { getWindowExtensions } from '@/shared/schemas/global';
 import type { ParsedApiErrorWithAction, UiAction } from '@/shared/utils/apiUi';
-import { applyFieldErrorsToConform } from '@/shared/utils/formAdapters/conformAdapter';
+import { applyFieldErrorsToConform } from '@/shared/utils/conformAdapter';
 
 const tryShowToast = (level: string, message: string): void => {
     try {

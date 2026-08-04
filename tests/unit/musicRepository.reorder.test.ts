@@ -1,4 +1,4 @@
-import { MusicRepository } from '@/server/music/repository/musicRepository';
+import { MusicRepository } from '@/server/music/musicRepository';
 import { INSERT_AT_FRONT } from '@/shared/schemas/music';
 import type { Music } from '@/shared/types/music';
 import { describe, expect, it } from 'bun:test';

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { MusicRepository } from '../../src/server/music/repository/musicRepository';
+import { MusicRepository } from '../../src/server/music/musicRepository';
 import { setupExtensionEventHandlers } from '../../src/server/socket/handlers/extensionEventHandlers';
 import createFakeEmitter from '../helpers/fakeEmitter';
 import createFakeSocket from '../helpers/fakeSocket';

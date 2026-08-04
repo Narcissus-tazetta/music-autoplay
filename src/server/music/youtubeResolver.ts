@@ -5,9 +5,9 @@ import type { Result } from '@/shared/utils/errors/result-handlers';
 import { err, ok } from '@/shared/utils/errors/result-handlers';
 import { extractYoutubeId } from '@/shared/utils/youtube';
 import type { z } from 'zod';
-import logger from '../../logger';
-import type { YouTubeService } from '../../services/youtubeService';
-import { normalizeYoutubeMeta } from '../../utils/normalizeYoutubeMeta';
+import logger from '../logger';
+import type { YouTubeService } from '../services/youtubeService';
+import { normalizeYoutubeMeta } from '../utils/normalizeYoutubeMeta';
 
 export type VideoMeta = z.infer<typeof YouTubeMetaSchema>;
 

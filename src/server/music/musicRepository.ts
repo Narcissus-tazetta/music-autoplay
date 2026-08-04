@@ -4,8 +4,8 @@ import { toHandlerError } from '@/shared/utils/errors';
 import type { Result } from '@/shared/utils/errors/result-handlers';
 import { err, ok } from '@/shared/utils/errors/result-handlers';
 import { watchUrl } from '@/shared/utils/youtube';
-import type { Store } from '../../persistence';
-import { persistAdd, persistRemove } from '../../persistence/storeHelpers';
+import type { Store } from '../persistence';
+import { persistAdd, persistRemove } from '../persistence/storeHelpers';
 
 /**
  * Ordered view over the in-memory music map.

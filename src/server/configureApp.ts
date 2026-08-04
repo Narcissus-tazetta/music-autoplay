@@ -8,8 +8,8 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ServerBuild } from 'react-router';
+import { getAllowedActionOrigins } from './actionOrigins';
 import { isProduction } from './config';
-import { getAllowedActionOrigins } from './reactRouter/actionOrigins';
 import { metricsManager } from './services/metricsManager';
 import type { SocketServerInstance } from './socket/socketServer';
 

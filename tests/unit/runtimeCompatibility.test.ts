@@ -1,6 +1,6 @@
 import routes from '@/app/routes';
 import { action as addMusicAction } from '@/app/routes/api/music.add';
-import { getAllowedActionOrigins } from '@/server/reactRouter/actionOrigins';
+import { getAllowedActionOrigins } from '@/server/actionOrigins';
 import { serverContext } from '@/shared/types/server';
 import { describe, expect, test } from 'bun:test';
 import { RouterContextProvider } from 'react-router';

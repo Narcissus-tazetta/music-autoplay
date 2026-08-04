@@ -9,8 +9,8 @@ import { WindowCloseManager } from '../../services/windowCloseManager';
 import { YouTubeService } from '../../services/youtubeService';
 import { TimerManager } from '../../utils/timerManager';
 import { makeConnectionHandler } from '../handlers/connectionHandler';
+import { registerSocketIdentityMiddleware } from '../identityMiddleware';
 import { SocketRuntime } from '../managers/runtime';
-import { registerSocketIdentityMiddleware } from '../middleware/socketIdentityMiddleware';
 import { createSocketIo } from './socketIo';
 
 export interface RuntimeOptions {

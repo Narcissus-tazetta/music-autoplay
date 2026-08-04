@@ -1,12 +1,12 @@
 import type { Music } from '@/shared/types/music';
 import type { Store } from '../persistence';
 import type { YouTubeService } from '../services/youtubeService';
-import { AuthChecker } from './auth/authChecker';
-import { MusicEventEmitter } from './emitter/musicEventEmitter';
-import type { EmitFn } from './emitter/musicEventEmitter';
+import { AuthChecker } from './authChecker';
+import { MusicEventEmitter } from './musicEventEmitter';
+import type { EmitFn } from './musicEventEmitter';
+import { MusicRepository } from './musicRepository';
 import { MusicService } from './musicService';
-import { MusicRepository } from './repository/musicRepository';
-import { YouTubeResolver } from './resolver/youtubeResolver';
+import { YouTubeResolver } from './youtubeResolver';
 
 export interface MusicServiceFactoryOptions {
     youtubeService: YouTubeService;

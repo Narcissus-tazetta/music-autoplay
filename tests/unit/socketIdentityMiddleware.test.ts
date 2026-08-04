@@ -1,6 +1,6 @@
 import { hashRequesterId, resolveRequesterIdentity } from '@/app/requesterIdentity.server';
 import { anonymousIdCookie } from '@/app/sessions.server';
-import { registerSocketIdentityMiddleware } from '@/server/socket/middleware/socketIdentityMiddleware';
+import { registerSocketIdentityMiddleware } from '@/server/socket/identityMiddleware';
 import { describe, expect, test } from 'bun:test';
 import { createServer } from 'node:http';
 import { Server as IOServer } from 'socket.io';

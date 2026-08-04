@@ -1,4 +1,4 @@
-import '../socketData';
+import './socketData';
 import { resolveRequesterIdentity } from '@/app/requesterIdentity.server';
 import type { Socket } from 'socket.io';
 import type { ExtendedError, Server as IOServer } from 'socket.io';
