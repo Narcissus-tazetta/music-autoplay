@@ -1,29 +1,18 @@
 /**
  * Public surface of the error utilities. Everything re-exported here has at least one
- * caller; the previous barrel also carried `errorUtils` (a namespace object duplicating
- * the same functions) and `withErrorHandler2` / `withAsyncErrorHandler2` / `safeExecuteSync`
- * aliases, none of which were ever imported.
+ * caller outside this directory; helpers used only within `errors/` (getErrorLogger,
+ * normalizeWrapOptions) are imported from their own module instead of being re-published
+ * here. The type guards are likewise imported straight from `../typeGuards`.
  */
-export { isRecord, isThenable } from '../typeGuards';
 
 export type { ErrorInfo, HandlerError, NormalizedWrapOptions, WrapOptions } from './core';
-export { extractErrorInfo, normalizeWrapOptions, safeString, toHandlerError } from './core';
+export { extractErrorInfo, safeString, toHandlerError } from './core';
 
 export type { Logger } from './wrappers';
-export { getErrorLogger, withAsyncErrorHandler, withErrorHandler, wrap, wrapAsync } from './wrappers';
+export { withErrorHandler, wrapAsync } from './wrappers';
 
 export type { Result } from './result-handlers';
-export {
-    chainResult,
-    combineResults,
-    err,
-    isErr,
-    isOk,
-    mapResult,
-    ok,
-    safeExecute,
-    safeExecuteAsync,
-} from './result-handlers';
+export { err, isErr, isOk, ok, safeExecuteAsync } from './result-handlers';
 
 export type { ReplyOptions } from './server';
 export {
@@ -32,7 +21,6 @@ export {
     createRateLimitReply,
     createServerErrorReply,
     createValidationErrorReply,
-    isSuccessReply,
 } from './server';
 
-export { extractApiError, extractErrorMessage } from './client';
+export { extractErrorMessage } from './client';

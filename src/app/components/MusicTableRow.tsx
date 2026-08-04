@@ -36,7 +36,7 @@ const getRequesterDisplayName = (requesterName?: string): string => {
     return requesterName;
 };
 
-export default function MusicTableRow({
+function MusicTableRow({
     music,
     index,
     userHash,

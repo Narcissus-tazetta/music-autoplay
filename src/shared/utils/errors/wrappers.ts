@@ -68,7 +68,7 @@ function sanitizeErrorForLog(errorInfo: ErrorInfo): ErrorInfo {
     return sanitized;
 }
 
-export function wrap<T extends unknown[], R>(
+export function withErrorHandler<T extends unknown[], R>(
     fn: (...args: T) => R,
     contextOrOpts?: string | WrapOptions,
 ): (...args: T) => R | undefined {
@@ -86,8 +86,6 @@ export function wrap<T extends unknown[], R>(
         }
     };
 }
-
-export const withErrorHandler = wrap;
 
 export function wrapAsync<T extends unknown[], R>(
     fn: (...args: T) => Promise<R> | R,
@@ -108,5 +106,3 @@ export function wrapAsync<T extends unknown[], R>(
         }
     };
 }
-
-export const withAsyncErrorHandler = wrapAsync;

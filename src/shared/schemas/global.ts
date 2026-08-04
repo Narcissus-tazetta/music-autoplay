@@ -9,7 +9,7 @@ const ShowToastFnSchema = z.custom<
     (payload: { level: z.infer<typeof UiToastLevelSchema>; message: string }) => void
 >(v => typeof v === 'function');
 
-export const WindowExtensionsSchema = z
+const WindowExtensionsSchema = z
     .object({
         SOCKET_PATH: z.string().optional(),
         SOCKET_URL: z.string().optional(),

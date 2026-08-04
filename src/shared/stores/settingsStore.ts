@@ -1,5 +1,6 @@
 import normalizeApiResponse from '@/shared/utils/api';
 import { parseApiErrorForUI } from '@/shared/utils/apiUi';
+import { runParsedApiError } from '@/shared/utils/runUiAction';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -45,12 +46,7 @@ const loadFromServerAsync = async (): Promise<void> => {
                     details: err.details,
                     message: err.message,
                 });
-                try {
-                    const mod = await import('@/shared/utils/uiActionExecutor');
-                    mod.executeParsedApiError(parsed, { conformFields: undefined });
-                } catch (error) {
-                    if (import.meta.env.DEV) console.warn('loadFromServer server error', parsed, error);
-                }
+                await runParsedApiError(parsed);
             } catch {
                 if (import.meta.env.DEV) console.warn('loadFromServer server error', norm.error);
             }
@@ -89,12 +85,7 @@ const _syncToServerAsync = async (): Promise<void> => {
                     details: err.details,
                     message: err.message,
                 });
-                try {
-                    const mod = await import('@/shared/utils/uiActionExecutor');
-                    mod.executeParsedApiError(parsed, { conformFields: undefined });
-                } catch (error) {
-                    if (import.meta.env.DEV) console.warn('syncToServer error', parsed, error);
-                }
+                await runParsedApiError(parsed);
             } catch {
                 if (import.meta.env.DEV) console.warn('syncToServer error', norm.error);
             }
@@ -147,5 +138,3 @@ export const useSettingsStore = create<SettingsStore>()(
         { name: 'settings-storage' },
     ),
 );
-
-export default useSettingsStore;

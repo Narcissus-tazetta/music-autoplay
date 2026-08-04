@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const YouTubeId = z
+const YouTubeId = z
     .string()
     .min(11)
     .max(20)
@@ -44,31 +44,6 @@ export const YouTubeMetaSchema = z.object({
     title: z.string(),
 });
 
-export const MusicSchema = z.object({
-    channelId: z.string(),
-    channelName: z.string(),
-    duration: z.string(),
-    id: YouTubeId,
-    requestedAt: z.string().optional(),
-    requesterHash: z.string().optional(),
-    requesterName: z.string().optional(),
-    title: z.string().min(1),
-});
-
-export const YouTubeResolveResultSchema = z.discriminatedUnion('ok', [
-    z.object({
-        ok: z.literal(true),
-        value: YouTubeMetaSchema,
-    }),
-    z.object({
-        error: z.union([z.string(), z.instanceof(Error)]),
-        ok: z.literal(false),
-    }),
-]);
-
-export type AddMusicInput = z.infer<typeof AddMusicSchema>;
-export type RemoveMusicInput = z.infer<typeof RemoveMusicSchema>;
-export type ReorderMusicInput = z.infer<typeof ReorderMusicSchema>;
+// The runtime shape of a queued music lives in @/shared/stores/musicStore; this module
+// only carries the schemas that actually validate incoming requests.
 export type YouTubeMeta = z.infer<typeof YouTubeMetaSchema>;
-export type Music = z.infer<typeof MusicSchema>;
-export type YouTubeResolveResult = z.infer<typeof YouTubeResolveResultSchema>;

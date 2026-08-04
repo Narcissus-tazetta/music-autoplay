@@ -1,12 +1,4 @@
-export interface ApiError {
-    code?: string | null;
-    message: string;
-    details?: unknown;
-}
-
-export type NormalizedApiResponse<T> =
-    | { success: true; data: T }
-    | { success: false; error: ApiError };
+import type { ApiError } from './api';
 
 export type UiFieldErrors = Record<string, string>;
 

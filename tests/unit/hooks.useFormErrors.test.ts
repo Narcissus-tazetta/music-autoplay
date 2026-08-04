@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { useFormErrors } from '../../src/app/hooks/useFormErrors';
+import useFormErrors from '../../src/app/hooks/useFormErrors';
 
 describe('useFormErrors hook', () => {
     test('returns undefined when no error data', () => {

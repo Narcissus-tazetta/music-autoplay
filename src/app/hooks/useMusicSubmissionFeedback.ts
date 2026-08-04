@@ -1,5 +1,6 @@
 import useFormErrors from '@/app/hooks/useFormErrors';
 import { getMessage } from '@/shared/constants/messages';
+import { runUiAction } from '@/shared/utils/runUiAction';
 import { useEffect, useRef, useState } from 'react';
 
 interface FetcherLike {
@@ -41,36 +42,18 @@ export function useMusicSubmissionFeedback({
             setInlineFeedback({ message: '追加できました', tone: 'success' });
             if (!hasShownToastRef.current) {
                 hasShownToastRef.current = true;
-                void (async () => {
-                    try {
-                        const mod = await import('@/shared/utils/uiActionExecutor');
-                        mod.executeUiAction({
-                            level: 'success',
-                            message: getMessage('SUCCESS_ADDED'),
-                            type: 'showToast',
-                        });
-                    } catch (error) {
-                        if (import.meta.env.DEV) console.debug('showToast failed', error);
-                    }
-                })();
+                void runUiAction({
+                    level: 'success',
+                    message: getMessage('SUCCESS_ADDED'),
+                    type: 'showToast',
+                });
             }
         }
 
         if (wasSubmitting && isNowIdle && errorMessage) {
             setInlineFeedback({ message: errorMessage, tone: 'error' });
 
-            void (async () => {
-                try {
-                    const mod = await import('@/shared/utils/uiActionExecutor');
-                    mod.executeUiAction({
-                        level: 'error',
-                        message: errorMessage,
-                        type: 'showToast',
-                    });
-                } catch (error) {
-                    if (import.meta.env.DEV) console.debug('showToast failed', error);
-                }
-            })();
+            void runUiAction({ level: 'error', message: errorMessage, type: 'showToast' });
         }
 
         if (wasSubmitting && isNowIdle && !errorMessage && formErrorsString) {
@@ -81,18 +64,7 @@ export function useMusicSubmissionFeedback({
                 tone: 'error',
             });
 
-            void (async () => {
-                try {
-                    const mod = await import('@/shared/utils/uiActionExecutor');
-                    mod.executeUiAction({
-                        level: 'error',
-                        message: formErrorsString,
-                        type: 'showToast',
-                    });
-                } catch (error) {
-                    if (import.meta.env.DEV) console.debug('showToast failed', error);
-                }
-            })();
+            void runUiAction({ level: 'error', message: formErrorsString, type: 'showToast' });
         }
 
         if (fetcher.state === 'submitting') {

@@ -1,11 +1,17 @@
 import logger from '@/server/logger';
 import type { RateLimiter } from '@/server/services/rateLimiter';
+import type { SocketServerInstance } from '@/server/socket';
+import { serverContext } from '@/shared/types/server';
+import { safeExecuteAsync } from '@/shared/utils/errors';
 import { err as makeErr } from '@/shared/utils/errors/result-handlers';
 import { respondWithResult } from '@/shared/utils/httpResponse';
+import { parseWithZod } from '@conform-to/zod/v4';
 import { createHash } from 'node:crypto';
+import type { ActionFunctionArgs } from 'react-router';
+import type { z } from 'zod';
 import { SERVER_ENV } from '~/env.server';
-import { resolveRequesterIdentity } from '~/requesterIdentity.server';
-import type { LoginSession } from '~/sessions.server';
+import { getRateLimitKey, resolveRequesterIdentity } from '~/requesterIdentity.server';
+import { isAdminSession, type LoginSession, loginSession } from '~/sessions.server';
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 
@@ -83,4 +89,80 @@ export function replyOptionsErrorResponse(value: unknown): Response | null {
         { error: (fe as string[]).join(' '), success: false },
         { status: 403 },
     );
+}
+
+export interface OwnedMusicActionConfig<TValue> {
+    schema: z.ZodType<TValue>;
+    /** Endpoint label used in rate-limit logs. */
+    endpoint: string;
+    /** Prefixes the rate-limit key so an endpoint can hold its own budget. */
+    rateLimitKeyPrefix?: string;
+    /** Shown when an anonymous caller has no identity hash to act as. */
+    unauthorizedMessage: string;
+    /** Log label and user-facing message for an unexpected failure. */
+    errorLabel: string;
+    failureMessage: string;
+    /** Extra gate run before rate limiting; return a Response to reject the request. */
+    authorize?: (session: LoginSession) => Response | null;
+    /** Logged once when an admin performs the action. */
+    adminLogMessage?: string;
+    run: (value: TValue, requesterHash: string, io: SocketServerInstance) => Promise<unknown>;
+}
+
+/**
+ * The shared skeleton behind the music mutations that act on someone's own queue entry
+ * (remove, reorder): parse → resolve session → authorize → rate limit → run → map result.
+ * `music.add` deliberately stays separate: it answers with conform `submission.reply()`
+ * payloads rather than the `{ data, success }` envelope these two return.
+ */
+export async function runOwnedMusicAction<TValue>(
+    { context, request }: ActionFunctionArgs,
+    config: OwnedMusicActionConfig<TValue>,
+): Promise<Response> {
+    const { httpRateLimiter, io } = context.get(serverContext);
+    const formData = await request.formData();
+    const submission = parseWithZod(formData, { schema: config.schema });
+
+    if (submission.status !== 'success') return Response.json(submission.reply(), { status: 400 });
+
+    const cookieHeader = request.headers.get('Cookie');
+    const session = await loginSession.getSession(cookieHeader);
+    const isAdmin = isAdminSession(session);
+
+    const rejected = config.authorize?.(session);
+    if (rejected) return rejected;
+
+    const rateLimitKey = `${config.rateLimitKeyPrefix ?? ''}${await getRateLimitKey(request, cookieHeader)}`;
+
+    if (!isAdmin) {
+        const limited = rateLimitExceededResponse(httpRateLimiter, rateLimitKey, config.endpoint);
+        if (limited) return limited;
+    }
+
+    try {
+        const acting = await resolveActingRequesterHash(
+            cookieHeader,
+            isAdmin,
+            config.unauthorizedMessage,
+            session,
+        );
+        if (!acting.ok) return acting.response;
+        if (isAdmin && config.adminLogMessage) logger.info(config.adminLogMessage);
+
+        const result = await safeExecuteAsync(() => config.run(submission.value, acting.requesterHash, io));
+
+        if (!result.ok) {
+            logger.error(config.errorLabel, { error: result.error });
+            return respondWithResult(makeErr({ message: extractHandlerErrorMessage(result.error) }));
+        }
+
+        const errorResponse = replyOptionsErrorResponse(result.value);
+        if (errorResponse) return errorResponse;
+
+        if (!isAdmin) httpRateLimiter.consume(rateLimitKey);
+        return Response.json({ data: result.value, success: true });
+    } catch (error: unknown) {
+        logger.error(config.errorLabel, { error });
+        return Response.json({ error: config.failureMessage, success: false }, { status: 500 });
+    }
 }

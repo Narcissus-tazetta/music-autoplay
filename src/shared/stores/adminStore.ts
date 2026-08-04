@@ -34,5 +34,3 @@ export const useAdminStore = create<AdminStore>(set => ({
         set(deriveRoleState(roles));
     },
 }));
-
-export default useAdminStore;
