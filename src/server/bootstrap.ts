@@ -1,4 +1,4 @@
-import { SERVER_ENV } from '@/app/env.server';
+import { SERVER_ENV } from '@/server/env.server';
 import { getHistoryService, type HistoryService } from './history/historyService';
 import logger from './logger';
 import type { Store } from './persistence';

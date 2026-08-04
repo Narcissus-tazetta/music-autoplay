@@ -1,4 +1,4 @@
-import { SERVER_ENV } from '@/app/env.server';
+import { SERVER_ENV } from '@/server/env.server';
 import logger from '@/server/logger';
 import compression from 'compression';
 import express from 'express';

@@ -1,7 +1,7 @@
+import { SERVER_ENV } from '@/server/env.server';
 import logger from '@/server/logger';
 import type { Server as HttpServer } from 'node:http';
 import { Server } from 'socket.io';
-import { SERVER_ENV } from '~/env.server';
 import { isProduction } from '../../config';
 import { buildCorsConfig, isOriginAllowed, makeOriginChecker } from './cors';
 import { attachUpgradeRewrite, registerEngineAugmentations } from './engine';

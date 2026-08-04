@@ -1,4 +1,4 @@
-import { SERVER_ENV } from '@/app/env.server';
+import { SERVER_ENV } from '@/server/env.server';
 import { HistoryService, setHistoryService } from '../history/historyService';
 import logger from '../logger';
 import { RequestLogService, setRequestLogService } from '../requestLog/requestLogService';

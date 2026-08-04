@@ -1,5 +1,5 @@
-import { SERVER_ENV } from '@/app/env.server';
-import { getSessionRoles, loginSession, type SessionRole } from '@/app/sessions.server';
+import { SERVER_ENV } from '@/server/env.server';
+import { getSessionRoles, loginSession, type SessionRole } from '@/server/sessions.server';
 import express, { type Request, Router } from 'express';
 import logger from '../logger';
 import { createAdminAuthenticator } from '../middleware/adminAuth';

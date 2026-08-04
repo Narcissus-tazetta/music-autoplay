@@ -2,7 +2,7 @@ import {
     hasPathfinderAccess as sessionHasPathfinderAccess,
     isAdminSession as sessionIsAdmin,
     loginSession,
-} from '@/app/sessions.server';
+} from '@/server/sessions.server';
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
 /**

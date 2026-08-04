@@ -1,3 +1,11 @@
+/**
+ * Keep the `.server` suffix. It is not decorative: React Router's Vite plugin uses it to
+ * strip this module from the client build, and route modules (e.g. routes/api/search.furigana)
+ * import SERVER_ENV directly. Renaming this to `env.ts` would pull the whole schema — and the
+ * process.env values it validates — into the browser bundle.
+ *
+ * The same applies to sessions.server.ts and requesterIdentity.server.ts.
+ */
 import dotenv from 'dotenv';
 import { z } from 'zod';
 

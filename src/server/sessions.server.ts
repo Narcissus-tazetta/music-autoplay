@@ -1,6 +1,6 @@
+import { SERVER_ENV } from '@/server/env.server';
 import { createCookie, createCookieSessionStorage } from 'react-router';
 import { createThemeSessionResolver } from 'remix-themes';
-import { SERVER_ENV } from '~/env.server';
 
 const isProduction = process.env.NODE_ENV === 'production';
 

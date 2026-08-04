@@ -1,4 +1,4 @@
-import { SERVER_ENV } from '@/app/env.server';
+import { SERVER_ENV } from '@/server/env.server';
 import { type RequestHandler, Router } from 'express';
 import { requireAdmin } from '../middleware/requireRole';
 import { metricsManager } from '../services/metricsManager';

@@ -13,7 +13,7 @@ async function readEnvValue(key: string, env: Record<string, string>): Promise<s
         [
             'bun',
             '-e',
-            `const m = await import('${import.meta.dir}/../../src/app/env.server.ts');`
+            `const m = await import('${import.meta.dir}/../../src/server/env.server.ts');`
             // dotenv prints a banner to stdout, so tag the value and pick it back out.
             + `process.stdout.write('<<VALUE>>' + String(m.SERVER_ENV['${key}']));`,
         ],

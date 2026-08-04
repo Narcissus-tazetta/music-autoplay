@@ -1,7 +1,7 @@
+import { SERVER_ENV } from '@/server/env.server';
+import type { UserSessionData } from '@/server/sessions.server';
 import { Authenticator } from 'remix-auth';
 import { GoogleOIDCStrategy } from '~/auth/auth-google.server';
-import { SERVER_ENV } from '~/env.server';
-import type { UserSessionData } from '~/sessions.server';
 
 export const authenticator = new Authenticator<UserSessionData>();
 

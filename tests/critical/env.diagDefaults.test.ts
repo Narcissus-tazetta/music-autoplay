@@ -1,4 +1,4 @@
-import { SERVER_ENV } from '@/app/env.server';
+import { SERVER_ENV } from '@/server/env.server';
 import { describe, expect, test } from 'bun:test';
 
 describe('diagnostics env defaults', () => {

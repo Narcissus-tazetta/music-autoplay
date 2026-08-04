@@ -1,6 +1,6 @@
+import { SERVER_ENV } from '@/server/env.server';
 import type { Music, RemoteStatus } from '@/shared/types/music';
 import { createAdminHash } from '@/shared/utils/errors';
-import { SERVER_ENV } from '~/env.server';
 import { socketConfig } from '../config';
 import type { Store } from '../persistence';
 import { RateLimiter } from '../services/rateLimiter';

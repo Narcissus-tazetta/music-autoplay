@@ -1,5 +1,5 @@
 import './socketData';
-import { resolveRequesterIdentity } from '@/app/requesterIdentity.server';
+import { resolveRequesterIdentity } from '@/server/requesterIdentity.server';
 import type { Socket } from 'socket.io';
 import type { ExtendedError, Server as IOServer } from 'socket.io';
 

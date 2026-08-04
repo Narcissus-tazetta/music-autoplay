@@ -1,5 +1,5 @@
+import { themeSessionResolver } from '@/server/sessions.server';
 import { createThemeAction } from 'remix-themes';
-import { themeSessionResolver } from '../../sessions.server';
 
 export const action = createThemeAction(themeSessionResolver);
 export default function SetTheme() {

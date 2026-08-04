@@ -1,9 +1,9 @@
+import { hasPathfinderAccess } from '@/server/sessions.server';
 import { ReorderMusicSchema } from '@/shared/schemas/music';
 import { err as makeErr } from '@/shared/utils/errors/result-handlers';
 import { respondWithResult } from '@/shared/utils/httpResponse';
 import type { ActionFunctionArgs } from 'react-router';
 import { runOwnedMusicAction } from '../../musicAction.server';
-import { hasPathfinderAccess } from '../../sessions.server';
 
 export const action = (args: ActionFunctionArgs) =>
     runOwnedMusicAction(args, {

@@ -1,4 +1,4 @@
-import { SERVER_ENV } from '@/app/env.server';
+import { SERVER_ENV } from '@/server/env.server';
 import type { RemoteStatus } from '@/shared/types/music';
 import { isRecord } from '@/shared/utils/typeGuards';
 import { extractYoutubeId } from '@/shared/utils/youtube';

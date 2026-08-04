@@ -5,8 +5,8 @@ import {
     maskRequesterHash,
     normalizeRequesterDisplayName,
     resolveRequesterIdentity,
-} from '@/app/requesterIdentity.server';
-import { anonymousIdCookie, loginSession, requesterDisplayNameCookie } from '@/app/sessions.server';
+} from '@/server/requesterIdentity.server';
+import { anonymousIdCookie, loginSession, requesterDisplayNameCookie } from '@/server/sessions.server';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 const TEST_ANON_ID = '550e8400-e29b-41d4-a716-446655440000';

@@ -1,6 +1,6 @@
+import { SERVER_ENV } from '@/server/env.server';
 import { withErrorHandler } from '@/shared/utils/errors';
 import type { Request } from 'express';
-import { SERVER_ENV } from '~/env.server';
 import { isProduction } from '../../config';
 import logger from '../../logger';
 import { logCorsViolation } from '../../utils/securityLogger';

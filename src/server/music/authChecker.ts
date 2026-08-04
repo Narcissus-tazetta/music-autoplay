@@ -1,4 +1,4 @@
-import { SERVER_ENV } from '@/app/env.server';
+import { SERVER_ENV } from '@/server/env.server';
 import type { HandlerError } from '@/shared/utils/errors';
 import { toHandlerError } from '@/shared/utils/errors';
 import type { Result } from '@/shared/utils/errors/result-handlers';

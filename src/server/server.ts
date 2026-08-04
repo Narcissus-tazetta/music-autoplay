@@ -1,4 +1,4 @@
-import { SERVER_ENV } from '@/app/env.server';
+import { SERVER_ENV } from '@/server/env.server';
 import logger, { installProcessHandlers, replaceConsoleWithLogger } from '@/server/logger';
 import { type ServerContext, serverContext } from '@/shared/types/server';
 import { createRequestHandler } from '@react-router/express';

@@ -1,5 +1,5 @@
-import { normalizeRequesterDisplayName, resolveRequesterIdentity } from '@/app/requesterIdentity.server';
-import { requesterDisplayNameCookie } from '@/app/sessions.server';
+import { normalizeRequesterDisplayName, resolveRequesterIdentity } from '@/server/requesterIdentity.server';
+import { requesterDisplayNameCookie } from '@/server/sessions.server';
 import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {

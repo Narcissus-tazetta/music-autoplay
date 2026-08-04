@@ -1,5 +1,5 @@
-import { hashRequesterId, resolveRequesterIdentity } from '@/app/requesterIdentity.server';
-import { anonymousIdCookie } from '@/app/sessions.server';
+import { hashRequesterId, resolveRequesterIdentity } from '@/server/requesterIdentity.server';
+import { anonymousIdCookie } from '@/server/sessions.server';
 import { registerSocketIdentityMiddleware } from '@/server/socket/identityMiddleware';
 import { describe, expect, test } from 'bun:test';
 import { createServer } from 'node:http';
