@@ -5,7 +5,7 @@ import type { HandlerError } from '@/shared/utils/errors';
 import type { Result } from '@/shared/utils/errors/result-handlers';
 import { err, ok } from '@/shared/utils/errors/result-handlers';
 import { watchUrl } from '@/shared/utils/youtube';
-import logger from '../logger';
+import logger from '../logger.server';
 import { getRequestLogService } from '../requestLog/requestLogService';
 import type { AuthChecker } from './authChecker';
 import type { MusicEventEmitter } from './musicEventEmitter';

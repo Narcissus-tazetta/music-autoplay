@@ -1,4 +1,4 @@
-import { replaceConsoleWithLogger } from '../src/server/logger';
+import { replaceConsoleWithLogger } from '../src/server/logger.server';
 import { describe, expect, it } from './bunTestCompat';
 
 describe('console wrapper', () => {

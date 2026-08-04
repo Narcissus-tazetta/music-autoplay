@@ -1,4 +1,4 @@
-import { respondWithResult } from '@/server/httpResponse';
+import { respondWithResult } from '@/server/httpResponse.server';
 import { ensureAnonymousIdCookie, resolveRequesterIdentity } from '@/server/requesterIdentity.server';
 import { themeSessionResolver, type UserSessionData } from '@/server/sessions.server';
 import { loginSession } from '@/server/sessions.server';

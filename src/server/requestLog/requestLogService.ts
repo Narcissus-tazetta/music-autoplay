@@ -8,7 +8,7 @@ import type {
 } from '@/shared/types/requestLog';
 import { watchUrl } from '@/shared/utils/youtube';
 import { randomUUID } from 'node:crypto';
-import logger from '../logger';
+import logger from '../logger.server';
 import { RequestLogFileStore } from './requestLogFileStore';
 
 const REQUEST_LOG_RETENTION_DAYS = 30;

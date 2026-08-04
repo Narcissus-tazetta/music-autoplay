@@ -1,5 +1,5 @@
 import { serverContext } from '@/server/context';
-import logger from '@/server/logger';
+import logger from '@/server/logger.server';
 import { getRateLimitKey, resolveRequesterIdentity } from '@/server/requesterIdentity.server';
 import { hasPathfinderAccess, loginSession } from '@/server/sessions.server';
 import { getMessage } from '@/shared/constants/messages';

@@ -2,7 +2,7 @@ import { SERVER_ENV } from '@/server/env.server';
 import { withErrorHandler } from '@/shared/utils/errors';
 import type { Request } from 'express';
 import { isProduction } from '../../config';
-import logger from '../../logger';
+import logger from '../../logger.server';
 import { logCorsViolation } from '../../utils/securityLogger';
 
 export interface CorsConfig {

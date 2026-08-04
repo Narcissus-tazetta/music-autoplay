@@ -1,7 +1,7 @@
 import { SERVER_ENV } from '@/server/env.server';
 import { withErrorHandler } from '@/shared/utils/errors';
 import type { Socket } from 'socket.io';
-import type { AppLogger } from '../../logger';
+import type { AppLogger } from '../../logger.server';
 import { sanitizeArgs, snapshotHeaders } from '../utils/logSanitizer';
 
 export function setupSocketLogging(

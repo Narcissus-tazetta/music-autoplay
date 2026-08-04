@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import logger from '../logger';
+import logger from '../logger.server';
 
 /**
  * Terminal error middleware.

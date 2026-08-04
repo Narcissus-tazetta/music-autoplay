@@ -1,4 +1,4 @@
-import logger from '@/server/logger';
+import logger from '@/server/logger.server';
 import { importJWK, jwtVerify } from 'jose';
 import { OAuth2Strategy } from 'remix-auth-oauth2';
 

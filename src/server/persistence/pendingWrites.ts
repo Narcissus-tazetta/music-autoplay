@@ -1,4 +1,4 @@
-import logger from '@/server/logger';
+import logger from '@/server/logger.server';
 
 const DEFAULT_WARN_THRESHOLD = 100;
 

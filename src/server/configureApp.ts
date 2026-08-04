@@ -1,5 +1,5 @@
 import { SERVER_ENV } from '@/server/env.server';
-import logger from '@/server/logger';
+import logger from '@/server/logger.server';
 import compression from 'compression';
 import express from 'express';
 import helmet from 'helmet';

@@ -1,7 +1,7 @@
 import { serverContext } from '@/server/context';
 import { SERVER_ENV } from '@/server/env.server';
-import { respondWithResult } from '@/server/httpResponse';
-import logger from '@/server/logger';
+import { respondWithResult } from '@/server/httpResponse.server';
+import logger from '@/server/logger.server';
 import { getRateLimitKey, resolveRequesterIdentity } from '@/server/requesterIdentity.server';
 import type { RateLimiter } from '@/server/services/rateLimiter';
 import { isAdminSession, type LoginSession, loginSession } from '@/server/sessions.server';

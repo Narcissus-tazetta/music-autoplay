@@ -1,4 +1,4 @@
-import logger from '@/server/logger';
+import logger from '@/server/logger.server';
 import fs from 'node:fs';
 import path from 'node:path';
 

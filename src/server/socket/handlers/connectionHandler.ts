@@ -3,7 +3,7 @@ import { withErrorHandler } from '@/shared/utils/errors';
 import { randomUUID } from 'node:crypto';
 import type { Socket } from 'socket.io';
 import type { Server as IOServer } from 'socket.io';
-import logger, { logMetric, withContext } from '../../logger';
+import logger, { logMetric, withContext } from '../../logger.server';
 import type { MusicService } from '../../music/musicService';
 import type { Store } from '../../persistence';
 import type { RateLimiter } from '../../services/rateLimiter';

@@ -1,5 +1,5 @@
 import { SERVER_ENV } from '@/server/env.server';
-import logger from '@/server/logger';
+import logger from '@/server/logger.server';
 import { isObject } from '@/shared/utils/typeGuards';
 import type { Server as HttpServer } from 'node:http';
 import { isProduction } from '../../config';

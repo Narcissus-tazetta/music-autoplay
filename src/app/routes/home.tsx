@@ -9,7 +9,7 @@ import { useAdminStore } from '@/app/stores/adminStore';
 import { useHistoryStore } from '@/app/stores/historyStore';
 import { useHomeViewStore } from '@/app/stores/homeViewStore';
 import { useMusicStore } from '@/app/stores/musicStore';
-import { respondWithResult } from '@/server/httpResponse';
+import { respondWithResult } from '@/server/httpResponse.server';
 import { resolveRequesterIdentity } from '@/server/requesterIdentity.server';
 import { INSERT_AT_END, INSERT_AT_FRONT } from '@/shared/schemas/music';
 import { normalizeApiResponse } from '@/shared/utils/api';

@@ -1,4 +1,4 @@
-import logger from '@/server/logger';
+import logger from '@/server/logger.server';
 import type { Music } from '@/shared/types/music';
 import type { Store } from './types';
 

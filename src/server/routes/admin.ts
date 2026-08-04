@@ -1,7 +1,7 @@
 import { SERVER_ENV } from '@/server/env.server';
 import { getSessionRoles, loginSession, type SessionRole } from '@/server/sessions.server';
 import express, { type Request, Router } from 'express';
-import logger from '../logger';
+import logger from '../logger.server';
 import { createAdminAuthenticator } from '../middleware/adminAuth';
 import { createAdminRateLimiter } from '../middleware/adminRateLimiter';
 import { logAuthFailure, logRateLimit, logSuspiciousRequest } from '../utils/securityLogger';

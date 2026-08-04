@@ -1,5 +1,5 @@
 import type { RemoteStatus } from '@/shared/types/music';
-import logger from '../logger';
+import logger from '../logger.server';
 
 export interface ReconcilerConfig {
     pausedGracePeriodMs: number;

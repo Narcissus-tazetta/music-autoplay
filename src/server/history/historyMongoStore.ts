@@ -1,5 +1,5 @@
 import type { HistoryItem } from '@/shared/types/history';
-import logger from '../logger';
+import logger from '../logger.server';
 import { MongoConnection, type MongoConnectionOptions } from '../persistence/mongoConnection';
 import { buildUpsert, computeExpireAt, docToEntity } from '../persistence/mongoDoc';
 import { PendingWriteQueue } from '../persistence/pendingWrites';

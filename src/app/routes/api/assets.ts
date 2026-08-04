@@ -1,4 +1,4 @@
-import { respondWithResult } from '@/server/httpResponse';
+import { respondWithResult } from '@/server/httpResponse.server';
 import { safeExecuteAsync } from '@/shared/utils/errors';
 import { err as makeErr } from '@/shared/utils/errors/result-handlers';
 import type { ActionFunctionArgs } from 'react-router';

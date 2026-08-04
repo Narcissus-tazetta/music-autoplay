@@ -3,7 +3,7 @@ import { isRecord } from '@/shared/utils/typeGuards';
 import { watchUrl } from '@/shared/utils/youtube';
 import type { Socket } from 'socket.io';
 import type { HistoryService } from '../../history/historyService';
-import type { AppLogger } from '../../logger';
+import type { AppLogger } from '../../logger.server';
 import type { MusicEventEmitter } from '../../music/musicEventEmitter';
 import type { MusicRepository } from '../../music/musicRepository';
 import type { YouTubeService } from '../../services/youtubeService';

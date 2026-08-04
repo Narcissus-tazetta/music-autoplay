@@ -1,7 +1,7 @@
 import type { HistoryQuery } from '@/shared/types/history';
 import type { Music, RemoteStatus } from '@/shared/types/music';
 import type { HistoryService } from '../../history/historyService';
-import logger from '../../logger';
+import logger from '../../logger.server';
 import { metricsManager } from '../../services/metricsManager';
 import { createSocketEventHandler } from './eventHandler';
 

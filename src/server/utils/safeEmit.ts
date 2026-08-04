@@ -1,6 +1,6 @@
 import { safeString } from '@/shared/utils/errors';
 import type { Server as IOServer } from 'socket.io';
-import logger, { serializeError } from '../logger';
+import logger, { serializeError } from '../logger.server';
 
 export interface EmitContext {
     operation?: string;

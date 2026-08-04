@@ -5,7 +5,7 @@ import { toHandlerError } from '@/shared/utils/errors';
 import type { Result } from '@/shared/utils/errors/result-handlers';
 import { err, ok } from '@/shared/utils/errors/result-handlers';
 import { watchUrl } from '@/shared/utils/youtube';
-import logger, { logMetric } from '../logger';
+import logger, { logMetric } from '../logger.server';
 
 export interface EmitOptions {
     context?: {

@@ -1,5 +1,5 @@
 import { SERVER_ENV } from '@/server/env.server';
-import logger from '@/server/logger';
+import logger from '@/server/logger.server';
 import type { Server as HttpServer } from 'node:http';
 import { Server } from 'socket.io';
 import { isProduction } from '../../config';

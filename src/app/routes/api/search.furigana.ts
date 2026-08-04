@@ -1,5 +1,5 @@
 import { SERVER_ENV } from '@/server/env.server';
-import logger from '@/server/logger';
+import logger from '@/server/logger.server';
 import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router';
 import { z } from 'zod';
 

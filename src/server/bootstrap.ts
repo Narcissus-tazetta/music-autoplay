@@ -1,6 +1,6 @@
 import { SERVER_ENV } from '@/server/env.server';
 import { getHistoryService, type HistoryService } from './history/historyService';
-import logger from './logger';
+import logger from './logger.server';
 import type { Store } from './persistence';
 import { createPersistence, registerPersistenceSingletons } from './persistence/provider';
 import type { RequestLogService } from './requestLog/requestLogService';

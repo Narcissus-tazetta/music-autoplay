@@ -1,5 +1,5 @@
-import { respondWithResult } from '@/server/httpResponse';
-import logger from '@/server/logger';
+import { respondWithResult } from '@/server/httpResponse.server';
+import logger from '@/server/logger.server';
 import { err as makeErr } from '@/shared/utils/errors/result-handlers';
 import type { ActionFunctionArgs } from 'react-router';
 import { authenticator } from '../../auth/auth.server';

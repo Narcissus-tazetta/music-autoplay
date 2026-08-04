@@ -1,4 +1,4 @@
-import { safeLog } from '@/server/logger';
+import { safeLog } from '@/server/logger.server';
 import { getStructuredClone, isObject } from '@/shared/utils/typeGuards';
 import type { HeaderSnapshot, RequestLike, SocketLike } from '../types';
 

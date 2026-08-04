@@ -1,4 +1,4 @@
-import { respondWithResult } from '@/server/httpResponse';
+import { respondWithResult } from '@/server/httpResponse.server';
 import { hasPathfinderAccess } from '@/server/sessions.server';
 import { ReorderMusicSchema } from '@/shared/schemas/music';
 import { err as makeErr } from '@/shared/utils/errors/result-handlers';

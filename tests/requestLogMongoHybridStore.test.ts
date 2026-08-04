@@ -1,4 +1,4 @@
-import logger from '@/server/logger';
+import logger from '@/server/logger.server';
 import { RequestLogMongoHybridStore, RequestLogMongoStore } from '@/server/requestLog/requestLogMongoStore';
 import type { RequestLogEntry, RequestLogQuery } from '@/shared/types/requestLog';
 import { describe, expect, jest, test } from 'bun:test';

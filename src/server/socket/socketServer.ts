@@ -3,7 +3,7 @@ import type { C2S, S2C } from '@/shared/types/socket';
 import type { Server as HttpServer } from 'node:http';
 import type { Server } from 'socket.io';
 import type { Server as IOServer } from 'socket.io';
-import logger from '../logger';
+import logger from '../logger.server';
 import type { MusicService } from '../music/musicService';
 import { createMusicService } from '../music/musicServiceFactory';
 import type { Store } from '../persistence';

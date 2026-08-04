@@ -1,6 +1,6 @@
 import { type ServerContext, serverContext } from '@/server/context';
 import { SERVER_ENV } from '@/server/env.server';
-import logger, { installProcessHandlers, replaceConsoleWithLogger } from '@/server/logger';
+import logger, { installProcessHandlers, replaceConsoleWithLogger } from '@/server/logger.server';
 import { createRequestHandler } from '@react-router/express';
 import express from 'express';
 import { RouterContextProvider } from 'react-router';

@@ -1,4 +1,4 @@
-import logger from '../logger';
+import logger from '../logger.server';
 import type { RateLimiter } from './rateLimiter';
 
 export class RateLimiterManager {
