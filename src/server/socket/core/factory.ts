@@ -1,16 +1,16 @@
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 import type { Server as HttpServer } from 'node:http';
 import type { Server as IOServer } from 'socket.io';
 import { socketConfig } from '../../config';
-import logger from '../../logger';
+import logger from '../../logger.server';
 import type { Store } from '../../persistence';
 import type { RateLimiter } from '../../services/rateLimiter';
 import { WindowCloseManager } from '../../services/windowCloseManager';
 import { YouTubeService } from '../../services/youtubeService';
 import { TimerManager } from '../../utils/timerManager';
 import { makeConnectionHandler } from '../handlers/connectionHandler';
+import { registerSocketIdentityMiddleware } from '../identityMiddleware';
 import { SocketRuntime } from '../managers/runtime';
-import { registerSocketIdentityMiddleware } from '../middleware/socketIdentityMiddleware';
 import { createSocketIo } from './socketIo';
 
 export interface RuntimeOptions {

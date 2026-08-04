@@ -64,18 +64,18 @@ bun run build:extension
 bun run start
 
 # テスト
-bun run test:unit
-bun run test:critical
+bun run test
 ```
 
 ## ディレクトリ構成（抜粋）
 
-- `src/` : アプリケーションのソース（サーバー・クライアント共存）
+- `src/server/` : Node バックエンド（Express・Socket.IO・永続化）。`src/app` には依存しない
+- `src/app/` : React Router アプリ（ルート・コンポーネント・ストア）。`.server.ts` はサーバー専用でクライアントバンドルから除外される
+- `src/shared/` : サーバーとアプリの両方から使う型・スキーマ・定数・ユーティリティのみ
 - `build/` : ビルド出力（`build/client` / `build/server`）
 - `youtube-auto-play/` : ブラウザ拡張のソースと設定
-- `server/` : サーバーブートストラップや設定（一部）
 - `public/` : 静的公開ファイル
-- `tests/` : テスト群
+- `tests/` : テスト群（主題別のフラット構成）
 
 ## 開発環境の構築（要点）
 

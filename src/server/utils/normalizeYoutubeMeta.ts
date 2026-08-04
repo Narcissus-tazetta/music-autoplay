@@ -1,4 +1,4 @@
-import { safeLog } from '@/server/logger';
+import { safeLog } from '@/server/logger.server';
 import type { YouTubeMeta } from '@/shared/schemas/music';
 
 function parseISO8601ToSeconds(iso: string): number {

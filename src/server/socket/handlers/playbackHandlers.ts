@@ -1,4 +1,4 @@
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 import { extractYoutubeId } from '@/shared/utils/youtube';
 import {
     createEventRegistrar,

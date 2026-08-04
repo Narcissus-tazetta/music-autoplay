@@ -44,6 +44,6 @@ export const YouTubeMetaSchema = z.object({
     title: z.string(),
 });
 
-// The runtime shape of a queued music lives in @/shared/stores/musicStore; this module
+// The runtime shape of a queued music lives in @/shared/types/music; this module
 // only carries the schemas that actually validate incoming requests.
 export type YouTubeMeta = z.infer<typeof YouTubeMetaSchema>;

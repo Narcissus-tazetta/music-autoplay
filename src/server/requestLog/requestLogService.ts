@@ -1,5 +1,5 @@
-import { maskRequesterHash } from '@/app/requesterIdentity.server';
-import type { Music } from '@/shared/stores/musicStore';
+import { maskRequesterHash } from '@/server/requesterIdentity.server';
+import type { Music } from '@/shared/types/music';
 import type {
     MaskedRequestLogEntry,
     RequestLogEntry,
@@ -8,7 +8,7 @@ import type {
 } from '@/shared/types/requestLog';
 import { watchUrl } from '@/shared/utils/youtube';
 import { randomUUID } from 'node:crypto';
-import logger from '../logger';
+import logger from '../logger.server';
 import { RequestLogFileStore } from './requestLogFileStore';
 
 const REQUEST_LOG_RETENTION_DAYS = 30;

@@ -1,9 +1,9 @@
-import logger from '@/server/logger';
+import { respondWithResult } from '@/server/httpResponse.server';
+import logger from '@/server/logger.server';
+import { loginSession } from '@/server/sessions.server';
 import { err as makeErr } from '@/shared/utils/errors/result-handlers';
-import { respondWithResult } from '@/shared/utils/httpResponse';
 import { type LoaderFunctionArgs, redirect } from 'react-router';
 import { authenticator } from '../../auth/auth.server';
-import { loginSession } from '../../sessions.server';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
     try {

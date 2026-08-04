@@ -1,6 +1,6 @@
-import { SERVER_ENV } from '@/app/env.server';
+import { SERVER_ENV } from '@/server/env.server';
 import { getHistoryService, type HistoryService } from './history/historyService';
-import logger from './logger';
+import logger from './logger.server';
 import type { Store } from './persistence';
 import { createPersistence, registerPersistenceSingletons } from './persistence/provider';
 import type { RequestLogService } from './requestLog/requestLogService';
@@ -8,7 +8,7 @@ import CacheService from './services/cacheService';
 import { MetricsManager, metricsManager } from './services/metricsManager';
 import { RateLimiterManager } from './services/rateLimiterManager';
 import { YouTubeService } from './services/youtubeService';
-import { SocketServerInstance } from './socket';
+import { SocketServerInstance } from './socket/socketServer';
 export interface Metrics {
     apiMusics: { calls: number; errors: number; totalMs: number };
     rpcGetAllMusics: { calls: number; errors: number; totalMs: number };

@@ -1,4 +1,4 @@
-import type { RemoteStatus } from '@/shared/stores/musicStore';
+import type { RemoteStatus } from '@/shared/types/music';
 import { isRecord } from '@/shared/utils/typeGuards';
 import { extractYoutubeId } from '@/shared/utils/youtube';
 import { createEventRegistrar, type ExtensionContext, isSameVideoOrUnknown } from './extensionHandlerContext';

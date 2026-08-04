@@ -1,8 +1,8 @@
 import { HistoryFileStore } from '@/server/history/historyFileStore';
 import type { HistoryStore } from '@/server/history/historyStore';
-import type { Music } from '@/shared/stores/musicStore';
 import type { HistoryItem, HistoryQuery, HistorySort } from '@/shared/types/history';
-import logger from '../logger';
+import type { Music } from '@/shared/types/music';
+import logger from '../logger.server';
 
 const HISTORY_RETENTION_YEARS = 3;
 const HISTORY_RETENTION_MS = HISTORY_RETENTION_YEARS * 365 * 24 * 60 * 60 * 1000;

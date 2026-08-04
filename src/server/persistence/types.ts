@@ -1,4 +1,4 @@
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 
 export interface PersistFile {
     items?: Music[];

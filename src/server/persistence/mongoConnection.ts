@@ -1,4 +1,4 @@
-import logger from '@/server/logger';
+import logger from '@/server/logger.server';
 import { MongoClient } from 'mongodb';
 import type { Collection, Db, Document } from 'mongodb';
 

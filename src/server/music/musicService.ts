@@ -1,16 +1,16 @@
 import { getMessage } from '@/shared/constants/messages';
 import { INSERT_AT_END, INSERT_AT_FRONT } from '@/shared/schemas/music';
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 import type { HandlerError } from '@/shared/utils/errors';
 import type { Result } from '@/shared/utils/errors/result-handlers';
 import { err, ok } from '@/shared/utils/errors/result-handlers';
 import { watchUrl } from '@/shared/utils/youtube';
-import logger from '../logger';
+import logger from '../logger.server';
 import { getRequestLogService } from '../requestLog/requestLogService';
-import type { AuthChecker } from './auth/authChecker';
-import type { MusicEventEmitter } from './emitter/musicEventEmitter';
-import type { MusicRepository } from './repository/musicRepository';
-import type { YouTubeResolver } from './resolver/youtubeResolver';
+import type { AuthChecker } from './authChecker';
+import type { MusicEventEmitter } from './musicEventEmitter';
+import type { MusicRepository } from './musicRepository';
+import type { YouTubeResolver } from './youtubeResolver';
 
 export interface AddMusicRequest {
     url: string;

@@ -1,5 +1,5 @@
 import { useSettingsSync } from '@/app/hooks/useSettingsSync';
-import { useAdminStore } from '@/shared/stores/adminStore';
+import { useAdminStore } from '@/app/stores/adminStore';
 import { Label } from '@shadcn/ui/label';
 import { ToggleGroup } from '@shadcn/ui/toggle-group';
 import { Eye, EyeOff, List, MoonIcon, Play, Settings2, SparklesIcon, SunIcon } from 'lucide-react';

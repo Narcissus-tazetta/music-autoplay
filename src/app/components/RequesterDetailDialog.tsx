@@ -1,4 +1,4 @@
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 import type { MaskedRequestLogEntry } from '@/shared/types/requestLog';
 import { formatRequestedAt } from '@/shared/utils/format';
 import { Badge } from '@shadcn/ui/badge';

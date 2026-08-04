@@ -1,10 +1,10 @@
-import { SERVER_ENV } from '@/app/env.server';
+import { SERVER_ENV } from '@/server/env.server';
 import { type RequestHandler, Router } from 'express';
 import { requireAdmin } from '../middleware/requireRole';
 import { metricsManager } from '../services/metricsManager';
 import { RateLimiterManager } from '../services/rateLimiterManager';
 import type { YouTubeService } from '../services/youtubeService';
-import type { SocketServerInstance } from '../socket';
+import type { SocketServerInstance } from '../socket/socketServer';
 
 interface DiagnosticsDeps {
     socketServer: SocketServerInstance;

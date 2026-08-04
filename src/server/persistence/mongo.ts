@@ -1,6 +1,8 @@
-import logger from '@/server/logger';
-import type { Music } from '@/shared/stores/musicStore';
+import logger from '@/server/logger.server';
+import type { Music } from '@/shared/types/music';
 import { MongoConnection, type MongoConnectionOptions } from './mongoConnection';
+import { buildUpsert, docToEntity } from './mongoDoc';
+import { PendingWriteQueue } from './pendingWrites';
 import type { PersistFile, Store } from './types';
 
 export type MongoStoreOptions = MongoConnectionOptions;
@@ -41,27 +43,16 @@ export class MongoStore extends MongoConnection<MusicDoc> {
                 position: typeof d.order === 'number' ? d.order : createdAtRank,
             }))
             .toSorted((a, b) => a.position - b.position)
-            .map(({ doc }) => {
-                const { _id, order: _order, ...rest } = doc;
-                const id = typeof rest.id === 'string' && rest.id.length > 0 ? rest.id : _id;
-                return Object.assign(rest as Record<string, unknown>, { id }) as unknown as Music;
-            });
+            // `order` is internal bookkeeping; createdAt/updatedAt are deliberately kept,
+            // since callers have always received them on the music rows.
+            .map(({ doc }) => docToEntity<Music>(doc, ['order']));
     }
 
     async add(m: Music, order?: number): Promise<void> {
         const col = await this.getCollection();
         await col.updateOne(
             { _id: m.id },
-            {
-                $set: {
-                    ...m,
-                    updatedAt: new Date(),
-                    ...(order != undefined ? { order } : {}),
-                },
-                $setOnInsert: {
-                    createdAt: new Date(),
-                },
-            },
+            buildUpsert(m, order != undefined ? { order } : {}),
             { upsert: true },
         );
     }
@@ -104,7 +95,7 @@ export class MongoHybridStore implements Store {
     };
 
     private mongo: MongoStore;
-    private pendingWrites: Promise<unknown>[] = [];
+    private readonly pending = new PendingWriteQueue('MongoHybridStore');
 
     constructor(mongo: MongoStore, initial: Music[] = []) {
         this.mongo = mongo;
@@ -116,25 +107,13 @@ export class MongoHybridStore implements Store {
         return this.current.items;
     }
 
-    private trackWrite(p: Promise<unknown>): void {
-        this.pendingWrites.push(p);
-        if (this.pendingWrites.length > 100) {
-            logger.warn('MongoHybridStore: pendingWrites exceeds threshold', {
-                count: this.pendingWrites.length,
-            });
-        }
-        void p.finally(() => {
-            this.pendingWrites = this.pendingWrites.filter(x => x !== p);
-        });
-    }
-
     addSync(m: Music, atIndex?: number) {
         this.current.items = this.current.items || [];
         const idx = this.current.items.findIndex(x => x.id === m.id);
         if (idx !== -1) {
             this.current.items[idx] = m;
             this.current.lastUpdated = new Date().toISOString();
-            this.trackWrite(
+            this.pending.track(
                 this.mongo.add(m, idx).catch(error => logger.warn('MongoHybridStore: failed to add', { error })),
             );
             return;
@@ -145,7 +124,7 @@ export class MongoHybridStore implements Store {
             items.splice(clamped, 0, m);
             this.current.lastUpdated = new Date().toISOString();
             // A mid-queue insert shifts every following position, so restamp the whole order.
-            this.trackWrite(
+            this.pending.track(
                 this.mongo.add(m)
                     .then(() => this.mongo.reorderAll(items))
                     .catch(error => logger.warn('MongoHybridStore: failed to add at index', { error })),
@@ -154,7 +133,7 @@ export class MongoHybridStore implements Store {
         }
         this.current.items.push(m);
         this.current.lastUpdated = new Date().toISOString();
-        this.trackWrite(
+        this.pending.track(
             this.mongo.add(m, this.current.items.length - 1)
                 .catch(error => logger.warn('MongoHybridStore: failed to add', { error })),
         );
@@ -167,7 +146,7 @@ export class MongoHybridStore implements Store {
     reorderSync(musics: Music[]) {
         this.current.items = [...musics];
         this.current.lastUpdated = new Date().toISOString();
-        this.trackWrite(
+        this.pending.track(
             this.mongo.reorderAll(this.current.items)
                 .catch(error => logger.warn('MongoHybridStore: failed to reorder', { error })),
         );
@@ -181,7 +160,7 @@ export class MongoHybridStore implements Store {
         this.current.items = (this.current.items || []).filter(x => x.id !== id);
         this.current.lastUpdated = new Date().toISOString();
 
-        this.trackWrite(
+        this.pending.track(
             this.mongo.remove(id).catch(error => logger.warn('MongoHybridStore: failed to remove', { error })),
         );
     }
@@ -193,7 +172,7 @@ export class MongoHybridStore implements Store {
     clearSync() {
         this.current = { items: [], lastUpdated: new Date().toISOString() };
 
-        this.trackWrite(
+        this.pending.track(
             this.mongo.clear().catch(error => logger.warn('MongoHybridStore: failed to clear', { error })),
         );
     }
@@ -203,11 +182,7 @@ export class MongoHybridStore implements Store {
     }
 
     async flush(): Promise<void> {
-        try {
-            await Promise.all(this.pendingWrites);
-        } catch (error) {
-            logger.warn('MongoHybridStore: flush encountered errors', { error });
-        }
+        await this.pending.settle();
     }
 
     closeSync(): void {

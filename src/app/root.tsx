@@ -1,6 +1,9 @@
+import { respondWithResult } from '@/server/httpResponse.server';
+import { ensureAnonymousIdCookie, resolveRequesterIdentity } from '@/server/requesterIdentity.server';
+import { themeSessionResolver, type UserSessionData } from '@/server/sessions.server';
+import { loginSession } from '@/server/sessions.server';
 import { safeExecuteAsync } from '@/shared/utils/errors';
 import { err as makeErr } from '@/shared/utils/errors/result-handlers';
-import { respondWithResult } from '@/shared/utils/httpResponse';
 import clsx from 'clsx';
 import type { LinksFunction, LoaderFunctionArgs } from 'react-router';
 import {
@@ -16,9 +19,6 @@ import {
 } from 'react-router';
 import { PreventFlashOnWrongTheme, ThemeProvider, useTheme } from 'remix-themes';
 import { Header } from '~/components/ui/Header';
-import { ensureAnonymousIdCookie, resolveRequesterIdentity } from '~/requesterIdentity.server';
-import { themeSessionResolver, type UserSessionData } from '~/sessions.server';
-import { loginSession } from '~/sessions.server';
 import appCss from './App.css?url';
 import { useAppInitialization } from './hooks/useAppInitialization';
 import { useWindowAppApi } from './hooks/useWindowAppApi';

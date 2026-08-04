@@ -1,4 +1,4 @@
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 import type { Socket } from 'socket.io';
 import type { Server as IOServer } from 'socket.io';
 import { getHistoryService } from '../../history/historyService';

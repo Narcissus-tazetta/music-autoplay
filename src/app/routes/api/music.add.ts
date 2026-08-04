@@ -1,13 +1,13 @@
-import logger from '@/server/logger';
+import { serverContext } from '@/server/context';
+import logger from '@/server/logger.server';
+import { getRateLimitKey, resolveRequesterIdentity } from '@/server/requesterIdentity.server';
+import { hasPathfinderAccess, loginSession } from '@/server/sessions.server';
 import { getMessage } from '@/shared/constants/messages';
 import { AddMusicSchema } from '@/shared/schemas/music';
-import { serverContext } from '@/shared/types/server';
 import { safeExecuteAsync } from '@/shared/utils/errors';
 import { parseWithZod } from '@conform-to/zod/v4';
 import type { ActionFunctionArgs } from 'react-router';
 import { rateLimitExceededResponse } from '../../musicAction.server';
-import { getRateLimitKey, resolveRequesterIdentity } from '../../requesterIdentity.server';
-import { hasPathfinderAccess, loginSession } from '../../sessions.server';
 
 export const action = async ({
     request,

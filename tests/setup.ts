@@ -8,3 +8,32 @@ process.env.GOOGLE_CLIENT_ID = 'test-google-client-id';
 process.env.GOOGLE_CLIENT_SECRET = 'test-google-client-secret';
 process.env.CLIENT_URL = 'http://localhost:3000';
 process.env.LOG_LEVEL = 'error';
+
+// getHistoryService()/getRequestLogService() lazily build a file-backed service pointing at
+// data/history.json and data/request-logs.json. Socket handlers reach for those singletons,
+// so running the suite used to rewrite the developer's real history: the write is debounced
+// by 500ms, which hid it in single-file runs and only surfaced during a full run.
+//
+// Installing scratch-backed singletons before any test imports them keeps data/ untouched.
+// This must come after the env assignments above, since these modules read SERVER_ENV.
+const { join } = await import('node:path');
+const { HistoryService, setHistoryService } = await import('../src/server/history/historyService');
+const { RequestLogService, setRequestLogService } = await import(
+    '../src/server/requestLog/requestLogService'
+);
+
+/**
+ * A fixed path rather than mkdtemp: bun's test runner does not fire `process.on('exit')`, so
+ * a unique directory per run just piles up in the OS temp dir. tmp_test_data/ is gitignored
+ * and gets reused, so exactly one scratch directory ever exists.
+ *
+ * The `export` is load-bearing: it makes this file a module, which the top-level awaits above
+ * require. A bare `export {}` does not survive `oxlint --fix` in the pre-commit hook.
+ *
+ * The imports have to stay dynamic: static ones are hoisted above the env assignments, and
+ * these modules read SERVER_ENV at import time.
+ */
+export const testDataDir = join(process.cwd(), 'tmp_test_data', 'scratch-stores');
+
+setHistoryService(new HistoryService(join(testDataDir, 'history.json')));
+setRequestLogService(new RequestLogService(join(testDataDir, 'request-logs.json')));

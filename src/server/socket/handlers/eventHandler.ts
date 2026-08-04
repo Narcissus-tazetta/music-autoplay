@@ -8,7 +8,7 @@ import {
 import { wrapAsync } from '@/shared/utils/errors';
 import type { Socket } from 'socket.io';
 import type { ZodError, ZodSchema } from 'zod';
-import logger, { withContext } from '../../logger';
+import logger, { withContext } from '../../logger.server';
 import { RateLimiter } from '../../services/rateLimiter';
 
 export interface AuthContext {

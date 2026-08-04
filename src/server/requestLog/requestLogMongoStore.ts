@@ -5,8 +5,10 @@ import type {
     RequestLogStore,
 } from '@/shared/types/requestLog';
 import type { Filter } from 'mongodb';
-import logger from '../logger';
+import logger from '../logger.server';
 import { MongoConnection, type MongoConnectionOptions } from '../persistence/mongoConnection';
+import { buildUpsert, computeExpireAt, docToEntity } from '../persistence/mongoDoc';
+import { PendingWriteQueue } from '../persistence/pendingWrites';
 
 const REQUEST_LOG_TTL_DAYS = 30;
 const REQUEST_LOG_TTL_MS = REQUEST_LOG_TTL_DAYS * 24 * 60 * 60 * 1000;
@@ -23,16 +25,9 @@ type RequestLogDoc = RequestLogEntry & {
     updatedAt?: Date;
 };
 
-function computeExpireAt(requestedAt: string): Date {
-    const baseMs = Date.parse(requestedAt);
-    const safeBase = Number.isFinite(baseMs) ? baseMs : Date.now();
-    return new Date(safeBase + REQUEST_LOG_TTL_MS);
-}
-
+/** Request logs are handed to the admin UI, so every mongo bookkeeping field is stripped. */
 function toEntry(doc: RequestLogDoc): RequestLogEntry {
-    const { _id, createdAt: _createdAt, expireAt: _expireAt, updatedAt: _updatedAt, ...rest } = doc;
-    const id = typeof rest.id === 'string' && rest.id.length > 0 ? rest.id : _id;
-    return Object.assign(rest as Record<string, unknown>, { id }) as unknown as RequestLogEntry;
+    return docToEntity<RequestLogEntry>(doc, ['createdAt', 'expireAt', 'updatedAt']);
 }
 
 function buildRecentFilter(input?: RequestLogQuery, now = new Date()): Filter<RequestLogDoc> {
@@ -120,16 +115,7 @@ export class RequestLogMongoStore extends MongoConnection<RequestLogDoc> {
         const col = await this.getCollection();
         await col.updateOne(
             { _id: entry.id },
-            {
-                $set: {
-                    ...entry,
-                    expireAt: computeExpireAt(entry.requestedAt),
-                    updatedAt: new Date(),
-                },
-                $setOnInsert: {
-                    createdAt: new Date(),
-                },
-            },
+            buildUpsert(entry, { expireAt: computeExpireAt(entry.requestedAt, REQUEST_LOG_TTL_MS) }),
             { upsert: true },
         );
     }
@@ -148,7 +134,10 @@ export class RequestLogMongoStore extends MongoConnection<RequestLogDoc> {
 export class RequestLogMongoHybridStore implements RequestLogStore {
     private current: RequestLogEntry[] = [];
     private readonly mongo: RequestLogMongoStore;
-    private pendingWrites: Promise<unknown>[] = [];
+    private readonly pending = new PendingWriteQueue(
+        'RequestLogMongoHybridStore',
+        PENDING_WRITE_WARN_THRESHOLD,
+    );
     private failedWrites: RequestLogEntry[] = [];
     private failedWriteCount = 0;
 
@@ -198,19 +187,16 @@ export class RequestLogMongoHybridStore implements RequestLogStore {
             return Number.isFinite(requestedAtMs) && requestedAtMs >= cutoffMs;
         });
 
-        const p = this.mongo
-            .pruneExpired(now)
-            .catch(error => logger.warn('RequestLogMongoHybridStore: failed to prune expired logs', { error }));
-        this.pendingWrites.push(p);
-        void p.finally(() => {
-            this.pendingWrites = this.pendingWrites.filter(x => x !== p);
-        });
+        this.pending.track(
+            this.mongo
+                .pruneExpired(now)
+                .catch(error => logger.warn('RequestLogMongoHybridStore: failed to prune expired logs', { error })),
+        );
     }
 
     private scheduleWrite(entry: RequestLogEntry): void {
-        const p = this.mongo
-            .append(entry)
-            .catch(error => {
+        this.pending.track(
+            this.mongo.append(entry).catch(error => {
                 this.failedWriteCount += 1;
                 if (this.failedWrites.length < FAILED_WRITE_QUEUE_LIMIT) this.failedWrites.push(entry);
                 logger.warn('RequestLogMongoHybridStore: failed to append', {
@@ -218,20 +204,12 @@ export class RequestLogMongoHybridStore implements RequestLogStore {
                     failedWriteCount: this.failedWriteCount,
                     queuedRetryCount: this.failedWrites.length,
                 });
-            });
-        this.pendingWrites.push(p);
-        if (this.pendingWrites.length > PENDING_WRITE_WARN_THRESHOLD) {
-            logger.warn('RequestLogMongoHybridStore: pending write queue is growing', {
-                pendingWrites: this.pendingWrites.length,
-            });
-        }
-        void p.finally(() => {
-            this.pendingWrites = this.pendingWrites.filter(x => x !== p);
-        });
+            }),
+        );
     }
 
     async flush(): Promise<void> {
-        await Promise.allSettled(this.pendingWrites);
+        await this.pending.settle();
 
         if (this.failedWrites.length > 0) {
             const retryEntries = this.failedWrites;

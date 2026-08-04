@@ -1,11 +1,11 @@
-import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
+import type { Music, RemoteStatus } from '@/shared/types/music';
 import { isRecord } from '@/shared/utils/typeGuards';
 import { watchUrl } from '@/shared/utils/youtube';
 import type { Socket } from 'socket.io';
 import type { HistoryService } from '../../history/historyService';
-import type { AppLogger } from '../../logger';
-import type { MusicEventEmitter } from '../../music/emitter/musicEventEmitter';
-import type { MusicRepository } from '../../music/repository/musicRepository';
+import type { AppLogger } from '../../logger.server';
+import type { MusicEventEmitter } from '../../music/musicEventEmitter';
+import type { MusicRepository } from '../../music/musicRepository';
 import type { YouTubeService } from '../../services/youtubeService';
 import type { SocketManager } from '../managers/manager';
 import { registerSocketEventSafely } from '../utils/eventRegistration';

@@ -1,4 +1,4 @@
-import type { Music } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/types/music';
 import { isRecord } from '@/shared/utils/typeGuards';
 import { extractYoutubeId, watchUrl } from '@/shared/utils/youtube';
 import {

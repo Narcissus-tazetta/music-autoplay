@@ -1,4 +1,4 @@
-import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
+import type { Music, RemoteStatus } from '@/shared/types/music';
 
 function usePlayingMusic(musics: Music[], remoteStatus: RemoteStatus | null): Music | undefined {
     if (!remoteStatus) return undefined;

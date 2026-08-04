@@ -1,4 +1,4 @@
-import type { AppLogger } from '../../logger';
+import type { AppLogger } from '../../logger.server';
 
 type EventHandler = (data: unknown) => void | Promise<void>;
 
