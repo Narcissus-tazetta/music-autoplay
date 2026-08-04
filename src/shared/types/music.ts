@@ -1,7 +1,7 @@
 /**
  * Core domain types shared by the server, the React Router app and the extension bridge.
  *
- * These used to live in `@/shared/stores/musicStore`, which pulled zustand and
+ * These used to live in the zustand music store, which pulled zustand and
  * socket.io-client into the import graph of anything that only needed the shapes.
  */
 

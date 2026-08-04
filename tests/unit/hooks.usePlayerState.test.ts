@@ -2,7 +2,7 @@ import {
     CLOSED_NOTIFICATION_VISIBLE_MS,
     isActivePlaybackStatus,
     shouldShowClosedNotification,
-} from '@/shared/hooks/usePlayerState';
+} from '@/app/hooks/usePlayerState';
 import type { RemoteStatus } from '@/shared/types/music';
 import { describe, expect, test } from 'bun:test';
 

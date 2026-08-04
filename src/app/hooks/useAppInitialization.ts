@@ -1,7 +1,7 @@
-import type { SessionRole } from '@/shared/stores/adminStore';
-import { useAdminStore } from '@/shared/stores/adminStore';
-import { useMusicStore } from '@/shared/stores/musicStore';
-import { useSettingsStore } from '@/shared/stores/settingsStore';
+import type { SessionRole } from '@/app/stores/adminStore';
+import { useAdminStore } from '@/app/stores/adminStore';
+import { useMusicStore } from '@/app/stores/musicStore';
+import { useSettingsStore } from '@/app/stores/settingsStore';
 import type { Music } from '@/shared/types/music';
 import normalizeApiResponse from '@/shared/utils/api';
 import { parseApiErrorForUI } from '@/shared/utils/apiUi';

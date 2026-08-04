@@ -2,7 +2,7 @@ import type { HistoryItem, HistoryQuery, HistorySort } from '@/shared/types/hist
 import type { C2S, S2C } from '@/shared/types/socket';
 import type { Socket } from 'socket.io-client';
 import { create } from 'zustand';
-import { getSocket } from '../../app/utils/socketClient';
+import { getSocket } from '../utils/socketClient';
 
 interface HistoryStore {
     items: HistoryItem[];

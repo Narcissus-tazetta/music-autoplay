@@ -1,7 +1,7 @@
+import { respondWithResult } from '@/server/httpResponse';
 import logger from '@/server/logger';
 import { loginSession } from '@/server/sessions.server';
 import { err as makeErr } from '@/shared/utils/errors/result-handlers';
-import { respondWithResult } from '@/shared/utils/httpResponse';
 import { type LoaderFunctionArgs, redirect } from 'react-router';
 import { authenticator } from '../../auth/auth.server';
 

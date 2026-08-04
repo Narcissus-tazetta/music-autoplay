@@ -1,13 +1,13 @@
-import { cn } from '@/app/utils/cn';
-import { getSocket } from '@/app/utils/socketClient';
 import {
     STATUS_PANEL_MOTION,
     useInterpolatedTime,
     useThumbnail,
     useTransitioningHold,
-} from '@/shared/hooks/usePlayerState';
-import { useAdminStore } from '@/shared/stores/adminStore';
-import { useSettingsStore } from '@/shared/stores/settingsStore';
+} from '@/app/hooks/usePlayerState';
+import { useAdminStore } from '@/app/stores/adminStore';
+import { useSettingsStore } from '@/app/stores/settingsStore';
+import { cn } from '@/app/utils/cn';
+import { getSocket } from '@/app/utils/socketClient';
 import type { Music, RemoteStatus } from '@/shared/types/music';
 import { formatSecondsToTime } from '@/shared/utils/format';
 import { watchUrl } from '@/shared/utils/youtube';

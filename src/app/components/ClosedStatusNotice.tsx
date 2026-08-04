@@ -1,5 +1,5 @@
-import type { VisibilityState } from '@/shared/hooks/usePlayerState';
-import { STATUS_PANEL_MOTION } from '@/shared/hooks/usePlayerState';
+import type { VisibilityState } from '@/app/hooks/usePlayerState';
+import { STATUS_PANEL_MOTION } from '@/app/hooks/usePlayerState';
 import { motion } from 'framer-motion';
 import { memo } from 'react';
 

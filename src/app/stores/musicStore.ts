@@ -3,7 +3,7 @@ import type { RemoteStatusWithMeta } from '@/shared/types/remoteStatus';
 import type { C2S, S2C } from '@/shared/types/socket';
 import type { Socket } from 'socket.io-client';
 import { create } from 'zustand';
-import { getSocket } from '../../app/utils/socketClient';
+import { getSocket } from '../utils/socketClient';
 
 const SEEK_THRESHOLD = 5;
 const REMOTE_STATUS_POLL_INTERVAL_MS = 10_000;

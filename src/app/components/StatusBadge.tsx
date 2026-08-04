@@ -1,3 +1,4 @@
+import { useSettingsStore } from '@/app/stores/settingsStore';
 import type { Music, RemoteStatus } from '@/shared/types/music';
 import { searchUrl } from '@/shared/utils/youtube';
 import { motion } from 'framer-motion';
@@ -8,7 +9,6 @@ import {
     useInitialStatusReveal,
     useTransitioningHold,
 } from '../hooks/usePlayerState';
-import { useSettingsStore } from '../stores/settingsStore';
 import { AudioPlayer } from './AudioPlayer';
 import { ClosedStatusNotice } from './ClosedStatusNotice';
 import { MusicTitleWithHover } from './MusicTitleWithHover';

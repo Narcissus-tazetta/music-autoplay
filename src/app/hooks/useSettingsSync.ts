@@ -1,5 +1,5 @@
-import type { YtStatusMode } from '@/shared/stores/settingsStore';
-import { useSettingsStore } from '@/shared/stores/settingsStore';
+import type { YtStatusMode } from '@/app/stores/settingsStore';
+import { useSettingsStore } from '@/app/stores/settingsStore';
 import { useEffect, useRef } from 'react';
 
 /**

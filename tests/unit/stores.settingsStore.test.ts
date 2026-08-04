@@ -1,5 +1,5 @@
+import { useSettingsStore } from '@/app/stores/settingsStore';
 import { describe, expect, test } from 'bun:test';
-import { useSettingsStore } from '../../src/shared/stores/settingsStore';
 
 describe('settingsStore', () => {
     test('initial state has default values', () => {

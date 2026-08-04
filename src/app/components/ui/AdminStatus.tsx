@@ -1,5 +1,5 @@
+import { useAdminStore } from '@/app/stores/adminStore';
 import { MdAdminPanelSettings } from 'react-icons/md';
-import { useAdminStore } from '../../../shared/stores/adminStore';
 
 const AdminStatus = () => {
     const isAdmin = useAdminStore(s => s.isAdmin);

@@ -1,9 +1,9 @@
+import { respondWithResult } from '@/server/httpResponse';
 import { ensureAnonymousIdCookie, resolveRequesterIdentity } from '@/server/requesterIdentity.server';
 import { themeSessionResolver, type UserSessionData } from '@/server/sessions.server';
 import { loginSession } from '@/server/sessions.server';
 import { safeExecuteAsync } from '@/shared/utils/errors';
 import { err as makeErr } from '@/shared/utils/errors/result-handlers';
-import { respondWithResult } from '@/shared/utils/httpResponse';
 import clsx from 'clsx';
 import type { LinksFunction, LoaderFunctionArgs } from 'react-router';
 import {

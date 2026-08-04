@@ -1,4 +1,4 @@
-import { useMusicStore } from '@/shared/stores/musicStore';
+import { useMusicStore } from '@/app/stores/musicStore';
 import { beforeEach, describe, expect, test } from 'bun:test';
 
 describe('remoteStatus duplicate traceId rejection', () => {

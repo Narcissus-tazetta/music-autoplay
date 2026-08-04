@@ -1,5 +1,5 @@
-import type { SessionRole } from '@/shared/stores/adminStore';
-import { useAdminStore } from '@/shared/stores/adminStore';
+import type { SessionRole } from '@/app/stores/adminStore';
+import { useAdminStore } from '@/app/stores/adminStore';
 import { Alert } from '@shadcn/ui/alert';
 import { Badge } from '@shadcn/ui/badge';
 import { Button } from '@shadcn/ui/button';

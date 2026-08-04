@@ -1,6 +1,6 @@
+import { MusicTitleWithHover } from '@/app/components/MusicTitleWithHover';
 import { useMusicSubmissionFeedback } from '@/app/hooks/useMusicSubmissionFeedback';
 import { cn } from '@/app/utils/cn';
-import { MusicTitleWithHover } from '@/shared/components';
 import type { HistoryItem } from '@/shared/types/history';
 import { watchUrl } from '@/shared/utils/youtube';
 import { Table } from '@shadcn/ui/table';

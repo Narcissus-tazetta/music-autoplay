@@ -1,5 +1,5 @@
+import { useAdminStore } from '@/app/stores/adminStore';
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { useAdminStore } from '../../src/shared/stores/adminStore';
 
 describe('useAuth logic', () => {
     beforeEach(() => {

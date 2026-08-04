@@ -1,6 +1,6 @@
 import { useAuth } from '@/app/hooks/useAuth';
-import { useAdminStore } from '@/shared/stores/adminStore';
-import { useHomeViewStore } from '@/shared/stores/homeViewStore';
+import { useAdminStore } from '@/app/stores/adminStore';
+import { useHomeViewStore } from '@/app/stores/homeViewStore';
 import { Alert } from '@shadcn/ui/alert';
 import { Button } from '@shadcn/ui/button';
 import { Dialog } from '@shadcn/ui/dialog';

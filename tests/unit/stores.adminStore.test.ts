@@ -1,5 +1,5 @@
+import { useAdminStore } from '@/app/stores/adminStore';
 import { describe, expect, test } from 'bun:test';
-import { useAdminStore } from '../../src/shared/stores/adminStore';
 
 describe('adminStore', () => {
     test('initial state is not admin', () => {

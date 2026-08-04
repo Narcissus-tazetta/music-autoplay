@@ -1,6 +1,6 @@
 import logger from '@/server/logger';
-import type { HandlerError } from './errors';
-import type { Result } from './errors/result-handlers';
+import type { HandlerError } from '@/shared/utils/errors';
+import type { Result } from '@/shared/utils/errors/result-handlers';
 
 interface JsonResponse {
     success: boolean;

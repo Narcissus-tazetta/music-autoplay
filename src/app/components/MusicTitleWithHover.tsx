@@ -1,8 +1,8 @@
 import { cn } from '@/app/utils/cn';
 import type { Music } from '@/shared/types/music';
 import { watchUrl } from '@/shared/utils/youtube';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@shadcn/ui/hover-card';
 import { memo, useState } from 'react';
-import { HoverCard, HoverCardContent, HoverCardTrigger } from './index';
 
 type MusicWithThumbnail = Music & { thumbnail?: string };
 
