@@ -35,6 +35,13 @@ interface Deps {
     musicService?: MusicService;
 }
 
+/** addMusic / removeMusic share one budget per requester. */
+const musicRateLimiterConfig = {
+    keyGenerator: (socket: Socket) => socket.data.requesterHash ?? socket.handshake.address ?? socket.id,
+    maxAttempts: 10,
+    windowMs: 60_000,
+} as const;
+
 const SocketAddMusicSchema = z.preprocess(input => {
     if (typeof input === 'string') return { url: input };
     if (Array.isArray(input)) {
@@ -116,13 +123,7 @@ export function createMusicHandlers(deps: Deps): {
         },
         logPayload: false,
         logResponse: false,
-        rateLimiter: deps.rateLimiter
-            ? {
-                keyGenerator: socket => socket.data.requesterHash ?? socket.handshake.address ?? socket.id,
-                maxAttempts: 10,
-                windowMs: 60_000,
-            }
-            : undefined,
+        rateLimiter: deps.rateLimiter ? musicRateLimiterConfig : undefined,
         validator: SocketAddMusicSchema,
     });
 
@@ -156,13 +157,7 @@ export function createMusicHandlers(deps: Deps): {
         },
         logPayload: false,
         logResponse: false,
-        rateLimiter: deps.rateLimiter
-            ? {
-                keyGenerator: socket => socket.data.requesterHash ?? socket.handshake.address ?? socket.id,
-                maxAttempts: 10,
-                windowMs: 60_000,
-            }
-            : undefined,
+        rateLimiter: deps.rateLimiter ? musicRateLimiterConfig : undefined,
         validator: SocketRemoveMusicSchema,
     });
 

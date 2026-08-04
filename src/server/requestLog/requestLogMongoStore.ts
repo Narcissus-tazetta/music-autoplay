@@ -4,9 +4,9 @@ import type {
     RequestLogQuery,
     RequestLogStore,
 } from '@/shared/types/requestLog';
-import { MongoClient } from 'mongodb';
-import type { Collection, Db, Filter } from 'mongodb';
+import type { Filter } from 'mongodb';
 import logger from '../logger';
+import { MongoConnection, type MongoConnectionOptions } from '../persistence/mongoConnection';
 
 const REQUEST_LOG_TTL_DAYS = 30;
 const REQUEST_LOG_TTL_MS = REQUEST_LOG_TTL_DAYS * 24 * 60 * 60 * 1000;
@@ -14,12 +14,7 @@ const REQUEST_LOG_LOAD_LIMIT = 5_000;
 const PENDING_WRITE_WARN_THRESHOLD = 100;
 const FAILED_WRITE_QUEUE_LIMIT = 500;
 
-export interface RequestLogMongoStoreOptions {
-    uri: string;
-    dbName: string;
-    collectionName: string;
-    client?: MongoClient;
-}
+export type RequestLogMongoStoreOptions = MongoConnectionOptions;
 
 type RequestLogDoc = RequestLogEntry & {
     _id: string;
@@ -65,47 +60,8 @@ function matchesQuery(entry: RequestLogEntry, input?: RequestLogQuery): boolean 
     return true;
 }
 
-export class RequestLogMongoStore {
-    private client: MongoClient;
-    private dbName: string;
-    private collectionName: string;
-    private ownsClient: boolean;
-    private connected: Promise<MongoClient> | null = null;
-
-    constructor(opts: RequestLogMongoStoreOptions) {
-        this.dbName = opts.dbName;
-        this.collectionName = opts.collectionName;
-
-        if (opts.client) {
-            this.client = opts.client;
-            this.ownsClient = false;
-        } else {
-            this.client = new MongoClient(opts.uri, {
-                serverSelectionTimeoutMS: 5_000,
-            });
-            this.ownsClient = true;
-        }
-    }
-
-    private async ensureConnected(): Promise<void> {
-        if (!this.connected) {
-            this.connected = this.client.connect().catch(error => {
-                this.connected = null;
-                throw error;
-            });
-        }
-        await this.connected;
-    }
-
-    private async getDb(): Promise<Db> {
-        await this.ensureConnected();
-        return this.client.db(this.dbName);
-    }
-
-    private async getCollection(): Promise<Collection<RequestLogDoc>> {
-        const db = await this.getDb();
-        return db.collection<RequestLogDoc>(this.collectionName);
-    }
+export class RequestLogMongoStore extends MongoConnection<RequestLogDoc> {
+    protected readonly label = 'RequestLogMongoStore';
 
     async initialize(): Promise<void> {
         const col = await this.getCollection();
@@ -186,15 +142,6 @@ export class RequestLogMongoStore {
                 { requestedAt: { $lt: new Date(now.getTime() - REQUEST_LOG_TTL_MS).toISOString() } },
             ],
         });
-    }
-
-    async close(): Promise<void> {
-        if (!this.ownsClient) return;
-        try {
-            await this.client.close();
-        } catch (error) {
-            logger.warn('RequestLogMongoStore: client.close failed', { error });
-        }
     }
 }
 

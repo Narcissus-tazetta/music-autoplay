@@ -110,14 +110,7 @@ export class MusicService {
             }
         }
 
-        const urlListEmitResult = this.emitter.emitUrlList(
-            this.repository.buildCompatList(),
-        );
-        if (!urlListEmitResult.ok) {
-            logger.warn('failed to emit url_list event', {
-                error: urlListEmitResult.error,
-            });
-        }
+        this.emitUrlListUpdate();
 
         this.emitter.logMusicAddedMetric(music);
 
@@ -191,14 +184,7 @@ export class MusicService {
             });
         }
 
-        const urlListEmitResult = this.emitter.emitUrlList(
-            this.repository.buildCompatList(),
-        );
-        if (!urlListEmitResult.ok) {
-            logger.warn('failed to emit url_list event', {
-                error: urlListEmitResult.error,
-            });
-        }
+        this.emitUrlListUpdate();
 
         this.emitter.logMusicRemovedMetric(id);
 
@@ -253,14 +239,7 @@ export class MusicService {
             });
         }
 
-        const urlListEmitResult = this.emitter.emitUrlList(
-            this.repository.buildCompatList(),
-        );
-        if (!urlListEmitResult.ok) {
-            logger.warn('failed to emit url_list event', {
-                error: urlListEmitResult.error,
-            });
-        }
+        this.emitUrlListUpdate();
 
         const persistResult = this.repository.persistReorder();
         if (!persistResult.ok) {
@@ -283,5 +262,15 @@ export class MusicService {
 
     buildCompatList(): (Music & { url: string })[] {
         return this.repository.buildCompatList();
+    }
+
+    /** Broadcasts the legacy url_list snapshot; a failed emit is logged, never thrown. */
+    private emitUrlListUpdate(): void {
+        const result = this.emitter.emitUrlList(this.repository.buildCompatList());
+        if (!result.ok) {
+            logger.warn('failed to emit url_list event', {
+                error: result.error,
+            });
+        }
     }
 }
