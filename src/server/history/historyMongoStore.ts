@@ -1,6 +1,8 @@
 import type { HistoryItem } from '@/shared/types/history';
 import logger from '../logger';
 import { MongoConnection, type MongoConnectionOptions } from '../persistence/mongoConnection';
+import { buildUpsert, computeExpireAt, docToEntity } from '../persistence/mongoDoc';
+import { PendingWriteQueue } from '../persistence/pendingWrites';
 import type { HistoryStore } from './historyStore';
 
 const HISTORY_TTL_YEARS = 3;
@@ -14,12 +16,6 @@ type HistoryDoc = HistoryItem & {
     expireAt?: Date;
     updatedAt?: Date;
 };
-
-function computeExpireAt(lastPlayedAt: string): Date {
-    const baseMs = Date.parse(lastPlayedAt);
-    const safeBase = Number.isFinite(baseMs) ? baseMs : Date.now();
-    return new Date(safeBase + HISTORY_TTL_MS);
-}
 
 export class HistoryMongoStore extends MongoConnection<HistoryDoc> {
     protected readonly label = 'HistoryMongoStore';
@@ -44,27 +40,15 @@ export class HistoryMongoStore extends MongoConnection<HistoryDoc> {
         const col = await this.getCollection();
         const docs = await col.find({}, { sort: { lastPlayedAt: -1, _id: 1 } }).toArray();
 
-        return docs.map(d => {
-            const { _id, ...rest } = d;
-            const id = typeof rest.id === 'string' && rest.id.length > 0 ? rest.id : _id;
-            return Object.assign(rest as Record<string, unknown>, { id }) as unknown as HistoryItem;
-        });
+        // History rows keep their createdAt/expireAt/updatedAt: callers already tolerate them.
+        return docs.map(d => docToEntity<HistoryItem>(d));
     }
 
     async upsert(item: HistoryItem): Promise<void> {
         const col = await this.getCollection();
         await col.updateOne(
             { _id: item.id },
-            {
-                $set: {
-                    ...item,
-                    expireAt: computeExpireAt(item.lastPlayedAt),
-                    updatedAt: new Date(),
-                },
-                $setOnInsert: {
-                    createdAt: new Date(),
-                },
-            },
+            buildUpsert(item, { expireAt: computeExpireAt(item.lastPlayedAt, HISTORY_TTL_MS) }),
             { upsert: true },
         );
     }
@@ -78,7 +62,7 @@ export class HistoryMongoStore extends MongoConnection<HistoryDoc> {
 export class HistoryMongoHybridStore implements HistoryStore {
     private current: HistoryItem[] = [];
     private readonly mongo: HistoryMongoStore;
-    private pendingWrites: Promise<unknown>[] = [];
+    private readonly pending = new PendingWriteQueue('HistoryMongoHybridStore');
 
     constructor(mongo: HistoryMongoStore, initial: HistoryItem[] = []) {
         this.mongo = mongo;
@@ -97,32 +81,24 @@ export class HistoryMongoHybridStore implements HistoryStore {
         if (idx !== -1) this.current[idx] = item;
         else this.current.push(item);
 
-        const p = this.mongo
-            .upsert(item)
-            .catch(error => logger.warn('HistoryMongoHybridStore: failed to upsert', { error }));
-        this.pendingWrites.push(p);
-        void p.finally(() => {
-            this.pendingWrites = this.pendingWrites.filter(x => x !== p);
-        });
+        this.pending.track(
+            this.mongo
+                .upsert(item)
+                .catch(error => logger.warn('HistoryMongoHybridStore: failed to upsert', { error })),
+        );
     }
 
     remove(id: string): void {
         this.current = this.current.filter(v => v.id !== id);
-        const p = this.mongo
-            .remove(id)
-            .catch(error => logger.warn('HistoryMongoHybridStore: failed to remove', { error }));
-        this.pendingWrites.push(p);
-        void p.finally(() => {
-            this.pendingWrites = this.pendingWrites.filter(x => x !== p);
-        });
+        this.pending.track(
+            this.mongo
+                .remove(id)
+                .catch(error => logger.warn('HistoryMongoHybridStore: failed to remove', { error })),
+        );
     }
 
     async flush(): Promise<void> {
-        try {
-            await Promise.all(this.pendingWrites);
-        } catch (error) {
-            logger.warn('HistoryMongoHybridStore: flush encountered errors', { error });
-        }
+        await this.pending.settle();
     }
 
     closeSync(): void {

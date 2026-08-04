@@ -95,15 +95,11 @@ export class FileStore implements Store {
         this.reorderSync(musics);
     }
 
-    // Both load first: writing a snapshot of never-hydrated state would clobber the file
-    // on disk with an empty queue.
     async flush() {
-        this.file.ensureLoaded();
         await this.file.flush();
     }
 
     closeSync() {
-        this.file.ensureLoaded();
         this.file.closeSync();
     }
 }

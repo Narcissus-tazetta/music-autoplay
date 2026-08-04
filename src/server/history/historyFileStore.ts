@@ -48,12 +48,10 @@ export class HistoryFileStore implements HistoryStore {
     }
 
     async flush(): Promise<void> {
-        this.file.ensureLoaded();
         await this.file.flush();
     }
 
     closeSync(): void {
-        this.file.ensureLoaded();
         this.file.closeSync();
     }
 }

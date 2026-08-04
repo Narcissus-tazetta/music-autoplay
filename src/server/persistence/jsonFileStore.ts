@@ -76,6 +76,9 @@ export class JsonFileStore<T> {
 
     /** Writes the current snapshot, retrying with exponential backoff before giving up. */
     async flush(): Promise<void> {
+        // Load first: writing a snapshot of never-hydrated state would clobber the file on
+        // disk with an empty payload. Every owner used to repeat this call by hand.
+        this.ensureLoaded();
         this.cancelScheduledFlush();
         const payload = JSON.stringify(this.opts.snapshot(), undefined, 2);
         const tmpBase = `${this.opts.filePath}.${process.pid}`;
@@ -109,6 +112,7 @@ export class JsonFileStore<T> {
 
     /** Best-effort synchronous write for process exit, where promises no longer run. */
     closeSync(): void {
+        this.ensureLoaded();
         this.cancelScheduledFlush();
         try {
             this.ensureDataDir();
