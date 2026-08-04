@@ -11,8 +11,6 @@
     "prepare": "husky",
     "start": "cross-env NODE_ENV=production tsx src/server/server.ts",
     "test": "bun test",
-    "test:critical": "bun test tests/critical",
-    "test:unit": "bun test tests/unit",
     "tsc": "tsc --noEmit",
     "update": "bunx npm-check-updates -u && bun install"
   },
