@@ -1,6 +1,6 @@
 import logger from '@/server/logger';
 import type { RateLimiter } from '@/server/services/rateLimiter';
-import type { SocketServerInstance } from '@/server/socket';
+import type { SocketServerInstance } from '@/server/socket/socketServer';
 import { serverContext } from '@/shared/types/server';
 import { safeExecuteAsync } from '@/shared/utils/errors';
 import { err as makeErr } from '@/shared/utils/errors/result-handlers';

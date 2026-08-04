@@ -2,7 +2,7 @@ import { withErrorHandler } from '@/shared/utils/errors';
 import type { Socket } from 'socket.io';
 import { SERVER_ENV } from '~/env.server';
 import type { AppLogger } from '../../logger';
-import { sanitizeArgs, snapshotHeaders } from '../utils';
+import { sanitizeArgs, snapshotHeaders } from '../utils/logSanitizer';
 
 export function setupSocketLogging(
     socket: Socket,

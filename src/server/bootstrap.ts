@@ -8,7 +8,7 @@ import CacheService from './services/cacheService';
 import { MetricsManager, metricsManager } from './services/metricsManager';
 import { RateLimiterManager } from './services/rateLimiterManager';
 import { YouTubeService } from './services/youtubeService';
-import { SocketServerInstance } from './socket';
+import { SocketServerInstance } from './socket/socketServer';
 export interface Metrics {
     apiMusics: { calls: number; errors: number; totalMs: number };
     rpcGetAllMusics: { calls: number; errors: number; totalMs: number };

@@ -1,5 +1,5 @@
 import type { RateLimiter } from '@/server/services/rateLimiter';
-import type { SocketServerInstance } from '@/server/socket';
+import type { SocketServerInstance } from '@/server/socket/socketServer';
 import { createContext } from 'react-router';
 import type { RouterContext } from 'react-router';
 

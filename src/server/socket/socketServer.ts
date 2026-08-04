@@ -3,19 +3,19 @@ import type { C2S, S2C } from '@/shared/types/socket';
 import type { Server as HttpServer } from 'node:http';
 import type { Server } from 'socket.io';
 import type { Server as IOServer } from 'socket.io';
-import logger from './logger';
-import type { MusicService } from './music/musicService';
-import { createMusicService } from './music/musicServiceFactory';
-import type { Store } from './persistence';
-import type { RateLimiter } from './services/rateLimiter';
-import { RateLimiterManager } from './services/rateLimiterManager';
-import type { WindowCloseManager } from './services/windowCloseManager';
-import type { YouTubeService } from './services/youtubeService';
-import { createSocketServerComponents } from './socket/components';
-import type { SocketManager } from './socket/managers/manager';
-import type { ReplyOptions } from './socket/types';
-import { createSocketEmitter } from './utils/safeEmit';
-import { TimerManager } from './utils/timerManager';
+import logger from '../logger';
+import type { MusicService } from '../music/musicService';
+import { createMusicService } from '../music/musicServiceFactory';
+import type { Store } from '../persistence';
+import type { RateLimiter } from '../services/rateLimiter';
+import { RateLimiterManager } from '../services/rateLimiterManager';
+import type { WindowCloseManager } from '../services/windowCloseManager';
+import type { YouTubeService } from '../services/youtubeService';
+import { createSocketEmitter } from '../utils/safeEmit';
+import { TimerManager } from '../utils/timerManager';
+import { createSocketServerComponents } from './components';
+import type { SocketManager } from './managers/manager';
+import type { ReplyOptions } from './types';
 
 export class SocketServerInstance {
     musicDB: Map<string, Music> = new Map();
@@ -71,7 +71,7 @@ export class SocketServerInstance {
 
     private async initializeSocket(server: HttpServer): Promise<void> {
         logger.info('initializeSocket starting');
-        const { initSocketServer } = await import('./socket/core/factory');
+        const { initSocketServer } = await import('./core/factory');
         logger.info('initSocketServer imported');
         const res = await initSocketServer(server, {
             adminHash: this.adminHash,

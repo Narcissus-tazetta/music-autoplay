@@ -6,7 +6,7 @@ import { adminRouter } from '../../src/server/routes/admin';
 import { createDiagnosticsRouter } from '../../src/server/routes/diagnostics';
 import { requestLogsRouter } from '../../src/server/routes/requestLogs';
 import type { YouTubeService } from '../../src/server/services/youtubeService';
-import type { SocketServerInstance } from '../../src/server/socket';
+import type { SocketServerInstance } from '../../src/server/socket/socketServer';
 
 /**
  * server.ts mounts three routers on overlapping prefixes:

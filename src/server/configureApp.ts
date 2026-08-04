@@ -11,7 +11,7 @@ import type { ServerBuild } from 'react-router';
 import { isProduction } from './config';
 import { getAllowedActionOrigins } from './reactRouter/actionOrigins';
 import { metricsManager } from './services/metricsManager';
-import type { SocketServerInstance } from './socket';
+import type { SocketServerInstance } from './socket/socketServer';
 
 export interface ConfigureAppResult {
     buildValue: ServerBuild | (() => Promise<ServerBuild>);

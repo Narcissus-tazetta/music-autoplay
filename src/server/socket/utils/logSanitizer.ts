@@ -1,6 +1,6 @@
 import { safeLog } from '@/server/logger';
 import { getStructuredClone, isObject } from '@/shared/utils/typeGuards';
-import type { HeaderSnapshot, RequestLike, SocketLike } from './types';
+import type { HeaderSnapshot, RequestLike, SocketLike } from '../types';
 
 function deepCloneForLog(v: unknown): unknown {
     try {

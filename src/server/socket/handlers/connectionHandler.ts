@@ -13,7 +13,7 @@ import type { EmitOptions } from '../../utils/safeEmit';
 import { createSocketEmitter } from '../../utils/safeEmit';
 import type { TimerManager } from '../../utils/timerManager';
 import type { SocketManager } from '../managers/manager';
-import { snapshotHeaders } from '../utils';
+import { snapshotHeaders } from '../utils/logSanitizer';
 import { extractSocketOn, extractTransportName } from '../utils/socketHelpers';
 import { setupExtensionEventHandlers } from './extensionEventHandlers';
 import { registerSocketHandlers } from './handlers';
