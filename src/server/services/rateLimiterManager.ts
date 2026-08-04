@@ -90,19 +90,6 @@ export class RateLimiterManager {
         );
     }
 
-    private getNextMidnightUTC(now: number): number {
-        const d = new Date(now);
-        return Date.UTC(
-            d.getUTCFullYear(),
-            d.getUTCMonth(),
-            d.getUTCDate() + 1,
-            0,
-            0,
-            0,
-            0,
-        );
-    }
-
     private executeCleanup(): void {
         try {
             const stats: { name: string; keys: number; attempts: number }[] = [];

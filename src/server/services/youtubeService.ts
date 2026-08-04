@@ -426,8 +426,4 @@ export class YouTubeService {
         this.cache.clear();
         this.requestQueue = [];
     }
-
-    dispose(): void {
-        this.destroy();
-    }
 }

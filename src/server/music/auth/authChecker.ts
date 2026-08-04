@@ -10,12 +10,6 @@ export interface AuthContext {
     socketId?: string;
 }
 
-export interface AuthResult {
-    isAuthenticated: boolean;
-    isAdmin: boolean;
-    userId?: string;
-}
-
 export class AuthChecker {
     private adminSecretHash?: Buffer;
 
@@ -53,24 +47,6 @@ export class AuthChecker {
 
             const isAdmin = timingSafeEqual(reqHashBuf, this.adminSecretHash);
             return ok(isAdmin);
-        } catch (error: unknown) {
-            return err(toHandlerError(error));
-        }
-    }
-
-    checkPermission(context: AuthContext): Result<AuthResult, HandlerError> {
-        try {
-            const adminCheckResult = this.checkAdmin(context.requesterHash);
-
-            if (!adminCheckResult.ok) return err(adminCheckResult.error);
-
-            const isAdmin = adminCheckResult.value;
-
-            return ok({
-                isAdmin,
-                isAuthenticated: true,
-                userId: context.requesterHash,
-            });
         } catch (error: unknown) {
             return err(toHandlerError(error));
         }

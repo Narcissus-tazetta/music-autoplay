@@ -21,8 +21,6 @@ export const socketConfig = {
     windowCloseDebounce: SERVER_ENV.WINDOW_CLOSE_DEBOUNCE_MS,
 } as const;
 
-export type SocketConfig = typeof socketConfig;
-
 export const loggingConfig = {
     isDev: SERVER_ENV.NODE_ENV === 'development',
     level: SERVER_ENV.LOG_LEVEL,

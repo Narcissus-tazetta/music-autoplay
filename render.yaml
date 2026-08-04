@@ -46,14 +46,11 @@ services:
         value: /api/socket.io
       - key: MORGAN_FORMAT
         value: tiny
-      # NOTE: DATABASE_URL is wired up but PERSISTENCE_PROVIDER is unset, so the app still
-      # defaults to the file store. Set PERSISTENCE_PROVIDER=pg to actually use this database.
-      - key: DATABASE_URL
-        fromDatabase:
-          name: music-autoplay-db
-          property: connectionString
 
 databases:
+  # NOTE: このデータベースはアプリから参照されていない(永続化は既定の file store、
+  # もしくは PERSISTENCE_PROVIDER=mongo)。宣言を消すと Render 側の実データベースも
+  # 削除されるため、意図しない破棄を避けてここに残してある。不要なら手動で削除すること。
   - name: music-autoplay-db
     databaseName: music_autoplay
     user: music_autoplay

@@ -236,13 +236,6 @@ export function createSocketEventHandler<TPayload, TResponse>(
     };
 }
 
-export function createTypedSocketEventHandler<
-    TPayload extends Record<string, unknown>,
-    TResponse,
->(config: EventHandlerConfig<TPayload, TResponse>) {
-    return createSocketEventHandler(config);
-}
-
 export interface BatchEventHandlerConfig {
     handlers: {
         event: string;

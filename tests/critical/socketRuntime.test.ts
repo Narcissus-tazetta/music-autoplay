@@ -82,40 +82,6 @@ describe('SocketRuntime', () => {
         expect(svcA).toBe(svcB);
     });
 
-    it('emit delegates to underlying io.emit', () => {
-        const emitSpy = vi.fn();
-        const ioGetter = () => ({ emit: emitSpy }) as unknown;
-        const musicDB = new Map<string, Music>();
-        const youtubeService = {} as unknown as YouTubeService;
-        const fileStore = {
-            add: () => {},
-            clear: () => {},
-            load: () => [],
-            remove: () => {},
-        } as unknown as Store;
-        const timerManager = {
-            clear: () => {},
-            start: () => {},
-        } as unknown as TimerManager;
-        const windowCloseManager = {
-            clearForOrigin: () => {},
-            processEvent: () => ({ processed: false }),
-        } as unknown as InstanceType<typeof WindowCloseManager>;
-
-        const runtime = new SocketRuntime(
-            ioGetter as any,
-            musicDB,
-            youtubeService,
-            fileStore,
-            timerManager,
-            windowCloseManager,
-            { debounceMs: 250, graceMs: 5000, inactivityMs: 10_000 },
-        );
-
-        runtime.emit('testEvent', { foo: 'bar' });
-        expect(emitSpy).toHaveBeenCalledWith('testEvent', { foo: 'bar' });
-    });
-
     it('manager emits remoteStatusUpdated when update called', () => {
         const emitSpy = vi.fn();
         const ioGetter = () => ({ emit: emitSpy }) as unknown;

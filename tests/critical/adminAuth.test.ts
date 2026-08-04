@@ -1,4 +1,4 @@
-import { AdminAuthenticator, createAdminAuthenticator, parseBasicAuth } from '@/server/middleware/adminAuth';
+import { AdminAuthenticator, createAdminAuthenticator } from '@/server/middleware/adminAuth';
 import { AdminRateLimiter, createAdminRateLimiter } from '@/server/middleware/adminRateLimiter';
 import { describe, expect, test } from 'bun:test';
 
@@ -50,36 +50,6 @@ describe('Admin Authentication', () => {
 
             expect(authenticator).toBeInstanceOf(AdminAuthenticator);
             expect(authenticator.authenticate(testUsername, testPassword)).toBe(true);
-        });
-    });
-
-    describe('parseBasicAuth', () => {
-        test('should parse valid Basic auth header', () => {
-            const credentials = Buffer.from(`${testUsername}:${testPassword}`).toString('base64');
-            const authHeader = `Basic ${credentials}`;
-
-            const result = parseBasicAuth(authHeader);
-
-            expect(result).not.toBeNull();
-            expect(result?.username).toBe(testUsername);
-            expect(result?.password).toBe(testPassword);
-        });
-
-        test('should return null for invalid format', () => {
-            expect(parseBasicAuth('Invalid format')).toBeNull();
-            expect(parseBasicAuth('Bearer token')).toBeNull();
-            expect(parseBasicAuth('Basic')).toBeNull();
-        });
-
-        test('should return null for invalid base64', () => {
-            expect(parseBasicAuth('Basic !!invalid!!')).toBeNull();
-        });
-
-        test('should return null for missing password', () => {
-            const credentials = Buffer.from('username').toString('base64');
-            const authHeader = `Basic ${credentials}`;
-
-            expect(parseBasicAuth(authHeader)).toBeNull();
         });
     });
 });

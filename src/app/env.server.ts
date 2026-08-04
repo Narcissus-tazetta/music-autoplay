@@ -58,7 +58,6 @@ const serverEnvSchema = z
         }, z.boolean().optional()),
         CLIENT_URL: z.string().url().default(clientUrlDefault),
         CORS_ORIGINS: z.string().optional(),
-        DATABASE_URL: z.string().optional(),
         DIAG_MEM_ENABLED: z.preprocess(v => {
             if (v == undefined || v === '') return undefined;
             if (typeof v === 'string') return v === 'true' ? true : (v === 'false' ? false : undefined);
@@ -78,7 +77,7 @@ const serverEnvSchema = z
         MONGODB_COLLECTION: z.string().optional().default('musicRequests'),
         MONGODB_REQUEST_LOG_COLLECTION: z.string().optional().default('requestLogs'),
         PERSISTENCE_PROVIDER: z
-            .enum(['file', 'pg', 'mongo'])
+            .enum(['file', 'mongo'])
             .optional()
             .default('file'),
         GOOGLE_CLIENT_ID: isTest

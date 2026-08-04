@@ -1,8 +1,5 @@
-// socket runtimeは型のない外部の engine/request オブジェクトを扱うため、防御的なチェックが必要です。
 import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
 import type { C2S, S2C } from '@/shared/types/socket';
-import { withErrorHandler } from '@/shared/utils/errors';
-import { isObject } from '@/shared/utils/typeGuards';
 import type { Server as HttpServer } from 'node:http';
 import type { Server } from 'socket.io';
 import type { Server as IOServer } from 'socket.io';
@@ -16,9 +13,7 @@ import type { WindowCloseManager } from './services/windowCloseManager';
 import type { YouTubeService } from './services/youtubeService';
 import { createSocketServerComponents } from './socket/components';
 import type { SocketManager } from './socket/managers/manager';
-import type { SocketRuntime } from './socket/managers/runtime';
 import type { ReplyOptions } from './socket/types';
-import type { EngineLike, RequestLike } from './socket/types';
 import { createSocketEmitter } from './utils/safeEmit';
 import { TimerManager } from './utils/timerManager';
 
@@ -42,34 +37,8 @@ export class SocketServerInstance {
     private windowCloseManager: InstanceType<typeof WindowCloseManager>;
     private manager?: SocketManager;
     private musicService?: MusicService;
-    private runtime?: SocketRuntime;
     private rateLimiter: RateLimiter;
     private httpRateLimiter: RateLimiter;
-    static isEngineLike(v: unknown): v is EngineLike {
-        if (!isObject(v)) return false;
-        const maybe = v as { on?: unknown; httpServer?: unknown };
-        return (
-            typeof maybe.on === 'function' || typeof maybe.httpServer !== 'undefined'
-        );
-    }
-    static getEngineFromIo(io: unknown): unknown {
-        if (!isObject(io)) return undefined;
-        const rec = io as { engine?: unknown };
-        return rec.engine;
-    }
-    static isObject: (v: unknown) => v is Record<string, unknown> = isObject;
-    private getOriginFromReq(req: unknown): string | undefined {
-        try {
-            if (!isObject(req)) return undefined;
-            const headers = (req as RequestLike).headers;
-            if (isObject(headers) && typeof headers.origin === 'string') return headers.origin;
-            if (isObject(req) && typeof (req as RequestLike).url === 'string') return undefined;
-            return undefined;
-        } catch (error) {
-            logger.debug('getOriginFromReq failed', { error: error });
-            return undefined;
-        }
-    }
 
     constructor(youtubeService: YouTubeService, fileStore: Store) {
         const components = createSocketServerComponents({
@@ -122,7 +91,6 @@ export class SocketServerInstance {
         });
         logger.info('initSocketServer completed');
         this.io = res.io as Server<C2S, S2C>;
-        this.runtime = res.runtime;
         return Promise.resolve();
     }
 
@@ -179,16 +147,6 @@ export class SocketServerInstance {
                 });
             }
         });
-    }
-    public emit(...args: unknown[]): void;
-    public emit(
-        ...args: Parameters<IOServer['emit']>
-    ): ReturnType<IOServer['emit']> | undefined {
-        const result = withErrorHandler(() => {
-            const ioServer = this.getIo();
-            return ioServer.emit(...args);
-        }, 'SocketServerInstance.emit')();
-        return result;
     }
 
     private getIo(): IOServer {

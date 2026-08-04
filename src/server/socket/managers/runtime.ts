@@ -20,7 +20,6 @@ export interface RuntimeOptions {
 export class SocketRuntime {
     private manager?: SocketManager;
     private musicService?: MusicService;
-    private safeEmit: (event: string, payload: unknown) => boolean;
 
     constructor(
         private readonly ioGetter: () => IOServer,
@@ -32,12 +31,7 @@ export class SocketRuntime {
             typeof WindowCloseManager
         >,
         private readonly opts: RuntimeOptions,
-    ) {
-        const emitter = createSocketEmitter(this.ioGetter, {
-            source: 'SocketRuntime',
-        });
-        this.safeEmit = (event: string, payload: unknown) => emitter.emit(event, payload);
-    }
+    ) {}
 
     getManager(): SocketManager | undefined {
         return this.manager;
@@ -78,9 +72,5 @@ export class SocketRuntime {
             });
         }
         return this.musicService;
-    }
-
-    emit(event: string, ...args: unknown[]): void {
-        this.safeEmit(event, args[0]);
     }
 }

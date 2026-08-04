@@ -1,11 +1,3 @@
-declare global {
-    var __simpleMetrics:
-        | {
-            apiMusics: { calls: number; errors: number; totalMs: number };
-            rpcGetAllMusics: { calls: number; errors: number; totalMs: number };
-        }
-        | undefined;
-}
 import { SERVER_ENV } from '@/app/env.server';
 import { getHistoryService, type HistoryService } from './history/historyService';
 import logger from './logger';

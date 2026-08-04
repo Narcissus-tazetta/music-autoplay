@@ -1,4 +1,4 @@
-import type { Music, RemoteStatus } from '@/shared/stores/musicStore';
+import type { Music } from '@/shared/stores/musicStore';
 import type { Socket } from 'socket.io';
 import type { Server as IOServer } from 'socket.io';
 import { getHistoryService } from '../../history/historyService';
@@ -24,7 +24,7 @@ export interface HandlerDeps {
     io: IOServer;
     emit?: (ev: string, payload: unknown, opts?: EmitOptions) => boolean;
     youtubeService?: YouTubeService;
-    manager?: SocketManager;
+    manager: SocketManager;
     fileStore?: Store;
     isAdmin: (h?: string) => boolean;
     adminHash?: string;
@@ -45,21 +45,7 @@ export function registerSocketHandlers(
     const getAllMusicsHandler = createGetAllMusicsHandler(deps.musicDB);
     const getHistoryHandler = createGetHistoryHandler(getHistoryService());
 
-    let getRemoteStatusHandler;
-    if (deps.manager) {
-        getRemoteStatusHandler = createGetRemoteStatusHandler(
-            () => deps.manager!.getSnapshot(),
-        );
-    } else {
-        const maybeRemote = (deps as unknown as Record<string, unknown>)[
-            'remoteStatus'
-        ];
-        if (maybeRemote && typeof maybeRemote === 'object') {
-            getRemoteStatusHandler = createGetRemoteStatusHandler(
-                maybeRemote as unknown as RemoteStatus,
-            );
-        }
-    }
+    const getRemoteStatusHandler = createGetRemoteStatusHandler(() => deps.manager.getSnapshot());
 
     const { fileStore, youtubeService } = deps;
 
@@ -78,9 +64,7 @@ export function registerSocketHandlers(
     const handlers = [
         { event: 'getAllMusics', handler: getAllMusicsHandler },
         { event: 'getHistory', handler: getHistoryHandler },
-        ...(getRemoteStatusHandler
-            ? [{ event: 'getRemoteStatus', handler: getRemoteStatusHandler }]
-            : []),
+        { event: 'getRemoteStatus', handler: getRemoteStatusHandler },
     ];
 
     registerBatchHandlers(socket, { handlers }, ctx);
