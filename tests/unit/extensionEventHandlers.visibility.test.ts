@@ -12,16 +12,15 @@ describe('visibility state handling', () => {
         const manager: any = { update: () => {} };
         const youtubeService: any = {};
         const log: any = { debug() {}, info() {}, warn() {} };
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
             log,
-            'conn',
-            new Map(),
             manager,
-            repo as any,
-            emitter as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-        );
+        });
 
         const now = Date.now();
         socket.trigger('progress_update', {

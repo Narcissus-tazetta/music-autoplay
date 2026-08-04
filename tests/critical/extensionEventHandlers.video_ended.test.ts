@@ -60,16 +60,15 @@ describe('video_ended handler', () => {
         const youtubeService: any = {};
         const log: any = console;
 
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
             log,
-            'conn',
-            new Map(),
             manager,
-            repo as any,
-            emitter as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-        );
+        });
 
         expect(repo.has('AAAAAAAAAAA')).toBe(true);
 
@@ -101,16 +100,15 @@ describe('video_ended handler', () => {
         const youtubeService: any = {};
         const log: any = console;
 
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
             log,
-            'conn',
-            new Map(),
             manager,
-            repo as any,
-            emitter as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-        );
+        });
 
         socket.trigger('video_ended', { url: 'https://youtu.be/BBBBBBBBBBB', tabId: 11 });
         await new Promise(res => setTimeout(res, 0));
@@ -138,16 +136,15 @@ describe('video_ended handler', () => {
         const youtubeService: any = {};
         const log: any = console;
 
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
             log,
-            'conn',
-            new Map(),
             manager,
-            repo as any,
-            emitter as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-        );
+        });
 
         socket.trigger('video_next', { url: 'https://youtu.be/CCCCCCCCCCC', tabId: 22 });
         await new Promise(res => setTimeout(res, 0));
@@ -170,16 +167,15 @@ describe('video_ended handler', () => {
         const youtubeService: any = {};
         const log: any = console;
 
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
             log,
-            'conn',
-            new Map(),
             manager,
-            repo as any,
-            emitter as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-        );
+        });
         socket.trigger('video_next', { url: 'https://youtu.be/ZZZZZZZZZZZ', tabId: 9 });
         await new Promise(res => setTimeout(res, 0));
 
@@ -202,17 +198,16 @@ describe('video_ended handler', () => {
         const historyService = createFakeHistoryService();
         const log: any = { debug() {}, info() {}, warn() {} };
 
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
+            historyService: historyService as any,
             log,
-            'conn',
-            new Map(),
-            manager as any,
-            repo as any,
-            emitter as any,
+            manager: manager as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-            historyService as any,
-        );
+        });
 
         socket.trigger('youtube_video_state', {
             state: 'ended',
@@ -238,17 +233,16 @@ describe('video_ended handler', () => {
         const historyService = createFakeHistoryService();
         const log: any = { debug() {}, info() {}, warn() {} };
 
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
+            historyService: historyService as any,
             log,
-            'conn',
-            new Map(),
-            manager as any,
-            repo as any,
-            emitter as any,
+            manager: manager as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-            historyService as any,
-        );
+        });
 
         socket.trigger('youtube_video_state', {
             state: 'playing',
@@ -287,17 +281,16 @@ describe('video_ended handler', () => {
         const historyService = createFakeHistoryService();
         const log: any = { debug() {}, info() {}, warn() {} };
 
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
+            historyService: historyService as any,
             log,
-            'conn',
-            new Map(),
-            manager as any,
-            repo as any,
-            emitter as any,
+            manager: manager as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-            historyService as any,
-        );
+        });
 
         const now = Date.now();
         socket.trigger('youtube_video_state', {
@@ -342,17 +335,16 @@ describe('video_ended handler', () => {
         const historyService = createFakeHistoryService();
         const log: any = { debug() {}, info() {}, warn() {} };
 
-        setupExtensionEventHandlers(
-            socket as any,
+        setupExtensionEventHandlers({
+            connectionId: 'conn',
+            emitter: emitter as any,
+            historyService: historyService as any,
             log,
-            'conn',
-            new Map(),
-            manager as any,
-            repo as any,
-            emitter as any,
+            manager: manager as any,
+            repository: repo as any,
+            socket: socket as any,
             youtubeService,
-            historyService as any,
-        );
+        });
 
         const now = Date.now();
         socket.trigger('youtube_video_state', {

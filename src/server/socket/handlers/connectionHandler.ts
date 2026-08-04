@@ -289,16 +289,15 @@ export function makeConnectionHandler(
 
         if (isExtension) {
             const musicService = deps.getMusicService();
-            setupExtensionEventHandlers(
-                socket,
-                log,
+            setupExtensionEventHandlers({
                 connectionId,
-                deps.musicDB,
+                emitter: musicService.emitter,
+                log,
                 manager,
-                musicService.repository,
-                musicService.emitter,
-                deps.youtubeService,
-            );
+                repository: musicService.repository,
+                socket,
+                youtubeService: deps.youtubeService,
+            });
         }
 
         socket.once('disconnect', reason => {
