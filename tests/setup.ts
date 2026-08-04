@@ -16,8 +16,6 @@ process.env.LOG_LEVEL = 'error';
 //
 // Installing scratch-backed singletons before any test imports them keeps data/ untouched.
 // This must come after the env assignments above, since these modules read SERVER_ENV.
-const { mkdtempSync } = await import('node:fs');
-const { tmpdir } = await import('node:os');
 const { join } = await import('node:path');
 const { HistoryService, setHistoryService } = await import('../src/server/history/historyService');
 const { RequestLogService, setRequestLogService } = await import(
@@ -25,14 +23,17 @@ const { RequestLogService, setRequestLogService } = await import(
 );
 
 /**
- * Exported for two reasons: tests that want a scratch path can reuse it, and the export is
- * what makes this file a module, which the top-level awaits above require. A bare `export {}`
- * does not survive `oxlint --fix` in the pre-commit hook.
+ * A fixed path rather than mkdtemp: bun's test runner does not fire `process.on('exit')`, so
+ * a unique directory per run just piles up in the OS temp dir. tmp_test_data/ is gitignored
+ * and gets reused, so exactly one scratch directory ever exists.
+ *
+ * The `export` is load-bearing: it makes this file a module, which the top-level awaits above
+ * require. A bare `export {}` does not survive `oxlint --fix` in the pre-commit hook.
  *
  * The imports have to stay dynamic: static ones are hoisted above the env assignments, and
  * these modules read SERVER_ENV at import time.
  */
-export const testDataDir = mkdtempSync(join(tmpdir(), 'music-auto-play-test-'));
+export const testDataDir = join(process.cwd(), 'tmp_test_data', 'scratch-stores');
 
 setHistoryService(new HistoryService(join(testDataDir, 'history.json')));
 setRequestLogService(new RequestLogService(join(testDataDir, 'request-logs.json')));

@@ -201,12 +201,24 @@ describe('mongo queue ordering', () => {
         it('closeSync flushes pending writes and closes the connection', async () => {
             // Runs on process exit, where an unhandled rejection would be the last thing
             // standing between a queued write and losing it.
-            const closed: string[] = [];
+            //
+            // closeSync is fire-and-forget, so the test waits on a promise the stub resolves
+            // rather than counting microtask ticks - the latter passes or fails depending on
+            // how many `await`s happen to sit between the call and the assertion.
+            const writes: string[] = [];
+            let onClosed = () => {};
+            const closeCalled = new Promise<void>(resolve => {
+                onClosed = resolve;
+            });
             const stub = {
-                add: () => Promise.resolve(),
+                add: () => {
+                    writes.push('add');
+                    return Promise.resolve();
+                },
                 clear: () => Promise.resolve(),
                 close: () => {
-                    closed.push('close');
+                    writes.push('close');
+                    onClosed();
                     return Promise.resolve();
                 },
                 remove: () => Promise.resolve(),
@@ -216,11 +228,10 @@ describe('mongo queue ordering', () => {
             store.add(makeMusic('a'));
 
             expect(() => store.closeSync()).not.toThrow();
+            await closeCalled;
 
-            await store.flush();
-            // closeSync chains close() after the flush promise, so yield once more.
-            await Promise.resolve();
-            expect(closed).toEqual(['close']);
+            // The pending add must land before the connection is torn down.
+            expect(writes).toEqual(['add', 'close']);
         });
 
         it('closeSync swallows a failing close', async () => {

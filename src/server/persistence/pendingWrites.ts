@@ -33,12 +33,13 @@ export class PendingWriteQueue {
         });
     }
 
-    /** Waits for every tracked write to settle. Never rejects. */
+    /**
+     * Waits for every write tracked so far to settle. Never rejects.
+     *
+     * Writes started while this is awaiting are not covered - the array is read once, which
+     * matches what the three hybrid stores did before this class existed.
+     */
     async settle(): Promise<void> {
         await Promise.allSettled(this.pending);
-    }
-
-    get size(): number {
-        return this.pending.length;
     }
 }
