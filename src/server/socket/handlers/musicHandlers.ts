@@ -84,8 +84,10 @@ export function createMusicHandlers(deps: Deps): {
         event: 'addMusic',
         handler: async (payload, context): Promise<ReplyOptions> => {
             const { url } = payload;
-            const requesterHash = context.socket?.data?.requesterHash ?? payload.requesterHash;
-            const requesterName = context.socket?.data?.requesterName ?? payload.requesterName ?? 'guest';
+            // Identity comes from the handshake cookie only (socketIdentityMiddleware).
+            // A payload-supplied hash is an ownership credential the caller must not choose.
+            const requesterHash = context.socket?.data?.requesterHash;
+            const requesterName = context.socket?.data?.requesterName ?? 'guest';
             const l = withContext(context as Record<string, unknown>);
 
             const result = await musicService.addMusic({
@@ -128,7 +130,8 @@ export function createMusicHandlers(deps: Deps): {
         event: 'removeMusic',
         handler: async (payload, context): Promise<ReplyOptions> => {
             const { url } = payload;
-            const requesterHash = context.socket?.data?.requesterHash ?? payload.requesterHash;
+            // See addMusic: never let the caller pick the hash its ownership is checked against.
+            const requesterHash = context.socket?.data?.requesterHash;
             const l = withContext(context as Record<string, unknown>);
 
             const result = await musicService.removeMusic({ requesterHash, url });

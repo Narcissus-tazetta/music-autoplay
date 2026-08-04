@@ -59,7 +59,7 @@ function waitForReply(handler: RegisteredHandler, ...args: unknown[]) {
 }
 
 describe('musicHandlers Socket.IO compatibility', () => {
-    test('addMusic は旧 url + requesterHash + requesterName payload を受け付ける', async () => {
+    test('addMusic は旧 url + requesterHash + requesterName payload の形を受け付ける', async () => {
         const { deps, musicDB } = createDeps();
         const { handlers, socket } = createSocket();
         createMusicHandlers(deps).register(socket);
@@ -71,9 +71,11 @@ describe('musicHandlers Socket.IO compatibility', () => {
             'Legacy Name',
         );
 
+        // 位置引数の payload 形状は引き続き解釈するが、identity は payload から取らない。
+        // 名乗った hash がそのまま所有権になると、他人の hash で削除できてしまう。
         expect(reply).toEqual({});
-        expect(musicDB.get('abcdefghijk')?.requesterHash).toBe('legacy-hash');
-        expect(musicDB.get('abcdefghijk')?.requesterName).toBe('Legacy Name');
+        expect(musicDB.get('abcdefghijk')?.requesterHash).toBeUndefined();
+        expect(musicDB.get('abcdefghijk')?.requesterName).toBe('guest');
     });
 
     test('addMusic は socket.data の identity を旧 payload より優先する', async () => {
@@ -94,5 +96,57 @@ describe('musicHandlers Socket.IO compatibility', () => {
         expect(reply).toEqual({});
         expect(musicDB.get('lmnopqrstuv')?.requesterHash).toBe('socket-hash');
         expect(musicDB.get('lmnopqrstuv')?.requesterName).toBe('Socket Name');
+    });
+
+    // 回帰: 公開されている一覧 (initMusics / url_list / /api/musics) には各曲の
+    // requesterHash が含まれる。それを payload で名乗れると、識別情報を持たない
+    // クライアント (拡張オリジンを騙るなど) が他人のエントリを削除できてしまう。
+    test('removeMusic は payload の requesterHash では他人のエントリを消せない', async () => {
+        const { deps, musicDB } = createDeps();
+        musicDB.set('abcdefghijk', {
+            channelId: 'channel',
+            channelName: 'channel',
+            duration: 'PT3M',
+            id: 'abcdefghijk',
+            requesterHash: 'victim-hash',
+            requesterName: 'Victim',
+            title: 'victim song',
+        });
+
+        // socket.data に identity が無い接続 (Cookie 無し / 拡張オリジン)
+        const { handlers, socket } = createSocket();
+        createMusicHandlers(deps).register(socket);
+
+        const reply = await waitForReply(
+            handlers.get('removeMusic')!,
+            { requesterHash: 'victim-hash', url: 'https://www.youtube.com/watch?v=abcdefghijk' },
+        );
+
+        expect(reply).toHaveProperty('formErrors');
+        expect(musicDB.has('abcdefghijk')).toBe(true);
+    });
+
+    test('removeMusic は socket.data の identity が所有者と一致すれば消せる', async () => {
+        const { deps, musicDB } = createDeps();
+        musicDB.set('abcdefghijk', {
+            channelId: 'channel',
+            channelName: 'channel',
+            duration: 'PT3M',
+            id: 'abcdefghijk',
+            requesterHash: 'owner-hash',
+            requesterName: 'Owner',
+            title: 'own song',
+        });
+
+        const { handlers, socket } = createSocket({ requesterHash: 'owner-hash' });
+        createMusicHandlers(deps).register(socket);
+
+        const reply = await waitForReply(
+            handlers.get('removeMusic')!,
+            { url: 'https://www.youtube.com/watch?v=abcdefghijk' },
+        );
+
+        expect(reply).toEqual({});
+        expect(musicDB.has('abcdefghijk')).toBe(false);
     });
 });
