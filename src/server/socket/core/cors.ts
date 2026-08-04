@@ -49,6 +49,22 @@ export const buildCorsConfig = (): CorsConfig => {
     return { allowAllOrigins, allowExtensionOrigins, origins };
 };
 
+/**
+ * The single source of truth for "may this origin connect?", shared by socket.io's
+ * `allowRequest` gate and the CORS origin callback — they used to decide this separately
+ * and had already drifted apart on how extension origins were matched.
+ *
+ * An entry that is only a scheme (e.g. `chrome-extension://`) acts as a prefix rule
+ * covering every origin on that scheme, and applies only when extension origins are
+ * enabled. Everything else must match exactly.
+ */
+export const isOriginAllowed = (origin: string, cfg: CorsConfig): boolean => {
+    if (cfg.allowAllOrigins) return true;
+    if (cfg.origins.includes(origin)) return true;
+    if (!cfg.allowExtensionOrigins) return false;
+    return cfg.origins.some(allowed => allowed.endsWith('://') && origin.startsWith(allowed));
+};
+
 export const makeOriginChecker = (
     cfg: CorsConfig,
 ): (
@@ -60,10 +76,7 @@ export const makeOriginChecker = (
             origin: unknown,
             callback: (err: Error | null, allow?: boolean) => void,
         ) => {
-            const decision = { allowed: false, reason: 'unknown' };
             if (origin == undefined) {
-                decision.allowed = true;
-                decision.reason = 'no-origin (server/API)';
                 logger.info('socket connection: no origin (server/API)', {
                     timestamp: new Date().toISOString(),
                 });
@@ -72,8 +85,6 @@ export const makeOriginChecker = (
             }
 
             if (typeof origin !== 'string') {
-                decision.allowed = false;
-                decision.reason = 'non-string origin';
                 logger.warn('socket connection: non-string origin', {
                     origin,
                     timestamp: new Date().toISOString(),
@@ -82,48 +93,22 @@ export const makeOriginChecker = (
                 return;
             }
 
-            decision.allowed = true;
-            decision.reason = 'allowed by config';
-
-            logger.info('socket connection: origin allowed', {
-                decision,
-                origin,
-                timestamp: new Date().toISOString(),
-            });
-
-            if (cfg.allowAllOrigins) {
+            if (isOriginAllowed(origin, cfg)) {
+                logger.info('socket connection: origin allowed', {
+                    origin,
+                    timestamp: new Date().toISOString(),
+                });
                 callback(null, true);
                 return;
             }
 
-            if (Array.isArray(cfg.origins)) {
-                let isAllowed = cfg.origins.includes(origin);
-
-                if (!isAllowed && cfg.allowExtensionOrigins) {
-                    isAllowed = cfg.origins.some(allowed => {
-                        if (allowed.endsWith('://') && origin.startsWith(allowed)) return true;
-                        return false;
-                    });
-                }
-
-                if (isAllowed) {
-                    callback(null, true);
-                    return;
-                }
-
-                decision.allowed = false;
-                decision.reason = 'not in allowed list';
-
-                logCorsViolation({} as Request, origin, decision.reason);
-
-                logger.warn('CORS origin rejected', {
-                    allowExtensionOrigins: cfg.allowExtensionOrigins,
-                    allowedOrigins: cfg.origins,
-                    decision,
-                    origin,
-                });
-                callback(new Error('CORS origin not allowed'));
-            }
+            logCorsViolation({} as Request, origin, 'not in allowed list');
+            logger.warn('CORS origin rejected', {
+                allowExtensionOrigins: cfg.allowExtensionOrigins,
+                allowedOrigins: cfg.origins,
+                origin,
+            });
+            callback(new Error('CORS origin not allowed'));
         },
         'makeOriginChecker',
     );

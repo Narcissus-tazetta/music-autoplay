@@ -1,14 +1,19 @@
 import type { Music } from '@/shared/stores/musicStore';
 import { isRecord } from '@/shared/utils/typeGuards';
 import { extractYoutubeId, watchUrl } from '@/shared/utils/youtube';
-import { createEventRegistrar, type ExtensionContext } from './extensionHandlerContext';
+import {
+    addMusicAndBroadcast,
+    createEventRegistrar,
+    type ExtensionContext,
+    removeMusicAndBroadcast,
+} from './extensionHandlerContext';
 
 /**
  * Queue mutations requested by the extension: `delete_url`,
  * `external_music_add`, plus the `request_first_url` lookup it uses on startup.
  */
 export function registerQueueHandlers(ctx: ExtensionContext): void {
-    const { connectionId, emitter, log, repository, socket, youtubeService } = ctx;
+    const { connectionId, log, repository, socket, youtubeService } = ctx;
     const on = createEventRegistrar(ctx);
 
     on('delete_url', async (url: unknown) => {
@@ -34,31 +39,8 @@ export function registerQueueHandlers(ctx: ExtensionContext): void {
                 return;
             }
 
-            repository.remove(videoId);
-            const emitResult = emitter.emitMusicRemoved(videoId);
-            if (!emitResult.ok) {
-                log.warn('delete_url: failed to emit musicRemoved', {
-                    error: emitResult.error,
-                    videoId,
-                });
-            }
+            removeMusicAndBroadcast(ctx, videoId, 'delete_url');
 
-            const urlListEmitResult = emitter.emitUrlList(
-                repository.buildCompatList(),
-            );
-            if (!urlListEmitResult.ok) {
-                log.warn('delete_url: failed to emit url_list', {
-                    error: urlListEmitResult.error,
-                });
-            }
-
-            const persistResult = repository.persistRemove(videoId);
-            if (!persistResult.ok) {
-                log.warn('delete_url: failed to persist removal', {
-                    error: persistResult.error,
-                    videoId,
-                });
-            }
             log.info('delete_url: music removed', {
                 connectionId,
                 socketId: socket.id,
@@ -159,31 +141,7 @@ export function registerQueueHandlers(ctx: ExtensionContext): void {
                 title: videoDetails.title,
             };
 
-            repository.add(music);
-            const emitResult = emitter.emitMusicAdded(music);
-            if (!emitResult.ok) {
-                log.warn('external_music_add: failed to emit musicAdded', {
-                    error: emitResult.error,
-                    videoId,
-                });
-            }
-
-            const urlListEmitResult = emitter.emitUrlList(
-                repository.buildCompatList(),
-            );
-            if (!urlListEmitResult.ok) {
-                log.warn('external_music_add: failed to emit url_list', {
-                    error: urlListEmitResult.error,
-                });
-            }
-
-            const persistResult = await repository.persistAdd(music);
-            if (!persistResult.ok) {
-                log.warn('external_music_add: failed to persist', {
-                    error: persistResult.error,
-                    videoId,
-                });
-            }
+            await addMusicAndBroadcast(ctx, music, 'external_music_add');
 
             log.info('external_music_add: music added', {
                 connectionId,

@@ -3,7 +3,7 @@ import type { Server as HttpServer } from 'node:http';
 import { Server } from 'socket.io';
 import { SERVER_ENV } from '~/env.server';
 import { isProduction } from '../../config';
-import { buildCorsConfig, makeOriginChecker } from './cors';
+import { buildCorsConfig, isOriginAllowed, makeOriginChecker } from './cors';
 import { attachUpgradeRewrite, registerEngineAugmentations } from './engine';
 
 export interface CreatedIo {
@@ -22,7 +22,7 @@ export const createSocketIo = (server: HttpServer): CreatedIo => {
         logger.warn('attachUpgradeRewrite failed', { error: error });
     }
 
-    const { origins, allowAllOrigins, allowExtensionOrigins } = buildCorsConfig();
+    const corsConfig = buildCorsConfig();
     const socketHttpCompression = SERVER_ENV.SOCKET_HTTP_COMPRESSION ?? !isProduction;
     const socketPerMessageDeflate = SERVER_ENV.SOCKET_PERMESSAGE_DEFLATE ?? !isProduction;
     const socketWebsocketOnly = SERVER_ENV.SOCKET_WEBSOCKET_ONLY ?? false;
@@ -35,31 +35,13 @@ export const createSocketIo = (server: HttpServer): CreatedIo => {
             allowEIO3: true,
             allowRequest: (req, callback) => {
                 const origin = req.headers.origin;
-                if (!origin) {
-                    callback(undefined, true);
-                    return;
-                }
-
-                if (allowAllOrigins) {
-                    callback(undefined, true);
-                    return;
-                }
-
-                const isAllowed = origins.includes(origin)
-                    || (allowExtensionOrigins && origin.startsWith('chrome-extension://'));
-
-                callback(undefined, isAllowed);
+                // A request with no Origin header is not a browser cross-origin request
+                // (server-to-server, native clients); the CORS checker treats it the same way.
+                callback(undefined, !origin || isOriginAllowed(origin, corsConfig));
             },
-            cors: allowAllOrigins
+            cors: corsConfig.allowAllOrigins
                 ? { credentials: true, origin: true }
-                : {
-                    credentials: true,
-                    origin: makeOriginChecker({
-                        allowAllOrigins,
-                        allowExtensionOrigins,
-                        origins,
-                    }),
-                },
+                : { credentials: true, origin: makeOriginChecker(corsConfig) },
             httpCompression: socketHttpCompression,
             path: socketPath,
             perMessageDeflate: socketPerMessageDeflate,
