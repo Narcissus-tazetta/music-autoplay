@@ -16,7 +16,6 @@ export { err, isErr, isOk, ok, safeExecuteAsync } from './result-handlers';
 
 export type { ReplyOptions } from './server';
 export {
-    createAdminHash,
     createAuthErrorReply,
     createRateLimitReply,
     createServerErrorReply,

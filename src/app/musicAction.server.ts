@@ -6,10 +6,10 @@ import { getRateLimitKey, resolveRequesterIdentity } from '@/server/requesterIde
 import type { RateLimiter } from '@/server/services/rateLimiter';
 import { isAdminSession, type LoginSession, loginSession } from '@/server/sessions.server';
 import type { SocketServerInstance } from '@/server/socket/socketServer';
+import { createAdminHash } from '@/server/utils/adminHash';
 import { safeExecuteAsync } from '@/shared/utils/errors';
 import { err as makeErr } from '@/shared/utils/errors/result-handlers';
 import { parseWithZod } from '@conform-to/zod/v4';
-import { createHash } from 'node:crypto';
 import type { ActionFunctionArgs } from 'react-router';
 import type { z } from 'zod';
 
@@ -54,7 +54,7 @@ async function resolveActingRequesterHash(
             logger.warn('Admin music action requested but ADMIN_SECRET is not configured');
             return { ok: false, response: respondWithResult(makeErr({ message: 'unauthorized' })) };
         }
-        return { ok: true, requesterHash: createHash('sha256').update(adminSecret).digest('hex') };
+        return { ok: true, requesterHash: createAdminHash(adminSecret) };
     }
 
     const identity = await resolveRequesterIdentity(cookieHeader, session);
