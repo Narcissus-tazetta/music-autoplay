@@ -6,7 +6,7 @@ import type {
 } from '@/shared/types/requestLog';
 import type { Filter } from 'mongodb';
 import logger from '../logger.server';
-import { MongoConnection, type MongoConnectionOptions } from '../persistence/mongoConnection';
+import { MongoConnection } from '../persistence/mongoConnection';
 import { buildUpsert, computeExpireAt, docToEntity } from '../persistence/mongoDoc';
 import { PendingWriteQueue } from '../persistence/pendingWrites';
 
@@ -15,8 +15,6 @@ const REQUEST_LOG_TTL_MS = REQUEST_LOG_TTL_DAYS * 24 * 60 * 60 * 1000;
 const REQUEST_LOG_LOAD_LIMIT = 5_000;
 const PENDING_WRITE_WARN_THRESHOLD = 100;
 const FAILED_WRITE_QUEUE_LIMIT = 500;
-
-export type RequestLogMongoStoreOptions = MongoConnectionOptions;
 
 type RequestLogDoc = RequestLogEntry & {
     _id: string;

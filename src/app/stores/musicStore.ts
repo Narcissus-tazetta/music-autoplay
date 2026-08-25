@@ -9,12 +9,14 @@ const SEEK_THRESHOLD = 5;
 const REMOTE_STATUS_POLL_INTERVAL_MS = 10_000;
 const SYNC_FETCH_MIN_INTERVAL_MS = 1_500;
 const REMOTE_STATUS_EVENT_GRACE_MS = 2_000;
+const ACK_TIMEOUT_MS = 2_000;
+const SYNC_MAX_ATTEMPTS = 3;
 
 interface MusicStore {
     musics: Music[];
-    socket?: Socket<S2C, C2S> | null;
+    socket: Socket<S2C, C2S> | null;
     remoteStatus: RemoteStatus | null;
-    lastAuthoritativePause?: {
+    lastAuthoritativePause: {
         time: number;
         serverTimestamp: number;
         sequenceNumber: number;
@@ -25,36 +27,18 @@ interface MusicStore {
     lastServerTimestamp: number;
     lastTraceId: string;
     lastEventReceivedAt: number;
-    error?: string;
-    resetError?: () => void;
-    setMusics?: (musics: Music[]) => void;
-    hydrateFromLocalStorage?: () => void;
+    /** Once the socket has delivered a queue snapshot it outranks every other source. */
+    hasServerSnapshot: boolean;
 
     addMusic(music: Music): void;
     connectSocket(): void;
     remoteStatusUpdated(incomingState: RemoteStatusWithMeta): void;
+    seedMusics(musics: Music[]): void;
 }
-
-type SyncFetchResult = {
-    source: 'musics' | 'remoteStatus';
-    ok: boolean;
-    attempts: number;
-    reason?: 'timeout' | 'emit-error' | 'recent-event' | 'invalid-payload';
-};
 
 const getStatusCurrentTime = (status: RemoteStatus | null): number | undefined => {
     if (!status || status.type === 'closed') return undefined;
     return typeof status.currentTime === 'number' ? status.currentTime : undefined;
-};
-
-const isMusic = (value: unknown): value is Music => {
-    if (!value || typeof value !== 'object') return false;
-    const candidate = value as Partial<Music>;
-    return typeof candidate.id === 'string'
-        && typeof candidate.title === 'string'
-        && typeof candidate.channelId === 'string'
-        && typeof candidate.channelName === 'string'
-        && typeof candidate.duration === 'string';
 };
 
 const isRemoteStatusShape = (value: unknown): value is RemoteStatus => {
@@ -78,9 +62,31 @@ const isRemoteStatusWithMetaShape = (value: unknown): value is RemoteStatusWithM
     return meta === undefined || isRemoteStatusMetaShape(meta);
 };
 
+const delay = (ms: number) =>
+    new Promise<void>(resolve => {
+        setTimeout(resolve, ms);
+    });
+
+/**
+ * `socket.timeout().emit()` only covers a single attempt, so a dropped ack has to be
+ * retried here; `null` means "no usable answer this time".
+ */
+const withRetry = async <T>(
+    attempt: () => Promise<T | null>,
+    maxAttempts: number,
+): Promise<T | null> => {
+    for (let i = 0; i < maxAttempts; i++) {
+        // oxlint-disable-next-line no-await-in-loop
+        const value = await attempt();
+        if (value !== null) return value;
+        // oxlint-disable-next-line no-await-in-loop
+        if (i + 1 < maxAttempts) await delay(500 * 2 ** i);
+    }
+    return null;
+};
+
 export const useMusicStore = create<MusicStore>(set => {
-    let socket: Socket<S2C, C2S> | null;
-    const STORAGE_KEY = 'music-auto-play:musics:v1';
+    let socket: Socket<S2C, C2S> | null = null;
     const handleRemoteStatusUpdate = (incomingState: RemoteStatusWithMeta) => {
         const meta = incomingState._meta;
 
@@ -238,6 +244,48 @@ export const useMusicStore = create<MusicStore>(set => {
         }
     };
 
+    /** A poll answer must not overwrite an event that arrived while it was in flight. */
+    const hasRecentEvent = () =>
+        Date.now() - useMusicStore.getState().lastEventReceivedAt < REMOTE_STATUS_EVENT_GRACE_MS;
+
+    const fetchAllMusics = (s: Socket<S2C, C2S>) =>
+        withRetry(
+            () =>
+                new Promise<Music[] | null>(resolve => {
+                    s.timeout(ACK_TIMEOUT_MS).emit(
+                        'getAllMusics',
+                        (error: Error | null, musics: Music[]) => {
+                            resolve(!error && Array.isArray(musics) ? musics : null);
+                        },
+                    );
+                }),
+            SYNC_MAX_ATTEMPTS,
+        ).then(musics => {
+            if (musics) set({ musics, hasServerSnapshot: true });
+        });
+
+    const fetchRemoteStatus = (s: Socket<S2C, C2S>, maxAttempts = SYNC_MAX_ATTEMPTS) =>
+        withRetry(
+            () => {
+                if (hasRecentEvent()) return Promise.resolve<'skipped'>('skipped');
+                return new Promise<RemoteStatusWithMeta | 'skipped' | null>(resolve => {
+                    s.timeout(ACK_TIMEOUT_MS).emit(
+                        'getRemoteStatus',
+                        (error: Error | null, status: unknown) => {
+                            if (error || !isRemoteStatusWithMetaShape(status)) {
+                                resolve(null);
+                                return;
+                            }
+                            resolve(hasRecentEvent() ? 'skipped' : status);
+                        },
+                    );
+                });
+            },
+            maxAttempts,
+        ).then(status => {
+            if (status && status !== 'skipped') handleRemoteStatusUpdate(status);
+        });
+
     return {
         addMusic(music) {
             set(state => ({
@@ -250,133 +298,10 @@ export const useMusicStore = create<MusicStore>(set => {
             set({ socket });
             const currentSocket = socket;
 
-            let statusPollInterval: ReturnType<typeof setInterval> | null = null;
             let syncInFlight = false;
             let lastSyncAt = 0;
 
-            const attemptGetAllMusics = (s: Socket<S2C, C2S>, maxAttempts = 3): Promise<SyncFetchResult> =>
-                new Promise(resolve => {
-                    let attempt = 0;
-                    const tryOnce = () => {
-                        attempt++;
-                        let called = false;
-                        const timeout = setTimeout(() => {
-                            if (called) return;
-                            called = true;
-                            if (attempt < maxAttempts) {
-                                const backoff = 500 * Math.pow(2, attempt - 1);
-                                setTimeout(tryOnce, backoff);
-                                return;
-                            }
-                            resolve({ source: 'musics', ok: false, attempts: attempt, reason: 'timeout' });
-                        }, 2000);
-
-                        try {
-                            s.emit('getAllMusics', (musics: Music[] | undefined) => {
-                                if (called) return;
-                                called = true;
-                                clearTimeout(timeout);
-                                if (Array.isArray(musics)) set({ musics });
-                                resolve({
-                                    source: 'musics',
-                                    ok: Array.isArray(musics),
-                                    attempts: attempt,
-                                    reason: Array.isArray(musics) ? undefined : 'invalid-payload',
-                                });
-                            });
-                        } catch {
-                            clearTimeout(timeout);
-                            if (attempt < maxAttempts) {
-                                const backoff = 500 * Math.pow(2, attempt - 1);
-                                setTimeout(tryOnce, backoff);
-                                return;
-                            }
-                            resolve({ source: 'musics', ok: false, attempts: attempt, reason: 'emit-error' });
-                        }
-                    };
-
-                    tryOnce();
-                });
-
-            const attemptGetRemoteStatus = (s: Socket<S2C, C2S>, maxAttempts = 3): Promise<SyncFetchResult> =>
-                new Promise(resolve => {
-                    let attempt = 0;
-                    const tryOnce = () => {
-                        attempt++;
-                        {
-                            const state = useMusicStore.getState();
-                            const timeSinceLastEvent = Date.now() - state.lastEventReceivedAt;
-                            if (timeSinceLastEvent < REMOTE_STATUS_EVENT_GRACE_MS) {
-                                resolve({
-                                    source: 'remoteStatus',
-                                    ok: true,
-                                    attempts: attempt,
-                                    reason: 'recent-event',
-                                });
-                                return;
-                            }
-                        }
-                        let called = false;
-                        const timeout = setTimeout(() => {
-                            if (called) return;
-                            called = true;
-                            if (attempt < maxAttempts) {
-                                const backoff = 500 * Math.pow(2, attempt - 1);
-                                setTimeout(tryOnce, backoff);
-                                return;
-                            }
-                            resolve({ source: 'remoteStatus', ok: false, attempts: attempt, reason: 'timeout' });
-                        }, 2000);
-
-                        try {
-                            s.emit('getRemoteStatus', (status: unknown) => {
-                                if (called) return;
-                                called = true;
-                                clearTimeout(timeout);
-                                if (isRemoteStatusWithMetaShape(status)) {
-                                    const state = useMusicStore.getState();
-                                    const timeSinceLastEvent = Date.now() - state.lastEventReceivedAt;
-                                    if (timeSinceLastEvent < REMOTE_STATUS_EVENT_GRACE_MS) {
-                                        if (import.meta.env.DEV) {
-                                            console.info(
-                                                '[musicStore] skipping poll response, recent event received',
-                                                { timeSinceLastEvent },
-                                            );
-                                        }
-                                        resolve({
-                                            source: 'remoteStatus',
-                                            ok: true,
-                                            attempts: attempt,
-                                            reason: 'recent-event',
-                                        });
-                                        return;
-                                    }
-                                    handleRemoteStatusUpdate(status);
-                                    resolve({ source: 'remoteStatus', ok: true, attempts: attempt });
-                                    return;
-                                }
-                                resolve({
-                                    source: 'remoteStatus',
-                                    ok: false,
-                                    attempts: attempt,
-                                    reason: 'invalid-payload',
-                                });
-                            });
-                        } catch {
-                            clearTimeout(timeout);
-                            if (attempt < maxAttempts) {
-                                const backoff = 500 * Math.pow(2, attempt - 1);
-                                setTimeout(tryOnce, backoff);
-                                return;
-                            }
-                            resolve({ source: 'remoteStatus', ok: false, attempts: attempt, reason: 'emit-error' });
-                        }
-                    };
-
-                    tryOnce();
-                });
-
-            const syncFromServer = async (s: Socket<S2C, C2S>) => {
+            const syncFromServer = async () => {
                 if (syncInFlight) return;
                 const now = Date.now();
                 if (now - lastSyncAt < SYNC_FETCH_MIN_INTERVAL_MS) return;
@@ -384,12 +309,10 @@ export const useMusicStore = create<MusicStore>(set => {
                 syncInFlight = true;
                 lastSyncAt = now;
                 try {
-                    const results = await Promise.all([
-                        attemptGetAllMusics(s),
-                        attemptGetRemoteStatus(s),
+                    await Promise.all([
+                        fetchAllMusics(currentSocket),
+                        fetchRemoteStatus(currentSocket),
                     ]);
-                    if (import.meta.env.DEV && results.some(result => !result.ok))
-                        console.debug('[musicStore] syncFromServer partial failure', { results });
                 } finally {
                     syncInFlight = false;
                 }
@@ -397,84 +320,57 @@ export const useMusicStore = create<MusicStore>(set => {
 
             currentSocket
                 .on('connect', () => {
-                    try {
-                        void syncFromServer(currentSocket);
-                    } catch (error) {
-                        if (import.meta.env.DEV) console.debug('Initial data fetch failed', error);
-                    }
+                    void syncFromServer();
                 })
                 .on('musicAdded', (music: Music) => {
                     set(state => ({
                         musics: [...state.musics, music],
+                        hasServerSnapshot: true,
                     }));
                 })
                 .on('musicRemoved', (musicId: string) => {
                     set(state => ({
                         musics: state.musics.filter(music => music.id !== musicId),
+                        hasServerSnapshot: true,
                     }));
                 })
                 .on('queueReordered', (musics: Music[]) => {
-                    set({ musics });
+                    set({ musics, hasServerSnapshot: true });
                 })
                 .on('remoteStatusUpdated', (incomingState: RemoteStatusWithMeta) => {
                     handleRemoteStatusUpdate(incomingState);
                 })
                 .on('disconnect', () => {
-                    if (statusPollInterval) {
-                        clearInterval(statusPollInterval);
-                        statusPollInterval = null;
-                    }
                     syncInFlight = false;
                 });
 
             currentSocket.io.on('reconnect_attempt', () => {
-                try {
-                    void syncFromServer(currentSocket);
-                } catch {
-                    if (import.meta.env.DEV) console.debug('reconnect_attempt data fetch failed');
-                }
+                void syncFromServer();
             });
 
             currentSocket.io.on('reconnect', () => {
-                try {
-                    void syncFromServer(currentSocket);
-                } catch {
-                    if (import.meta.env.DEV) console.debug('reconnect data fetch failed');
-                }
+                void syncFromServer();
             });
 
             currentSocket.connect();
 
-            statusPollInterval = setInterval(() => {
+            // Deliberately never cleared: the callback skips while disconnected, so the safety
+            // net still covers the session after a reconnect.
+            setInterval(() => {
                 if (!currentSocket.connected) return;
 
-                if (typeof document !== 'undefined' && document.hidden) {
-                    const state = useMusicStore.getState();
-                    if (Date.now() - state.lastEventReceivedAt < REMOTE_STATUS_POLL_INTERVAL_MS * 2) return;
-                }
+                // A backgrounded tab still receives events, so it only needs the poll once the
+                // stream has actually gone quiet.
+                const eventAge = Date.now() - useMusicStore.getState().lastEventReceivedAt;
+                if (
+                    typeof document !== 'undefined' && document.hidden && eventAge < REMOTE_STATUS_POLL_INTERVAL_MS * 2
+                ) { return; }
 
-                void attemptGetRemoteStatus(currentSocket, 1);
+                void fetchRemoteStatus(currentSocket, 1);
             }, REMOTE_STATUS_POLL_INTERVAL_MS);
         },
-        error: undefined,
-        hydrateFromLocalStorage() {
-            try {
-                const storage: Storage | undefined = typeof window !== 'undefined'
-                    ? window.localStorage
-                    : (globalThis as { localStorage?: Storage }).localStorage;
-                if (!storage) return;
-                const raw = storage.getItem(STORAGE_KEY);
-                if (!raw) return;
-                const parsed = JSON.parse(raw) as unknown;
-                if (!Array.isArray(parsed) || !parsed.every(isMusic)) return;
-                set(state => {
-                    if (state.musics.length > 0) return {};
-                    return { musics: parsed };
-                });
-            } catch (error) {
-                if (import.meta.env.DEV) console.debug('musicStore hydrateFromLocalStorage failed', error);
-            }
-        },
+        hasServerSnapshot: false,
+        lastAuthoritativePause: null,
         lastSequenceNumber: 0,
         lastServerTimestamp: 0,
         lastTraceId: '',
@@ -489,17 +385,9 @@ export const useMusicStore = create<MusicStore>(set => {
             }
             handleRemoteStatusUpdate(incomingState);
         },
-        resetError: () => {
-            set({ error: undefined });
+        seedMusics(musics: Music[]) {
+            set(state => (state.hasServerSnapshot ? {} : { musics }));
         },
-        setMusics(musics: Music[]) {
-            try {
-                if (typeof window !== 'undefined') window.localStorage.setItem(STORAGE_KEY, JSON.stringify(musics));
-            } catch (error) {
-                if (import.meta.env.DEV) console.debug('musicStore setMusics localStorage failed', error);
-            }
-            set({ musics });
-        },
-        socket: undefined,
+        socket: null,
     };
 });

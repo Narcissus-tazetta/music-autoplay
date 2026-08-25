@@ -1,4 +1,3 @@
-import { RequestLogFileStore } from '@/server/requestLog/requestLogFileStore';
 import { RequestLogService, resetRequestLogService } from '@/server/requestLog/requestLogService';
 import type { Music } from '@/shared/types/music';
 import type { RequestLogEntry, RequestLogStore } from '@/shared/types/requestLog';
@@ -8,6 +7,15 @@ import os from 'node:os';
 import path from 'node:path';
 
 let tempDirs: string[] = [];
+
+const noopStore: RequestLogStore = {
+    append: () => undefined,
+    closeSync: () => undefined,
+    flush: () => Promise.resolve(),
+    load: () => ({ entries: [] }),
+    pruneExpired: () => undefined,
+    query: () => [],
+};
 
 const makeMusic = (overrides?: Partial<Music>): Music => ({
     channelId: 'channel-1',
@@ -146,16 +154,16 @@ describe('RequestLogService', () => {
             title: 'valid',
             url: 'https://www.youtube.com/watch?v=aaaaaaaaaaa',
         };
+        const stored = [
+            valid,
+            { ...valid, id: '', title: 'broken-id' },
+            { ...valid, id: 'bad-date', requestedAt: 'not-a-date' },
+            { ...valid, id: 'bad-hash', requesterHash: 'guest' },
+        ] as RequestLogEntry[];
         const store: RequestLogStore = {
-            append: () => undefined,
-            load: () => ({
-                entries: [
-                    valid,
-                    { ...valid, id: '', title: 'broken-id' },
-                    { ...valid, id: 'bad-date', requestedAt: 'not-a-date' },
-                    { ...valid, id: 'bad-hash', requesterHash: 'guest' },
-                ] as RequestLogEntry[],
-            }),
+            ...noopStore,
+            load: () => ({ entries: stored }),
+            query: () => stored,
         };
         const service = new RequestLogService(store);
 
@@ -176,8 +184,7 @@ describe('RequestLogService', () => {
         };
         let receivedLimit: number | undefined;
         const store: RequestLogStore = {
-            append: () => undefined,
-            load: () => ({ entries: [] }),
+            ...noopStore,
             query: input => {
                 receivedLimit = input?.limit;
                 return [valid];
@@ -208,30 +215,5 @@ describe('RequestLogService', () => {
         const raw = await fs.readFile(filePath, 'utf8');
         const persisted = JSON.parse(raw) as { entries: RequestLogEntry[] };
         expect(persisted.entries.map(entry => entry.title)).toEqual(['fresh']);
-    });
-
-    test('RequestLogFileStore.replace は永続化対象を置き換える', async () => {
-        const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'request-log-store-test-'));
-        tempDirs.push(dir);
-        const filePath = path.join(dir, 'request-logs.json');
-        const store = new RequestLogFileStore(filePath);
-        const entry = {
-            id: 'replace-entry',
-            musicId: 'aaaaaaaaaaa',
-            requesterHash: 'abc123def4567890abcdef1234567890abcdef1234567890abcdef1234567890',
-            requesterName: '550e8400...',
-            requestedAt: new Date().toISOString(),
-            title: 'replace',
-            url: 'https://www.youtube.com/watch?v=aaaaaaaaaaa',
-        };
-
-        store.append({ ...entry, id: 'old-entry', title: 'old' });
-        store.replace([entry]);
-        await store.flush();
-
-        const raw = await fs.readFile(filePath, 'utf8');
-        const persisted = JSON.parse(raw) as { entries: RequestLogEntry[] };
-        expect(persisted.entries).toHaveLength(1);
-        expect(persisted.entries[0]?.title).toBe('replace');
     });
 });

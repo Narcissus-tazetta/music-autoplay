@@ -1,14 +1,12 @@
 import type { HistoryItem } from '@/shared/types/history';
 import logger from '../logger.server';
-import { MongoConnection, type MongoConnectionOptions } from '../persistence/mongoConnection';
+import { MongoConnection } from '../persistence/mongoConnection';
 import { buildUpsert, computeExpireAt, docToEntity } from '../persistence/mongoDoc';
 import { PendingWriteQueue } from '../persistence/pendingWrites';
 import type { HistoryStore } from './historyStore';
 
 const HISTORY_TTL_YEARS = 3;
 const HISTORY_TTL_MS = HISTORY_TTL_YEARS * 365 * 24 * 60 * 60 * 1000;
-
-export type HistoryMongoStoreOptions = MongoConnectionOptions;
 
 type HistoryDoc = HistoryItem & {
     _id: string;

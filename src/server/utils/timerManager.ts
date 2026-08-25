@@ -1,4 +1,4 @@
-import { safeLog } from '@/server/logger.server';
+import logger from '@/server/logger.server';
 
 export class TimerManager {
     private timers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -14,10 +14,7 @@ export class TimerManager {
             try {
                 cb();
             } catch (error) {
-                safeLog('warn', 'timer callback threw', { error: error, key } as Record<
-                    string,
-                    unknown
-                >);
+                logger.warn('timer callback threw', { error, key });
             }
         }, ms);
         this.timers.set(key, id);

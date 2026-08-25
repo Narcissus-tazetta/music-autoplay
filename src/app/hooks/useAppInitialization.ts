@@ -3,13 +3,14 @@ import { useAdminStore } from '@/app/stores/adminStore';
 import { useMusicStore } from '@/app/stores/musicStore';
 import { useSettingsStore } from '@/app/stores/settingsStore';
 import type { Music } from '@/shared/types/music';
-import normalizeApiResponse from '@/shared/utils/api';
-import { parseApiErrorForUI } from '@/shared/utils/apiUi';
-import { runParsedApiError } from '@/shared/utils/runUiAction';
+import { normalizeApiResponse } from '@/shared/utils/api';
 import { useEffect } from 'react';
 import { z } from 'zod';
 
 const SettingsSchema = z.object({ ytStatusVisible: z.boolean().optional() }).passthrough();
+
+const SEED_FETCH_TIMEOUT_MS = 3_000;
+const SEED_RETRY_DELAYS_MS = [0, 500, 1_000];
 
 const isMusic = (v: unknown): v is Music => {
     if (!v || typeof v !== 'object') return false;
@@ -23,160 +24,76 @@ const isMusic = (v: unknown): v is Music => {
     );
 };
 
+async function loadRoles(signal: AbortSignal): Promise<void> {
+    const res = await fetch('/api/admin/status', { signal });
+    if (!res.ok) return;
+
+    const data = await res.json() as { isAdmin?: boolean; roles?: unknown };
+    const roles = Array.isArray(data.roles) ? [...data.roles as SessionRole[]] : [];
+    if (data.isAdmin === true && !roles.includes('admin')) roles.push('admin');
+    if (roles.length > 0) useAdminStore.getState().setRoles(roles);
+}
+
+async function loadSettings(signal: AbortSignal): Promise<void> {
+    const res = await fetch('/api/settings', { signal });
+    // 204 means "nothing stored yet" and carries no body to parse.
+    if (res.status !== 200) return;
+
+    const parsed = SettingsSchema.safeParse(await res.json());
+    if (parsed.success && typeof parsed.data.ytStatusVisible === 'boolean')
+        useSettingsStore.getState().setYtStatusVisible(parsed.data.ytStatusVisible);
+}
+
+/**
+ * Only a seed for the first paint: the socket owns the queue, and `seedMusics` is a no-op
+ * once its snapshot has landed, so a slow response here can never resurrect a stale list.
+ */
+async function seedMusicsFromApi(signal: AbortSignal): Promise<void> {
+    for (const retryDelay of SEED_RETRY_DELAYS_MS) {
+        if (useMusicStore.getState().hasServerSnapshot || signal.aborted) return;
+        // oxlint-disable-next-line no-await-in-loop
+        if (retryDelay > 0) await new Promise(r => setTimeout(r, retryDelay));
+
+        try {
+            // oxlint-disable-next-line no-await-in-loop
+            const res = await fetch('/api/musics', {
+                cache: 'no-store',
+                signal: AbortSignal.any([signal, AbortSignal.timeout(SEED_FETCH_TIMEOUT_MS)]),
+            });
+            // oxlint-disable-next-line no-await-in-loop
+            const norm = await normalizeApiResponse<{ musics: unknown[] }>(res);
+            if (!norm.success) throw new Error(norm.error.message);
+
+            const musics = norm.data?.musics;
+            if (!Array.isArray(musics)) throw new Error('/api/musics returned no queue');
+
+            useMusicStore.getState().seedMusics(musics.filter(isMusic));
+            return;
+        } catch (error) {
+            if (signal.aborted) return;
+            if (import.meta.env.DEV) console.debug('/api/musics seed attempt failed', error);
+        }
+    }
+    console.warn('/api/musics seed gave up; the queue will fill in over the socket');
+}
+
 export function useAppInitialization(): void {
     useEffect(() => {
-        const run = async () => {
-            try {
-                const res = await fetch('/api/admin/status');
-                if (res.ok) {
-                    const data = await res.json() as { isAdmin?: boolean; roles?: unknown };
-                    const roles = Array.isArray(data.roles) ? [...data.roles as SessionRole[]] : [];
-                    if (data.isAdmin === true && !roles.includes('admin')) roles.push('admin');
-                    if (roles.length > 0) useAdminStore.getState().setRoles(roles);
-                }
-            } catch {
-                if (import.meta.env.DEV) console.debug('admin status check failed');
-            }
+        const controller = new AbortController();
+        const signal = controller.signal;
 
-            const store = useMusicStore.getState();
-            try {
-                const resp = await fetch('/api/settings');
-                if (resp.ok && resp.status === 200) {
-                    const rawData: unknown = await resp.json();
-                    const parsed = SettingsSchema.safeParse(rawData);
-                    if (
-                        parsed.success
-                        && typeof parsed.data.ytStatusVisible === 'boolean'
-                    ) {
-                        useSettingsStore
-                            .getState()
-                            .setYtStatusVisible(parsed.data.ytStatusVisible);
-                    }
-                }
-            } catch {
-                // Silently handle initialization error
-            }
+        useMusicStore.getState().connectSocket();
 
-            try {
-                store.connectSocket();
-            } catch (error) {
-                if (import.meta.env.DEV) {
-                    if (error instanceof Error) console.error('connectSocket failed', error);
-                    else console.error('connectSocket failed', String(error));
-                }
-            }
-            const doBackgroundFetch = async () => {
-                const doFetchOnce = async (signal: AbortSignal) => {
-                    const resp = await fetch('/api/musics', {
-                        cache: 'no-store',
-                        signal,
-                    });
-                    const norm = await normalizeApiResponse<{ musics: unknown[] }>(resp);
-
-                    if (!norm.success) {
-                        try {
-                            const parsed = parseApiErrorForUI({
-                                code: norm.error.code,
-                                details: norm.error.details,
-                                message: norm.error.message,
-                            });
-
-                            if (import.meta.env.DEV) {
-                                console.debug(
-                                    '/api/musics responded with parsed error:',
-                                    parsed,
-                                );
-                            }
-
-                            await runParsedApiError(parsed);
-
-                            if (parsed.kind === 'unauthorized') return;
-                        } catch (error) {
-                            if (import.meta.env.DEV) console.debug('parseApiErrorForUI failed', error);
-                        }
-                        const maybeErr: unknown = norm.error;
-                        let fallbackMsg = 'Unknown error';
-                        if (
-                            typeof maybeErr === 'object'
-                            && maybeErr !== null
-                            && 'message' in maybeErr
-                        ) {
-                            const m = (maybeErr as Record<string, unknown>).message;
-                            if (typeof m === 'string') fallbackMsg = m;
-                        } else if (typeof maybeErr === 'string') fallbackMsg = maybeErr;
-                        else {
-                            try {
-                                fallbackMsg = JSON.stringify(maybeErr);
-                            } catch {
-                                fallbackMsg = String(maybeErr);
-                            }
-                        }
-
-                        throw new Error('fetch /api/musics failed: ' + fallbackMsg);
-                    }
-
-                    const musicsRaw = (norm.data as { musics?: unknown } | null)?.musics;
-                    if (!Array.isArray(musicsRaw)) throw new Error('no-musics');
-                    const maybeMusics = musicsRaw;
-                    const musics = maybeMusics.filter(isMusic);
-                    store.setMusics?.(musics);
-                };
-
-                const attempts = [0, 500, 1000];
-                for (let i = 0; i < attempts.length; i++) {
-                    // oxlint-disable-next-line no-await-in-loop
-                    if (i > 0) await new Promise(r => setTimeout(r, attempts[i]));
-                    const controller = new AbortController();
-                    const timeout = setTimeout(() => {
-                        controller.abort();
-                    }, 3000);
-                    try {
-                        // oxlint-disable-next-line no-await-in-loop
-                        await doFetchOnce(controller.signal);
-                        clearTimeout(timeout);
-                        break;
-                    } catch (error) {
-                        clearTimeout(timeout);
-                        if (import.meta.env.DEV) {
-                            console.debug('/api/musics fetch attempt failed', {
-                                attempt: i + 1,
-                                error: error instanceof Error ? error.message : String(error),
-                            });
-                            if (i === attempts.length - 1) {
-                                console.debug(
-                                    '/api/musics all attempts failed, relying on socket',
-                                );
-                            }
-                        }
-                    }
-                }
-            };
-
-            let fetchSucceeded = false;
-            try {
-                await doBackgroundFetch();
-                fetchSucceeded = true;
-            } catch {
-                if (import.meta.env.DEV) console.debug('background /api/musics task failed');
-            }
-            if (!fetchSucceeded) {
-                try {
-                    store.hydrateFromLocalStorage?.();
-                } catch (error) {
-                    if (import.meta.env.DEV) console.debug('hydrateFromLocalStorage failed', error);
-                }
-            }
+        const settle = (label: string) => (error: unknown) => {
+            if (signal.aborted) return;
+            console.warn(`app initialization: ${label} failed`, error);
         };
+        loadRoles(signal).catch(settle('admin status'));
+        loadSettings(signal).catch(settle('settings'));
+        void seedMusicsFromApi(signal);
 
-        run().catch(error => {
-            if (import.meta.env.DEV) {
-                if (error instanceof Error) console.error(error);
-                else {
-                    console.error(
-                        typeof error === 'string' ? error : JSON.stringify(error),
-                    );
-                }
-            }
-        });
+        return () => {
+            controller.abort();
+        };
     }, []);
 }

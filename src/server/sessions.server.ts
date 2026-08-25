@@ -2,7 +2,9 @@ import { SERVER_ENV } from '@/server/env.server';
 import { createCookie, createCookieSessionStorage } from 'react-router';
 import { createThemeSessionResolver } from 'remix-themes';
 
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = SERVER_ENV.NODE_ENV === 'production';
+/** Scoped to the deployment's own host so the cookies follow CLIENT_URL rather than a baked-in domain. */
+const cookieDomain = isProduction ? { domain: new URL(SERVER_ENV.CLIENT_URL).hostname } : {};
 
 const sessionStorage = createCookieSessionStorage({
     cookie: {
@@ -11,9 +13,8 @@ const sessionStorage = createCookieSessionStorage({
         httpOnly: true,
         sameSite: 'lax',
         secrets: [SERVER_ENV.SESSION_SECRET],
-        ...(isProduction
-            ? { domain: 'music-auto-play.onrender.com', secure: true }
-            : {}),
+        secure: isProduction,
+        ...cookieDomain,
     },
 });
 export const themeSessionResolver = createThemeSessionResolver(sessionStorage);
@@ -38,7 +39,7 @@ export const loginSession = createCookieSessionStorage<{
         sameSite: 'lax',
         secrets: [SERVER_ENV.SESSION_SECRET],
         secure: isProduction,
-        ...(isProduction ? { domain: 'music-auto-play.onrender.com' } : {}),
+        ...cookieDomain,
     },
 });
 
@@ -68,7 +69,7 @@ export const anonymousIdCookie = createCookie('_anonId', {
     sameSite: 'lax',
     secrets: [SERVER_ENV.SESSION_SECRET],
     secure: isProduction,
-    ...(isProduction ? { domain: 'music-auto-play.onrender.com' } : {}),
+    ...cookieDomain,
 });
 
 export const requesterDisplayNameCookie = createCookie('_requesterName', {
@@ -78,5 +79,5 @@ export const requesterDisplayNameCookie = createCookie('_requesterName', {
     sameSite: 'lax',
     secrets: [SERVER_ENV.SESSION_SECRET],
     secure: isProduction,
-    ...(isProduction ? { domain: 'music-auto-play.onrender.com' } : {}),
+    ...cookieDomain,
 });

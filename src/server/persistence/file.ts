@@ -103,4 +103,3 @@ export class FileStore implements Store {
         this.file.closeSync();
     }
 }
-export default FileStore;

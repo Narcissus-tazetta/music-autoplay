@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { MusicRepository } from '../src/server/music/musicRepository';
 import { setupExtensionEventHandlers } from '../src/server/socket/handlers/extensionEventHandlers';
-import createFakeEmitter from './helpers/fakeEmitter';
-import createFakeSocket from './helpers/fakeSocket';
+import { createFakeEmitter } from './helpers/fakeEmitter';
+import { createFakeSocket } from './helpers/fakeSocket';
 
 describe('ad_state_changed sequences', () => {
     test('ad_start -> ad_end toggles isAdvertisement and video_next triggers next', async () => {

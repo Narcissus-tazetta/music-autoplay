@@ -5,11 +5,6 @@ import type { Result } from '@/shared/utils/errors/result-handlers';
 import { err, ok } from '@/shared/utils/errors/result-handlers';
 import { createHash, timingSafeEqual } from 'node:crypto';
 
-export interface AuthContext {
-    requesterHash?: string;
-    socketId?: string;
-}
-
 export class AuthChecker {
     private adminSecretHash?: Buffer;
 

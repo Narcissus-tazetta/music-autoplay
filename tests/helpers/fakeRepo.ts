@@ -36,5 +36,3 @@ export function createFakeRepo<T extends { id?: string; url?: string } = { id?: 
         },
     } as const;
 }
-
-export default createFakeRepo;

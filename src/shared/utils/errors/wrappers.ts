@@ -6,7 +6,7 @@ export interface Logger {
     warn(message: string, meta?: Record<string, unknown>): void;
     error(message: string, meta?: Record<string, unknown>): void;
 }
-export const defaultLogger: Logger = {
+const defaultLogger: Logger = {
     debug: (msg, meta) => {
         console.debug(msg, meta);
     },

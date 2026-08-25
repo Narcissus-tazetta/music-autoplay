@@ -14,9 +14,8 @@ import { RequestLogFileStore } from './requestLogFileStore';
 const REQUEST_LOG_RETENTION_DAYS = 30;
 const REQUEST_LOG_RETENTION_MS = REQUEST_LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 const HASH_PATTERN = /^[a-f0-9]{64}$/i;
-const HASH_PREFIX_PATTERN = /^[a-f0-9]{4,64}$/i;
 const MUSIC_ID_PATTERN = /^[A-Za-z0-9_-]{11,20}$/;
-const MAX_LIMIT = 500;
+const DEFAULT_LIMIT = 50;
 
 function isValidRequesterHash(value: unknown): value is string {
     return typeof value === 'string' && (HASH_PATTERN.test(value) || value === 'external');
@@ -53,10 +52,6 @@ function isWithinRetention(entry: RequestLogEntry, nowMs: number): boolean {
     return Number.isFinite(requestedAtMs) && requestedAtMs >= nowMs - REQUEST_LOG_RETENTION_MS;
 }
 
-function normalizeLimit(limit: unknown): number {
-    return Math.min(Math.max(typeof limit === 'number' && Number.isFinite(limit) ? limit : 50, 1), MAX_LIMIT);
-}
-
 function maskEntry(entry: RequestLogEntry): MaskedRequestLogEntry {
     return {
         ...entry,
@@ -66,7 +61,6 @@ function maskEntry(entry: RequestLogEntry): MaskedRequestLogEntry {
 
 export class RequestLogService {
     private readonly store: RequestLogStore;
-    private loaded = false;
 
     constructor(filePathOrStore?: string | RequestLogStore) {
         if (typeof filePathOrStore === 'string' || !filePathOrStore) {
@@ -76,39 +70,9 @@ export class RequestLogService {
         this.store = filePathOrStore;
     }
 
-    private ensureLoaded(): void {
-        if (this.loaded) return;
-        this.loaded = true;
-    }
-
-    private loadValidEntries(): RequestLogEntry[] {
-        const persisted = this.store.load();
-        const rawEntries = Array.isArray(persisted.entries)
-            ? persisted.entries.map(normalizeEntry).filter((entry): entry is RequestLogEntry => entry !== null)
-            : [];
-        const invalidCount = Array.isArray(persisted.entries) ? persisted.entries.length - rawEntries.length : 0;
-        if (invalidCount > 0) logger.warn('RequestLogService: ignored invalid request log entries', { invalidCount });
-        return rawEntries;
-    }
-
-    private async pruneExpired(): Promise<void> {
-        const now = new Date();
-        if (typeof this.store.pruneExpired === 'function') {
-            await this.store.pruneExpired(now);
-            return;
-        }
-
-        if (typeof this.store.replace !== 'function') return;
-
-        const nowMs = now.getTime();
-        const entries = this.loadValidEntries().filter(entry => isWithinRetention(entry, nowMs));
-        await this.store.replace(entries);
-    }
-
     appendFromMusic(music: Music, url?: string): RequestLogEntry | null {
         if (!music.requesterHash || !isValidRequesterHash(music.requesterHash)) return null;
 
-        this.ensureLoaded();
         const requestedAtMs = Date.parse(music.requestedAt ?? '');
         const entry = normalizeEntry({
             id: randomUUID(),
@@ -129,45 +93,37 @@ export class RequestLogService {
         return entry;
     }
 
+    /**
+     * The store owns filtering, ordering and the limit; what is left here is the persistence
+     * boundary check — rows that no longer parse, or that outlived the retention window the
+     * backend has not pruned yet, must never reach the admin UI.
+     */
     async query(input?: RequestLogQuery): Promise<MaskedRequestLogEntry[]> {
-        this.ensureLoaded();
-        const limit = normalizeLimit(input?.limit);
-        const rawRequesterHash = input?.requesterHash?.trim().toLowerCase();
-        const requesterHash = rawRequesterHash && isValidRequesterHash(rawRequesterHash) ? rawRequesterHash : undefined;
-        const rawHashPrefix = input?.hashPrefix?.trim().toLowerCase();
-        const hashPrefix = rawHashPrefix && HASH_PREFIX_PATTERN.test(rawHashPrefix) ? rawHashPrefix : undefined;
         const nowMs = Date.now();
+        const sourceRows = await this.store.query(input);
 
-        const queryInput = {
-            hashPrefix,
-            limit,
-            requesterHash,
-        };
+        const rows: RequestLogEntry[] = [];
+        for (const row of sourceRows) {
+            const entry = normalizeEntry(row);
+            if (entry && isWithinRetention(entry, nowMs)) rows.push(entry);
+        }
+        if (rows.length < sourceRows.length) {
+            logger.warn('RequestLogService: dropped unusable request log entries', {
+                droppedCount: sourceRows.length - rows.length,
+            });
+        }
 
-        const sourceRows = typeof this.store.query === 'function'
-            ? await this.store.query(queryInput)
-            : this.loadValidEntries();
-
-        let rows = sourceRows
-            .map(normalizeEntry)
-            .filter((entry): entry is RequestLogEntry => entry !== null)
-            .filter(entry => isWithinRetention(entry, nowMs));
-
-        if (requesterHash) rows = rows.filter(entry => entry.requesterHash.toLowerCase() === requesterHash);
-        else if (hashPrefix) rows = rows.filter(entry => entry.requesterHash.toLowerCase().startsWith(hashPrefix));
-
-        rows.sort((a, b) => Date.parse(b.requestedAt) - Date.parse(a.requestedAt));
-        return rows.slice(0, limit).map(maskEntry);
+        return rows.slice(0, input?.limit ?? DEFAULT_LIMIT).map(maskEntry);
     }
 
     async flush(): Promise<void> {
-        await this.pruneExpired();
-        if (typeof this.store.flush === 'function') await this.store.flush();
+        await this.store.pruneExpired(new Date());
+        await this.store.flush();
     }
 
     closeSync(): void {
-        void this.pruneExpired();
-        if (typeof this.store.closeSync === 'function') this.store.closeSync();
+        void this.store.pruneExpired(new Date());
+        this.store.closeSync();
     }
 }
 

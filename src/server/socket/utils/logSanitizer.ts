@@ -1,4 +1,3 @@
-import { safeLog } from '@/server/logger.server';
 import { getStructuredClone, isObject } from '@/shared/utils/typeGuards';
 import type { HeaderSnapshot, RequestLike, SocketLike } from '../types';
 
@@ -12,49 +11,33 @@ function deepCloneForLog(v: unknown): unknown {
     }
 }
 
+/** The only headers worth logging; the cookie is recorded as present but never in clear. */
+function pickLoggableHeaders(headers: Record<string, unknown>): HeaderSnapshot {
+    const out: Record<string, string | undefined> = {};
+    if (typeof headers.origin === 'string') out.origin = headers.origin;
+    if (typeof headers.referer === 'string') out.referer = headers.referer;
+    if (typeof headers.cookie === 'string') out.cookie = '[REDACTED]';
+    if (typeof headers['user-agent'] === 'string') out['user-agent'] = headers['user-agent'];
+    return out;
+}
+
 export function snapshotHeaders(socket: SocketLike): HeaderSnapshot {
-    try {
-        if (!isObject(socket)) return undefined;
+    if (!isObject(socket)) return undefined;
 
-        const socketObj = socket as { handshake?: unknown; conn?: unknown };
-        const hs = socketObj.handshake;
+    const socketObj = socket as { handshake?: unknown; conn?: unknown };
 
-        if (isObject(hs)) {
-            const handshake = hs as { headers?: unknown };
-            const headers = handshake.headers;
-            if (isObject(headers)) {
-                const h = headers;
-                const out: Record<string, string | undefined> = {};
-                if (typeof h.origin === 'string') out.origin = h.origin;
-                if (typeof h.referer === 'string') out.referer = h.referer;
-                if (typeof h.cookie === 'string') out.cookie = '[REDACTED]';
-                if (typeof h['user-agent'] === 'string') out['user-agent'] = h['user-agent'];
-                return out;
-            }
-        }
+    const handshakeHeaders = isObject(socketObj.handshake)
+        ? (socketObj.handshake as { headers?: unknown }).headers
+        : undefined;
+    if (isObject(handshakeHeaders)) return pickLoggableHeaders(handshakeHeaders);
 
-        const conn = socketObj.conn;
-        if (isObject(conn)) {
-            const connObj = conn as { request?: unknown };
-            const maybeReq = connObj.request;
-            if (isObject(maybeReq)) {
-                const r = maybeReq as RequestLike;
-                if (isObject(r.headers)) {
-                    const h = r.headers;
-                    const out: Record<string, string | undefined> = {};
-                    if (typeof h.origin === 'string') out.origin = h.origin;
-                    if (typeof h.referer === 'string') out.referer = h.referer;
-                    if (typeof h.cookie === 'string') out.cookie = '[REDACTED]';
-                    if (typeof h['user-agent'] === 'string') out['user-agent'] = h['user-agent'];
-                    return out;
-                }
-            }
-        }
-        return undefined;
-    } catch (error) {
-        safeLog('debug', 'snapshotHeaders failed', { error: error });
-        return undefined;
-    }
+    const request = isObject(socketObj.conn)
+        ? (socketObj.conn as { request?: unknown }).request
+        : undefined;
+    const requestHeaders = isObject(request) ? (request as RequestLike).headers : undefined;
+    if (isObject(requestHeaders)) return pickLoggableHeaders(requestHeaders);
+
+    return undefined;
 }
 
 export function sanitizeArgs(args: unknown[]): unknown[] {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { handleNoNextVideo, navigateToNextVideo } from '../youtube-auto-play/src/bg/youtube-state';
-import createFakeChrome from './helpers/fakeChrome';
+import { createFakeChrome } from './helpers/fakeChrome';
 
 describe('youtube-state navigation', () => {
     test('navigateToNextVideo updates tab and storage', () => {

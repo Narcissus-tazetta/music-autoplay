@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { extractErrorInfo, safeString } from './core';
+import { safeString } from './core';
 
 export type ReplyOptions =
     | {
@@ -9,8 +9,7 @@ export type ReplyOptions =
     }
     | Record<string, unknown>;
 
-export type SuccessReply = Record<string, never>;
-export function createErrorReply(message: string, code?: string): ReplyOptions {
+function createErrorReply(message: string, code?: string): ReplyOptions {
     return {
         formErrors: [message],
         ...(code && { code }),
@@ -29,12 +28,8 @@ export function createValidationErrorReply(
     };
 }
 
-export function createServerErrorReply(error?: unknown): ReplyOptions {
-    if (error) {
-        const info = extractErrorInfo(error);
-        void info;
-    }
-
+/** The caller logs the underlying error; the reply deliberately carries no detail of it. */
+export function createServerErrorReply(): ReplyOptions {
     return createErrorReply('内部サーバーエラーが発生しました', 'INTERNAL_ERROR');
 }
 

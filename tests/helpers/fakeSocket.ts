@@ -37,5 +37,3 @@ export function createFakeSocket() {
         },
     } as const;
 }
-
-export default createFakeSocket;

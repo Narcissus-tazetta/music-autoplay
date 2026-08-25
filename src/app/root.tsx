@@ -1,3 +1,4 @@
+import { serverContext } from '@/server/context';
 import { respondWithResult } from '@/server/httpResponse.server';
 import { ensureAnonymousIdCookie, resolveRequesterIdentity } from '@/server/requesterIdentity.server';
 import { themeSessionResolver, type UserSessionData } from '@/server/sessions.server';
@@ -33,7 +34,8 @@ export const links: LinksFunction = () => [
     { href: '/favicon.ico', rel: 'icon', sizes: 'any' },
 ];
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
+export const loader = async ({ context, request }: LoaderFunctionArgs) => {
+    const nonce = context.get(serverContext).cspNonce;
     const res = await safeExecuteAsync(async () => {
         const cookieHeader = request.headers.get('Cookie');
         const { getTheme } = await themeSessionResolver(request);
@@ -51,6 +53,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             headers: setCookieHeader ? { 'Set-Cookie': setCookieHeader } : undefined,
             requesterHash: requesterIdentity.requesterHash,
             requesterName: requesterIdentity.requesterName,
+            nonce,
             theme: getTheme(),
             user,
         };
@@ -75,11 +78,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     const { headers, requesterHash, requesterName, theme, user } = res.value;
-    return routerData({ requesterHash, requesterName, theme, user }, headers ? { headers } : undefined);
+    return routerData(
+        { nonce, requesterHash, requesterName, theme, user },
+        headers ? { headers } : undefined,
+    );
 };
 
 type LoaderResult =
-    | { requesterHash?: string; requesterName?: string; theme: string | null; user?: UserSessionData | undefined }
+    | {
+        nonce?: string;
+        requesterHash?: string;
+        requesterName?: string;
+        theme: string | null;
+        user?: UserSessionData | undefined;
+    }
     | undefined;
 
 function isLoaderData(data: unknown): data is LoaderResult {
@@ -109,7 +121,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
                 <meta charSet='utf-8' />
                 <meta name='viewport' content='width=device-width, initial-scale=1' />
                 <Meta />
-                <PreventFlashOnWrongTheme ssrTheme={!!data?.theme} />
+                <PreventFlashOnWrongTheme ssrTheme={!!data?.theme} nonce={data?.nonce} />
                 <Links />
             </head>
             <body>

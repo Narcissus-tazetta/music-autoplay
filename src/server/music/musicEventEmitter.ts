@@ -7,7 +7,7 @@ import { err, ok } from '@/shared/utils/errors/result-handlers';
 import { watchUrl } from '@/shared/utils/youtube';
 import logger, { logMetric } from '../logger.server';
 
-export interface EmitOptions {
+interface EmitOptions {
     context?: {
         operation?: string;
         identifiers?: Record<string, unknown>;

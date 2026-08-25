@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import FileStore from '../src/server/persistence/file';
+import { FileStore } from '../src/server/persistence/file';
 import { afterEach, beforeEach, describe, expect, it } from './bunTestCompat';
 
 const TMP_DIR = path.join(process.cwd(), 'tmp_test_data');

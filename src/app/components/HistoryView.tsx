@@ -12,7 +12,7 @@ import {
     type HistorySearchReadings,
 } from '~/utils/historySearchSuggestions';
 
-export interface HistoryViewProps {
+interface HistoryViewProps {
     filteredHistoryCount: number;
     historyItems: HistoryItem[];
     historySearchReadings?: HistorySearchReadings;

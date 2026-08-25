@@ -9,7 +9,7 @@ type PersistFile = Record<
     { value: Record<string, unknown>; lastUpdated: string } | undefined
 >;
 
-export class SettingsStore {
+class SettingsStore {
     private filePath: string;
     private current: PersistFile | null = null;
 

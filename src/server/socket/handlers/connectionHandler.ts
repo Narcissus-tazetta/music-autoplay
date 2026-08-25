@@ -38,10 +38,6 @@ export interface ConnectionDeps {
     windowCloseManager: InstanceType<typeof WindowCloseManager>;
 }
 
-export type ConnectionHandlerFactory = (
-    deps: ConnectionDeps,
-) => (socket: Socket) => void;
-
 type SourceKind = 'extension' | 'browser' | 'unknown';
 
 const classifyClientSource = (origin: string | undefined): SourceKind => {

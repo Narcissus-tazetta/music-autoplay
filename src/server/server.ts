@@ -6,7 +6,7 @@ import express from 'express';
 import { RouterContextProvider } from 'react-router';
 import { bootstrap } from './bootstrap';
 import { isProduction, isTest } from './config';
-import configureApp, { type ConfigureAppResult } from './configureApp';
+import { configureApp, type ConfigureAppResult } from './configureApp';
 import { errorHandler } from './middleware/errorHandler';
 import { adminRouter } from './routes/admin';
 import { createDiagnosticsRouter } from './routes/diagnostics';
@@ -138,19 +138,8 @@ async function gracefulShutdown() {
         process.exit(0);
     } catch (error) {
         clearTimeout(timer);
-        const errorMsg = error && typeof error === 'object' && 'message' in error
-            ? String(error.message)
-            : String(error);
-        if (
-            errorMsg.includes('Server is not running')
-            || errorMsg.includes('already closed')
-        ) {
-            logger.info('graceful shutdown complete (server already stopped)');
-            process.exit(0);
-        } else {
-            logger.error('graceful shutdown failed', { error: error });
-            process.exit(1);
-        }
+        logger.error('graceful shutdown failed', { error });
+        process.exit(1);
     }
 }
 
@@ -191,11 +180,12 @@ app.all(
     '*splat',
     createRequestHandler({
         build: configResult.buildValue,
-        getLoadContext: () => {
+        getLoadContext: (_req, res) => {
             const contextProvider = new RouterContextProvider();
             contextProvider.set(
                 serverContext,
                 {
+                    cspNonce: res.locals.cspNonce as string | undefined,
                     httpRateLimiter: socketServer.getHttpRateLimiter(),
                     io: socketServer,
                 } satisfies ServerContext,

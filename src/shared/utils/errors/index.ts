@@ -5,14 +5,12 @@
  * here. The type guards are likewise imported straight from `../typeGuards`.
  */
 
-export type { ErrorInfo, HandlerError, NormalizedWrapOptions, WrapOptions } from './core';
+export type { HandlerError } from './core';
 export { extractErrorInfo, safeString, toHandlerError } from './core';
 
-export type { Logger } from './wrappers';
 export { withErrorHandler, wrapAsync } from './wrappers';
 
-export type { Result } from './result-handlers';
-export { err, isErr, isOk, ok, safeExecuteAsync } from './result-handlers';
+export { safeExecuteAsync } from './result-handlers';
 
 export type { ReplyOptions } from './server';
 export {
@@ -22,5 +20,3 @@ export {
     createServerErrorReply,
     createValidationErrorReply,
 } from './server';
-
-export { extractErrorMessage } from './client';

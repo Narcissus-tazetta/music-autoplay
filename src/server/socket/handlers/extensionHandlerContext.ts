@@ -25,7 +25,7 @@ export type ProgressSnapshot = {
     clientLatencyMs?: number;
 };
 
-export type AuthoritativeVideoState = {
+type AuthoritativeVideoState = {
     state: 'playing' | 'paused';
     receivedAt: number;
     seq?: number;
@@ -33,18 +33,18 @@ export type AuthoritativeVideoState = {
     duration?: number;
 };
 
-export type AdSnapshot = {
+type AdSnapshot = {
     isAdvertisement: boolean;
     adTimestamp?: number;
 };
 
-export type PendingNext = {
+type PendingNext = {
     videoId: string;
     nextCandidateId?: string;
     createdAt: number;
 };
 
-export type ProgressTrackingState = {
+type ProgressTrackingState = {
     lastTime: number;
     lastTimestamp: number;
     consecutiveStalls: number;
@@ -66,7 +66,7 @@ export type ExtensionSessionState = {
     videoEndDebounce: Map<string, number>;
 };
 
-export const createExtensionSessionState = (): ExtensionSessionState => ({
+const createExtensionSessionState = (): ExtensionSessionState => ({
     authoritativeVideoState: new Map(),
     historyCompletionRecordedAtByVideoId: new Map(),
     lastAdSnapshotByVideoId: new Map(),

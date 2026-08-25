@@ -6,64 +6,31 @@ interface AdminAuthConfig {
 }
 
 /**
- * AdminAuthenticator
+ * Compares admin credentials byte-by-byte so response timing cannot be used to guess them.
  *
- * Timing-safe comparison for admin credentials.
- * Credentials are obtained from environment variables and compared byte-by-byte
- * to prevent timing attacks that could leak information about the correct credentials.
- *
- * SECURITY NOTES:
- * - Passwords are provided as environment variables only (e.g., ADMIN_PASSWORD)
- * - Both username and password are compared using crypto.timingSafeEqual()
- * - This prevents attackers from using timing differences to guess credentials
- * - For production systems with multiple admins, consider using bcrypt/argon2 with a database
+ * Credentials come from environment variables only. A deployment with several admins should
+ * move to hashed credentials in a database (bcrypt/argon2) instead of extending this.
  */
 export class AdminAuthenticator {
     private usernameBuffer: Buffer;
     private passwordBuffer: Buffer;
 
     constructor(config: AdminAuthConfig) {
-        // Store credentials as buffers for timing-safe comparison
         this.usernameBuffer = Buffer.from(config.username, 'utf-8');
         this.passwordBuffer = Buffer.from(config.password, 'utf-8');
     }
 
-    /**
-     * Authenticate username and password using timing-safe comparison
-     * @returns true if both username and password match, false otherwise
-     */
     authenticate(username: string, password: string): boolean {
-        try {
-            const incomingUsernameBuffer = Buffer.from(username, 'utf-8');
-            const incomingPasswordBuffer = Buffer.from(password, 'utf-8');
+        const usernameMatch = this.safeBufferEqual(Buffer.from(username, 'utf-8'), this.usernameBuffer);
+        const passwordMatch = this.safeBufferEqual(Buffer.from(password, 'utf-8'), this.passwordBuffer);
 
-            const usernameMatch = this.safeBufferEqual(
-                incomingUsernameBuffer,
-                this.usernameBuffer,
-            );
-            const passwordMatch = this.safeBufferEqual(
-                incomingPasswordBuffer,
-                this.passwordBuffer,
-            );
-
-            return usernameMatch && passwordMatch;
-        } catch {
-            return false;
-        }
+        return usernameMatch && passwordMatch;
     }
 
-    /**
-     * Constant-time buffer comparison using crypto.timingSafeEqual
-     * This prevents timing attacks by always taking the same time regardless of where the difference occurs
-     */
     private safeBufferEqual(a: Buffer, b: Buffer): boolean {
+        // timingSafeEqual throws on a length mismatch, and the length is not a secret anyway.
         if (a.length !== b.length) return false;
-
-        try {
-            return timingSafeEqual(a, b);
-        } catch {
-            return false;
-        }
+        return timingSafeEqual(a, b);
     }
 }
 

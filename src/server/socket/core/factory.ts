@@ -45,19 +45,10 @@ export async function initSocketServer(
 ): Promise<InitSocketServerResult> {
     const { adminHash, fileStore, musicDB, opts, rateLimiter } = deps;
 
-    const created = createSocketIo(server);
-    if (!created.io) throw new Error('failed to initialize socket.io');
-    const io = created.io;
+    const { io, socketPath } = createSocketIo(server);
     registerSocketIdentityMiddleware(io);
 
-    const persistedData = (() => {
-        try {
-            return fileStore.load();
-        } catch (error) {
-            logger.warn('failed to restore persisted musics', { error: error });
-            return [];
-        }
-    })();
+    const persistedData = fileStore.load();
     for (const m of persistedData) musicDB.set(m.id, m);
     logger.info('restored persisted musics', { count: persistedData.length });
 
@@ -96,5 +87,5 @@ export async function initSocketServer(
         }),
     );
 
-    return { io, runtime, socketPath: created.socketPath };
+    return { io, runtime, socketPath };
 }

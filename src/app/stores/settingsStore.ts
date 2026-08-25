@@ -1,4 +1,4 @@
-import normalizeApiResponse from '@/shared/utils/api';
+import { normalizeApiResponse } from '@/shared/utils/api';
 import { parseApiErrorForUI } from '@/shared/utils/apiUi';
 import { runParsedApiError } from '@/shared/utils/runUiAction';
 import { create } from 'zustand';

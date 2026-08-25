@@ -18,10 +18,9 @@ const NODE_ENV = (process.env.NODE_ENV ?? 'development') as
 
 const isTest = NODE_ENV === 'test';
 
-const clientUrlDefault = process.env.CLIENT_URL
-    ?? (NODE_ENV === 'production'
-        ? 'https://music-auto-play.onrender.com'
-        : 'http://localhost:3000');
+// Production must state its own public URL: cookie domains and allowed action origins are
+// derived from it, so a baked-in default would silently break any other deployment.
+const isProductionEnv = NODE_ENV === 'production';
 
 const toNumber = (v: unknown) => {
     if (v == undefined || v === '') return undefined;
@@ -64,7 +63,9 @@ const serverEnvSchema = z
             if (typeof v === 'string') return v === 'true' ? true : (v === 'false' ? false : undefined);
             return undefined;
         }, z.boolean().optional()),
-        CLIENT_URL: z.string().url().default(clientUrlDefault),
+        CLIENT_URL: isProductionEnv
+            ? z.string().url('CLIENT_URL is required in production')
+            : z.string().url().default('http://localhost:3000'),
         CORS_ORIGINS: z.string().optional(),
         DIAG_MEM_ENABLED: z.preprocess(v => {
             if (v == undefined || v === '') return undefined;
@@ -254,5 +255,3 @@ export const SERVER_ENV = (() => {
 
     return parsed.data;
 })();
-
-export type ServerEnv = typeof SERVER_ENV;

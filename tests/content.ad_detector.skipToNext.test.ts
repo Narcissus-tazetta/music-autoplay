@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import createFakeChrome from './helpers/fakeChrome';
+import { createFakeChrome } from './helpers/fakeChrome';
 
 describe('AdDetector near-end ad skip', () => {
     test('ad near end triggers ad_skip_to_next message', async () => {

@@ -2,13 +2,6 @@ import type { Socket } from 'socket.io';
 
 export type ReplyOptions = { formErrors?: string[] } | Record<string, unknown>;
 
-export type EngineLike =
-    & { on?: unknown; httpServer?: unknown }
-    & Record<
-        string,
-        unknown
-    >;
-
 export interface RequestLike {
     url?: string;
     headers?: Record<string, unknown>;

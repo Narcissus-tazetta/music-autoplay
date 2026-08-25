@@ -6,6 +6,8 @@ import type { RouterContext } from 'react-router';
 export interface ServerContext {
     io: SocketServerInstance;
     httpRateLimiter: RateLimiter;
+    /** Per-request CSP nonce; every inline script the document emits must carry it. Production only. */
+    cspNonce: string | undefined;
 }
 
 const SERVER_CONTEXT_KEY = Symbol.for('music-auto-play.serverContext');

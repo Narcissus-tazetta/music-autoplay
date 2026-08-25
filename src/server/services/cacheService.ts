@@ -36,5 +36,3 @@ export class CacheService<V = unknown> {
         };
     }
 }
-
-export default CacheService;

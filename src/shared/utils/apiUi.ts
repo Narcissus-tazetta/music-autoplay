@@ -1,15 +1,15 @@
 import type { ApiError } from './api';
 
-export type UiFieldErrors = Record<string, string>;
+type UiFieldErrors = Record<string, string>;
 
-export type ParsedApiError =
+type ParsedApiError =
     | { kind: 'unauthorized'; message: string }
     | { kind: 'forbidden'; message: string }
     | { kind: 'validation'; message: string; fieldErrors?: UiFieldErrors }
     | { kind: 'not_found'; message: string }
     | { kind: 'internal'; message: string };
 
-export type UiToastLevel = 'info' | 'success' | 'warning' | 'error';
+type UiToastLevel = 'info' | 'success' | 'warning' | 'error';
 
 export type UiAction =
     | { type: 'noop' }

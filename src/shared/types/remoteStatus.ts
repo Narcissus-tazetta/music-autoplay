@@ -1,6 +1,6 @@
 import type { RemoteStatus } from '@/shared/types/music';
 
-export interface RemoteStatusMeta {
+interface RemoteStatusMeta {
     sequenceNumber: number;
     serverTimestamp: number;
     traceId: string;

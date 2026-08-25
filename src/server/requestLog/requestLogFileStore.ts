@@ -72,12 +72,6 @@ export class RequestLogFileStore implements RequestLogStore {
         this.file.scheduleFlush();
     }
 
-    replace(entries: RequestLogEntry[]): void {
-        this.file.ensureLoaded();
-        this.entries.splice(0, this.entries.length, ...entries);
-        this.file.scheduleFlush();
-    }
-
     async flush(): Promise<void> {
         await this.file.flush();
     }

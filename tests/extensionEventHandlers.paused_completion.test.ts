@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { MusicRepository } from '../src/server/music/musicRepository';
 import { setupExtensionEventHandlers } from '../src/server/socket/handlers/extensionEventHandlers';
-import createFakeSocket from './helpers/fakeSocket';
+import { createFakeSocket } from './helpers/fakeSocket';
 
 /**
  * Auto-advance driven by a `paused` report sitting at 100% of the duration — the path the
