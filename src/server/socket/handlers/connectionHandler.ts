@@ -3,7 +3,7 @@ import { withErrorHandler } from '@/shared/utils/errors';
 import { randomUUID } from 'node:crypto';
 import type { Socket } from 'socket.io';
 import type { Server as IOServer } from 'socket.io';
-import logger, { logMetric, withContext } from '../../logger.server';
+import { logMetric, withContext } from '../../logger.server';
 import type { MusicService } from '../../music/musicService';
 import type { Store } from '../../persistence';
 import type { RateLimiter } from '../../services/rateLimiter';
@@ -12,9 +12,10 @@ import type { YouTubeService } from '../../services/youtubeService';
 import type { EmitOptions } from '../../utils/safeEmit';
 import { createSocketEmitter } from '../../utils/safeEmit';
 import type { TimerManager } from '../../utils/timerManager';
+import { classifyClientSource } from '../clientSource';
 import type { SocketManager } from '../managers/manager';
 import { snapshotHeaders } from '../utils/logSanitizer';
-import { extractSocketOn, extractTransportName } from '../utils/socketHelpers';
+import { extractTransportName } from '../utils/socketHelpers';
 import { setupExtensionEventHandlers } from './extensionEventHandlers';
 import { registerSocketHandlers } from './handlers';
 import { emitInitialData } from './initEmitter';
@@ -38,40 +39,17 @@ export interface ConnectionDeps {
     windowCloseManager: InstanceType<typeof WindowCloseManager>;
 }
 
-type SourceKind = 'extension' | 'browser' | 'unknown';
-
-const classifyClientSource = (origin: string | undefined): SourceKind => {
-    if (typeof origin !== 'string' || origin.length === 0) return 'unknown';
-    if (origin.startsWith('chrome-extension://')) return 'extension';
-    return 'browser';
-};
-
 const getSocketListenerSummary = (socket: Socket): {
     eventCount: number;
     events: string[];
     totalListeners: number;
 } => {
-    try {
-        const names = socket.eventNames().map(name => String(name));
-        const totalListeners = names.reduce((sum, name) => {
-            try {
-                return sum + socket.listenerCount(name);
-            } catch {
-                return sum;
-            }
-        }, 0);
-        return {
-            eventCount: names.length,
-            events: names.slice(0, 25),
-            totalListeners,
-        };
-    } catch {
-        return {
-            eventCount: -1,
-            events: [],
-            totalListeners: -1,
-        };
-    }
+    const names = socket.eventNames().map(name => String(name));
+    return {
+        eventCount: names.length,
+        events: names.slice(0, 25),
+        totalListeners: names.reduce((sum, name) => sum + socket.listenerCount(name), 0),
+    };
 };
 
 const getSocketFleetSnapshot = (io: IOServer): {
@@ -129,27 +107,20 @@ export function makeConnectionHandler(
 ): (socket: Socket) => void {
     return (socket: Socket): void => {
         const connectionId = randomUUID();
-        let requestId: string | undefined;
-        try {
-            const hdrs = snapshotHeaders(socket);
-            const maybeId = hdrs?.['x-request-id'];
-            if (typeof maybeId === 'string') requestId = maybeId;
-        } catch (error) {
-            logger.debug('failed to extract request id from handshake headers', {
-                error: error,
-                socketId: socket.id,
-            });
-            requestId = undefined;
-        }
+        const headersSnapshot = snapshotHeaders(socket);
+        // Read from the handshake, not from snapshotHeaders: that snapshot deliberately keeps
+        // only the few headers worth logging, so looking x-request-id up there never matched.
+        const rawRequestId = socket.handshake.headers['x-request-id'];
+        const requestId = typeof rawRequestId === 'string' ? rawRequestId : undefined;
 
         const log = withContext({ connectionId, requestId, socketId: socket.id });
         const manager = deps.getManager() ?? deps.createManager();
 
-        const headersSnapshot = snapshotHeaders(socket);
         const origin = typeof headersSnapshot?.origin === 'string'
             ? headersSnapshot.origin
             : undefined;
-        const sourceKind = classifyClientSource(origin);
+        // Decided once by the identity middleware, which runs before any connection handler.
+        const sourceKind = socket.data.clientSource ?? classifyClientSource(origin);
         const isExtension = sourceKind === 'extension';
 
         const transport = extractTransportName(socket);
@@ -159,7 +130,7 @@ export function makeConnectionHandler(
         log.info('socket connection established', {
             clientSource,
             connectionId,
-            headers: snapshotHeaders(socket),
+            headers: headersSnapshot,
             origin,
             requesterHashPrefix: socket.data.requesterHash?.slice(0, 8),
             requesterName: socket.data.requesterName,
@@ -168,25 +139,17 @@ export function makeConnectionHandler(
             transport,
         });
 
-        try {
-            const socketFleet = getSocketFleetSnapshot(deps.getIo());
-            const listenerSummary = getSocketListenerSummary(socket);
-            log.info('socket lifecycle connected', {
-                clientSource,
-                connectionId,
-                listenerEventCount: listenerSummary.eventCount,
-                listenerEvents: listenerSummary.events,
-                listenerTotalCount: listenerSummary.totalListeners,
-                socketId: socket.id,
-                socketFleet,
-                transport,
-            });
-        } catch (error) {
-            log.debug('socket lifecycle connected snapshot failed', {
-                error: error,
-                socketId: socket.id,
-            });
-        }
+        const listenerSummary = getSocketListenerSummary(socket);
+        log.info('socket lifecycle connected', {
+            clientSource,
+            connectionId,
+            listenerEventCount: listenerSummary.eventCount,
+            listenerEvents: listenerSummary.events,
+            listenerTotalCount: listenerSummary.totalListeners,
+            socketId: socket.id,
+            socketFleet: getSocketFleetSnapshot(deps.getIo()),
+            transport,
+        });
 
         withErrorHandler(() => {
             logMetric(
@@ -234,41 +197,20 @@ export function makeConnectionHandler(
         }
 
         if (isExtension) {
-            const maybeSocketOn = extractSocketOn(socket);
+            socket.conn.on('upgrade', () => {
+                log.info('extension connection upgraded to websocket', {
+                    socketId: socket.id,
+                    timestamp: new Date().toISOString(),
+                });
+            });
 
-            if (typeof maybeSocketOn === 'function') {
-                try {
-                    maybeSocketOn('upgrade', () => {
-                        log.info('extension connection upgraded to websocket', {
-                            socketId: socket.id,
-                            timestamp: new Date().toISOString(),
-                        });
-                    });
-                } catch (error) {
-                    log.debug('failed to register upgrade handler', {
-                        error: error,
-                        socketId: socket.id,
-                    });
-                }
-
-                try {
-                    maybeSocketOn('upgradeError', (error: unknown) => {
-                        log.warn(
-                            'extension websocket upgrade failed, continuing with polling',
-                            {
-                                error,
-                                socketId: socket.id,
-                                timestamp: new Date().toISOString(),
-                            },
-                        );
-                    });
-                } catch (error) {
-                    log.debug('failed to register upgradeError handler', {
-                        error: error,
-                        socketId: socket.id,
-                    });
-                }
-            }
+            socket.conn.on('upgradeError', (error: unknown) => {
+                log.warn('extension websocket upgrade failed, continuing with polling', {
+                    error,
+                    socketId: socket.id,
+                    timestamp: new Date().toISOString(),
+                });
+            });
         }
 
         setupSocketLogging(socket, log, transport);
@@ -297,37 +239,29 @@ export function makeConnectionHandler(
         }
 
         socket.once('disconnect', reason => {
-            try {
-                const socketFleet = getSocketFleetSnapshot(deps.getIo());
-                const listenerSummary = getSocketListenerSummary(socket);
-                const lifetimeMs = Date.now() - connectedAtMs;
+            const summaryOnDisconnect = getSocketListenerSummary(socket);
+            const lifetimeMs = Date.now() - connectedAtMs;
 
-                log.info('socket lifecycle disconnected', {
-                    clientSource,
+            log.info('socket lifecycle disconnected', {
+                clientSource,
+                connectionId,
+                lifetimeMs,
+                listenerEventCount: summaryOnDisconnect.eventCount,
+                listenerEvents: summaryOnDisconnect.events,
+                listenerTotalCount: summaryOnDisconnect.totalListeners,
+                reason,
+                socketId: socket.id,
+                socketFleet: getSocketFleetSnapshot(deps.getIo()),
+                transport,
+            });
+
+            if (isExtension && lifetimeMs <= 45_000) {
+                log.warn('extension short-lived socket detected', {
                     connectionId,
                     lifetimeMs,
-                    listenerEventCount: listenerSummary.eventCount,
-                    listenerEvents: listenerSummary.events,
-                    listenerTotalCount: listenerSummary.totalListeners,
                     reason,
                     socketId: socket.id,
-                    socketFleet,
                     transport,
-                });
-
-                if (isExtension && lifetimeMs <= 45_000) {
-                    log.warn('extension short-lived socket detected', {
-                        connectionId,
-                        lifetimeMs,
-                        reason,
-                        socketId: socket.id,
-                        transport,
-                    });
-                }
-            } catch (error) {
-                log.debug('socket lifecycle disconnect snapshot failed', {
-                    error: error,
-                    socketId: socket.id,
                 });
             }
         });

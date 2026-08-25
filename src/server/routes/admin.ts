@@ -16,9 +16,10 @@ const pathfinderAuthenticator = SERVER_ENV.PATHFINDER_USER && SERVER_ENV.PATHFIN
     ? createAdminAuthenticator(SERVER_ENV.PATHFINDER_USER, SERVER_ENV.PATHFINDER_PASSWORD)
     : undefined;
 
+/** `req.ip` already honours the configured `trust proxy` hops; reading the raw headers here
+ * would take the client-controlled end of `X-Forwarded-For` instead. */
 function rateLimitKeyFor(req: Request): string {
-    const clientIp = req.ip || req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown';
-    return typeof clientIp === 'string' ? clientIp : clientIp[0] || 'unknown';
+    return req.ip ?? 'unknown';
 }
 
 export const adminRouter: Router = Router();

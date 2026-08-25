@@ -45,40 +45,32 @@ const registerDisconnectHandler = (ctx: ExtensionContext): void => {
     const { connectionId, log, manager, socket, state } = ctx;
 
     socket.on('disconnect', reason => {
-        try {
-            const current = manager.getCurrent();
-            if (current.type === 'closed') return;
+        const cleanupBefore = snapshotSessionSizes(ctx);
 
-            const cleanupBefore = snapshotSessionSizes(ctx);
+        // The session state is released unconditionally. Returning early when the remote was
+        // already closed used to leave every per-video map (and the socket's listeners)
+        // behind, which is the one thing that bounds their growth.
+        if (manager.getCurrent().type !== 'closed') manager.update({ type: 'closed' }, 'extension_disconnect');
 
-            manager.update({ type: 'closed' }, 'extension_disconnect');
+        state.authoritativeVideoState.clear();
+        state.historyCompletionRecordedAtByVideoId.clear();
+        state.lastProgressSnapshotByVideoId.clear();
+        state.lastAdSnapshotByVideoId.clear();
+        state.videoEndDebounce.clear();
+        state.pendingNextByTabId.clear();
+        state.progressState.clear();
+        state.recordableMusicSnapshotByVideoId.clear();
+        socket.removeAllListeners();
 
-            state.authoritativeVideoState.clear();
-            state.historyCompletionRecordedAtByVideoId.clear();
-            state.lastProgressSnapshotByVideoId.clear();
-            state.lastAdSnapshotByVideoId.clear();
-            state.videoEndDebounce.clear();
-            state.pendingNextByTabId.clear();
-            state.progressState.clear();
-            state.recordableMusicSnapshotByVideoId.clear();
-            socket.removeAllListeners();
+        const cleanupAfter = snapshotSessionSizes(ctx);
 
-            const cleanupAfter = snapshotSessionSizes(ctx);
-
-            log.info('extension socket disconnected: scheduled remote closed', {
-                cleanupAfter,
-                cleanupBefore,
-                connectionId,
-                reason,
-                socketId: socket.id,
-            });
-        } catch (error) {
-            log.warn('extension disconnect handler failed', {
-                connectionId,
-                error: error,
-                socketId: socket.id,
-            });
-        }
+        log.info('extension socket disconnected: scheduled remote closed', {
+            cleanupAfter,
+            cleanupBefore,
+            connectionId,
+            reason,
+            socketId: socket.id,
+        });
     });
 };
 
@@ -92,12 +84,8 @@ const registerSessionHandlers = (ctx: ExtensionContext): void => {
             socketId: socket.id,
             timestamp: new Date().toISOString(),
         });
-        try {
-            const current = manager.getCurrent();
-            manager.update(current, 'extension_heartbeat');
-        } catch (error) {
-            log.warn('extension_heartbeat: failed to update manager', { error });
-        }
+        const current = manager.getCurrent();
+        manager.update(current, 'extension_heartbeat');
     });
 
     on('extension_connected', data => {

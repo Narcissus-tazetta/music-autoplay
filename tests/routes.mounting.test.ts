@@ -69,7 +69,14 @@ describe('API router mounting', () => {
 
             const socketInfo = await fetch(`${base}/api/socket-info`);
             expect(socketInfo.status).toBe(200);
-            expect(await socketInfo.json()).toMatchObject({ ok: true });
+            const socketInfoBody = await socketInfo.json() as {
+                ok: boolean;
+                socket: { corsOrigins: unknown; socketUrl: unknown; wsUrl: unknown };
+            };
+            expect(socketInfoBody.ok).toBe(true);
+            expect(Array.isArray(socketInfoBody.socket.corsOrigins)).toBe(true);
+            expect(typeof socketInfoBody.socket.socketUrl).toBe('string');
+            expect(typeof socketInfoBody.socket.wsUrl).toBe('string');
         });
     }, 20_000);
 

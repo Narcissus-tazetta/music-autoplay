@@ -133,7 +133,7 @@ describe('RateLimiterManager', () => {
     });
 
     describe('cleanup execution', () => {
-        test('should clear all registered limiters', () => {
+        test('keeps attempts that are still inside the window', () => {
             manager.register('limiter1', limiter1);
             manager.register('limiter2', limiter2);
 
@@ -141,16 +141,28 @@ describe('RateLimiterManager', () => {
             limiter1.tryConsume('key1');
             limiter2.tryConsume('key2');
 
-            expect(limiter1.getStats().totalAttempts).toBe(2);
-            expect(limiter2.getStats().totalAttempts).toBe(1);
-
-            const managerAny = manager as unknown as {
-                executeCleanup: () => void;
-            };
+            const managerAny = manager as unknown as { executeCleanup: () => void };
             managerAny.executeCleanup();
 
-            expect(limiter1.getStats().totalAttempts).toBe(0);
-            expect(limiter2.getStats().totalAttempts).toBe(0);
+            // A sweep must not double as an amnesty: wiping live counters would hand every
+            // caller a fresh allowance at the interval boundary.
+            expect(limiter1.getStats().totalAttempts).toBe(2);
+            expect(limiter2.getStats().totalAttempts).toBe(1);
+        });
+
+        test('drops keys whose attempts have aged out', async () => {
+            const shortWindow = new RateLimiter(5, 50);
+            manager.register('short', shortWindow);
+
+            shortWindow.tryConsume('key1');
+            expect(shortWindow.getStats().totalKeys).toBe(1);
+
+            await new Promise(resolve => setTimeout(resolve, 80));
+
+            const managerAny = manager as unknown as { executeCleanup: () => void };
+            managerAny.executeCleanup();
+
+            expect(shortWindow.getStats().totalKeys).toBe(0);
         });
     });
 });

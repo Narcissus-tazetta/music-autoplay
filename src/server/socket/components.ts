@@ -1,5 +1,5 @@
 import { SERVER_ENV } from '@/server/env.server';
-import type { Music, RemoteStatus } from '@/shared/types/music';
+import type { Music } from '@/shared/types/music';
 import { createAdminHash } from '@/shared/utils/errors';
 import { socketConfig } from '../config';
 import type { Store } from '../persistence';
@@ -12,7 +12,6 @@ export interface SocketServerComponents {
     youtubeService: YouTubeService;
     fileStore: Store;
     musicDB: Map<string, Music>;
-    remoteStatus: RemoteStatus;
     adminHash: string;
     windowCloseManager: WindowCloseManager;
     rateLimiter: RateLimiter;
@@ -33,7 +32,6 @@ export function createSocketServerComponents(deps: {
     youtubeService: YouTubeService;
     fileStore: Store;
     musicDB: Map<string, Music>;
-    remoteStatus: RemoteStatus;
 }): SocketServerComponents {
     const rateLimiter = new RateLimiter(socketConfig.rateLimitMaxAttempts, socketConfig.rateLimitWindowMs);
     const httpRateLimiter = new RateLimiter(socketConfig.rateLimitMaxAttempts, socketConfig.rateLimitWindowMs);
@@ -49,7 +47,6 @@ export function createSocketServerComponents(deps: {
         httpRateLimiter,
         musicDB: deps.musicDB,
         rateLimiter,
-        remoteStatus: deps.remoteStatus,
         socketConfig,
         windowCloseManager: new WindowCloseManager(socketConfig.windowCloseDebounce),
         youtubeService: deps.youtubeService,

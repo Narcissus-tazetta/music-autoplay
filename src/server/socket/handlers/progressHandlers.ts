@@ -8,6 +8,7 @@ import {
     isSameVideoOrUnknown,
     type ProgressSnapshot,
     shouldReplaceProgressSnapshot,
+    trackByVideo,
 } from './extensionHandlerContext';
 
 const AUTHORITATIVE_PLAYING_PROMOTION_MS = 3000;
@@ -76,8 +77,7 @@ export function registerProgressHandlers(ctx: ExtensionContext): void {
             : undefined;
         const duration = typeof payload['duration'] === 'number' ? payload['duration'] : undefined;
 
-        if (process.env.NODE_ENV !== 'production')
-            console.debug(`[handleProgressUpdate] START`, { url, currentTime, eventName });
+        log.debug(`${eventName}: received`, { currentTime, url });
         const playbackRate = typeof payload['playbackRate'] === 'number' ? payload['playbackRate'] : 1;
         const isBuffering = typeof payload['isBuffering'] === 'boolean'
             ? payload['isBuffering']
@@ -155,7 +155,7 @@ export function registerProgressHandlers(ctx: ExtensionContext): void {
                     lastTime: 0,
                     lastTimestamp: 0,
                 };
-                progressState.set(videoId, tracking);
+                trackByVideo(progressState, videoId, tracking);
             }
 
             if (!isFirstUpdate && timestamp < tracking.lastTimestamp) {
@@ -265,7 +265,7 @@ export function registerProgressHandlers(ctx: ExtensionContext): void {
                 timestamp,
             };
             if (shouldReplaceProgressSnapshot(lastProgressSnapshotByVideoId.get(videoId), progressSnapshot))
-                lastProgressSnapshotByVideoId.set(videoId, progressSnapshot);
+                trackByVideo(lastProgressSnapshotByVideoId, videoId, progressSnapshot);
 
             history.clearHistoryCompletionIfReplayStarted(videoId, currentTime, duration, eventName);
 

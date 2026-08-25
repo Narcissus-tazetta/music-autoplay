@@ -9,6 +9,7 @@ import {
     nextIndexWithWrap,
     removeMusicAndBroadcast,
     reportNoNextVideo,
+    trackByVideo,
 } from './extensionHandlerContext';
 
 const VIDEO_END_DEBOUNCE_MS = 500;
@@ -137,7 +138,7 @@ export function registerPlaybackHandlers(ctx: ExtensionContext): void {
                 log.debug('video_ended: debounced duplicate', { videoId, elapsed: now - lastProcessed });
                 return;
             }
-            videoEndDebounce.set(videoId, now);
+            trackByVideo(videoEndDebounce, videoId, now);
             setTimeout(() => videoEndDebounce.delete(videoId), VIDEO_END_DEBOUNCE_MS * 2);
 
             log.info('video_ended: received', {
@@ -171,7 +172,7 @@ export function registerPlaybackHandlers(ctx: ExtensionContext): void {
                 ? preRemoveList[nextIndexWithWrap(preRemoveList, preIndex)].id
                 : undefined;
 
-            pendingNextByTabId.set(tabId, {
+            trackByVideo(pendingNextByTabId, tabId, {
                 videoId,
                 nextCandidateId,
                 createdAt: Date.now(),

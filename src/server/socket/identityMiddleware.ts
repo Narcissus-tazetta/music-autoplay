@@ -2,12 +2,7 @@ import './socketData';
 import { resolveRequesterIdentity } from '@/server/requesterIdentity.server';
 import type { Socket } from 'socket.io';
 import type { ExtendedError, Server as IOServer } from 'socket.io';
-
-const classifyClientSource = (origin: string | undefined): 'extension' | 'browser' | 'unknown' => {
-    if (typeof origin !== 'string' || origin.length === 0) return 'unknown';
-    if (origin.startsWith('chrome-extension://')) return 'extension';
-    return 'browser';
-};
+import { classifyClientSource } from './clientSource';
 
 export function registerSocketIdentityMiddleware(io: IOServer): void {
     io.use((socket: Socket, next: (err?: ExtendedError) => void) => {

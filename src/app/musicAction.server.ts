@@ -132,7 +132,7 @@ export async function runOwnedMusicAction<TValue>(
     const rejected = config.authorize?.(session);
     if (rejected) return rejected;
 
-    const rateLimitKey = `${config.rateLimitKeyPrefix ?? ''}${await getRateLimitKey(request, cookieHeader)}`;
+    const rateLimitKey = `${config.rateLimitKeyPrefix ?? ''}${await getRateLimitKey(request, cookieHeader, session)}`;
 
     if (!isAdmin) {
         const limited = rateLimitExceededResponse(httpRateLimiter, rateLimitKey, config.endpoint);

@@ -28,6 +28,7 @@
 - `SOCKET_EVENT_LOG_ENABLED` : Socketイベント詳細ログの有効/無効
 - `SOCKET_EVENT_LOG_SAMPLE_RATE` : Socketイベントログのサンプリング率（0〜1）
 - `YOUTUBE_REQUEST_QUEUE_MAX` : YouTube API リクエストキュー上限
+- `TRUSTED_PROXY_HOPS` : 信頼するリバースプロキシの段数（本番の既定は `1`）。レートリミットとセキュリティログのクライアント IP 判定に使う
 - `ADMIN_SECRET` : 管理用シークレット（任意）
 - `SESSION_SECRET` : セッション署名に使う秘密鍵
 - `DATABASE_URL` : PostgreSQL 等の接続文字列（このプロジェクトで使う場合）

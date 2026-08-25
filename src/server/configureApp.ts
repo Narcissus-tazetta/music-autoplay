@@ -41,6 +41,11 @@ export async function configureApp(
         ssrLoadModule?: (s: string) => Promise<unknown>;
     } | null,
 ): Promise<ConfigureAppResult> {
+    // Without this, `req.ip` behind a platform proxy is the proxy's own address, so every
+    // caller shares one rate-limit bucket and a handful of failed admin logins lock out
+    // everybody.
+    app.set('trust proxy', SERVER_ENV.TRUSTED_PROXY_HOPS);
+
     app.use(
         (
             req: express.Request,

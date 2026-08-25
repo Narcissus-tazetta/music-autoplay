@@ -112,6 +112,10 @@ const serverEnvSchema = z
         NODE_ENV: z
             .enum(['development', 'test', 'production'])
             .default('development'),
+        TRUSTED_PROXY_HOPS: z.preprocess(
+            v => toNumber(v),
+            z.number().int().nonnegative().default(isProductionEnv ? 1 : 0),
+        ),
         PORT: z.preprocess(
             v => toNumber(v),
             z.number().int().positive().default(3000),

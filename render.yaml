@@ -42,6 +42,10 @@ services:
         value: https://music-auto-play.onrender.com,chrome-extension://flhmplnalnjjbmmjdcdehcoeiihnloja
       - key: ALLOW_EXTENSION_ORIGINS
         value: false
+      # Render terminates TLS at one proxy in front of the app, so exactly one
+      # X-Forwarded-For entry is trustworthy. Must match the real topology.
+      - key: TRUSTED_PROXY_HOPS
+        value: 1
       - key: SOCKET_PATH
         value: /api/socket.io
       - key: MORGAN_FORMAT
