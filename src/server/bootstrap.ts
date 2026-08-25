@@ -7,6 +7,7 @@ import type { RequestLogService } from './requestLog/requestLogService';
 import { MetricsManager, metricsManager } from './services/metricsManager';
 import { RateLimiterManager } from './services/rateLimiterManager';
 import { YouTubeService } from './services/youtubeService';
+import { defaultSettingsStore } from './settingsPersistence.server';
 import { SocketServerInstance } from './socket/socketServer';
 export interface Metrics {
     apiMusics: { calls: number; errors: number; totalMs: number };
@@ -62,6 +63,7 @@ export async function bootstrap(): Promise<BootstrapResult> {
             () => (historyService ?? getHistoryService()).closeSync(),
         );
         await drain('requestLogService', () => requestLogService.flush(), () => requestLogService.closeSync());
+        await drain('settingsStore', () => defaultSettingsStore.flush(), () => defaultSettingsStore.closeSync());
         if (closeDb) await drain('persistence backend', closeDb);
     });
 
@@ -138,8 +140,6 @@ export async function bootstrap(): Promise<BootstrapResult> {
                     socketConnectedSockets: socketDiagnostics.connectedSockets,
                     socketRoomCount: socketDiagnostics.roomCount,
                     socketTimerCount: socketDiagnostics.timerCount,
-                    socketWindowCloseLastEventCount: socketDiagnostics.windowClose.lastEventCount,
-                    socketWindowCloseTimerCount: socketDiagnostics.windowClose.timerCount,
                     socketRateLimiterKeys: socketDiagnostics.rateLimiter.socket.totalKeys,
                     socketRateLimiterAttempts: socketDiagnostics.rateLimiter.socket.totalAttempts,
                     httpRateLimiterKeys: socketDiagnostics.rateLimiter.http.totalKeys,

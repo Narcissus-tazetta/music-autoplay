@@ -1,5 +1,4 @@
 export type MessageKey =
-    | 'SUCCESS_ADDED'
     | 'ERROR_ALREADY_EXISTS'
     | 'ERROR_NOT_FOUND'
     | 'ERROR_FORBIDDEN'
@@ -12,7 +11,6 @@ const MESSAGES = {
     ERROR_FORBIDDEN: 'この楽曲を削除する権限がありません',
     ERROR_NOT_FOUND: 'この楽曲は登録されていません',
     ERROR_REORDER_FORBIDDEN: 'この楽曲を並び替える権限がありません',
-    SUCCESS_ADDED: '楽曲を追加しました',
 } as const;
 
 export function getMessage(key: MessageKey, ...args: unknown[]): string {

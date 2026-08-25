@@ -1,6 +1,5 @@
 import type { RemoteStatus } from '@/shared/types/music';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import { WindowCloseManager } from '../src/server/services/windowCloseManager';
 import { SocketManager } from '../src/server/socket/managers/manager';
 import type { EmitFn, ManagerConfig } from '../src/server/socket/managers/manager';
 import { TimerManager } from '../src/server/utils/timerManager';
@@ -10,7 +9,6 @@ describe('SocketManager inactivity behavior', () => {
     let emitMock: ReturnType<typeof mock>;
     let emittedEvents: { event: string; payload: any }[];
     let timerManager: TimerManager;
-    let windowCloseManager: WindowCloseManager;
 
     beforeEach(() => {
         emittedEvents = [];
@@ -19,7 +17,6 @@ describe('SocketManager inactivity behavior', () => {
             return true;
         });
         timerManager = new TimerManager();
-        windowCloseManager = new WindowCloseManager(50);
     });
 
     test('should close playing status after configured inactivityMsPlaying', async () => {
@@ -31,7 +28,7 @@ describe('SocketManager inactivity behavior', () => {
             inactivityMsPaused: 200,
         } as unknown as ManagerConfig;
 
-        manager = new SocketManager(emitMock as unknown as EmitFn, timerManager, windowCloseManager, config);
+        manager = new SocketManager(emitMock as unknown as EmitFn, timerManager, config);
 
         manager.update({
             currentTime: 0,
@@ -55,7 +52,7 @@ describe('SocketManager inactivity behavior', () => {
             inactivityMsPaused: 50,
         } as unknown as ManagerConfig;
 
-        manager = new SocketManager(emitMock as unknown as EmitFn, timerManager, windowCloseManager, config);
+        manager = new SocketManager(emitMock as unknown as EmitFn, timerManager, config);
 
         manager.update({
             musicId: 'song2',
@@ -78,7 +75,7 @@ describe('SocketManager inactivity behavior', () => {
             inactivityMsPaused: 120,
         } as unknown as ManagerConfig;
 
-        manager = new SocketManager(emitMock as unknown as EmitFn, timerManager, windowCloseManager, config);
+        manager = new SocketManager(emitMock as unknown as EmitFn, timerManager, config);
 
         const status: RemoteStatus = {
             currentTime: 0,

@@ -1,6 +1,5 @@
 import type { RemoteStatus } from '@/shared/types/music';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import { WindowCloseManager } from '../src/server/services/windowCloseManager';
 import { SocketManager } from '../src/server/socket/managers/manager';
 import type { EmitFn, ManagerConfig } from '../src/server/socket/managers/manager';
 import { TimerManager } from '../src/server/utils/timerManager';
@@ -10,7 +9,6 @@ describe('SocketManager', () => {
     let emitMock: ReturnType<typeof mock>;
     let emittedEvents: { event: string; payload: any }[];
     let timerManager: TimerManager;
-    let windowCloseManager: WindowCloseManager;
 
     beforeEach(() => {
         emittedEvents = [];
@@ -20,7 +18,6 @@ describe('SocketManager', () => {
         });
 
         timerManager = new TimerManager();
-        windowCloseManager = new WindowCloseManager(500);
 
         const config: ManagerConfig = {
             debounceMs: 100,
@@ -31,7 +28,6 @@ describe('SocketManager', () => {
         manager = new SocketManager(
             emitMock as unknown as EmitFn,
             timerManager,
-            windowCloseManager,
             config,
         );
     });
@@ -391,11 +387,9 @@ describe('SocketManager', () => {
                 return true;
             });
             const localTimer = new TimerManager();
-            const localWindowClose = new WindowCloseManager(10);
             const localManager = new SocketManager(
                 localEmit as unknown as EmitFn,
                 localTimer,
-                localWindowClose,
                 {
                     debounceMs: 10,
                     graceMs: 10,

@@ -330,7 +330,7 @@ export function registerVideoStateHandlers(ctx: ExtensionContext): void {
                 && resolvedVideoId
                 && repository.has(resolvedVideoId)
             ) {
-                handlePausedVideoCompletion(ctx, resolvedVideoId);
+                await handlePausedVideoCompletion(ctx, resolvedVideoId);
             }
             return;
         }

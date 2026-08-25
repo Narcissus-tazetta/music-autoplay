@@ -5,13 +5,11 @@ describe('useFormErrors hook', () => {
     test('returns undefined when no error data', () => {
         const result = useFormErrors(undefined);
         expect(result.formErrorsString).toBeUndefined();
-        expect(result.parsedAction).toBeUndefined();
     });
 
     test('returns undefined when success is true', () => {
         const result = useFormErrors({ data: {}, success: true });
         expect(result.formErrorsString).toBeUndefined();
-        expect(result.parsedAction).toBeUndefined();
     });
 
     test('parses validation error with fieldErrors', () => {
@@ -32,7 +30,6 @@ describe('useFormErrors hook', () => {
         const result = useFormErrors(fetcherData);
         expect(result.formErrorsString).toContain('URLが不正です');
         expect(result.formErrorsString).toContain('タイトルが必要です');
-        expect(result.parsedAction?.type).toBe('fieldErrors');
     });
 
     test('extracts message from non-validation error', () => {
@@ -72,7 +69,7 @@ describe('useFormErrors hook', () => {
         expect(result.formErrorsString).toBeDefined();
     });
 
-    test('returns action with toast when code is DUPLICATE_MUSIC', () => {
+    test('surfaces the message for an unrecognised error code', () => {
         const fetcherData = {
             error: {
                 code: 'DUPLICATE_MUSIC',
@@ -82,7 +79,6 @@ describe('useFormErrors hook', () => {
         };
 
         const result = useFormErrors(fetcherData);
-        expect(result.parsedAction?.type).toBe('showToast');
         expect(result.formErrorsString).toBe('この楽曲は既に追加されています');
     });
 

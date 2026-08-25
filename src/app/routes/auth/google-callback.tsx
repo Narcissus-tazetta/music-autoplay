@@ -20,16 +20,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             },
         });
     } catch (error: unknown) {
-        logger.error('認証エラー', { error });
-
+        // A Response here is the strategy's own redirect, not a failure.
         if (error instanceof Response) return error;
 
-        const message = error instanceof Error
-            ? error.message
-            : (typeof error === 'string'
-                ? error
-                : 'authentication error');
-        return respondWithResult(makeErr({ code: 'unauthorized', message }));
+        logger.error('認証エラー', { error });
+        // The underlying jose/OAuth message stays in the log; the caller gets a fixed one.
+        return respondWithResult(
+            makeErr({ code: 'unauthorized', message: 'ログインに失敗しました。もう一度お試しください。' }),
+        );
     }
 };
 

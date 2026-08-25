@@ -3,7 +3,6 @@ import type { Server as IOServer } from 'socket.io';
 import type { MusicService } from '../../music/musicService';
 import { createMusicService } from '../../music/musicServiceFactory';
 import type { Store } from '../../persistence';
-import type { WindowCloseManager } from '../../services/windowCloseManager';
 import type { YouTubeService } from '../../services/youtubeService';
 import { createSocketEmitter } from '../../utils/safeEmit';
 import type { TimerManager } from '../../utils/timerManager';
@@ -27,9 +26,6 @@ export class SocketRuntime {
         private readonly youtubeService: YouTubeService,
         private readonly fileStore: Store,
         private readonly timerManager: TimerManager,
-        private readonly windowCloseManager: InstanceType<
-            typeof WindowCloseManager
-        >,
         private readonly opts: RuntimeOptions,
     ) {}
 
@@ -46,7 +42,6 @@ export class SocketRuntime {
             this.manager = new SocketManager(
                 managerEmitter.asFn(),
                 this.timerManager,
-                this.windowCloseManager,
                 {
                     debounceMs: this.opts.debounceMs,
                     graceMs: this.opts.graceMs,

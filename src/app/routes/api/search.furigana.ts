@@ -6,6 +6,7 @@ import { z } from 'zod';
 const MAX_TEXTS = 80;
 const MAX_TEXT_LENGTH = 200;
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const CACHE_MAX_ENTRIES = 5_000;
 
 const FuriganaRequestSchema = z.object({
     texts: z.array(z.string().min(1).max(MAX_TEXT_LENGTH)).max(MAX_TEXTS),
@@ -15,7 +16,24 @@ const FuriganaResponseSchema = z.object({
     furigana: z.string().optional(),
 });
 
+/**
+ * Keyed by caller-supplied text, so it needs a ceiling: entries only expire when the same
+ * text is looked up again, and a caller can mint 80 new keys per request.
+ */
 const memoryCache = new Map<string, { furigana: string; ts: number }>();
+
+const rememberFurigana = (text: string, furigana: string): void => {
+    memoryCache.set(text, { furigana, ts: Date.now() });
+    if (memoryCache.size <= CACHE_MAX_ENTRIES) return;
+
+    const now = Date.now();
+    for (const [key, entry] of memoryCache) if (now - entry.ts > CACHE_TTL_MS) memoryCache.delete(key);
+    // Still over budget once the expired entries are gone: drop the oldest insertions.
+    for (const key of memoryCache.keys()) {
+        if (memoryCache.size <= CACHE_MAX_ENTRIES) break;
+        memoryCache.delete(key);
+    }
+};
 
 export const loader = async (_args: LoaderFunctionArgs) => {
     return Response.json({ error: 'Method not allowed' }, { status: 405 });
@@ -56,7 +74,7 @@ async function getFurigana(text: string): Promise<string> {
         const raw = await response.json();
         const parsed = FuriganaResponseSchema.safeParse(raw);
         const furigana = parsed.success ? (parsed.data.furigana?.trim() ?? '') : '';
-        if (furigana) memoryCache.set(text, { furigana, ts: Date.now() });
+        if (furigana) rememberFurigana(text, furigana);
         return furigana;
     } catch (error) {
         logger.debug('furigana lookup failed', { error });

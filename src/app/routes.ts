@@ -14,7 +14,6 @@ export default [
     route('api/music/reorder', 'routes/api/music.reorder.ts'),
     route('api/requester/name', 'routes/api/requester.name.ts'),
     route('api/search/furigana', 'routes/api/search.furigana.ts'),
-    route('api/assets', 'routes/api/assets.ts'),
     route('api/settings', 'routes/api/settings.ts'),
 
     route('*', 'routes/not-found.tsx'),

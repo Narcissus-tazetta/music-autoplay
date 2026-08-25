@@ -1,102 +1,52 @@
-import { respondWithResult } from '@/server/httpResponse.server';
 import { loginSession } from '@/server/sessions.server';
 import { defaultSettingsStore } from '@/server/settingsPersistence.server';
-import { safeExecuteAsync } from '@/shared/utils/errors';
-import { err as makeErr } from '@/shared/utils/errors/result-handlers';
-import type { LoaderFunctionArgs } from 'react-router';
-import z from 'zod';
+import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router';
+import { z } from 'zod';
+
+/** Only the keys the UI actually syncs. The schema used to pass unknown keys straight
+ * through to disk, which let any signed-in caller store arbitrary JSON of any size. */
+const SettingsSchema = z.object({
+    ytAdminControlsEnabled: z.boolean().optional(),
+    ytStatusMode: z.enum(['compact', 'player']).optional(),
+    ytStatusVisible: z.boolean().optional(),
+}).strict();
+
+const MAX_BODY_BYTES = 2_048;
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-    const res = await safeExecuteAsync(async () => {
-        const cookie = request.headers.get('Cookie') || '';
-        const sess = await loginSession.getSession(cookie);
-        const user = sess.get('user');
-        if (user == undefined || !user.id) return { __status: 204 } as { __status: number };
-        const stored = defaultSettingsStore.load(user.id);
-        return stored ? stored.value : {};
-    });
+    const session = await loginSession.getSession(request.headers.get('Cookie'));
+    const user = session.get('user');
+    // Anonymous visitors have nothing stored; 204 says so without a body to parse.
+    if (!user?.id) return new Response(undefined, { status: 204 });
 
-    if (!res.ok) {
-        return respondWithResult(
-            makeErr({ message: Object.prototype.toString.call(res.error) }),
-        );
-    }
-    const maybeStatus = res.value as unknown;
-    if (
-        maybeStatus
-        && typeof maybeStatus === 'object'
-        && typeof (maybeStatus as { __status?: unknown }).__status === 'number'
-        && (maybeStatus as { __status?: number }).__status === 204
-    ) {
-        return new Response(undefined, { status: 204 });
-    }
-    return new Response(JSON.stringify(res.value ?? {}), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 200,
-    });
+    const stored = defaultSettingsStore.load(user.id);
+    return Response.json(stored?.value ?? {});
 };
 
-export const action = async ({ request }: LoaderFunctionArgs) => {
-    const res = await safeExecuteAsync(async () => {
-        const cookie = request.headers.get('Cookie') || '';
-        const sess = await loginSession.getSession(cookie);
-        const user = sess.get('user');
-        const isAdminSession = sess.get('admin') === true;
-
-        if ((!user || typeof user.id !== 'string') && isAdminSession) return { __status: 204 } as { __status: number };
-        if (!user || typeof user.id !== 'string') return { __status: 401 } as { __status: number };
-
-        const data = (await request.json()) as unknown;
-        if (data == undefined || typeof data !== 'object') return { __status: 400 } as { __status: number };
-
-        const SettingsSchema = z
-            .object({
-                ytAdminControlsEnabled: z.boolean().optional(),
-                ytStatusMode: z.enum(['compact', 'player']).optional(),
-                ytStatusVisible: z.boolean().optional(),
-            })
-            .passthrough();
-        const parsed = SettingsSchema.safeParse(data);
-        if (!parsed.success) return { __status: 400 } as { __status: number };
-
-        // persist validated settings (passthrough allows extra keys but ensures known keys are typed)
-        defaultSettingsStore.save(user.id, parsed.data as Record<string, unknown>);
-        return { ok: true };
-    });
-
-    if (!res.ok) {
-        const errVal = res.error;
-        let msg = 'Unknown error';
-        if (typeof errVal === 'string') msg = errVal;
-        else if (
-            errVal
-            && typeof errVal === 'object'
-            && 'message' in (errVal as Record<string, unknown>)
-        ) {
-            const m = (errVal as Record<string, unknown>).message;
-            if (typeof m === 'string') msg = m;
-        } else {
-            try {
-                msg = JSON.stringify(errVal);
-            } catch {
-                msg = Object.prototype.toString.call(errVal);
-            }
-        }
-        return respondWithResult(makeErr({ message: msg }));
+export const action = async ({ request }: ActionFunctionArgs) => {
+    const session = await loginSession.getSession(request.headers.get('Cookie'));
+    const user = session.get('user');
+    if (!user?.id) {
+        // An admin without a Google account has no per-user row to write to; that is not an
+        // error, the settings simply stay client-side.
+        if (session.get('admin') === true) return new Response(undefined, { status: 204 });
+        return Response.json({ error: 'unauthorized', ok: false }, { status: 401 });
     }
 
-    const maybeStatus = res.value as unknown;
-    if (
-        maybeStatus
-        && typeof maybeStatus === 'object'
-        && typeof (maybeStatus as { __status?: unknown }).__status === 'number'
-    ) {
-        const status = (maybeStatus as { __status: number }).__status;
-        return new Response(undefined, { status });
-    }
+    const body = await request.text();
+    if (body.length > MAX_BODY_BYTES) return Response.json({ error: 'payload_too_large', ok: false }, { status: 413 });
 
-    return new Response(JSON.stringify(res.value), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 200,
-    });
+    const parsed = SettingsSchema.safeParse(parseJson(body));
+    if (!parsed.success) return Response.json({ error: 'invalid_settings', ok: false }, { status: 400 });
+
+    defaultSettingsStore.save(user.id, parsed.data);
+    return Response.json({ ok: true });
 };
+
+function parseJson(body: string): unknown {
+    try {
+        return JSON.parse(body);
+    } catch {
+        return undefined;
+    }
+}

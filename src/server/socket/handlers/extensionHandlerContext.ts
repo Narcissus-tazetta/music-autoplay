@@ -198,7 +198,11 @@ export const extractUrlAndTabId = (
  * slow disk write never delays the UI. Each step is independent: a failure is logged and
  * the rest still run.
  */
-export const removeMusicAndBroadcast = (ctx: ExtensionContext, videoId: string, eventName: string): void => {
+export const removeMusicAndBroadcast = async (
+    ctx: ExtensionContext,
+    videoId: string,
+    eventName: string,
+): Promise<void> => {
     const { emitter, log, repository } = ctx;
 
     repository.remove(videoId);
@@ -210,7 +214,7 @@ export const removeMusicAndBroadcast = (ctx: ExtensionContext, videoId: string, 
     const urlListResult = emitter.emitUrlList(repository.buildCompatList());
     if (!urlListResult.ok) log.warn(`${eventName}: failed to emit url_list`, { error: urlListResult.error });
 
-    const persistResult = repository.persistRemove(videoId);
+    const persistResult = await repository.persistRemove(videoId);
     if (!persistResult.ok) log.warn(`${eventName}: failed to persist removal`, { error: persistResult.error, videoId });
 };
 

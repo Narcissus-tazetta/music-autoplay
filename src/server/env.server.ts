@@ -209,10 +209,6 @@ const serverEnvSchema = z
             v => toNumber(v),
             z.number().min(0).max(1).optional(),
         ),
-        WINDOW_CLOSE_DEBOUNCE_MS: z.preprocess(
-            v => toNumber(v),
-            z.number().int().nonnegative().default(500),
-        ),
         YOUTUBE_REQUEST_QUEUE_MAX: z.preprocess(
             v => toNumber(v),
             z.number().int().positive().default(500),

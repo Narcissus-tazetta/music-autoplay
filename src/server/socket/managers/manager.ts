@@ -2,7 +2,6 @@ import type { RemoteStatus } from '@/shared/types/music';
 import { randomUUID } from 'node:crypto';
 import logger from '../../logger.server';
 import { StateReconciler } from '../../services/stateReconciler';
-import type { WindowCloseManager } from '../../services/windowCloseManager';
 import type { TimerManager } from '../../utils/timerManager';
 import { isRemoteStatusEqual, shouldDebounce } from './remoteStatus';
 
@@ -35,7 +34,6 @@ export class SocketManager {
     constructor(
         private emit: EmitFn,
         private timerManager: TimerManager,
-        private windowCloseManager: WindowCloseManager,
         private config: ManagerConfig,
     ) {
         this.stateReconciler = new StateReconciler();

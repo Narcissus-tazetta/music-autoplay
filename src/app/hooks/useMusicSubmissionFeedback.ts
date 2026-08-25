@@ -1,6 +1,4 @@
 import useFormErrors from '@/app/hooks/useFormErrors';
-import { getMessage } from '@/shared/constants/messages';
-import { runUiAction } from '@/shared/utils/runUiAction';
 import { useEffect, useRef, useState } from 'react';
 
 interface FetcherLike {
@@ -38,23 +36,10 @@ export function useMusicSubmissionFeedback({
         const errorMessage = typeof data?.error === 'string' ? data.error : undefined;
         const isSuccessReply = Boolean(data) && !errorMessage && !formErrorsString;
 
-        if (wasSubmitting && isNowIdle && (data?.status === 'success' || isSuccessReply)) {
+        if (wasSubmitting && isNowIdle && (data?.status === 'success' || isSuccessReply))
             setInlineFeedback({ message: '追加できました', tone: 'success' });
-            if (!hasShownToastRef.current) {
-                hasShownToastRef.current = true;
-                void runUiAction({
-                    level: 'success',
-                    message: getMessage('SUCCESS_ADDED'),
-                    type: 'showToast',
-                });
-            }
-        }
 
-        if (wasSubmitting && isNowIdle && errorMessage) {
-            setInlineFeedback({ message: errorMessage, tone: 'error' });
-
-            void runUiAction({ level: 'error', message: errorMessage, type: 'showToast' });
-        }
+        if (wasSubmitting && isNowIdle && errorMessage) setInlineFeedback({ message: errorMessage, tone: 'error' });
 
         if (wasSubmitting && isNowIdle && !errorMessage && formErrorsString) {
             setInlineFeedback({
@@ -63,8 +48,6 @@ export function useMusicSubmissionFeedback({
                     : formErrorsString,
                 tone: 'error',
             });
-
-            void runUiAction({ level: 'error', message: formErrorsString, type: 'showToast' });
         }
 
         if (fetcher.state === 'submitting') {

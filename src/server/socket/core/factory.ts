@@ -5,7 +5,6 @@ import { socketConfig } from '../../config';
 import logger from '../../logger.server';
 import type { Store } from '../../persistence';
 import type { RateLimiter } from '../../services/rateLimiter';
-import { WindowCloseManager } from '../../services/windowCloseManager';
 import { YouTubeService } from '../../services/youtubeService';
 import { TimerManager } from '../../utils/timerManager';
 import { makeConnectionHandler } from '../handlers/connectionHandler';
@@ -40,7 +39,6 @@ export async function initSocketServer(
         // tears them down in close(). Creating separate ones here left those calls pointing
         // at idle objects while the real timers kept running.
         timerManager?: TimerManager;
-        windowCloseManager?: WindowCloseManager;
     },
 ): Promise<InitSocketServerResult> {
     const { adminHash, fileStore, musicDB, opts, rateLimiter } = deps;
@@ -53,7 +51,6 @@ export async function initSocketServer(
     logger.info('restored persisted musics', { count: persistedData.length });
 
     const timerManager = deps.timerManager ?? new TimerManager();
-    const windowCloseManager = deps.windowCloseManager ?? new WindowCloseManager(socketConfig.windowCloseDebounce);
     const youtubeService = deps.youtubeService ?? new YouTubeService();
 
     const runtime = new SocketRuntime(
@@ -62,7 +59,6 @@ export async function initSocketServer(
         youtubeService,
         fileStore,
         timerManager,
-        windowCloseManager,
         opts,
     );
 
@@ -82,7 +78,6 @@ export async function initSocketServer(
             },
             rateLimiter,
             timerManager,
-            windowCloseManager,
             youtubeService,
         }),
     );

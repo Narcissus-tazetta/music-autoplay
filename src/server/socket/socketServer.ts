@@ -8,7 +8,6 @@ import type { MusicService } from '../music/musicService';
 import type { Store } from '../persistence';
 import type { RateLimiter } from '../services/rateLimiter';
 import { RateLimiterManager } from '../services/rateLimiterManager';
-import type { WindowCloseManager } from '../services/windowCloseManager';
 import type { YouTubeService } from '../services/youtubeService';
 import { TimerManager } from '../utils/timerManager';
 import { createSocketServerComponents } from './components';
@@ -29,7 +28,6 @@ export class SocketServerInstance {
     private remoteStatusInactivityMsPlaying: number;
     private remoteStatusInactivityMsPaused: number;
     private timerManager = new TimerManager();
-    private windowCloseManager: InstanceType<typeof WindowCloseManager>;
     private rateLimiter: RateLimiter;
     private httpRateLimiter: RateLimiter;
 
@@ -44,7 +42,6 @@ export class SocketServerInstance {
         this.fileStore = components.fileStore;
         this.musicDB = components.musicDB;
         this.adminHash = components.adminHash;
-        this.windowCloseManager = components.windowCloseManager;
         this.rateLimiter = components.rateLimiter;
         this.httpRateLimiter = components.httpRateLimiter;
         this.remoteStatusDebounceMs = components.socketConfig.remoteStatusDebounceMs;
@@ -77,7 +74,6 @@ export class SocketServerInstance {
                 inactivityMsPaused: this.remoteStatusInactivityMsPaused,
             },
             timerManager: this.timerManager,
-            windowCloseManager: this.windowCloseManager,
             youtubeService: this.youtubeService,
         });
         logger.info('initSocketServer completed');
@@ -96,7 +92,6 @@ export class SocketServerInstance {
         connectedSockets: number;
         roomCount: number;
         timerCount: number;
-        windowClose: { lastEventCount: number; timerCount: number };
         rateLimiter: {
             socket: { totalKeys: number; totalAttempts: number };
             http: { totalKeys: number; totalAttempts: number };
@@ -111,7 +106,6 @@ export class SocketServerInstance {
             connectedSockets: socketMap ? socketMap.size : 0,
             roomCount: roomMap ? roomMap.size : 0,
             timerCount: this.timerManager.getSize(),
-            windowClose: this.windowCloseManager.getStats(),
             rateLimiter: {
                 socket: this.rateLimiter.getStats(),
                 http: this.httpRateLimiter.getStats(),
@@ -123,7 +117,6 @@ export class SocketServerInstance {
         if (!this.io) return;
 
         RateLimiterManager.getInstance().stopCleanup();
-        this.windowCloseManager.destroy();
         this.timerManager.clearAll();
 
         await new Promise<void>(resolve => {

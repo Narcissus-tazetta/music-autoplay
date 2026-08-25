@@ -1,6 +1,5 @@
 import { normalizeApiResponse } from '@/shared/utils/api';
 import { parseApiErrorForUI } from '@/shared/utils/apiUi';
-import { runParsedApiError } from '@/shared/utils/runUiAction';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -46,7 +45,7 @@ const loadFromServerAsync = async (): Promise<void> => {
                     details: err.details,
                     message: err.message,
                 });
-                await runParsedApiError(parsed);
+                console.warn('settings load failed', { kind: parsed.kind, message: parsed.message });
             } catch {
                 if (import.meta.env.DEV) console.warn('loadFromServer server error', norm.error);
             }
@@ -85,7 +84,7 @@ const _syncToServerAsync = async (): Promise<void> => {
                     details: err.details,
                     message: err.message,
                 });
-                await runParsedApiError(parsed);
+                console.warn('settings sync failed', { kind: parsed.kind, message: parsed.message });
             } catch {
                 if (import.meta.env.DEV) console.warn('syncToServer error', norm.error);
             }

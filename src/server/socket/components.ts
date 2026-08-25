@@ -5,7 +5,6 @@ import { socketConfig } from '../config';
 import type { Store } from '../persistence';
 import { RateLimiter } from '../services/rateLimiter';
 import { RateLimiterManager } from '../services/rateLimiterManager';
-import { WindowCloseManager } from '../services/windowCloseManager';
 import type { YouTubeService } from '../services/youtubeService';
 
 export interface SocketServerComponents {
@@ -13,7 +12,6 @@ export interface SocketServerComponents {
     fileStore: Store;
     musicDB: Map<string, Music>;
     adminHash: string;
-    windowCloseManager: WindowCloseManager;
     rateLimiter: RateLimiter;
     httpRateLimiter: RateLimiter;
     socketConfig: typeof socketConfig;
@@ -48,7 +46,6 @@ export function createSocketServerComponents(deps: {
         musicDB: deps.musicDB,
         rateLimiter,
         socketConfig,
-        windowCloseManager: new WindowCloseManager(socketConfig.windowCloseDebounce),
         youtubeService: deps.youtubeService,
     };
 }

@@ -39,7 +39,7 @@ export function registerQueueHandlers(ctx: ExtensionContext): void {
                 return;
             }
 
-            removeMusicAndBroadcast(ctx, videoId, 'delete_url');
+            await removeMusicAndBroadcast(ctx, videoId, 'delete_url');
 
             log.info('delete_url: music removed', {
                 connectionId,
