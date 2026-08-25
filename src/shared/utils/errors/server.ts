@@ -1,6 +1,3 @@
-import { createHash } from 'node:crypto';
-import { safeString } from './core';
-
 export type ReplyOptions =
     | {
         formErrors?: string[];
@@ -46,11 +43,4 @@ export function createRateLimitReply(retryAfter?: number): ReplyOptions {
         : 'リクエストが多すぎます。しばらく待ってから再試行してください';
 
     return createErrorReply(message, 'RATE_LIMIT_EXCEEDED');
-}
-
-export function createAdminHash(secretCandidate: unknown): string {
-    const secretString = safeString(secretCandidate);
-    if (!secretString) return createHash('sha256').update('').digest('hex');
-
-    return createHash('sha256').update(secretString).digest('hex');
 }
