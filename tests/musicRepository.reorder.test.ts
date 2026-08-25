@@ -2,6 +2,7 @@ import { MusicRepository } from '@/server/music/musicRepository';
 import { INSERT_AT_FRONT } from '@/shared/schemas/music';
 import type { Music } from '@/shared/types/music';
 import { describe, expect, it } from 'bun:test';
+import { createMemoryStore } from './helpers/memoryStore';
 
 function makeMusic(id: string): Music {
     return {
@@ -15,7 +16,7 @@ function makeMusic(id: string): Music {
 
 describe('MusicRepository ordering', () => {
     it('add() without atIndex appends to the end', () => {
-        const repo = new MusicRepository(new Map(), undefined as never);
+        const repo = new MusicRepository(new Map(), createMemoryStore());
         repo.add(makeMusic('a'));
         repo.add(makeMusic('b'));
         repo.add(makeMusic('c'));
@@ -24,7 +25,7 @@ describe('MusicRepository ordering', () => {
     });
 
     it('add() with atIndex inserts at the given position', () => {
-        const repo = new MusicRepository(new Map(), undefined as never);
+        const repo = new MusicRepository(new Map(), createMemoryStore());
         repo.add(makeMusic('a'));
         repo.add(makeMusic('b'));
         repo.add(makeMusic('c'), 1);
@@ -33,7 +34,7 @@ describe('MusicRepository ordering', () => {
     });
 
     it('add() clamps an out-of-range atIndex', () => {
-        const repo = new MusicRepository(new Map(), undefined as never);
+        const repo = new MusicRepository(new Map(), createMemoryStore());
         repo.add(makeMusic('a'));
         repo.add(makeMusic('b'), 999);
 
@@ -41,7 +42,7 @@ describe('MusicRepository ordering', () => {
     });
 
     it('reorder() moves an entry directly after the anchor', () => {
-        const repo = new MusicRepository(new Map(), undefined as never);
+        const repo = new MusicRepository(new Map(), createMemoryStore());
         repo.add(makeMusic('a'));
         repo.add(makeMusic('b'));
         repo.add(makeMusic('c'));
@@ -52,7 +53,7 @@ describe('MusicRepository ordering', () => {
     });
 
     it('reorder() moves an entry to the front with INSERT_AT_FRONT', () => {
-        const repo = new MusicRepository(new Map(), undefined as never);
+        const repo = new MusicRepository(new Map(), createMemoryStore());
         repo.add(makeMusic('a'));
         repo.add(makeMusic('b'));
         repo.add(makeMusic('c'));
@@ -63,7 +64,7 @@ describe('MusicRepository ordering', () => {
     });
 
     it('reorder() falls back to the front when the anchor is missing', () => {
-        const repo = new MusicRepository(new Map(), undefined as never);
+        const repo = new MusicRepository(new Map(), createMemoryStore());
         repo.add(makeMusic('a'));
         repo.add(makeMusic('b'));
         repo.add(makeMusic('c'));
@@ -74,7 +75,7 @@ describe('MusicRepository ordering', () => {
     });
 
     it('reorder() is a no-op when the anchor is the entry itself', () => {
-        const repo = new MusicRepository(new Map(), undefined as never);
+        const repo = new MusicRepository(new Map(), createMemoryStore());
         repo.add(makeMusic('a'));
         repo.add(makeMusic('b'));
 
@@ -84,7 +85,7 @@ describe('MusicRepository ordering', () => {
     });
 
     it('reorder() leaves the queue untouched for an unknown id', () => {
-        const repo = new MusicRepository(new Map(), undefined as never);
+        const repo = new MusicRepository(new Map(), createMemoryStore());
         repo.add(makeMusic('a'));
         repo.add(makeMusic('b'));
 

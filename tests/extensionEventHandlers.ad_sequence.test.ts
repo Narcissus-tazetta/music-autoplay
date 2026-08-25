@@ -3,6 +3,7 @@ import { MusicRepository } from '../src/server/music/musicRepository';
 import { setupExtensionEventHandlers } from '../src/server/socket/handlers/extensionEventHandlers';
 import { createFakeEmitter } from './helpers/fakeEmitter';
 import { createFakeSocket } from './helpers/fakeSocket';
+import { createMemoryStore } from './helpers/memoryStore';
 
 describe('ad_state_changed sequences', () => {
     test('ad_start -> ad_end toggles isAdvertisement and video_next triggers next', async () => {
@@ -26,7 +27,7 @@ describe('ad_state_changed sequences', () => {
             requestedAt: new Date().toISOString(),
             requesterHash: 't',
         });
-        const repo = new MusicRepository(musicMap, undefined as any);
+        const repo = new MusicRepository(musicMap, createMemoryStore());
         const emitter = createFakeEmitter();
         const updates: any[] = [];
         const manager: any = {

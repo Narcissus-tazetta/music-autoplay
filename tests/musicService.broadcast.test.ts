@@ -6,6 +6,7 @@ import type { YouTubeResolver } from '@/server/music/youtubeResolver';
 import type { Music } from '@/shared/types/music';
 import { ok } from '@/shared/utils/errors/result-handlers';
 import { describe, expect, it } from 'bun:test';
+import { createMemoryStore } from './helpers/memoryStore';
 
 /**
  * The events the browser relies on to keep its queue in sync. addMusic, removeMusic and
@@ -39,7 +40,7 @@ function makeResolver(id: string): YouTubeResolver {
 }
 
 function setup(initial: Music[]) {
-    const repository = new MusicRepository(new Map(), undefined as never);
+    const repository = new MusicRepository(new Map(), createMemoryStore());
     for (const m of initial) repository.add(m);
 
     const emitted: { event: string; payload: unknown }[] = [];
