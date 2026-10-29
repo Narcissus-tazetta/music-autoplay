@@ -72,6 +72,34 @@ describe('mongo queue ordering', () => {
     });
 
     describe('MongoHybridStore', () => {
+        it('keeps append order after earlier queue entries are removed', async () => {
+            const store = new MongoHybridStore(mongo);
+            for (const id of ['a', 'b', 'c', 'd']) store.add(makeMusic(id));
+            store.remove('a');
+            store.remove('b');
+            store.add(makeMusic('e'));
+            await store.flush();
+            expect((await mongo.loadAll()).map(m => m.id)).toEqual(['c', 'd', 'e']);
+        });
+
+        it('does not resurrect an entry removed while its add is pending', async () => {
+            const originalAdd = mongo.add.bind(mongo);
+            let release!: () => void;
+            const gate = new Promise<void>(resolve => {
+                release = resolve;
+            });
+            mongo.add = async (music, order) => {
+                await gate;
+                await originalAdd(music, order);
+            };
+            const store = new MongoHybridStore(mongo);
+            store.add(makeMusic('a'));
+            store.remove('a');
+            release();
+            await store.flush();
+            expect(await mongo.loadAll()).toEqual([]);
+        });
+
         it('appends to memory immediately and persists in the background', async () => {
             const store = new MongoHybridStore(mongo, []);
 

@@ -134,7 +134,7 @@ describe('RequestLogMongoHybridStore', () => {
         expect(store.load().entries.map(v => v.id)).toEqual(['a']);
     });
 
-    test('pruneExpired はメモリとMongoの期限切れ削除に反映する', () => {
+    test('pruneExpired はメモリとMongoの期限切れ削除に反映する', async () => {
         const mongo = new MockRequestLogMongoStore();
         const now = new Date();
         const oldDate = new Date(now.getTime() - (31 * 24 * 60 * 60 * 1000)).toISOString();
@@ -146,6 +146,7 @@ describe('RequestLogMongoHybridStore', () => {
         store.pruneExpired(now);
 
         expect(store.load().entries.map(v => v.id)).toEqual(['fresh']);
+        await store.flush();
         expect(mongo.prunedAt).toBe(now);
     });
 

@@ -2,19 +2,17 @@ import logger from '@/server/logger.server';
 
 const DEFAULT_WARN_THRESHOLD = 100;
 
-/**
- * Bookkeeping for the background writes a hybrid store fires off after mutating memory.
- *
- * MongoHybridStore, HistoryMongoHybridStore and RequestLogMongoHybridStore each kept their
- * own copy of the same push / finally-filter dance in six places, which is easy to get
- * subtly wrong: forget the `finally` and the array grows without bound, forget to compare
- * by identity and you drop the wrong entry.
- *
- * Callers attach their own `.catch()` before tracking, so a tracked promise never rejects;
- * `settle()` uses allSettled regardless so a caller that forgets cannot break flush().
- */
 export class PendingWriteQueue {
     private pending: Promise<unknown>[] = [];
+    private tail: Promise<unknown> = Promise.resolve();
+
+    enqueue(write: () => Promise<unknown>): void {
+        const task = this.tail.then(write);
+        this.tail = task.catch(error => {
+            logger.error(`${this.label}: queued write failed`, { error });
+        });
+        this.track(this.tail);
+    }
 
     constructor(
         private readonly label: string,
@@ -33,13 +31,9 @@ export class PendingWriteQueue {
         });
     }
 
-    /**
-     * Waits for every write tracked so far to settle. Never rejects.
-     *
-     * Writes started while this is awaiting are not covered - the array is read once, which
-     * matches what the three hybrid stores did before this class existed.
-     */
     async settle(): Promise<void> {
-        await Promise.allSettled(this.pending);
+        // Shutdown must include writes enqueued while an earlier batch was settling.
+        // eslint-disable-next-line no-await-in-loop
+        while (this.pending.length > 0) await Promise.allSettled(this.pending);
     }
 }

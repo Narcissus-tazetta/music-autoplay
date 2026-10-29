@@ -81,19 +81,19 @@ export class HistoryMongoHybridStore implements HistoryStore {
         if (idx !== -1) this.current[idx] = item;
         else this.current.push(item);
 
-        this.pending.track(
+        this.pending.enqueue(() =>
             this.mongo
                 .upsert(item)
-                .catch(error => logger.warn('HistoryMongoHybridStore: failed to upsert', { error })),
+                .catch(error => logger.warn('HistoryMongoHybridStore: failed to upsert', { error }))
         );
     }
 
     remove(id: string): void {
         this.current = this.current.filter(v => v.id !== id);
-        this.pending.track(
+        this.pending.enqueue(() =>
             this.mongo
                 .remove(id)
-                .catch(error => logger.warn('HistoryMongoHybridStore: failed to remove', { error })),
+                .catch(error => logger.warn('HistoryMongoHybridStore: failed to remove', { error }))
         );
     }
 

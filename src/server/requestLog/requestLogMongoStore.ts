@@ -187,15 +187,15 @@ export class RequestLogMongoHybridStore implements RequestLogStore {
             return Number.isFinite(requestedAtMs) && requestedAtMs >= cutoffMs;
         });
 
-        this.pending.track(
+        this.pending.enqueue(() =>
             this.mongo
                 .pruneExpired(now)
-                .catch(error => logger.warn('RequestLogMongoHybridStore: failed to prune expired logs', { error })),
+                .catch(error => logger.warn('RequestLogMongoHybridStore: failed to prune expired logs', { error }))
         );
     }
 
     private scheduleWrite(entry: RequestLogEntry): void {
-        this.pending.track(
+        this.pending.enqueue(() =>
             this.mongo.append(entry).catch(error => {
                 this.failedWriteCount += 1;
                 if (this.failedWrites.length < FAILED_WRITE_QUEUE_LIMIT) this.failedWrites.push(entry);
@@ -204,7 +204,7 @@ export class RequestLogMongoHybridStore implements RequestLogStore {
                     failedWriteCount: this.failedWriteCount,
                     queuedRetryCount: this.failedWrites.length,
                 });
-            }),
+            })
         );
     }
 
