@@ -107,3 +107,11 @@ describe('requesterIdentity.server', () => {
         expect(identity.requesterName).toBe('guest');
     });
 });
+
+test('unsigned cookies cannot rotate the requester rate-limit budget', async () => {
+    const { getRateLimitKey } = await import('../src/server/requesterIdentity.server');
+    const request = new Request('http://localhost/api/music/add');
+    const original = await getRateLimitKey(request, null);
+    expect(await getRateLimitKey(request, '__session=arbitrary-one')).toBe(original);
+    expect(await getRateLimitKey(request, '__session=arbitrary-two; theme=other')).toBe(original);
+});

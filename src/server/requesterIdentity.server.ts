@@ -98,15 +98,12 @@ export async function getRateLimitKey(
     cookieHeader: string | null | undefined,
 ): Promise<string> {
     if (cookieHeader) {
-        const sessionMatch = cookieHeader.match(/__session=([^;]+)/);
-        if (sessionMatch)
-            return `session:${createHash('sha256').update(sessionMatch[1]).digest('hex').substring(0, 16)}`;
+        const session = await loginSession.getSession(cookieHeader);
+        const user = session.get('user');
+        if (user) return `user:${hashRequesterId(user.id)}`;
 
         const anonId = await parseAnonymousId(cookieHeader);
-        if (anonId) return `anon:${createHash('sha256').update(anonId).digest('hex').substring(0, 16)}`;
-
-        const themeMatch = cookieHeader.match(/theme=([^;]+)/);
-        if (themeMatch) return `theme:${createHash('sha256').update(themeMatch[1]).digest('hex').substring(0, 16)}`;
+        if (anonId) return `anon:${hashRequesterId(anonId)}`;
     }
 
     const userAgent = request.headers.get('user-agent');

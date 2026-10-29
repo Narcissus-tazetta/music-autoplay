@@ -42,18 +42,10 @@ export function useMusicForm() {
             const isRateLimitError = errorMessage.includes('レート制限');
 
             if (isRateLimitError) {
-                const retryAfterHeader = (
-                    fetcher.data as unknown as { headers?: Headers }
-                ).headers;
-                let seconds = 60;
-
-                if (retryAfterHeader instanceof Headers) {
-                    const retryValue = retryAfterHeader.get('Retry-After');
-                    if (retryValue) {
-                        const parsed = Number.parseInt(retryValue, 10);
-                        if (!isNaN(parsed)) seconds = parsed;
-                    }
-                }
+                const retrySeconds = data?.retryAfter;
+                const seconds = typeof retrySeconds === 'number' && Number.isFinite(retrySeconds) && retrySeconds > 0
+                    ? Math.ceil(retrySeconds)
+                    : 60;
 
                 if (retryAfter === 0) {
                     setRetryAfter(seconds);

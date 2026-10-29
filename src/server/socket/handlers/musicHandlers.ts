@@ -124,6 +124,7 @@ export function createMusicHandlers(deps: Deps): {
         logPayload: false,
         logResponse: false,
         rateLimiter: deps.rateLimiter ? musicRateLimiterConfig : undefined,
+        sharedRateLimiter: deps.rateLimiter,
         validator: SocketAddMusicSchema,
     });
 
@@ -158,6 +159,7 @@ export function createMusicHandlers(deps: Deps): {
         logPayload: false,
         logResponse: false,
         rateLimiter: deps.rateLimiter ? musicRateLimiterConfig : undefined,
+        sharedRateLimiter: deps.rateLimiter,
         validator: SocketRemoveMusicSchema,
     });
 
