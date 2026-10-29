@@ -22,8 +22,11 @@ interface HistoryStore {
 export const useHistoryStore = create<HistoryStore>((set, get) => {
     let socket: Socket<S2C, C2S> | null = null;
 
+    let requestVersion = 0;
+
     const request = (overrides?: Partial<HistoryQuery>) => {
         if (!socket) return;
+        const version = ++requestVersion;
         const state = get();
         const resolvedFrom = overrides?.from ?? state.from;
         const resolvedTo = overrides?.to ?? state.to;
@@ -34,7 +37,7 @@ export const useHistoryStore = create<HistoryStore>((set, get) => {
         };
         try {
             socket.emit('getHistory', payload, (items: HistoryItem[] | undefined) => {
-                if (Array.isArray(items)) set({ items });
+                if (version === requestVersion && Array.isArray(items)) set({ items });
             });
         } catch {
             if (import.meta.env.DEV) console.debug('historyStore getHistory emit failed');

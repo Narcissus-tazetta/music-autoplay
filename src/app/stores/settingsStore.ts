@@ -1,6 +1,6 @@
 import normalizeApiResponse from '@/shared/utils/api';
 import { parseApiErrorForUI } from '@/shared/utils/apiUi';
-import { runParsedApiError } from '@/shared/utils/runUiAction';
+import { runParsedApiError, runUiAction } from '@/shared/utils/runUiAction';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -28,9 +28,16 @@ export interface SettingsStore {
     reset: () => void;
 }
 
+let settingsRevision = 0;
+let loadVersion = 0;
+let saveTail = Promise.resolve();
+
 const loadFromServerAsync = async (): Promise<void> => {
+    const revision = settingsRevision;
+    const version = ++loadVersion;
     try {
-        const resp = await fetch('/api/settings');
+        await saveTail;
+        const resp = await fetch('/api/settings', { signal: AbortSignal.timeout(5000) });
         const norm = await normalizeApiResponse<
             Partial<{
                 ytStatusVisible: boolean;
@@ -52,29 +59,22 @@ const loadFromServerAsync = async (): Promise<void> => {
             }
             return;
         }
-        const server = norm.data;
-        if (server && typeof server.ytStatusVisible === 'boolean')
-            useSettingsStore.getState().setYtStatusVisible(server.ytStatusVisible);
-        if (server && typeof server.ytStatusMode === 'string')
-            useSettingsStore.getState().setYtStatusMode(server.ytStatusMode);
-        if (server && typeof server.ytAdminControlsEnabled === 'boolean')
-            useSettingsStore.getState().setYtAdminControlsEnabled(server.ytAdminControlsEnabled);
+        if (revision !== settingsRevision || version !== loadVersion) return;
+        useSettingsStore.getState().loadFromServer(norm.data ?? {});
     } catch (error) {
         if (import.meta.env.DEV) console.warn('loadFromServer error', error);
     }
 };
 
-const _syncToServerAsync = async (): Promise<void> => {
+const _syncToServerAsync = async (
+    payload: { ytAdminControlsEnabled: boolean; ytStatusMode: YtStatusMode; ytStatusVisible: boolean },
+): Promise<void> => {
     try {
-        const payload = {
-            ytAdminControlsEnabled: useSettingsStore.getState().ytAdminControlsEnabled,
-            ytStatusMode: useSettingsStore.getState().ytStatusMode,
-            ytStatusVisible: useSettingsStore.getState().ytStatusVisible,
-        };
         const resp = await fetch('/api/settings', {
             body: JSON.stringify(payload),
             headers: { 'content-type': 'application/json' },
             method: 'POST',
+            signal: AbortSignal.timeout(5000),
         });
         const norm = await normalizeApiResponse(resp);
         if (!norm.success) {
@@ -91,7 +91,12 @@ const _syncToServerAsync = async (): Promise<void> => {
             }
         }
     } catch (error) {
-        if (import.meta.env.DEV) console.warn('syncToServer error', error);
+        console.error('設定の保存に失敗しました', error);
+        await runUiAction({
+            type: 'showToast',
+            level: 'warning',
+            message: '設定をサーバーに保存できませんでした。この端末の設定は保持しています。',
+        });
     }
 };
 
@@ -109,27 +114,40 @@ export const useSettingsStore = create<SettingsStore>()(
                     void loadFromServerAsync();
                     return;
                 }
-                if (typeof data.ytStatusVisible === 'boolean') set({ ytStatusVisible: data.ytStatusVisible });
-                const d = data as Partial<{
-                    ytStatusVisible: boolean;
-                    ytStatusMode: YtStatusMode;
-                    ytAdminControlsEnabled: boolean;
-                }>;
-                if (d.ytStatusMode === 'compact' || d.ytStatusMode === 'player') set({ ytStatusMode: d.ytStatusMode });
-                if (typeof d.ytAdminControlsEnabled === 'boolean')
-                    set({ ytAdminControlsEnabled: d.ytAdminControlsEnabled });
+                set({
+                    ...(typeof data.ytStatusVisible === 'boolean' ? { ytStatusVisible: data.ytStatusVisible } : {}),
+                    ...(data.ytStatusMode === 'compact' || data.ytStatusMode === 'player'
+                        ? { ytStatusMode: data.ytStatusMode }
+                        : {}),
+                    ...(typeof data.ytAdminControlsEnabled === 'boolean'
+                        ? { ytAdminControlsEnabled: data.ytAdminControlsEnabled }
+                        : {}),
+                });
             },
-            reset: () => set({ ytAdminControlsEnabled: false, ytStatusMode: 'player', ytStatusVisible: true }),
-            setYtAdminControlsEnabled: (v: boolean) => set({ ytAdminControlsEnabled: v }),
-            setYtStatusMode: (v: YtStatusMode) => set({ ytStatusMode: v }),
-            setYtStatusVisible: (v: boolean) => set({ ytStatusVisible: v }),
+            reset: () => {
+                settingsRevision++;
+                set({ ytAdminControlsEnabled: false, ytStatusMode: 'player', ytStatusVisible: true });
+            },
+            setYtAdminControlsEnabled: (v: boolean) => {
+                settingsRevision++;
+                set({ ytAdminControlsEnabled: v });
+            },
+            setYtStatusMode: (v: YtStatusMode) => {
+                settingsRevision++;
+                set({ ytStatusMode: v });
+            },
+            setYtStatusVisible: (v: boolean) => {
+                settingsRevision++;
+                set({ ytStatusVisible: v });
+            },
             syncToServer: () => {
-                void _syncToServerAsync();
-                return {
+                const payload = {
                     ytAdminControlsEnabled: get().ytAdminControlsEnabled,
                     ytStatusMode: get().ytStatusMode,
                     ytStatusVisible: get().ytStatusVisible,
                 };
+                saveTail = saveTail.then(() => _syncToServerAsync(payload));
+                return payload;
             },
             ytAdminControlsEnabled: false,
             ytStatusMode: 'player',

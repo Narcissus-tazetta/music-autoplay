@@ -12,6 +12,7 @@ const REMOTE_STATUS_EVENT_GRACE_MS = 2_000;
 
 interface MusicStore {
     musics: Music[];
+    queueRevision: number;
     socket?: Socket<S2C, C2S> | null;
     remoteStatus: RemoteStatus | null;
     lastAuthoritativePause?: {
@@ -27,7 +28,7 @@ interface MusicStore {
     lastEventReceivedAt: number;
     error?: string;
     resetError?: () => void;
-    setMusics?: (musics: Music[]) => void;
+    setMusics?: (musics: Music[], expectedRevision?: number) => void;
     hydrateFromLocalStorage?: () => void;
 
     addMusic(music: Music): void;
@@ -242,6 +243,7 @@ export const useMusicStore = create<MusicStore>(set => {
         addMusic(music) {
             set(state => ({
                 musics: [...state.musics, music],
+                queueRevision: state.queueRevision + 1,
             }));
         },
         connectSocket() {
@@ -271,12 +273,23 @@ export const useMusicStore = create<MusicStore>(set => {
                             resolve({ source: 'musics', ok: false, attempts: attempt, reason: 'timeout' });
                         }, 2000);
 
+                        const revision = useMusicStore.getState().queueRevision;
                         try {
                             s.emit('getAllMusics', (musics: Music[] | undefined) => {
                                 if (called) return;
                                 called = true;
                                 clearTimeout(timeout);
-                                if (Array.isArray(musics)) set({ musics });
+                                if (revision !== useMusicStore.getState().queueRevision) {
+                                    if (attempt < maxAttempts) tryOnce();
+                                    else {resolve({
+                                            source: 'musics',
+                                            ok: false,
+                                            attempts: attempt,
+                                            reason: 'recent-event',
+                                        });}
+                                    return;
+                                }
+                                if (Array.isArray(musics)) useMusicStore.getState().setMusics?.(musics, revision);
                                 resolve({
                                     source: 'musics',
                                     ok: Array.isArray(musics),
@@ -406,15 +419,17 @@ export const useMusicStore = create<MusicStore>(set => {
                 .on('musicAdded', (music: Music) => {
                     set(state => ({
                         musics: [...state.musics, music],
+                        queueRevision: state.queueRevision + 1,
                     }));
                 })
                 .on('musicRemoved', (musicId: string) => {
                     set(state => ({
                         musics: state.musics.filter(music => music.id !== musicId),
+                        queueRevision: state.queueRevision + 1,
                     }));
                 })
                 .on('queueReordered', (musics: Music[]) => {
-                    set({ musics });
+                    set(state => ({ musics, queueRevision: state.queueRevision + 1 }));
                 })
                 .on('remoteStatusUpdated', (incomingState: RemoteStatusWithMeta) => {
                     handleRemoteStatusUpdate(incomingState);
@@ -480,6 +495,7 @@ export const useMusicStore = create<MusicStore>(set => {
         lastTraceId: '',
         lastEventReceivedAt: 0,
         musics: [],
+        queueRevision: 0,
         remoteStatus: null,
         remoteStatusUpdated(incomingState: RemoteStatusWithMeta) {
             if (!isRemoteStatusWithMetaShape(incomingState)) {
@@ -492,13 +508,14 @@ export const useMusicStore = create<MusicStore>(set => {
         resetError: () => {
             set({ error: undefined });
         },
-        setMusics(musics: Music[]) {
+        setMusics(musics: Music[], expectedRevision?: number) {
+            if (expectedRevision !== undefined && useMusicStore.getState().queueRevision !== expectedRevision) return;
             try {
                 if (typeof window !== 'undefined') window.localStorage.setItem(STORAGE_KEY, JSON.stringify(musics));
             } catch (error) {
                 if (import.meta.env.DEV) console.debug('musicStore setMusics localStorage failed', error);
             }
-            set({ musics });
+            set(state => ({ musics, queueRevision: state.queueRevision + 1 }));
         },
         socket: undefined,
     };

@@ -1,15 +1,11 @@
 import type { SessionRole } from '@/app/stores/adminStore';
 import { useAdminStore } from '@/app/stores/adminStore';
 import { useMusicStore } from '@/app/stores/musicStore';
-import { useSettingsStore } from '@/app/stores/settingsStore';
 import type { Music } from '@/shared/types/music';
 import normalizeApiResponse from '@/shared/utils/api';
 import { parseApiErrorForUI } from '@/shared/utils/apiUi';
 import { runParsedApiError } from '@/shared/utils/runUiAction';
 import { useEffect } from 'react';
-import { z } from 'zod';
-
-const SettingsSchema = z.object({ ytStatusVisible: z.boolean().optional() }).passthrough();
 
 const isMusic = (v: unknown): v is Music => {
     if (!v || typeof v !== 'object') return false;
@@ -32,31 +28,13 @@ export function useAppInitialization(): void {
                     const data = await res.json() as { isAdmin?: boolean; roles?: unknown };
                     const roles = Array.isArray(data.roles) ? [...data.roles as SessionRole[]] : [];
                     if (data.isAdmin === true && !roles.includes('admin')) roles.push('admin');
-                    if (roles.length > 0) useAdminStore.getState().setRoles(roles);
+                    useAdminStore.getState().setRoles(roles);
                 }
             } catch {
                 if (import.meta.env.DEV) console.debug('admin status check failed');
             }
 
             const store = useMusicStore.getState();
-            try {
-                const resp = await fetch('/api/settings');
-                if (resp.ok && resp.status === 200) {
-                    const rawData: unknown = await resp.json();
-                    const parsed = SettingsSchema.safeParse(rawData);
-                    if (
-                        parsed.success
-                        && typeof parsed.data.ytStatusVisible === 'boolean'
-                    ) {
-                        useSettingsStore
-                            .getState()
-                            .setYtStatusVisible(parsed.data.ytStatusVisible);
-                    }
-                }
-            } catch {
-                // Silently handle initialization error
-            }
-
             try {
                 store.connectSocket();
             } catch (error) {
@@ -65,8 +43,9 @@ export function useAppInitialization(): void {
                     else console.error('connectSocket failed', String(error));
                 }
             }
-            const doBackgroundFetch = async () => {
+            const doBackgroundFetch = async (): Promise<boolean> => {
                 const doFetchOnce = async (signal: AbortSignal) => {
+                    const revision = useMusicStore.getState().queueRevision;
                     const resp = await fetch('/api/musics', {
                         cache: 'no-store',
                         signal,
@@ -119,7 +98,8 @@ export function useAppInitialization(): void {
                     if (!Array.isArray(musicsRaw)) throw new Error('no-musics');
                     const maybeMusics = musicsRaw;
                     const musics = maybeMusics.filter(isMusic);
-                    store.setMusics?.(musics);
+                    if (revision !== useMusicStore.getState().queueRevision) throw new Error('queue-changed');
+                    store.setMusics?.(musics, revision);
                 };
 
                 const attempts = [0, 500, 1000];
@@ -134,7 +114,7 @@ export function useAppInitialization(): void {
                         // oxlint-disable-next-line no-await-in-loop
                         await doFetchOnce(controller.signal);
                         clearTimeout(timeout);
-                        break;
+                        return true;
                     } catch (error) {
                         clearTimeout(timeout);
                         if (import.meta.env.DEV) {
@@ -150,12 +130,12 @@ export function useAppInitialization(): void {
                         }
                     }
                 }
+                return false;
             };
 
             let fetchSucceeded = false;
             try {
-                await doBackgroundFetch();
-                fetchSucceeded = true;
+                fetchSucceeded = await doBackgroundFetch();
             } catch {
                 if (import.meta.env.DEV) console.debug('background /api/musics task failed');
             }
