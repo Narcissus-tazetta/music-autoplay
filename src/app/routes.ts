@@ -16,6 +16,7 @@ export default [
     route('api/search/furigana', 'routes/api/search.furigana.ts'),
     route('api/assets', 'routes/api/assets.ts'),
     route('api/settings', 'routes/api/settings.ts'),
+    route('api/youtube/control', 'routes/api/youtube.control.ts'),
 
     route('*', 'routes/not-found.tsx'),
     // route('time', 'routes/time.tsx'),

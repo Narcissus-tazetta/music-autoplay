@@ -7,9 +7,10 @@ import {
 import { useAdminStore } from '@/app/stores/adminStore';
 import { useSettingsStore } from '@/app/stores/settingsStore';
 import { cn } from '@/app/utils/cn';
-import { getSocket } from '@/app/utils/socketClient';
 import type { Music, RemoteStatus } from '@/shared/types/music';
+import normalizeApiResponse from '@/shared/utils/api';
 import { formatSecondsToTime } from '@/shared/utils/format';
+import { runUiAction } from '@/shared/utils/runUiAction';
 import { watchUrl } from '@/shared/utils/youtube';
 import { Button } from '@shadcn/ui/button';
 import { motion } from 'framer-motion';
@@ -181,13 +182,21 @@ function AudioPlayerInner({
     }, [duration, isAdvertisement, pausedIndicator, localCurrentTime]);
 
     const emitAdminControl = useCallback((action: 'toggle_play_pause' | 'prev' | 'next' | 'skip') => {
-        try {
-            const socket = getSocket();
-            if (!socket.connected) socket.connect();
-            socket.emit('admin_youtube_control', { action });
-        } catch {
-            return;
-        }
+        void (async () => {
+            try {
+                const response = await fetch('/api/youtube/control', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action }),
+                });
+                const result = await normalizeApiResponse(response);
+                if (!result.success)
+                    await runUiAction({ type: 'showToast', level: 'error', message: result.error.message });
+            } catch (error) {
+                console.error('再生操作の送信に失敗しました', error);
+                await runUiAction({ type: 'showToast', level: 'error', message: '再生操作の送信に失敗しました' });
+            }
+        })();
     }, []);
 
     if (!status || status.type === 'closed' || !ytStatusVisible) return null;
