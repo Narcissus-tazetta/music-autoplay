@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 interface FetcherLike {
     data: unknown;
     state: string;
+    formAction?: string;
 }
 
 interface FetcherData {
@@ -28,6 +29,7 @@ export function useMusicSubmissionFeedback({
 }: UseMusicSubmissionFeedbackOptions): MusicSubmissionInlineFeedback | null {
     const hasShownToastRef = useRef(false);
     const lastStateRef = useRef(fetcher.state);
+    const actionRef = useRef(fetcher.formAction);
     const [inlineFeedback, setInlineFeedback] = useState<MusicSubmissionInlineFeedback | null>(null);
     const { formErrorsString } = useFormErrors(fetcher.data);
 
@@ -39,12 +41,15 @@ export function useMusicSubmissionFeedback({
         const isSuccessReply = Boolean(data) && !errorMessage && !formErrorsString;
 
         if (wasSubmitting && isNowIdle && (data?.status === 'success' || isSuccessReply)) {
-            setInlineFeedback({ message: '追加できました', tone: 'success' });
+            const message = actionRef.current?.endsWith('/music/remove')
+                ? '削除できました'
+                : getMessage('SUCCESS_ADDED');
+            setInlineFeedback({ message, tone: 'success' });
             if (!hasShownToastRef.current) {
                 hasShownToastRef.current = true;
                 void runUiAction({
                     level: 'success',
-                    message: getMessage('SUCCESS_ADDED'),
+                    message,
                     type: 'showToast',
                 });
             }
@@ -68,12 +73,13 @@ export function useMusicSubmissionFeedback({
         }
 
         if (fetcher.state === 'submitting') {
+            actionRef.current = fetcher.formAction;
             hasShownToastRef.current = false;
             setInlineFeedback(null);
         }
 
         lastStateRef.current = fetcher.state;
-    }, [fetcher.data, fetcher.state, formErrorsString]);
+    }, [fetcher.data, fetcher.formAction, fetcher.state, formErrorsString]);
 
     return inlineFeedback;
 }

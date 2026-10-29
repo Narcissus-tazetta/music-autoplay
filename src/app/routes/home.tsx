@@ -1,10 +1,8 @@
 import { StatusBadge } from '@/app/components/StatusBadge';
-import useFormErrors from '@/app/hooks/useFormErrors';
 import { useHistoryJapaneseReadings } from '@/app/hooks/useHistoryJapaneseReadings';
 import { useMusicForm } from '@/app/hooks/useMusicForm';
 import usePlayingMusic from '@/app/hooks/usePlayingMusic';
 import { useSettingsSync } from '@/app/hooks/useSettingsSync';
-import { useUiActionExecutor } from '@/app/hooks/useUiActionExecutor';
 import { useAdminStore } from '@/app/stores/adminStore';
 import { useHistoryStore } from '@/app/stores/historyStore';
 import { useHomeViewStore } from '@/app/stores/homeViewStore';
@@ -93,7 +91,6 @@ export default function Home() {
     const isAdmin = useAdminStore(s => s.isAdmin);
     const hasPathfinderAccess = useAdminStore(s => s.hasPathfinderAccess);
     const { fetcher, form, fields, isSubmitting, canSubmit, retryAfter } = useMusicForm();
-    const { parsedAction } = useFormErrors(fetcher.data);
     const {
         items: historyItems,
         query,
@@ -121,11 +118,6 @@ export default function Home() {
             to: state.to,
         })),
     );
-
-    useUiActionExecutor({
-        conformFields: fields,
-        parsedAction,
-    });
 
     useEffect(() => {
         connectHistorySocket();

@@ -20,8 +20,8 @@ import {
 import { PreventFlashOnWrongTheme, ThemeProvider, useTheme } from 'remix-themes';
 import { Header } from '~/components/ui/Header';
 import appCss from './App.css?url';
+import { Notifications } from './components/Notifications';
 import { useAppInitialization } from './hooks/useAppInitialization';
-import { useWindowAppApi } from './hooks/useWindowAppApi';
 
 const isErrLike = (
     v: unknown,
@@ -135,6 +135,7 @@ export default function App() {
 
     return (
         <>
+            <Notifications />
             <Header requesterHash={requesterHash} requesterName={requesterName} userName={userName} />
             <div className='flex flex-col items-center min-h-screen'>
                 <Outlet />
@@ -150,7 +151,6 @@ function Providers({ children }: { children?: React.ReactNode }) {
     const data = isLoaderData(dataRaw) ? dataRaw : undefined;
     const theme = data?.theme ?? undefined;
     useAppInitialization();
-    useWindowAppApi();
 
     const specifiedTheme = typeof theme === 'string' ? theme : undefined;
     return (
