@@ -1,3 +1,4 @@
+import { spyOn } from 'bun:test';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -284,5 +285,47 @@ describe('real on-disk data round-trips unchanged', () => {
             expect(rewritten[key]).toHaveLength(original[key].length);
             expect(rewritten[key]).toEqual(original[key]);
         });
+    }
+});
+
+it('keeps the newest snapshot when flushes overlap a slow disk write', async () => {
+    const store = new FileStore(at('overlapping.json'));
+    let release!: () => void;
+    let started!: () => void;
+    const gate = new Promise<void>(resolve => {
+        release = resolve;
+    });
+    const writing = new Promise<void>(resolve => {
+        started = resolve;
+    });
+    const originalWrite = fs.promises.writeFile.bind(fs.promises);
+    let calls = 0;
+    const write = spyOn(fs.promises, 'writeFile').mockImplementation(
+        async (...args: Parameters<typeof fs.promises.writeFile>) => {
+            calls++;
+            if (calls === 1) {
+                started();
+                await gate;
+            }
+            await originalWrite(...args);
+        },
+    );
+    let first: Promise<void> | undefined;
+    let second: Promise<void> | undefined;
+    try {
+        store.add(music('a'));
+        first = store.flush();
+        await writing;
+        store.add(music('b'));
+        second = store.flush();
+        await Promise.resolve();
+        expect(calls).toBe(1);
+        release();
+        await Promise.all([first, second]);
+        expect(readJson('overlapping.json').items.map((item: { id: string }) => item.id)).toEqual(['a', 'b']);
+    } finally {
+        release();
+        await Promise.allSettled([first, second]);
+        write.mockRestore();
     }
 });
