@@ -1,9 +1,10 @@
+import { SERVER_ENV } from '@/server/env.server';
 import type { HistoryItem } from '@/shared/types/history';
 import path from 'node:path';
 import { JsonFileStore } from '../persistence/jsonFileStore';
 import type { HistoryPersistFile, HistoryStore } from './historyStore';
 
-const DEFAULT_HISTORY_PATH = path.resolve(process.cwd(), 'data', 'history.json');
+const DEFAULT_HISTORY_PATH = path.resolve(SERVER_ENV.DATA_DIR ?? path.resolve(process.cwd(), 'data'), 'history.json');
 const FLUSH_DELAY_MS = 400;
 
 export class HistoryFileStore implements HistoryStore {

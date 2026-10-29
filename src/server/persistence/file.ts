@@ -1,11 +1,11 @@
+import { SERVER_ENV } from '@/server/env.server';
 import type { Music } from '@/shared/types/music';
 import path from 'node:path';
 import { JsonFileStore } from './jsonFileStore';
 import type { PersistFile, Store } from './types';
 
 const DEFAULT_FILE_PATH = path.resolve(
-    process.cwd(),
-    'data',
+    SERVER_ENV.DATA_DIR ?? path.resolve(process.cwd(), 'data'),
     'musicRequests.json',
 );
 

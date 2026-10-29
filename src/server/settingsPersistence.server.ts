@@ -1,8 +1,9 @@
+import { SERVER_ENV } from '@/server/env.server';
 import logger from '@/server/logger.server';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const DEFAULT_FILE_PATH = path.resolve(process.cwd(), 'data', 'settings.json');
+const DEFAULT_FILE_PATH = path.resolve(SERVER_ENV.DATA_DIR ?? path.resolve(process.cwd(), 'data'), 'settings.json');
 
 type PersistFile = Record<
     string,
