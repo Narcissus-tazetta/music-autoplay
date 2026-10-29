@@ -15,6 +15,7 @@ export default [
     route('api/requester/name', 'routes/api/requester.name.ts'),
     route('api/search/furigana', 'routes/api/search.furigana.ts'),
     route('api/settings', 'routes/api/settings.ts'),
+    route('api/youtube/control', 'routes/api/youtube.control.ts'),
 
     route('*', 'routes/not-found.tsx'),
     // route('time', 'routes/time.tsx'),

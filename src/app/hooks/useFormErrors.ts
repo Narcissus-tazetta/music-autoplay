@@ -91,6 +91,8 @@ const useFormErrors = (fetcherData: unknown): FormErrorResult => {
 
     if (!isRecord(deepData)) return EMPTY_RESULT;
 
+    if (deepData.success === true || deepData.status === 'success') return EMPTY_RESULT;
+
     const apiError = extractApiError(deepData);
     if (apiError) return apiError;
 

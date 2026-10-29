@@ -6,7 +6,7 @@ import { describe, expect, test } from 'bun:test';
 import { RouterContextProvider } from 'react-router';
 
 const createRateLimiter = () => ({
-    check: () => true,
+    tryConsume: () => true,
     consume: () => undefined,
     getOldestAttempt: () => undefined,
 });

@@ -48,7 +48,6 @@ export const action = async ({
                 { status: 400 },
             );
         }
-        rateLimiter.consume(rateLimitKey);
         return Response.json(submission.reply({ resetForm: true }), {
             status: 200,
         });

@@ -1,7 +1,8 @@
+import { SERVER_ENV } from '@/server/env.server';
 import path from 'node:path';
 import { JsonFileStore } from './persistence/jsonFileStore';
 
-const DEFAULT_FILE_PATH = path.resolve(process.cwd(), 'data', 'settings.json');
+const DEFAULT_FILE_PATH = path.resolve(SERVER_ENV.DATA_DIR ?? path.resolve(process.cwd(), 'data'), 'settings.json');
 const FLUSH_DELAY_MS = 500;
 
 interface StoredSettings {

@@ -1,13 +1,10 @@
 import type { SessionRole } from '@/app/stores/adminStore';
 import { useAdminStore } from '@/app/stores/adminStore';
 import { useMusicStore } from '@/app/stores/musicStore';
-import { useSettingsStore } from '@/app/stores/settingsStore';
+import { notify } from '@/app/utils/notifications';
 import type { Music } from '@/shared/types/music';
 import { normalizeApiResponse } from '@/shared/utils/api';
 import { useEffect } from 'react';
-import { z } from 'zod';
-
-const SettingsSchema = z.object({ ytStatusVisible: z.boolean().optional() }).passthrough();
 
 const SEED_FETCH_TIMEOUT_MS = 3_000;
 const SEED_RETRY_DELAYS_MS = [0, 500, 1_000];
@@ -31,17 +28,7 @@ async function loadRoles(signal: AbortSignal): Promise<void> {
     const data = await res.json() as { isAdmin?: boolean; roles?: unknown };
     const roles = Array.isArray(data.roles) ? [...data.roles as SessionRole[]] : [];
     if (data.isAdmin === true && !roles.includes('admin')) roles.push('admin');
-    if (roles.length > 0) useAdminStore.getState().setRoles(roles);
-}
-
-async function loadSettings(signal: AbortSignal): Promise<void> {
-    const res = await fetch('/api/settings', { signal });
-    // 204 means "nothing stored yet" and carries no body to parse.
-    if (res.status !== 200) return;
-
-    const parsed = SettingsSchema.safeParse(await res.json());
-    if (parsed.success && typeof parsed.data.ytStatusVisible === 'boolean')
-        useSettingsStore.getState().setYtStatusVisible(parsed.data.ytStatusVisible);
+    useAdminStore.getState().setRoles(roles);
 }
 
 /**
@@ -55,6 +42,7 @@ async function seedMusicsFromApi(signal: AbortSignal): Promise<void> {
         if (retryDelay > 0) await new Promise(r => setTimeout(r, retryDelay));
 
         try {
+            const revision = useMusicStore.getState().queueRevision;
             // oxlint-disable-next-line no-await-in-loop
             const res = await fetch('/api/musics', {
                 cache: 'no-store',
@@ -67,7 +55,8 @@ async function seedMusicsFromApi(signal: AbortSignal): Promise<void> {
             const musics = norm.data?.musics;
             if (!Array.isArray(musics)) throw new Error('/api/musics returned no queue');
 
-            useMusicStore.getState().seedMusics(musics.filter(isMusic));
+            if (revision !== useMusicStore.getState().queueRevision) continue;
+            useMusicStore.getState().seedMusics(musics.filter(isMusic), revision);
             return;
         } catch (error) {
             if (signal.aborted) return;
@@ -75,6 +64,7 @@ async function seedMusicsFromApi(signal: AbortSignal): Promise<void> {
         }
     }
     console.warn('/api/musics seed gave up; the queue will fill in over the socket');
+    notify({ level: 'warning', message: '再生リストを取得できません。接続が戻ると自動で同期します。' });
 }
 
 export function useAppInitialization(): void {
@@ -89,7 +79,6 @@ export function useAppInitialization(): void {
             console.warn(`app initialization: ${label} failed`, error);
         };
         loadRoles(signal).catch(settle('admin status'));
-        loadSettings(signal).catch(settle('settings'));
         void seedMusicsFromApi(signal);
 
         return () => {

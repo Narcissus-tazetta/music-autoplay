@@ -1,4 +1,5 @@
 import logger from '@/server/logger.server';
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -33,6 +34,7 @@ export interface JsonFileStoreOptions<T> {
 export class JsonFileStore<T> {
     private flushTimer: NodeJS.Timeout | null = null;
     private loaded = false;
+    private writeTail: Promise<void> = Promise.resolve();
 
     constructor(private readonly opts: JsonFileStoreOptions<T>) {}
 
@@ -64,7 +66,7 @@ export class JsonFileStore<T> {
         if (this.flushTimer) clearTimeout(this.flushTimer);
         this.flushTimer = setTimeout(() => {
             this.flushTimer = null;
-            void this.flush();
+            void this.flush().catch(error => logger.error(`${this.opts.label}: scheduled flush failed`, { error }));
         }, this.opts.flushDelayMs);
     }
 
@@ -75,16 +77,24 @@ export class JsonFileStore<T> {
     }
 
     /** Writes the current snapshot, retrying with exponential backoff before giving up. */
-    async flush(): Promise<void> {
+    flush(): Promise<void> {
         // Load first: writing a snapshot of never-hydrated state would clobber the file on
         // disk with an empty payload. Every owner used to repeat this call by hand.
         this.ensureLoaded();
         this.cancelScheduledFlush();
         const payload = JSON.stringify(this.opts.snapshot(), undefined, 2);
+        const write = this.writeTail.then(() => this.writeSnapshot(payload));
+        this.writeTail = write.catch(error => {
+            logger.error(`${this.opts.label}: flush failed`, { error });
+        });
+        return write;
+    }
+
+    private async writeSnapshot(payload: string): Promise<void> {
         const tmpBase = `${this.opts.filePath}.${process.pid}`;
 
         for (let attempt = 0; attempt < MAX_WRITE_RETRIES; attempt++) {
-            const tmp = `${tmpBase}.${Date.now()}.tmp`;
+            const tmp = `${tmpBase}.${randomUUID()}.tmp`;
             try {
                 // Sequential by design: the rename must observe the finished temp file.
                 // eslint-disable-next-line no-await-in-loop
@@ -98,6 +108,7 @@ export class JsonFileStore<T> {
                 } catch (cleanupError) {
                     logger.warn(`${this.opts.label}: failed to remove tmp file`, { error: cleanupError });
                 }
+                if (attempt === MAX_WRITE_RETRIES - 1) throw error;
                 const backoff = WRITE_BACKOFF_BASE_MS * Math.pow(2, attempt);
                 logger.warn(
                     `${this.opts.label}: write attempt ${attempt + 1} failed, retrying in ${backoff}ms`,

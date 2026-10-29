@@ -14,6 +14,7 @@ const SYNC_MAX_ATTEMPTS = 3;
 
 interface MusicStore {
     musics: Music[];
+    queueRevision: number;
     socket: Socket<S2C, C2S> | null;
     remoteStatus: RemoteStatus | null;
     lastAuthoritativePause: {
@@ -33,7 +34,7 @@ interface MusicStore {
     addMusic(music: Music): void;
     connectSocket(): void;
     remoteStatusUpdated(incomingState: RemoteStatusWithMeta): void;
-    seedMusics(musics: Music[]): void;
+    seedMusics(musics: Music[], expectedRevision?: number): void;
 }
 
 const getStatusCurrentTime = (status: RemoteStatus | null): number | undefined => {
@@ -251,18 +252,24 @@ export const useMusicStore = create<MusicStore>(set => {
     const fetchAllMusics = (s: Socket<S2C, C2S>) =>
         withRetry(
             () =>
-                new Promise<Music[] | null>(resolve => {
+                new Promise<boolean | null>(resolve => {
+                    const revision = useMusicStore.getState().queueRevision;
                     s.timeout(ACK_TIMEOUT_MS).emit(
                         'getAllMusics',
                         (error: Error | null, musics: Music[]) => {
-                            resolve(!error && Array.isArray(musics) ? musics : null);
+                            if (
+                                error || !Array.isArray(musics) || revision !== useMusicStore.getState().queueRevision
+                            ) {
+                                resolve(null);
+                                return;
+                            }
+                            set(state => ({ musics, hasServerSnapshot: true, queueRevision: state.queueRevision + 1 }));
+                            resolve(true);
                         },
                     );
                 }),
             SYNC_MAX_ATTEMPTS,
-        ).then(musics => {
-            if (musics) set({ musics, hasServerSnapshot: true });
-        });
+        );
 
     const fetchRemoteStatus = (s: Socket<S2C, C2S>, maxAttempts = SYNC_MAX_ATTEMPTS) =>
         withRetry(
@@ -290,6 +297,7 @@ export const useMusicStore = create<MusicStore>(set => {
         addMusic(music) {
             set(state => ({
                 musics: [...state.musics, music],
+                queueRevision: state.queueRevision + 1,
             }));
         },
         connectSocket() {
@@ -325,17 +333,19 @@ export const useMusicStore = create<MusicStore>(set => {
                 .on('musicAdded', (music: Music) => {
                     set(state => ({
                         musics: [...state.musics, music],
+                        queueRevision: state.queueRevision + 1,
                         hasServerSnapshot: true,
                     }));
                 })
                 .on('musicRemoved', (musicId: string) => {
                     set(state => ({
                         musics: state.musics.filter(music => music.id !== musicId),
+                        queueRevision: state.queueRevision + 1,
                         hasServerSnapshot: true,
                     }));
                 })
                 .on('queueReordered', (musics: Music[]) => {
-                    set({ musics, hasServerSnapshot: true });
+                    set(state => ({ musics, hasServerSnapshot: true, queueRevision: state.queueRevision + 1 }));
                 })
                 .on('remoteStatusUpdated', (incomingState: RemoteStatusWithMeta) => {
                     handleRemoteStatusUpdate(incomingState);
@@ -376,6 +386,7 @@ export const useMusicStore = create<MusicStore>(set => {
         lastTraceId: '',
         lastEventReceivedAt: 0,
         musics: [],
+        queueRevision: 0,
         remoteStatus: null,
         remoteStatusUpdated(incomingState: RemoteStatusWithMeta) {
             if (!isRemoteStatusWithMetaShape(incomingState)) {
@@ -385,8 +396,13 @@ export const useMusicStore = create<MusicStore>(set => {
             }
             handleRemoteStatusUpdate(incomingState);
         },
-        seedMusics(musics: Music[]) {
-            set(state => (state.hasServerSnapshot ? {} : { musics }));
+        seedMusics(musics: Music[], expectedRevision?: number) {
+            set(
+                state => (state.hasServerSnapshot
+                        || (expectedRevision !== undefined && expectedRevision !== state.queueRevision)
+                    ? {}
+                    : { musics }),
+            );
         },
         socket: null,
     };

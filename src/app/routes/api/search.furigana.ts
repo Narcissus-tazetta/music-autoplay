@@ -52,32 +52,41 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         return Response.json({ error: 'Invalid request', issues: parsed.error.issues }, { status: 400 });
 
     const uniqueTexts = [...new Set(parsed.data.texts.map(text => text.trim()).filter(Boolean))];
-    const entries = await Promise.all(
+    const lookups = await Promise.all(
         uniqueTexts.map(async text => [text, await getFurigana(text)] as const),
     );
 
     return Response.json({
-        readings: Object.fromEntries(entries.filter(([, furigana]) => furigana.length > 0)),
+        readings: Object.fromEntries(
+            lookups.filter(([, lookup]) => lookup.furigana.length > 0).map(([text, lookup]) => [text, lookup.furigana]),
+        ),
+        unavailable: lookups.filter(([, lookup]) => lookup.failed).map(([text]) => text),
     });
 };
 
-async function getFurigana(text: string): Promise<string> {
+/**
+ * `failed` separates a lookup that could not be made from one that succeeded without a
+ * reading. Texts with no kana to add legitimately come back empty, so the client needs this
+ * to tell them apart from an outage.
+ */
+async function getFurigana(text: string): Promise<{ furigana: string; failed: boolean }> {
     const cached = memoryCache.get(text);
-    if (cached && Date.now() - cached.ts <= CACHE_TTL_MS) return cached.furigana;
+    if (cached && Date.now() - cached.ts <= CACHE_TTL_MS) return { furigana: cached.furigana, failed: false };
 
     try {
         const url = new URL(SERVER_ENV.YAHOO_FURIGANA_ENDPOINT);
         url.searchParams.set('q', text);
         const response = await fetch(url, { signal: AbortSignal.timeout(2500) });
-        if (!response.ok) return '';
+        if (!response.ok) return { furigana: '', failed: true };
 
-        const raw = await response.json();
-        const parsed = FuriganaResponseSchema.safeParse(raw);
-        const furigana = parsed.success ? (parsed.data.furigana?.trim() ?? '') : '';
+        const parsed = FuriganaResponseSchema.safeParse(await response.json());
+        if (!parsed.success) return { furigana: '', failed: true };
+
+        const furigana = parsed.data.furigana?.trim() ?? '';
         if (furigana) rememberFurigana(text, furigana);
-        return furigana;
+        return { furigana, failed: false };
     } catch (error) {
         logger.debug('furigana lookup failed', { error });
-        return '';
+        return { furigana: '', failed: true };
     }
 }

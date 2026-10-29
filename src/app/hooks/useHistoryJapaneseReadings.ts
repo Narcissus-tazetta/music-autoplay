@@ -1,5 +1,6 @@
+import { notify } from '@/app/utils/notifications';
 import type { HistoryItem } from '@/shared/types/history';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 export type HistoryReadingMap = Record<string, string[]>;
 
@@ -7,6 +8,7 @@ const MAX_READING_TEXTS = 80;
 type ReadingLookupState = Record<string, string | null>;
 
 export function useHistoryJapaneseReadings(items: HistoryItem[], enabled: boolean): HistoryReadingMap {
+    const warnedRef = useRef(false);
     const [readings, setReadings] = useState<ReadingLookupState>({});
 
     const texts = useMemo(() => {
@@ -17,14 +19,22 @@ export function useHistoryJapaneseReadings(items: HistoryItem[], enabled: boolea
             addText(unique, item.channelName);
             addText(unique, item.requesterName);
         }
-        return [...unique].slice(0, MAX_READING_TEXTS);
+        return [...unique];
     }, [enabled, items]);
 
     useEffect(() => {
         if (!enabled || texts.length === 0) return;
-        const missing = texts.filter(text => readings[text] === undefined);
+        const missing = texts.filter(text => readings[text] === undefined).slice(0, MAX_READING_TEXTS);
         if (missing.length === 0) return;
 
+        const warnUnavailable = () => {
+            if (warnedRef.current) return;
+            warnedRef.current = true;
+            notify({
+                level: 'warning',
+                message: '一部の読み仮名を取得できませんでした。曲名の文字でも検索できます。',
+            });
+        };
         const controller = new AbortController();
         void fetch('/api/search/furigana', {
             body: JSON.stringify({ texts: missing }),
@@ -34,14 +44,19 @@ export function useHistoryJapaneseReadings(items: HistoryItem[], enabled: boolea
         })
             .then(async response => {
                 if (!response.ok) {
+                    warnUnavailable();
                     setReadings(current => markFetched(current, missing, {}));
                     return;
                 }
-                const data = await response.json() as { readings?: Record<string, string> };
+                const data = await response.json() as { readings?: Record<string, string>; unavailable?: string[] };
+                if (data.unavailable && data.unavailable.length > 0) warnUnavailable();
                 setReadings(current => markFetched(current, missing, data.readings ?? {}));
             })
             .catch(error => {
                 if (error instanceof DOMException && error.name === 'AbortError') return;
+                console.error('読み仮名の取得に失敗しました', error);
+                warnUnavailable();
+                setReadings(current => markFetched(current, missing, {}));
             });
 
         return () => controller.abort();
@@ -50,7 +65,11 @@ export function useHistoryJapaneseReadings(items: HistoryItem[], enabled: boolea
     return useMemo(() => {
         const map: HistoryReadingMap = {};
         for (const item of items) {
-            const values = [readings[item.title], readings[item.channelName ?? ''], readings[item.requesterName ?? '']]
+            const values = [
+                readings[item.title.trim()],
+                readings[item.channelName?.trim() ?? ''],
+                readings[item.requesterName?.trim() ?? ''],
+            ]
                 .filter((value): value is string => typeof value === 'string' && value.length > 0);
             if (values.length > 0) map[item.id] = values;
         }

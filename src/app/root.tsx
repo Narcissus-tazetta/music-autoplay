@@ -21,6 +21,7 @@ import {
 import { PreventFlashOnWrongTheme, ThemeProvider, useTheme } from 'remix-themes';
 import { Header } from '~/components/ui/Header';
 import appCss from './App.css?url';
+import { Notifications } from './components/Notifications';
 import { useAppInitialization } from './hooks/useAppInitialization';
 
 const isErrLike = (
@@ -146,6 +147,7 @@ export default function App() {
 
     return (
         <>
+            <Notifications />
             <Header requesterHash={requesterHash} requesterName={requesterName} userName={userName} />
             <div className='flex flex-col items-center min-h-screen'>
                 <Outlet />

@@ -98,3 +98,15 @@ describe('useFormErrors hook', () => {
         expect(result.formErrorsString).toBe('深くネストされたエラー');
     });
 });
+
+test('validation without field details falls back to its message', () => {
+    expect(
+        useFormErrors({ success: false, error: { code: 'VALIDATION', message: '入力を確認してください' } })
+            .formErrorsString,
+    )
+        .toBe('入力を確認してください');
+});
+
+test('success payload content is not an error', () => {
+    expect(useFormErrors({ success: true, data: { title: '曲名' } }).formErrorsString).toBeUndefined();
+});

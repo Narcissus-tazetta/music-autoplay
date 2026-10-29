@@ -13,22 +13,17 @@ import { parseWithZod } from '@conform-to/zod/v4';
 import type { ActionFunctionArgs } from 'react-router';
 import type { z } from 'zod';
 
-const RATE_LIMIT_WINDOW_MS = 60_000;
-
 /** Returns the 429 response when the caller is over budget, or null when the request may proceed. */
 export function rateLimitExceededResponse(
     rateLimiter: RateLimiter,
     rateLimitKey: string,
     endpoint: string,
 ): Response | null {
-    if (rateLimiter.check(rateLimitKey)) return null;
-    const oldestAttempt = rateLimiter.getOldestAttempt(rateLimitKey);
-    const retryAfter = typeof oldestAttempt === 'number'
-        ? Math.ceil((oldestAttempt + RATE_LIMIT_WINDOW_MS - Date.now()) / 1000)
-        : 60;
+    if (rateLimiter.tryConsume(rateLimitKey)) return null;
+    const retryAfter = rateLimiter.getRetryAfterSeconds(rateLimitKey);
     logger.warn('Rate limit exceeded', { endpoint, rateLimitKey });
     return Response.json(
-        { error: 'レート制限を超えました。しばらくしてから再試行してください。' },
+        { error: 'レート制限を超えました。しばらくしてから再試行してください。', retryAfter },
         { headers: { 'Retry-After': retryAfter.toString() }, status: 429 },
     );
 }
@@ -159,7 +154,6 @@ export async function runOwnedMusicAction<TValue>(
         const errorResponse = replyOptionsErrorResponse(result.value);
         if (errorResponse) return errorResponse;
 
-        if (!isAdmin) httpRateLimiter.consume(rateLimitKey);
         return Response.json({ data: result.value, success: true });
     } catch (error: unknown) {
         logger.error(config.errorLabel, { error });

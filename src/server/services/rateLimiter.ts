@@ -51,6 +51,13 @@ export class RateLimiter {
         return removed;
     }
 
+    getRetryAfterSeconds(key: string): number {
+        const now = Date.now();
+        const recent = (this.attempts.get(key) ?? []).filter(t => now - t < this.windowMs);
+        if (recent.length === 0) return 0;
+        return Math.max(1, Math.ceil((Math.min(...recent) + this.windowMs - now) / 1000));
+    }
+
     getStats(): { totalKeys: number; totalAttempts: number } {
         let totalAttempts = 0;
         for (const arr of this.attempts.values()) totalAttempts += arr.length;

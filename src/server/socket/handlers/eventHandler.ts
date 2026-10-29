@@ -39,6 +39,7 @@ export interface EventHandlerConfig<TPayload, TResponse> {
         context: EventContext,
     ) => Promise<TResponse> | TResponse;
     rateLimiter?: RateLimiterConfig;
+    sharedRateLimiter?: RateLimiter;
     auth?: AuthChecker;
     logPayload?: boolean;
     logResponse?: boolean;
@@ -83,12 +84,12 @@ function extractCallbackFromArgs(
 export function createSocketEventHandler<TPayload, TResponse>(
     config: EventHandlerConfig<TPayload, TResponse>,
 ) {
-    const rateLimiter = config.rateLimiter
+    const rateLimiter = config.sharedRateLimiter ?? (config.rateLimiter
         ? new RateLimiter(
             config.rateLimiter.maxAttempts,
             config.rateLimiter.windowMs,
         )
-        : undefined;
+        : undefined);
 
     return (socket: Socket, context?: EventContext) => {
         const ctx: EventContext = {
@@ -117,13 +118,8 @@ export function createSocketEventHandler<TPayload, TResponse>(
                 if (config.rateLimiter.keyGenerator) rateLimitKey = config.rateLimiter.keyGenerator(socket);
                 else rateLimitKey = socket.id;
 
-                if (!rateLimiter.check(rateLimitKey)) {
-                    const oldest = rateLimiter.getOldestAttempt(rateLimitKey);
-                    const retryAfter = oldest
-                        ? Math.ceil(
-                            (config.rateLimiter.windowMs - (Date.now() - oldest)) / 1000,
-                        )
-                        : Math.ceil(config.rateLimiter.windowMs / 1000);
+                if (!rateLimiter.tryConsume(rateLimitKey)) {
+                    const retryAfter = rateLimiter.getRetryAfterSeconds(rateLimitKey);
 
                     const reply = createRateLimitReply(retryAfter);
                     if (callback) callback(reply);
@@ -188,8 +184,6 @@ export function createSocketEventHandler<TPayload, TResponse>(
 
             try {
                 const result = await config.handler(handlerPayload, ctx);
-
-                if (rateLimiter && rateLimitKey) rateLimiter.consume(rateLimitKey);
 
                 if (config.logResponse) {
                     log.debug(`socket event response: ${config.event}`, {

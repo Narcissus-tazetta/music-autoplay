@@ -81,6 +81,7 @@ const serverEnvSchema = z
             if (typeof v === 'string') return v === 'true' ? true : (v === 'false' ? false : undefined);
             return undefined;
         }, z.boolean().optional().default(false)),
+        DATA_DIR: z.string().optional(),
         MONGODB_URI: z.string().optional(),
         MONGODB_DB_NAME: z.string().optional().default('musicReq'),
         MONGODB_COLLECTION: z.string().optional().default('musicRequests'),

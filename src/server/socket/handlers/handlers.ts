@@ -12,13 +12,6 @@ import { registerBatchHandlers } from './eventHandler';
 import { createMusicHandlers } from './musicHandlers';
 import { createGetAllMusicsHandler, createGetHistoryHandler, createGetRemoteStatusHandler } from './standardHandlers';
 
-const ADMIN_YT_CONTROL_ACTIONS = new Set([
-    'toggle_play_pause',
-    'prev',
-    'next',
-    'skip',
-]);
-
 export interface HandlerDeps {
     musicDB: Map<string, Music>;
     io: IOServer;
@@ -73,24 +66,8 @@ export function registerSocketHandlers(
 
     socket.on(
         'admin_youtube_control',
-        (
-            payload: unknown,
-            callback?: (result: { success: boolean; error?: string }) => void,
-        ) => {
-            const action = typeof payload === 'object'
-                    && payload !== null
-                    && 'action' in payload
-                    && typeof (payload as { action?: unknown }).action === 'string'
-                ? (payload as { action: string }).action
-                : undefined;
-
-            if (!action || !ADMIN_YT_CONTROL_ACTIONS.has(action)) {
-                callback?.({ error: 'invalid action', success: false });
-                return;
-            }
-
-            deps.io.emit('admin_youtube_control_command', { action });
-            callback?.({ success: true });
+        (_payload: unknown, callback?: (result: { success: boolean; error: string }) => void) => {
+            callback?.({ success: false, error: '再生操作は管理者APIから実行してください' });
         },
     );
 }
