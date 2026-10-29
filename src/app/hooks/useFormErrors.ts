@@ -82,7 +82,7 @@ const extractApiError = (data: UnknownRecord): FormErrorResult | null => {
 
     const parsed = parseApiErrorForUI({ code, details: errObj.details, message });
 
-    const formErrorsString = parsed.kind === 'validation' && 'fieldErrors' in parsed
+    const formErrorsString = parsed.kind === 'validation' && parsed.fieldErrors
         ? Object.values(parsed.fieldErrors as Record<string, string>).join(' ')
         : parsed.message;
 
@@ -96,6 +96,8 @@ const useFormErrors = (fetcherData: unknown): FormErrorResult => {
     const deepData = extractDeepestData(fetcherData);
 
     if (!isRecord(deepData)) return EMPTY_RESULT;
+
+    if (deepData.success === true || deepData.status === 'success') return EMPTY_RESULT;
 
     const apiError = extractApiError(deepData);
     if (apiError) return apiError;
