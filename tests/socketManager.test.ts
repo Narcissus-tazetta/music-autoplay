@@ -425,3 +425,19 @@ describe('SocketManager', () => {
         });
     });
 });
+
+test('paused snapshots reflect seeking and switching videos', () => {
+    const timers = new TimerManager();
+    const windows = new WindowCloseManager(0);
+    const manager = new SocketManager(() => true, timers, windows, { debounceMs: 0, graceMs: 0, inactivityMs: 0 });
+    try {
+        manager.update({ type: 'paused', musicId: 'A', currentTime: 10, duration: 100 });
+        manager.update({ type: 'paused', musicId: 'A', currentTime: 50, duration: 100 });
+        expect(manager.getCurrent()).toMatchObject({ musicId: 'A', currentTime: 50 });
+        manager.update({ type: 'paused', musicId: 'B', currentTime: 80, duration: 200 });
+        expect(manager.getSnapshot()).toMatchObject({ musicId: 'B', currentTime: 80, duration: 200 });
+    } finally {
+        manager.shutdown();
+        windows.destroy();
+    }
+});
