@@ -96,19 +96,21 @@ export async function ensureAnonymousIdCookie(
 /**
  * The bucket a rate limiter counts against.
  *
- * It must come from something the caller cannot rewrite at will. Both branches below are
- * verified: `requesterHash` is derived from the signed session or the signed anonymous-id
- * cookie, and the IP fallback is the address the trusted proxy observed. Keying off raw
- * cookie bytes, as this used to, let anyone mint a fresh bucket per request and walk past
- * the limit entirely.
+ * Only signed-in identities are keyed by identity. An anonymous id is minted for every
+ * cookie-less request and costs nothing to repeat, so keying on it would let a client reset
+ * its allowance by discarding the cookie; anonymous callers share the bucket of the address
+ * the trusted proxy observed instead.
  */
 export async function getRateLimitKey(
     request: Request,
     cookieHeader: string | null | undefined,
     preloadedSession?: LoginSession,
 ): Promise<string> {
-    const { requesterHash } = await resolveRequesterIdentity(cookieHeader, preloadedSession);
-    if (requesterHash) return `id:${requesterHash.slice(0, 16)}`;
+    const session = preloadedSession ?? await loginSession.getSession(cookieHeader);
+    if (session.get('user')) {
+        const { requesterHash } = await resolveRequesterIdentity(cookieHeader, session);
+        if (requesterHash) return `id:${requesterHash.slice(0, 16)}`;
+    }
 
     return `ip:${createHash('sha256').update(getClientIP(request)).digest('hex').slice(0, 16)}`;
 }

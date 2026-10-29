@@ -48,8 +48,8 @@ export function useHistoryJapaneseReadings(items: HistoryItem[], enabled: boolea
                     setReadings(current => markFetched(current, missing, {}));
                     return;
                 }
-                const data = await response.json() as { readings?: Record<string, string> };
-                if (missing.some(text => !data.readings?.[text])) warnUnavailable();
+                const data = await response.json() as { readings?: Record<string, string>; unavailable?: string[] };
+                if (data.unavailable && data.unavailable.length > 0) warnUnavailable();
                 setReadings(current => markFetched(current, missing, data.readings ?? {}));
             })
             .catch(error => {
