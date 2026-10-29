@@ -8,7 +8,7 @@ import { Dialog } from '@shadcn/ui/dialog';
 import { Input } from '@shadcn/ui/input';
 import { Table } from '@shadcn/ui/table';
 import { Check, Loader, Pencil, TrashIcon, UserRound, X } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFetcher } from 'react-router';
 
 export interface RequesterSelection {
@@ -58,10 +58,12 @@ export function RequesterDetailDialog({
         requesterName?: string;
     }>();
 
+    const appliedNameReply = useRef(displayNameFetcher.data);
+    const editingRequesterHash = useRef<string | undefined>(undefined);
     const requesterHash = requester?.requesterHash;
     const isSelf = !!requesterHash && requesterHash === userHash;
     const hashPrefix = requesterHash?.slice(0, 8);
-    const displayedRequesterName = displayNameFetcher.data?.requesterName ?? editableName;
+    const displayedRequesterName = editableName;
 
     useEffect(() => {
         const nextName = requesterDisplayName(requester);
@@ -70,11 +72,14 @@ export function RequesterDetailDialog({
     }, [requester]);
 
     useEffect(() => {
+        if (appliedNameReply.current === displayNameFetcher.data) return;
+        appliedNameReply.current = displayNameFetcher.data;
+        if (editingRequesterHash.current !== requesterHash) return;
         if (!displayNameFetcher.data?.ok || !displayNameFetcher.data.requesterName) return;
         setEditableName(displayNameFetcher.data.requesterName);
         setIsEditingName(false);
         onRequesterNameChange?.(displayNameFetcher.data.requesterName);
-    }, [displayNameFetcher.data, onRequesterNameChange]);
+    }, [displayNameFetcher.data, onRequesterNameChange, requesterHash]);
 
     useEffect(() => {
         if (!open || !canViewLogs || !requesterHash) {
@@ -182,6 +187,9 @@ export function RequesterDetailDialog({
                                             <displayNameFetcher.Form
                                                 method='post'
                                                 action='/api/requester/name'
+                                                onSubmit={() => {
+                                                    editingRequesterHash.current = requesterHash;
+                                                }}
                                                 className='space-y-2'
                                             >
                                                 <Input
