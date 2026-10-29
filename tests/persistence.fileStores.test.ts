@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { HistoryFileStore } from '../src/server/history/historyFileStore';
-import FileStore from '../src/server/persistence/file';
+import { FileStore } from '../src/server/persistence/file';
 import { RequestLogFileStore } from '../src/server/requestLog/requestLogFileStore';
 import { afterEach, beforeEach, describe, expect, it } from './bunTestCompat';
 

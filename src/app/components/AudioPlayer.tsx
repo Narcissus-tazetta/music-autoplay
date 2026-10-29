@@ -7,10 +7,10 @@ import {
 import { useAdminStore } from '@/app/stores/adminStore';
 import { useSettingsStore } from '@/app/stores/settingsStore';
 import { cn } from '@/app/utils/cn';
+import { notify } from '@/app/utils/notifications';
 import type { Music, RemoteStatus } from '@/shared/types/music';
-import normalizeApiResponse from '@/shared/utils/api';
+import { normalizeApiResponse } from '@/shared/utils/api';
 import { formatSecondsToTime } from '@/shared/utils/format';
-import { runUiAction } from '@/shared/utils/runUiAction';
 import { watchUrl } from '@/shared/utils/youtube';
 import { Button } from '@shadcn/ui/button';
 import { motion } from 'framer-motion';
@@ -190,11 +190,10 @@ function AudioPlayerInner({
                     body: JSON.stringify({ action }),
                 });
                 const result = await normalizeApiResponse(response);
-                if (!result.success)
-                    await runUiAction({ type: 'showToast', level: 'error', message: result.error.message });
+                if (!result.success) notify({ level: 'error', message: result.error.message });
             } catch (error) {
                 console.error('再生操作の送信に失敗しました', error);
-                await runUiAction({ type: 'showToast', level: 'error', message: '再生操作の送信に失敗しました' });
+                notify({ level: 'error', message: '再生操作の送信に失敗しました' });
             }
         })();
     }, []);

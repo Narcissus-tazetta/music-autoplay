@@ -2,7 +2,6 @@ import type { RemoteStatus } from '@/shared/types/music';
 import { randomUUID } from 'node:crypto';
 import logger from '../../logger.server';
 import { StateReconciler } from '../../services/stateReconciler';
-import type { WindowCloseManager } from '../../services/windowCloseManager';
 import type { TimerManager } from '../../utils/timerManager';
 import { isRemoteStatusEqual, shouldDebounce } from './remoteStatus';
 
@@ -35,7 +34,6 @@ export class SocketManager {
     constructor(
         private emit: EmitFn,
         private timerManager: TimerManager,
-        private windowCloseManager: WindowCloseManager,
         private config: ManagerConfig,
     ) {
         this.stateReconciler = new StateReconciler();
@@ -46,19 +44,9 @@ export class SocketManager {
     }
 
     shutdown() {
-        try {
-            this.updateQueue = [];
-            this.timerManager.clear('pendingClose');
-            this.timerManager.clear('inactivity');
-            this.stateReconciler.reset();
-            try {
-                this.timerManager.clearAll();
-            } catch (error) {
-                logger.warn('SocketManager failed to clearAll timers', { error: error });
-            }
-        } catch (error) {
-            logger.warn('SocketManager shutdown error', { error: error });
-        }
+        this.updateQueue = [];
+        this.stateReconciler.reset();
+        this.timerManager.clearAll();
     }
 
     update(status: RemoteStatus, source?: string) {
@@ -150,16 +138,20 @@ export class SocketManager {
     }
 
     private applyStatusChange(
-        status: RemoteStatus,
+        incoming: RemoteStatus,
         source: string,
         traceId: string,
         reason?: string,
     ): void {
-        this.remoteStatus = status;
         this.remoteStatusUpdatedAt = Date.now();
         this.sequenceNumber++;
 
-        if (status.type === 'playing') status.lastProgressUpdate = this.remoteStatusUpdatedAt;
+        // Copied rather than stamped in place: callers pass objects they still hold (the
+        // heartbeat even passes getCurrent()'s own reference back in).
+        const status: RemoteStatus = incoming.type === 'playing'
+            ? { ...incoming, lastProgressUpdate: this.remoteStatusUpdatedAt }
+            : incoming;
+        this.remoteStatus = status;
 
         this.lastTraceId = traceId;
         const enrichedStatus = {

@@ -1,4 +1,5 @@
 import { StatusBadge } from '@/app/components/StatusBadge';
+import useFormErrors from '@/app/hooks/useFormErrors';
 import { useHistoryJapaneseReadings } from '@/app/hooks/useHistoryJapaneseReadings';
 import { useMusicForm } from '@/app/hooks/useMusicForm';
 import usePlayingMusic from '@/app/hooks/usePlayingMusic';
@@ -79,6 +80,7 @@ export default function Home() {
     const [selectedRequester, setSelectedRequester] = useState<RequesterSelection | null>(null);
     const [reorderResyncToken, setReorderResyncToken] = useState(0);
     const [reorderError, setReorderError] = useState<string | null>(null);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
 
     const { musics, remoteStatus } = useMusicStore(
         useShallow(state => ({
@@ -91,6 +93,7 @@ export default function Home() {
     const isAdmin = useAdminStore(s => s.isAdmin);
     const hasPathfinderAccess = useAdminStore(s => s.hasPathfinderAccess);
     const { fetcher, form, fields, isSubmitting, canSubmit, retryAfter } = useMusicForm();
+    const { formErrorsString } = useFormErrors(fetcher.data);
     const {
         items: historyItems,
         query,
@@ -138,6 +141,7 @@ export default function Home() {
 
     const handleDelete = useCallback(
         (id: string, asAdmin?: boolean) => {
+            setDeleteError(null);
             const formData = new FormData();
             formData.append('url', watchUrl(id));
             if (asAdmin) formData.append('isAdmin', 'true');
@@ -184,6 +188,18 @@ export default function Home() {
         const timer = setTimeout(() => setReorderError(null), 5000);
         return () => clearTimeout(timer);
     }, [reorderError]);
+
+    // The delete failures (no permission, already gone, rate limited) come back through the
+    // shared fetcher. Without this they had no surface at all: the add form only renders
+    // conform's field errors, and the row simply stays put.
+    useEffect(() => {
+        if (!formErrorsString || fetcher.state !== 'idle') return;
+        const data = fetcher.data as { status?: string } | undefined;
+        if (data?.status === 'success') return;
+        setDeleteError(formErrorsString);
+        const timer = setTimeout(() => setDeleteError(null), 5000);
+        return () => clearTimeout(timer);
+    }, [fetcher.data, fetcher.state, formErrorsString]);
 
     const historySearchReadings = useHistoryJapaneseReadings(historyItems, viewMode === 'history');
     const filteredHistoryItems = useMemo(
@@ -270,9 +286,9 @@ export default function Home() {
                 )
                 : (
                     <>
-                        {reorderError && (
+                        {(reorderError || deleteError) && (
                             <p className='text-sm text-destructive font-medium text-center' role='alert'>
-                                {reorderError}
+                                {reorderError ?? deleteError}
                             </p>
                         )}
                         <MusicTable

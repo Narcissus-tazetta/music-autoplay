@@ -18,7 +18,6 @@ export const socketConfig = {
     remoteStatusInactivityMs: SERVER_ENV.REMOTE_STATUS_INACTIVITY_MS,
     remoteStatusInactivityMsPaused: SERVER_ENV.REMOTE_STATUS_INACTIVITY_MS_PAUSED,
     remoteStatusInactivityMsPlaying: SERVER_ENV.REMOTE_STATUS_INACTIVITY_MS_PLAYING,
-    windowCloseDebounce: SERVER_ENV.WINDOW_CLOSE_DEBOUNCE_MS,
 } as const;
 
 export const loggingConfig = {

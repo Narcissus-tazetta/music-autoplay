@@ -1,4 +1,4 @@
-import { safeLog } from '@/server/logger.server';
+import logger from '@/server/logger.server';
 import type { YouTubeMeta } from '@/shared/schemas/music';
 
 function parseISO8601ToSeconds(iso: string): number {
@@ -105,14 +105,10 @@ export const normalizeYoutubeMeta = (
                     const secs = parseISO8601ToSeconds(s);
                     finalDuration = secondsToHMS(secs);
                 } catch (error) {
-                    safeLog(
-                        'debug',
-                        'normalizeYoutubeMeta: failed to parse ISO8601 duration',
-                        {
-                            error: error,
-                            value: s,
-                        },
-                    );
+                    logger.debug('normalizeYoutubeMeta: failed to parse ISO8601 duration', {
+                        error,
+                        value: s,
+                    });
                     finalDuration = s;
                 }
             }

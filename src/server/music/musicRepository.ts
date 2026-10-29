@@ -89,20 +89,20 @@ export class MusicRepository {
         }
     }
 
-    persistRemove(id: string): Result<void, HandlerError> {
+    async persistRemove(id: string): Promise<Result<void, HandlerError>> {
         try {
-            void persistRemove(this.fileStore, id);
+            await persistRemove(this.fileStore, id);
             return ok(undefined);
         } catch (error: unknown) {
             return err(toHandlerError(error));
         }
     }
 
-    persistReorder(): Result<void, HandlerError> {
+    async persistReorder(): Promise<Result<void, HandlerError>> {
         try {
             if (!this.fileStore.reorder)
                 return err(toHandlerError(new Error('current store does not support persisting reorder')));
-            void this.fileStore.reorder(this.list());
+            await this.fileStore.reorder(this.list());
             return ok(undefined);
         } catch (error: unknown) {
             return err(toHandlerError(error));

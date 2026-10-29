@@ -1,17 +1,14 @@
 import { parseApiErrorForUI } from '@/shared/utils/apiUi';
-import type { UiAction } from '@/shared/utils/apiUi';
 import { extractErrorMessage } from '@/shared/utils/errors/client';
 
 type UnknownRecord = Record<string, unknown>;
 
 interface FormErrorResult {
     readonly formErrorsString: string | undefined;
-    readonly parsedAction: UiAction | undefined;
 }
 
 const EMPTY_RESULT: FormErrorResult = {
     formErrorsString: undefined,
-    parsedAction: undefined,
 };
 
 const isRecord = (value: unknown): value is UnknownRecord => {
@@ -46,28 +43,28 @@ const extractFormErrors = (data: UnknownRecord): FormErrorResult | null => {
         const submission = data.submission;
         if ('error' in submission) {
             const errorString = extractErrorString(submission.error);
-            if (errorString) return { formErrorsString: errorString, parsedAction: undefined };
+            if (errorString) return { formErrorsString: errorString };
         }
 
         if ('fieldErrors' in submission) {
             const errorString = extractErrorString(submission.fieldErrors);
-            if (errorString) return { formErrorsString: errorString, parsedAction: undefined };
+            if (errorString) return { formErrorsString: errorString };
         }
     }
 
     if ('error' in data) {
         const errorString = extractErrorString(data.error);
-        if (errorString) return { formErrorsString: errorString, parsedAction: undefined };
+        if (errorString) return { formErrorsString: errorString };
     }
 
     if ('formErrors' in data) {
         const errorString = extractErrorString(data.formErrors);
-        if (errorString) return { formErrorsString: errorString, parsedAction: undefined };
+        if (errorString) return { formErrorsString: errorString };
     }
 
     if ('fieldErrors' in data) {
         const errorString = extractErrorString(data.fieldErrors);
-        if (errorString) return { formErrorsString: errorString, parsedAction: undefined };
+        if (errorString) return { formErrorsString: errorString };
     }
 
     return null;
@@ -83,13 +80,10 @@ const extractApiError = (data: UnknownRecord): FormErrorResult | null => {
     const parsed = parseApiErrorForUI({ code, details: errObj.details, message });
 
     const formErrorsString = parsed.kind === 'validation' && parsed.fieldErrors
-        ? Object.values(parsed.fieldErrors as Record<string, string>).join(' ')
+        ? Object.values(parsed.fieldErrors).join(' ')
         : parsed.message;
 
-    return {
-        formErrorsString,
-        parsedAction: parsed.action as UiAction | undefined,
-    };
+    return { formErrorsString };
 };
 
 const useFormErrors = (fetcherData: unknown): FormErrorResult => {
@@ -106,9 +100,7 @@ const useFormErrors = (fetcherData: unknown): FormErrorResult => {
     if (formErrors) return formErrors;
 
     const fallbackError = extractErrorMessage(deepData, { joinWith: ' ' });
-    return fallbackError
-        ? { formErrorsString: fallbackError, parsedAction: undefined }
-        : EMPTY_RESULT;
+    return fallbackError ? { formErrorsString: fallbackError } : EMPTY_RESULT;
 };
 
 export default useFormErrors;

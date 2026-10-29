@@ -18,5 +18,3 @@ export function createFakeEmitter() {
         },
     } as const;
 }
-
-export default createFakeEmitter;

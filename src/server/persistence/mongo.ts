@@ -1,11 +1,9 @@
 import logger from '@/server/logger.server';
 import type { Music } from '@/shared/types/music';
-import { MongoConnection, type MongoConnectionOptions } from './mongoConnection';
+import { MongoConnection } from './mongoConnection';
 import { buildUpsert, docToEntity } from './mongoDoc';
 import { PendingWriteQueue } from './pendingWrites';
 import type { PersistFile, Store } from './types';
-
-export type MongoStoreOptions = MongoConnectionOptions;
 
 type MusicDoc = Music & {
     _id: string;

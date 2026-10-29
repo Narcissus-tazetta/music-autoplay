@@ -2,7 +2,6 @@ import type { Music } from '@/shared/types/music';
 import type { Server as IOServer } from 'socket.io';
 import { MusicService } from '../src/server/music/musicService';
 import type { Store } from '../src/server/persistence';
-import { type WindowCloseManager } from '../src/server/services/windowCloseManager';
 import type { YouTubeService } from '../src/server/services/youtubeService';
 import { SocketManager } from '../src/server/socket/managers/manager';
 import { SocketRuntime } from '../src/server/socket/managers/runtime';
@@ -25,10 +24,6 @@ describe('SocketRuntime', () => {
             clear: () => {},
             start: () => {},
         } as unknown as TimerManager;
-        const windowCloseManager = {
-            clearForOrigin: () => {},
-            processEvent: () => ({ processed: false }),
-        } as unknown as InstanceType<typeof WindowCloseManager>;
 
         const runtime = new SocketRuntime(
             ioGetter as unknown as () => IOServer,
@@ -36,7 +31,6 @@ describe('SocketRuntime', () => {
             youtubeService,
             fileStore,
             timerManager,
-            windowCloseManager,
             { debounceMs: 250, graceMs: 5000, inactivityMs: 10_000 },
         );
 
@@ -61,10 +55,6 @@ describe('SocketRuntime', () => {
             clear: () => {},
             start: () => {},
         } as unknown as TimerManager;
-        const windowCloseManager = {
-            clearForOrigin: () => {},
-            processEvent: () => ({ processed: false }),
-        } as unknown as InstanceType<typeof WindowCloseManager>;
 
         const runtime = new SocketRuntime(
             ioGetter as unknown as () => IOServer,
@@ -72,7 +62,6 @@ describe('SocketRuntime', () => {
             youtubeService,
             fileStore,
             timerManager,
-            windowCloseManager,
             { debounceMs: 250, graceMs: 5000, inactivityMs: 10_000 },
         );
 
@@ -89,7 +78,6 @@ describe('SocketRuntime', () => {
         const youtubeService = {} as any;
         const fileStore = { add: () => {}, remove: () => {} } as any;
         const timerManager = { clear: () => {}, start: () => {} } as any;
-        const windowCloseManager = {} as any;
 
         const runtime = new SocketRuntime(
             ioGetter as any,
@@ -97,7 +85,6 @@ describe('SocketRuntime', () => {
             youtubeService,
             fileStore,
             timerManager,
-            windowCloseManager,
             { debounceMs: 250, graceMs: 5000, inactivityMs: 10_000 },
         );
         const mgr = runtime.createManager();

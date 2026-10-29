@@ -28,6 +28,7 @@ declare module 'express-serve-static-core' {
         params: Record<string, string | undefined>;
         path?: string;
         query: Record<string, string | string[] | undefined>;
+        /** Set by the request-id middleware in configureApp. */
         requestId?: string;
         socket: Socket;
         url: string;

@@ -1,5 +1,5 @@
+import { notify } from '@/app/utils/notifications';
 import type { HistoryItem } from '@/shared/types/history';
-import { runUiAction } from '@/shared/utils/runUiAction';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 export type HistoryReadingMap = Record<string, string[]>;
@@ -30,8 +30,7 @@ export function useHistoryJapaneseReadings(items: HistoryItem[], enabled: boolea
         const warnUnavailable = () => {
             if (warnedRef.current) return;
             warnedRef.current = true;
-            void runUiAction({
-                type: 'showToast',
+            notify({
                 level: 'warning',
                 message: '一部の読み仮名を取得できませんでした。曲名の文字でも検索できます。',
             });

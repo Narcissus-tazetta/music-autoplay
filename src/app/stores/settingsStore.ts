@@ -1,6 +1,6 @@
-import normalizeApiResponse from '@/shared/utils/api';
+import { notify } from '@/app/utils/notifications';
+import { normalizeApiResponse } from '@/shared/utils/api';
 import { parseApiErrorForUI } from '@/shared/utils/apiUi';
-import { runParsedApiError, runUiAction } from '@/shared/utils/runUiAction';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -53,7 +53,7 @@ const loadFromServerAsync = async (): Promise<void> => {
                     details: err.details,
                     message: err.message,
                 });
-                await runParsedApiError(parsed);
+                notify({ level: 'error', message: parsed.message });
             } catch {
                 if (import.meta.env.DEV) console.warn('loadFromServer server error', norm.error);
             }
@@ -85,15 +85,14 @@ const _syncToServerAsync = async (
                     details: err.details,
                     message: err.message,
                 });
-                await runParsedApiError(parsed);
+                notify({ level: 'error', message: parsed.message });
             } catch {
                 if (import.meta.env.DEV) console.warn('syncToServer error', norm.error);
             }
         }
     } catch (error) {
         console.error('設定の保存に失敗しました', error);
-        await runUiAction({
-            type: 'showToast',
+        notify({
             level: 'warning',
             message: '設定をサーバーに保存できませんでした。この端末の設定は保持しています。',
         });

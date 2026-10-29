@@ -4,18 +4,32 @@ import { describe, expect, test } from 'bun:test';
 
 describe('HTTP Rate Limiting', () => {
     describe('getClientIP', () => {
-        test('extracts IP from X-Forwarded-For header', () => {
+        test('takes the address appended by the trusted proxy, not the client-supplied one', () => {
             const request = new Request('http://localhost', {
-                headers: { 'x-forwarded-for': '192.168.1.1, 10.0.0.1' },
+                headers: { 'x-forwarded-for': '203.0.113.9, 192.168.1.1' },
             });
-            expect(getClientIP(request)).toBe('192.168.1.1');
+            expect(getClientIP(request, 1)).toBe('192.168.1.1');
+        });
+
+        test('counts back one entry per trusted hop', () => {
+            const request = new Request('http://localhost', {
+                headers: { 'x-forwarded-for': '203.0.113.9, 192.168.1.1, 10.0.0.1' },
+            });
+            expect(getClientIP(request, 2)).toBe('192.168.1.1');
+        });
+
+        test('falls back to the leftmost entry when the header is shorter than the hop count', () => {
+            const request = new Request('http://localhost', {
+                headers: { 'x-forwarded-for': '192.168.1.1' },
+            });
+            expect(getClientIP(request, 3)).toBe('192.168.1.1');
         });
 
         test('extracts IP from X-Real-IP header', () => {
             const request = new Request('http://localhost', {
                 headers: { 'x-real-ip': '192.168.1.2' },
             });
-            expect(getClientIP(request)).toBe('192.168.1.2');
+            expect(getClientIP(request, 1)).toBe('192.168.1.2');
         });
 
         test('prioritizes X-Forwarded-For over X-Real-IP', () => {
@@ -25,19 +39,26 @@ describe('HTTP Rate Limiting', () => {
                     'x-real-ip': '192.168.1.2',
                 },
             });
-            expect(getClientIP(request)).toBe('192.168.1.1');
+            expect(getClientIP(request, 1)).toBe('192.168.1.1');
         });
 
         test("returns 'unknown' when no IP headers present", () => {
             const request = new Request('http://localhost');
-            expect(getClientIP(request)).toBe('unknown');
+            expect(getClientIP(request, 1)).toBe('unknown');
+        });
+
+        test('ignores forwarding headers entirely when no proxy is trusted', () => {
+            const request = new Request('http://localhost', {
+                headers: { 'x-forwarded-for': '192.168.1.1' },
+            });
+            expect(getClientIP(request, 0)).toBe('unknown');
         });
 
         test('trims whitespace from IP addresses', () => {
             const request = new Request('http://localhost', {
-                headers: { 'x-forwarded-for': '  192.168.1.1  , 10.0.0.1' },
+                headers: { 'x-forwarded-for': '  203.0.113.9  ,  192.168.1.1  ' },
             });
-            expect(getClientIP(request)).toBe('192.168.1.1');
+            expect(getClientIP(request, 1)).toBe('192.168.1.1');
         });
     });
 

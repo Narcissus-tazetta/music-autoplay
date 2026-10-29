@@ -36,12 +36,7 @@ export class SocketEmitter {
         const mergedContext = { ...this.defaultContext, ...context };
 
         try {
-            const io = this.ioGetter();
-            if (typeof io.emit !== 'function') {
-                if (!silent) logger[logLevel](`${errorPrefix}: invalid emitter`, { context: mergedContext, event });
-                return false;
-            }
-            io.emit(event, payload);
+            this.ioGetter().emit(event, payload);
             return true;
         } catch (error) {
             if (!silent) {

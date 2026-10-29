@@ -156,13 +156,7 @@ export class MusicService {
             });
         }
 
-        const canRemove = this.auth.canRemoveMusic(
-            requesterHash,
-            existing.requesterHash,
-        );
-        if (!canRemove.ok) return err(canRemove.error);
-
-        if (!canRemove.value) {
+        if (!this.auth.canRemoveMusic(requesterHash, existing.requesterHash)) {
             return err({
                 code: 'FORBIDDEN',
                 message: getMessage('ERROR_FORBIDDEN'),
@@ -188,7 +182,7 @@ export class MusicService {
 
         this.emitter.logMusicRemovedMetric(id);
 
-        const persistResult = this.repository.persistRemove(id);
+        const persistResult = await this.repository.persistRemove(id);
         if (!persistResult.ok) {
             logger.warn('failed to persist music removal', {
                 error: persistResult.error,
@@ -212,13 +206,7 @@ export class MusicService {
             });
         }
 
-        const canReorder = this.auth.canRemoveMusic(
-            requesterHash,
-            existing.requesterHash,
-        );
-        if (!canReorder.ok) return err(canReorder.error);
-
-        if (!canReorder.value) {
+        if (!this.auth.canRemoveMusic(requesterHash, existing.requesterHash)) {
             return err({
                 code: 'FORBIDDEN',
                 message: getMessage('ERROR_REORDER_FORBIDDEN'),
@@ -241,7 +229,7 @@ export class MusicService {
 
         this.emitUrlListUpdate();
 
-        const persistResult = this.repository.persistReorder();
+        const persistResult = await this.repository.persistReorder();
         if (!persistResult.ok) {
             logger.warn('failed to persist music reorder', {
                 error: persistResult.error,

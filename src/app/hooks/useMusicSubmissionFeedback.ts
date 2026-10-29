@@ -1,6 +1,5 @@
 import useFormErrors from '@/app/hooks/useFormErrors';
-import { getMessage } from '@/shared/constants/messages';
-import { runUiAction } from '@/shared/utils/runUiAction';
+import { notify } from '@/app/utils/notifications';
 import { useEffect, useRef, useState } from 'react';
 
 interface FetcherLike {
@@ -43,14 +42,13 @@ export function useMusicSubmissionFeedback({
         if (wasSubmitting && isNowIdle && (data?.status === 'success' || isSuccessReply)) {
             const message = actionRef.current?.endsWith('/music/remove')
                 ? '削除できました'
-                : getMessage('SUCCESS_ADDED');
+                : '追加できました';
             setInlineFeedback({ message, tone: 'success' });
             if (!hasShownToastRef.current) {
                 hasShownToastRef.current = true;
-                void runUiAction({
+                notify({
                     level: 'success',
                     message,
-                    type: 'showToast',
                 });
             }
         }
@@ -58,7 +56,7 @@ export function useMusicSubmissionFeedback({
         if (wasSubmitting && isNowIdle && errorMessage) {
             setInlineFeedback({ message: errorMessage, tone: 'error' });
 
-            void runUiAction({ level: 'error', message: errorMessage, type: 'showToast' });
+            notify({ level: 'error', message: errorMessage });
         }
 
         if (wasSubmitting && isNowIdle && !errorMessage && formErrorsString) {
@@ -69,7 +67,7 @@ export function useMusicSubmissionFeedback({
                 tone: 'error',
             });
 
-            void runUiAction({ level: 'error', message: formErrorsString, type: 'showToast' });
+            notify({ level: 'error', message: formErrorsString });
         }
 
         if (fetcher.state === 'submitting') {

@@ -1,5 +1,5 @@
 import logger from '@/server/logger.server';
-import { importJWK, jwtVerify } from 'jose';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { OAuth2Strategy } from 'remix-auth-oauth2';
 
 export interface GoogleOIDCClaims {
@@ -13,6 +13,18 @@ export interface GoogleOIDCClaims {
     iss: string; // 発行者（Google）
     email_verified: boolean; // メール確認済み
 }
+
+/**
+ * Google's signing keys, fetched once and refreshed on rotation.
+ *
+ * This replaces fetching the JWKS and hand-decoding the JWT header on every single login:
+ * that added an uncached, untimed round trip to each sign-in, and decoded the header as
+ * base64 rather than base64url, so a `-`/`_` in it silently corrupted the key lookup.
+ */
+const googleJwks = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'), {
+    cooldownDuration: 30_000,
+    timeoutDuration: 5_000,
+});
 
 export class GoogleOIDCStrategy<User> extends OAuth2Strategy<User> {
     name = 'google-oidc';
@@ -50,29 +62,10 @@ export class GoogleOIDCStrategy<User> extends OAuth2Strategy<User> {
         clientId: string,
     ): Promise<GoogleOIDCClaims> {
         try {
-            const jwks = await fetch(
-                `https://www.googleapis.com/oauth2/v3/certs`,
-            ).then(
-                res => res.json() as Promise<{ keys: Record<string, unknown>[] }>,
-            );
-
-            const [header] = idToken.split('.');
-            const decodedHeader = JSON.parse(
-                Buffer.from(header, 'base64').toString('utf8'),
-            ) as Record<string, string>;
-
-            const key = jwks.keys.find(k => k.kid === decodedHeader.kid);
-            if (!key) throw new Error('Public key not found');
-
-            const publicKey = await importJWK(key);
-            const { payload } = await jwtVerify<GoogleOIDCClaims>(
-                idToken,
-                publicKey,
-                {
-                    audience: clientId,
-                    issuer: 'https://accounts.google.com',
-                },
-            );
+            const { payload } = await jwtVerify<GoogleOIDCClaims>(idToken, googleJwks, {
+                audience: clientId,
+                issuer: 'https://accounts.google.com',
+            });
 
             if (!payload.sub || !payload.email) throw new Error('Invalid ID token payload');
 

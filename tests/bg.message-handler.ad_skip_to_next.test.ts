@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { setupMessageHandler } from '../youtube-auto-play/src/bg/message-handler';
-import createFakeChrome from './helpers/fakeChrome';
-import createFakeSocket from './helpers/fakeSocket';
+import { createFakeChrome } from './helpers/fakeChrome';
+import { createFakeSocket } from './helpers/fakeSocket';
 
 describe('background message-handler ad_skip_to_next', () => {
     test('ad_skip_to_next sends video_ended and video_next via socket with tabId', () => {

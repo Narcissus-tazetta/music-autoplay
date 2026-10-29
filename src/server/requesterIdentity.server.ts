@@ -93,24 +93,22 @@ export async function ensureAnonymousIdCookie(
     return { anonId, setCookieHeader };
 }
 
+/**
+ * The bucket a rate limiter counts against.
+ *
+ * It must come from something the caller cannot rewrite at will. Both branches below are
+ * verified: `requesterHash` is derived from the signed session or the signed anonymous-id
+ * cookie, and the IP fallback is the address the trusted proxy observed. Keying off raw
+ * cookie bytes, as this used to, let anyone mint a fresh bucket per request and walk past
+ * the limit entirely.
+ */
 export async function getRateLimitKey(
     request: Request,
     cookieHeader: string | null | undefined,
+    preloadedSession?: LoginSession,
 ): Promise<string> {
-    if (cookieHeader) {
-        const session = await loginSession.getSession(cookieHeader);
-        const user = session.get('user');
-        if (user) return `user:${hashRequesterId(user.id)}`;
+    const { requesterHash } = await resolveRequesterIdentity(cookieHeader, preloadedSession);
+    if (requesterHash) return `id:${requesterHash.slice(0, 16)}`;
 
-        const anonId = await parseAnonymousId(cookieHeader);
-        if (anonId) return `anon:${hashRequesterId(anonId)}`;
-    }
-
-    const userAgent = request.headers.get('user-agent');
-    const accept = request.headers.get('accept');
-    const acceptLang = request.headers.get('accept-language');
-    const clientIP = getClientIP(request);
-
-    const fingerprint = `${clientIP}:${userAgent}:${accept}:${acceptLang}`;
-    return `fp:${createHash('sha256').update(fingerprint).digest('hex').substring(0, 16)}`;
+    return `ip:${createHash('sha256').update(getClientIP(request)).digest('hex').slice(0, 16)}`;
 }

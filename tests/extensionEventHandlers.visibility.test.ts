@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { setupExtensionEventHandlers } from '../src/server/socket/handlers/extensionEventHandlers';
-import createFakeEmitter from './helpers/fakeEmitter';
-import createFakeRepo from './helpers/fakeRepo';
-import createFakeSocket from './helpers/fakeSocket';
+import { createFakeEmitter } from './helpers/fakeEmitter';
+import { createFakeRepo } from './helpers/fakeRepo';
+import { createFakeSocket } from './helpers/fakeSocket';
 
 describe('visibility state handling', () => {
     test('hidden visibility resets consecutive stalls and prevents ad decision', () => {

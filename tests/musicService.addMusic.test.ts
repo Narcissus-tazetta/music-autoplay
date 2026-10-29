@@ -6,6 +6,7 @@ import type { YouTubeResolver } from '@/server/music/youtubeResolver';
 import type { Music } from '@/shared/types/music';
 import { ok } from '@/shared/utils/errors/result-handlers';
 import { describe, expect, it } from 'bun:test';
+import { createMemoryStore } from './helpers/memoryStore';
 
 function makeMusic(id: string): Music {
     return {
@@ -33,7 +34,7 @@ function makeResolver(id: string): YouTubeResolver {
 
 describe('MusicService.addMusic ordering broadcast', () => {
     it('emits queueReordered with the authoritative order when inserted mid-queue', async () => {
-        const repository = new MusicRepository(new Map(), undefined as never);
+        const repository = new MusicRepository(new Map(), createMemoryStore());
         repository.add(makeMusic('a'));
         repository.add(makeMusic('b'));
 
@@ -57,7 +58,7 @@ describe('MusicService.addMusic ordering broadcast', () => {
     });
 
     it('does not emit queueReordered for a plain append', async () => {
-        const repository = new MusicRepository(new Map(), undefined as never);
+        const repository = new MusicRepository(new Map(), createMemoryStore());
         repository.add(makeMusic('a'));
 
         const emitted: Array<{ event: string; payload: unknown }> = [];

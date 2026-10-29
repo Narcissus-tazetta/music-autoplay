@@ -1,6 +1,5 @@
 import type { RemoteStatus } from '@/shared/types/music';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import { WindowCloseManager } from '../src/server/services/windowCloseManager';
 import { SocketManager } from '../src/server/socket/managers/manager';
 import type { EmitFn, ManagerConfig } from '../src/server/socket/managers/manager';
 import { TimerManager } from '../src/server/utils/timerManager';
@@ -10,7 +9,6 @@ describe('SocketManager', () => {
     let emitMock: ReturnType<typeof mock>;
     let emittedEvents: { event: string; payload: any }[];
     let timerManager: TimerManager;
-    let windowCloseManager: WindowCloseManager;
 
     beforeEach(() => {
         emittedEvents = [];
@@ -20,7 +18,6 @@ describe('SocketManager', () => {
         });
 
         timerManager = new TimerManager();
-        windowCloseManager = new WindowCloseManager(500);
 
         const config: ManagerConfig = {
             debounceMs: 100,
@@ -31,7 +28,6 @@ describe('SocketManager', () => {
         manager = new SocketManager(
             emitMock as unknown as EmitFn,
             timerManager,
-            windowCloseManager,
             config,
         );
     });
@@ -391,11 +387,9 @@ describe('SocketManager', () => {
                 return true;
             });
             const localTimer = new TimerManager();
-            const localWindowClose = new WindowCloseManager(10);
             const localManager = new SocketManager(
                 localEmit as unknown as EmitFn,
                 localTimer,
-                localWindowClose,
                 {
                     debounceMs: 10,
                     graceMs: 10,
@@ -428,8 +422,7 @@ describe('SocketManager', () => {
 
 test('paused snapshots reflect seeking and switching videos', () => {
     const timers = new TimerManager();
-    const windows = new WindowCloseManager(0);
-    const manager = new SocketManager(() => true, timers, windows, { debounceMs: 0, graceMs: 0, inactivityMs: 0 });
+    const manager = new SocketManager(() => true, timers, { debounceMs: 0, graceMs: 0, inactivityMs: 0 });
     try {
         manager.update({ type: 'paused', musicId: 'A', currentTime: 10, duration: 100 });
         manager.update({ type: 'paused', musicId: 'A', currentTime: 50, duration: 100 });
@@ -438,6 +431,5 @@ test('paused snapshots reflect seeking and switching videos', () => {
         expect(manager.getSnapshot()).toMatchObject({ musicId: 'B', currentTime: 80, duration: 200 });
     } finally {
         manager.shutdown();
-        windows.destroy();
     }
 });

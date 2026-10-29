@@ -34,6 +34,23 @@ export class RateLimiter {
         return Math.min(...arr);
     }
 
+    /**
+     * Drops keys whose attempts have all aged out. Without it the map only ever shrinks for
+     * keys that come back, so a caller cycling through keys grows it without bound.
+     */
+    sweep(): number {
+        const now = Date.now();
+        let removed = 0;
+        for (const [key, timestamps] of this.attempts) {
+            const recent = timestamps.filter(t => now - t < this.windowMs);
+            if (recent.length === 0) {
+                this.attempts.delete(key);
+                removed++;
+            } else if (recent.length !== timestamps.length) { this.attempts.set(key, recent); }
+        }
+        return removed;
+    }
+
     getRetryAfterSeconds(key: string): number {
         const now = Date.now();
         const recent = (this.attempts.get(key) ?? []).filter(t => now - t < this.windowMs);

@@ -11,7 +11,7 @@ import type { ZodError, ZodSchema } from 'zod';
 import logger, { withContext } from '../../logger.server';
 import { RateLimiter } from '../../services/rateLimiter';
 
-export interface AuthContext {
+interface AuthContext {
     socketId: string;
     requesterHash?: string;
 }
@@ -23,17 +23,12 @@ export interface EventContext extends Record<string, unknown> {
     socket?: Socket;
 }
 
-export type AuthChecker = (context: AuthContext) => boolean | Promise<boolean>;
+type AuthChecker = (context: AuthContext) => boolean | Promise<boolean>;
 
-export interface RateLimiterConfig {
+interface RateLimiterConfig {
     maxAttempts: number;
     windowMs: number;
     keyGenerator?: (socket: Socket) => string;
-}
-
-export interface ValidationError {
-    field: string;
-    message: string;
 }
 
 export interface EventHandlerConfig<TPayload, TResponse> {
@@ -204,7 +199,7 @@ export function createSocketEventHandler<TPayload, TResponse>(
                     socketId: ctx.socketId,
                 });
 
-                const reply = createServerErrorReply(error);
+                const reply = createServerErrorReply();
                 if (callback) callback(reply);
             }
         }, `socket:${config.event}`);

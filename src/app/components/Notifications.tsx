@@ -1,7 +1,7 @@
-import { useWindowAppApi } from '@/app/hooks/useWindowAppApi';
+import { useNotifications } from '@/app/hooks/useNotifications';
 
 export function Notifications() {
-    const { notification, dismissNotification } = useWindowAppApi();
+    const { notification, dismissNotification } = useNotifications();
     return (
         <div
             className='fixed bottom-4 right-4 left-4 sm:left-auto sm:max-w-md z-100'

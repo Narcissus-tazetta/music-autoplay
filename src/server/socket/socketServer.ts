@@ -5,38 +5,29 @@ import type { Server } from 'socket.io';
 import type { Server as IOServer } from 'socket.io';
 import logger from '../logger.server';
 import type { MusicService } from '../music/musicService';
-import { createMusicService } from '../music/musicServiceFactory';
 import type { Store } from '../persistence';
 import type { RateLimiter } from '../services/rateLimiter';
 import { RateLimiterManager } from '../services/rateLimiterManager';
-import type { WindowCloseManager } from '../services/windowCloseManager';
 import type { YouTubeService } from '../services/youtubeService';
-import { createSocketEmitter } from '../utils/safeEmit';
 import { TimerManager } from '../utils/timerManager';
 import { createSocketServerComponents } from './components';
-import type { SocketManager } from './managers/manager';
+import type { SocketRuntime } from './managers/runtime';
 import type { ReplyOptions } from './types';
 
 export class SocketServerInstance {
     musicDB: Map<string, Music> = new Map();
-    remoteStatus: RemoteStatus = {
-        type: 'closed',
-    };
     private adminHash: string;
 
     io?: Server<C2S, S2C>;
     youtubeService: YouTubeService;
     fileStore: Store;
-    private remoteStatusUpdatedAt = 0;
+    private runtime?: SocketRuntime;
     private remoteStatusDebounceMs: number;
     private remoteStatusGraceMs: number;
     private remoteStatusInactivityMs: number;
     private remoteStatusInactivityMsPlaying: number;
     private remoteStatusInactivityMsPaused: number;
     private timerManager = new TimerManager();
-    private windowCloseManager: InstanceType<typeof WindowCloseManager>;
-    private manager?: SocketManager;
-    private musicService?: MusicService;
     private rateLimiter: RateLimiter;
     private httpRateLimiter: RateLimiter;
 
@@ -44,16 +35,13 @@ export class SocketServerInstance {
         const components = createSocketServerComponents({
             fileStore,
             musicDB: this.musicDB,
-            remoteStatus: this.remoteStatus,
             youtubeService,
         });
 
         this.youtubeService = components.youtubeService;
         this.fileStore = components.fileStore;
         this.musicDB = components.musicDB;
-        this.remoteStatus = components.remoteStatus;
         this.adminHash = components.adminHash;
-        this.windowCloseManager = components.windowCloseManager;
         this.rateLimiter = components.rateLimiter;
         this.httpRateLimiter = components.httpRateLimiter;
         this.remoteStatusDebounceMs = components.socketConfig.remoteStatusDebounceMs;
@@ -86,11 +74,11 @@ export class SocketServerInstance {
                 inactivityMsPaused: this.remoteStatusInactivityMsPaused,
             },
             timerManager: this.timerManager,
-            windowCloseManager: this.windowCloseManager,
             youtubeService: this.youtubeService,
         });
         logger.info('initSocketServer completed');
         this.io = res.io as Server<C2S, S2C>;
+        this.runtime = res.runtime;
         return Promise.resolve();
     }
 
@@ -104,7 +92,6 @@ export class SocketServerInstance {
         connectedSockets: number;
         roomCount: number;
         timerCount: number;
-        windowClose: { lastEventCount: number; timerCount: number };
         rateLimiter: {
             socket: { totalKeys: number; totalAttempts: number };
             http: { totalKeys: number; totalAttempts: number };
@@ -115,11 +102,10 @@ export class SocketServerInstance {
         const roomMap = io?.sockets?.adapter?.rooms;
         return {
             musicDBSize: this.musicDB.size,
-            remoteStatusType: this.remoteStatus.type,
+            remoteStatusType: this.runtime?.getManager()?.getCurrent().type ?? 'closed',
             connectedSockets: socketMap ? socketMap.size : 0,
             roomCount: roomMap ? roomMap.size : 0,
             timerCount: this.timerManager.getSize(),
-            windowClose: this.windowCloseManager.getStats(),
             rateLimiter: {
                 socket: this.rateLimiter.getStats(),
                 http: this.httpRateLimiter.getStats(),
@@ -131,7 +117,6 @@ export class SocketServerInstance {
         if (!this.io) return;
 
         RateLimiterManager.getInstance().stopCleanup();
-        this.windowCloseManager.destroy();
         this.timerManager.clearAll();
 
         await new Promise<void>(resolve => {
@@ -154,17 +139,13 @@ export class SocketServerInstance {
         return this.io;
     }
 
+    /**
+     * The same instance the socket handlers use. Building a second one here gave the HTTP
+     * actions their own emitter over the identical musicDB and store.
+     */
     private getMusicService(): MusicService {
-        if (!this.musicService) {
-            const emitter = createSocketEmitter(() => this.getIo());
-            this.musicService = createMusicService({
-                emitFn: (ev, payload, opts?) => emitter.emit(ev, payload, opts),
-                fileStore: this.fileStore,
-                musicDB: this.musicDB,
-                youtubeService: this.youtubeService,
-            });
-        }
-        return this.musicService;
+        if (!this.runtime) throw new Error('SocketServerInstance not initialized (call init first)');
+        return this.runtime.getMusicService();
     }
     async addMusic(
         url: string,

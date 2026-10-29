@@ -66,5 +66,3 @@ export function createFakeChrome() {
     (global as any).chrome = { tabs, runtime, storage } as any;
     return { tabs, runtime, storage };
 }
-
-export default createFakeChrome;

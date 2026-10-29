@@ -1,13 +1,25 @@
 import type { RemoteStatus } from '@/shared/types/music';
 import { isRecord } from '@/shared/utils/typeGuards';
 import { extractYoutubeId } from '@/shared/utils/youtube';
-import { createEventRegistrar, type ExtensionContext, isSameVideoOrUnknown } from './extensionHandlerContext';
+import {
+    createEventRegistrar,
+    type ExtensionContext,
+    isSameVideoOrUnknown,
+    trackByVideo,
+} from './extensionHandlerContext';
 import { handlePausedVideoCompletion } from './playbackHandlers';
 
 const AUTHORITATIVE_PAUSE_HOLD_MS = 3000;
 const AUTHORITATIVE_RESUME_EPSILON_SEC = 0.75;
 const EXTERNAL_VIDEO_TITLE_CACHE_TTL_MS = 10 * 60 * 1000;
 const EXTERNAL_VIDEO_TITLE_CACHE_MAX = 500;
+
+/**
+ * Shared by every connection on purpose: a per-connection cache is empty on each reconnect,
+ * which is exactly when the titles get looked up again. It exists on top of YouTubeService's
+ * own cache only because the `動画ID: …` fallback for a failed lookup is not cached there.
+ */
+const externalVideoTitleCache = new Map<string, { title: string; cachedAt: number }>();
 
 /**
  * `youtube_video_state` / `ad_state_changed` / `tab_closed`: the extension's
@@ -17,8 +29,6 @@ export function registerVideoStateHandlers(ctx: ExtensionContext): void {
     const { connectionId, history, log, manager, repository, socket, state, youtubeService } = ctx;
     const { authoritativeVideoState, lastAdSnapshotByVideoId, lastProgressSnapshotByVideoId } = state;
     const on = createEventRegistrar(ctx);
-
-    const externalVideoTitleCache = new Map<string, { title: string; cachedAt: number }>();
 
     const getExternalVideoTitle = async (videoId: string): Promise<string> => {
         const now = Date.now();
@@ -89,20 +99,14 @@ export function registerVideoStateHandlers(ctx: ExtensionContext): void {
 
         if (stateRaw === 'window_close') {
             const status: RemoteStatus = { type: 'closed' };
-            try {
-                manager.update(status, 'extension');
-                log.info(
-                    'youtube_video_state processed: window_close -> remote closed',
-                    {
-                        connectionId,
-                        socketId: socket.id,
-                    },
-                );
-            } catch (error) {
-                log.warn('failed to update remote status (window_close)', {
-                    error: error,
-                });
-            }
+            manager.update(status, 'extension');
+            log.info(
+                'youtube_video_state processed: window_close -> remote closed',
+                {
+                    connectionId,
+                    socketId: socket.id,
+                },
+            );
             return;
         }
 
@@ -113,18 +117,12 @@ export function registerVideoStateHandlers(ctx: ExtensionContext): void {
                 musicTitle: undefined,
                 type: 'paused',
             };
-            try {
-                manager.update(transitionStatus, 'transitioning');
-                log.info('youtube_video_state: transitioning to next video', {
-                    connectionId,
-                    socketId: socket.id,
-                    url,
-                });
-            } catch (error) {
-                log.warn('failed to update remote status (transitioning)', {
-                    error: error,
-                });
-            }
+            manager.update(transitionStatus, 'transitioning');
+            log.info('youtube_video_state: transitioning to next video', {
+                connectionId,
+                socketId: socket.id,
+                url,
+            });
             return;
         }
 
@@ -137,22 +135,18 @@ export function registerVideoStateHandlers(ctx: ExtensionContext): void {
                 // Avoid leaving remoteStatus stuck in 'playing' if video_ended is missed.
                 if (videoId) {
                     history.recordCompletedHistory(videoId, 'youtube_video_state:ended', music);
-                    try {
-                        manager.update(
-                            {
-                                type: 'paused',
-                                isTransitioning: true,
-                                currentTime: incomingCurrentTime,
-                                duration: incomingDuration,
-                                musicId: music ? videoId : undefined,
-                                musicTitle: music?.title,
-                                videoId: videoId,
-                            },
-                            'youtube_video_state:ended',
-                        );
-                    } catch (error) {
-                        log.warn('failed to update remote status (ended -> paused)', { error });
-                    }
+                    manager.update(
+                        {
+                            type: 'paused',
+                            isTransitioning: true,
+                            currentTime: incomingCurrentTime,
+                            duration: incomingDuration,
+                            musicId: music ? videoId : undefined,
+                            musicTitle: music?.title,
+                            videoId: videoId,
+                        },
+                        'youtube_video_state:ended',
+                    );
                 }
             }
             return;
@@ -301,7 +295,7 @@ export function registerVideoStateHandlers(ctx: ExtensionContext): void {
                 };
 
             if (resolvedVideoId) {
-                authoritativeVideoState.set(resolvedVideoId, {
+                trackByVideo(authoritativeVideoState, resolvedVideoId, {
                     state: videoState,
                     receivedAt: Date.now(),
                     seq: incomingSeq,
@@ -315,22 +309,16 @@ export function registerVideoStateHandlers(ctx: ExtensionContext): void {
                 });
             }
 
-            try {
-                manager.update(remoteStatus, 'extension');
-                log.info('youtube_video_state processed', {
-                    connectionId,
-                    isAdvertisement: videoState === 'playing' ? isAdvertisement : undefined,
-                    isExternalVideo,
-                    matched: !!match,
-                    socketId: socket.id,
-                    state: stateRaw,
-                    url,
-                });
-            } catch (error) {
-                log.warn('failed to update remote status (playing/paused)', {
-                    error: error,
-                });
-            }
+            manager.update(remoteStatus, 'extension');
+            log.info('youtube_video_state processed', {
+                connectionId,
+                isAdvertisement: videoState === 'playing' ? isAdvertisement : undefined,
+                isExternalVideo,
+                matched: !!match,
+                socketId: socket.id,
+                state: stateRaw,
+                url,
+            });
 
             if (
                 videoState === 'paused'
@@ -342,7 +330,7 @@ export function registerVideoStateHandlers(ctx: ExtensionContext): void {
                 && resolvedVideoId
                 && repository.has(resolvedVideoId)
             ) {
-                handlePausedVideoCompletion(ctx, resolvedVideoId);
+                await handlePausedVideoCompletion(ctx, resolvedVideoId);
             }
             return;
         }
@@ -368,20 +356,12 @@ export function registerVideoStateHandlers(ctx: ExtensionContext): void {
             timestamp: new Date().toISOString(),
         });
 
-        try {
-            const current = manager.getCurrent();
-            if (current.type !== 'closed') manager.update({ type: 'closed' }, 'tab_closed');
-            log.debug('tab_closed: cleanup completed', {
-                socketId: socket.id,
-                tabId,
-            });
-        } catch (error) {
-            log.warn('tab_closed: cleanup failed', {
-                error: error,
-                socketId: socket.id,
-                tabId,
-            });
-        }
+        const current = manager.getCurrent();
+        if (current.type !== 'closed') manager.update({ type: 'closed' }, 'tab_closed');
+        log.debug('tab_closed: cleanup completed', {
+            socketId: socket.id,
+            tabId,
+        });
     });
 
     on('ad_state_changed', async payload => {
@@ -417,7 +397,7 @@ export function registerVideoStateHandlers(ctx: ExtensionContext): void {
                 videoId,
             });
 
-            lastAdSnapshotByVideoId.set(videoId, {
+            trackByVideo(lastAdSnapshotByVideoId, videoId, {
                 isAdvertisement: isAd,
                 adTimestamp: isAd ? timestamp : undefined,
             });

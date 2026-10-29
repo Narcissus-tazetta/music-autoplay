@@ -1,41 +1,17 @@
-import logger from '@/server/logger.server';
 import type { Music } from '@/shared/types/music';
 import type { Store } from './types';
 
-export async function persistAdd(
-    store: Store | undefined,
-    music: Music,
-    atIndex?: number,
-): Promise<void> {
-    if (!store || typeof store.add !== 'function') return;
-    try {
-        const res = store.add(music, atIndex);
-        if (res && typeof (res as { then?: unknown }).then === 'function') await res;
-    } catch (error) {
-        try {
-            logger.warn('failed to persist music add', {
-                error: error,
-                id: music.id,
-            });
-        } catch (logError) {
-            void logError;
-        }
-    }
+/**
+ * Awaits the store's own async write so a rejection reaches the caller.
+ *
+ * These used to catch and log, then return normally, which made every persist look like a
+ * success to MusicRepository — the `if (!persistResult.ok)` branches above it were dead and
+ * a full disk went unreported.
+ */
+export async function persistAdd(store: Store, music: Music, atIndex?: number): Promise<void> {
+    await store.add(music, atIndex);
 }
 
-export async function persistRemove(
-    store: Store | undefined,
-    id: string,
-): Promise<void> {
-    if (!store || typeof store.remove !== 'function') return;
-    try {
-        const res = store.remove(id);
-        if (res && typeof (res as { then?: unknown }).then === 'function') await res;
-    } catch (error) {
-        try {
-            logger.warn('failed to persist music removal', { error: error, id });
-        } catch (logError) {
-            void logError;
-        }
-    }
+export async function persistRemove(store: Store, id: string): Promise<void> {
+    await store.remove(id);
 }

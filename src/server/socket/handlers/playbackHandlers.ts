@@ -9,6 +9,7 @@ import {
     nextIndexWithWrap,
     removeMusicAndBroadcast,
     reportNoNextVideo,
+    trackByVideo,
 } from './extensionHandlerContext';
 
 const VIDEO_END_DEBOUNCE_MS = 500;
@@ -21,7 +22,7 @@ const NO_TAB_ID = -1;
  * Auto-advance triggered by a `paused` state report that sits at 100% of the
  * duration, i.e. the extension never sent `video_ended` for this video.
  */
-export function handlePausedVideoCompletion(ctx: ExtensionContext, videoId: string): void {
+export async function handlePausedVideoCompletion(ctx: ExtensionContext, videoId: string): Promise<void> {
     const { history, repository } = ctx;
 
     const preList = repository.list();
@@ -33,7 +34,7 @@ export function handlePausedVideoCompletion(ctx: ExtensionContext, videoId: stri
     const nextId = preList.length > 1 ? preList[nextIndexWithWrap(preList, preIdx)].id : undefined;
 
     history.recordCompletedHistory(videoId, 'paused_ended', endedMusic);
-    removeMusicAndBroadcast(ctx, videoId, 'paused_100');
+    await removeMusicAndBroadcast(ctx, videoId, 'paused_100');
 
     const postList = repository.list();
     if (postList.length === 0) {
@@ -137,7 +138,7 @@ export function registerPlaybackHandlers(ctx: ExtensionContext): void {
                 log.debug('video_ended: debounced duplicate', { videoId, elapsed: now - lastProcessed });
                 return;
             }
-            videoEndDebounce.set(videoId, now);
+            trackByVideo(videoEndDebounce, videoId, now);
             setTimeout(() => videoEndDebounce.delete(videoId), VIDEO_END_DEBOUNCE_MS * 2);
 
             log.info('video_ended: received', {
@@ -171,14 +172,14 @@ export function registerPlaybackHandlers(ctx: ExtensionContext): void {
                 ? preRemoveList[nextIndexWithWrap(preRemoveList, preIndex)].id
                 : undefined;
 
-            pendingNextByTabId.set(tabId, {
+            trackByVideo(pendingNextByTabId, tabId, {
                 videoId,
                 nextCandidateId,
                 createdAt: Date.now(),
             });
 
             history.recordCompletedHistory(videoId, 'video_ended', endedMusic);
-            removeMusicAndBroadcast(ctx, videoId, 'video_ended');
+            await removeMusicAndBroadcast(ctx, videoId, 'video_ended');
         } catch (error) {
             log.warn('video_ended: failed to process', {
                 error: error,

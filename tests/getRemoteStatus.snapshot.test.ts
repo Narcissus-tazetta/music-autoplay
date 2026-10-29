@@ -1,17 +1,14 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { WindowCloseManager } from '../src/server/services/windowCloseManager';
 import { SocketManager } from '../src/server/socket/managers/manager';
 import { TimerManager } from '../src/server/utils/timerManager';
 
 describe('SocketManager getSnapshot extrapolation', () => {
     let manager: SocketManager;
     let timerManager: TimerManager;
-    let windowCloseManager: WindowCloseManager;
 
     beforeEach(() => {
         timerManager = new TimerManager();
-        windowCloseManager = new WindowCloseManager(500);
-        manager = new SocketManager(() => true, timerManager, windowCloseManager, {
+        manager = new SocketManager(() => true, timerManager, {
             debounceMs: 100,
             graceMs: 200,
             inactivityMs: 60_000,

@@ -1,12 +1,13 @@
+import { MusicRepository } from '@/server/music/musicRepository';
 import type { Music } from '@/shared/types/music';
 import { persistAdd, persistRemove } from '../src/server/persistence/storeHelpers';
 import type { Store } from '../src/server/persistence/types';
 import { describe, expect, it } from './bunTestCompat';
 
 /**
- * These helpers exist so a failing disk/mongo write never takes down an in-memory queue
- * mutation that already succeeded. Only the happy path was covered, which meant the
- * swallow-and-log branches - the entire reason the helpers exist - were never executed.
+ * A failing disk/mongo write must reach the caller. These helpers used to catch and log,
+ * then return normally, so MusicRepository always reported success and the `!ok` branches
+ * above it could never run.
  */
 const music: Music = {
     channelId: 'UCtest',
@@ -47,27 +48,20 @@ describe('persistAdd', () => {
         expect(settled).toBe(true);
     });
 
-    it('swallows a synchronous store failure', async () => {
+    it('propagates a synchronous store failure', async () => {
         const store = storeWith({
             add: () => {
                 throw new Error('disk full');
             },
         });
 
-        await expect(persistAdd(store, music)).resolves.toBeUndefined();
+        await expect(persistAdd(store, music)).rejects.toThrow('disk full');
     });
 
-    it('swallows a rejected async add', async () => {
+    it('propagates a rejected async add', async () => {
         const store = storeWith({ add: () => Promise.reject(new Error('mongo down')) });
 
-        await expect(persistAdd(store, music)).resolves.toBeUndefined();
-    });
-
-    it('is a no-op when the store is missing or has no add', async () => {
-        await expect(persistAdd(undefined, music)).resolves.toBeUndefined();
-        await expect(
-            persistAdd({ add: undefined } as unknown as Store, music),
-        ).resolves.toBeUndefined();
+        await expect(persistAdd(store, music)).rejects.toThrow('mongo down');
     });
 });
 
@@ -94,26 +88,46 @@ describe('persistRemove', () => {
         expect(settled).toBe(true);
     });
 
-    it('swallows a synchronous store failure', async () => {
-        const store = storeWith({
-            remove: () => {
-                throw new Error('disk full');
-            },
-        });
-
-        await expect(persistRemove(store, 'abc')).resolves.toBeUndefined();
-    });
-
-    it('swallows a rejected async remove', async () => {
+    it('propagates a rejected async remove', async () => {
         const store = storeWith({ remove: () => Promise.reject(new Error('mongo down')) });
 
-        await expect(persistRemove(store, 'abc')).resolves.toBeUndefined();
+        await expect(persistRemove(store, 'abc')).rejects.toThrow('mongo down');
+    });
+});
+
+describe('MusicRepository persistence results', () => {
+    const repositoryWith = (store: Store) => new MusicRepository(new Map(), store);
+
+    it('reports a failed add as an error result', async () => {
+        const repository = repositoryWith(storeWith({ add: () => Promise.reject(new Error('disk full')) }));
+
+        const result = await repository.persistAdd(music);
+
+        expect(result.ok).toBe(false);
     });
 
-    it('is a no-op when the store is missing or has no remove', async () => {
-        await expect(persistRemove(undefined, 'abc')).resolves.toBeUndefined();
-        await expect(
-            persistRemove({ remove: undefined } as unknown as Store, 'abc'),
-        ).resolves.toBeUndefined();
+    it('reports a failed remove as an error result', async () => {
+        const repository = repositoryWith(storeWith({ remove: () => Promise.reject(new Error('disk full')) }));
+
+        const result = await repository.persistRemove('abc');
+
+        expect(result.ok).toBe(false);
+    });
+
+    it('reports a failed reorder as an error result', async () => {
+        const repository = repositoryWith(
+            storeWith({ reorder: () => Promise.reject(new Error('disk full')) }),
+        );
+
+        const result = await repository.persistReorder();
+
+        expect(result.ok).toBe(false);
+    });
+
+    it('reports success when the store accepts the write', async () => {
+        const repository = repositoryWith(storeWith({}));
+
+        expect((await repository.persistAdd(music)).ok).toBe(true);
+        expect((await repository.persistRemove('abc')).ok).toBe(true);
     });
 });

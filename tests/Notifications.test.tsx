@@ -3,6 +3,7 @@ import { JSDOM } from 'jsdom';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Notifications } from '../src/app/components/Notifications';
+import { notify } from '../src/app/utils/notifications';
 
 test('notifications show API feedback and can be dismissed', async () => {
     const dom = new JSDOM('<div id="root"></div>', { url: 'http://localhost' });
@@ -19,11 +20,8 @@ test('notifications show API feedback and can be dismissed', async () => {
         await act(async () => {
             root.render(<Notifications />);
         });
-        const api =
-            (window as unknown as { __app__: { showToast: (message: { level: string; message: string }) => void } })
-                .__app__;
         await act(async () => {
-            api.showToast({ level: 'error', message: '送信に失敗しました' });
+            notify({ level: 'error', message: '送信に失敗しました' });
         });
         expect(container.querySelector('[role="alert"]')?.textContent).toContain('送信に失敗しました');
         await act(async () => {

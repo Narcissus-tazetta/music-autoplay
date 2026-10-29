@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { MusicRepository } from '../src/server/music/musicRepository';
 import { setupExtensionEventHandlers } from '../src/server/socket/handlers/extensionEventHandlers';
-import createFakeSocket from './helpers/fakeSocket';
+import { createFakeSocket } from './helpers/fakeSocket';
+import { createMemoryStore } from './helpers/memoryStore';
 
 /**
  * Auto-advance driven by a `paused` report sitting at 100% of the duration — the path the
@@ -85,7 +86,7 @@ function pausedAtEnd(socket: ReturnType<typeof createFakeSocket>, videoId: strin
 function setup(ids: string[], emitterOverrides: Record<string, unknown> = {}) {
     const socket = createFakeSocket();
     const musicMap = new Map(ids.map(id => [id, makeMusic(id)]));
-    const repository = new MusicRepository(musicMap, undefined as never);
+    const repository = new MusicRepository(musicMap, createMemoryStore());
     const emitter = createEmitter(emitterOverrides);
     const historyService = createHistoryService();
     const log = createLog();

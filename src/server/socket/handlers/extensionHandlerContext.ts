@@ -9,7 +9,6 @@ import type { MusicRepository } from '../../music/musicRepository';
 import type { YouTubeService } from '../../services/youtubeService';
 import type { SocketManager } from '../managers/manager';
 import { registerSocketEventSafely } from '../utils/eventRegistration';
-import { extractSocketOn } from '../utils/socketHelpers';
 
 export type ProgressSnapshot = {
     timestamp: number;
@@ -25,7 +24,7 @@ export type ProgressSnapshot = {
     clientLatencyMs?: number;
 };
 
-export type AuthoritativeVideoState = {
+type AuthoritativeVideoState = {
     state: 'playing' | 'paused';
     receivedAt: number;
     seq?: number;
@@ -33,22 +32,43 @@ export type AuthoritativeVideoState = {
     duration?: number;
 };
 
-export type AdSnapshot = {
+type AdSnapshot = {
     isAdvertisement: boolean;
     adTimestamp?: number;
 };
 
-export type PendingNext = {
+type PendingNext = {
     videoId: string;
     nextCandidateId?: string;
     createdAt: number;
 };
 
-export type ProgressTrackingState = {
+type ProgressTrackingState = {
     lastTime: number;
     lastTimestamp: number;
     consecutiveStalls: number;
     lastAdDecisionAt: number;
+};
+
+/**
+ * How many videos of per-connection history each map keeps. A connection that stays open
+ * across a long playlist would otherwise accumulate one entry per video for its whole life;
+ * only the video being played and its immediate neighbours are ever read back.
+ */
+const MAX_TRACKED_VIDEOS = 200;
+
+/**
+ * Inserts into a per-video map, evicting the oldest entries once the cap is reached.
+ * Maps iterate in insertion order, so the first key is the least recently added.
+ */
+export const trackByVideo = <K, V>(map: Map<K, V>, key: K, value: V): void => {
+    map.delete(key);
+    map.set(key, value);
+    while (map.size > MAX_TRACKED_VIDEOS) {
+        const oldest = map.keys().next();
+        if (oldest.done) break;
+        map.delete(oldest.value);
+    }
 };
 
 /**
@@ -66,7 +86,7 @@ export type ExtensionSessionState = {
     videoEndDebounce: Map<string, number>;
 };
 
-export const createExtensionSessionState = (): ExtensionSessionState => ({
+const createExtensionSessionState = (): ExtensionSessionState => ({
     authoritativeVideoState: new Map(),
     historyCompletionRecordedAtByVideoId: new Map(),
     lastAdSnapshotByVideoId: new Map(),
@@ -101,7 +121,6 @@ export type ExtensionHandlerDeps = {
 };
 
 export type ExtensionContextBase = ExtensionHandlerDeps & {
-    socketOn: ((...args: unknown[]) => void) | undefined;
     socketContext: { socketId: string };
     state: ExtensionSessionState;
 };
@@ -113,7 +132,6 @@ export type ExtensionContext = ExtensionContextBase & {
 export const createExtensionContextBase = (deps: ExtensionHandlerDeps): ExtensionContextBase => ({
     ...deps,
     socketContext: { socketId: deps.socket.id },
-    socketOn: extractSocketOn(deps.socket),
     state: createExtensionSessionState(),
 });
 
@@ -123,7 +141,7 @@ export type ExtensionEventRegistrar = (
 ) => void;
 
 export const createEventRegistrar = (ctx: ExtensionContextBase): ExtensionEventRegistrar => (eventName, handler) =>
-    registerSocketEventSafely(ctx.socketOn, eventName, handler, ctx.log, ctx.socketContext);
+    registerSocketEventSafely(ctx.socket, eventName, handler, ctx.log, ctx.socketContext);
 
 export const isSameVideoOrUnknown = (
     current: RemoteStatus,
@@ -180,7 +198,11 @@ export const extractUrlAndTabId = (
  * slow disk write never delays the UI. Each step is independent: a failure is logged and
  * the rest still run.
  */
-export const removeMusicAndBroadcast = (ctx: ExtensionContext, videoId: string, eventName: string): void => {
+export const removeMusicAndBroadcast = async (
+    ctx: ExtensionContext,
+    videoId: string,
+    eventName: string,
+): Promise<void> => {
     const { emitter, log, repository } = ctx;
 
     repository.remove(videoId);
@@ -192,7 +214,7 @@ export const removeMusicAndBroadcast = (ctx: ExtensionContext, videoId: string, 
     const urlListResult = emitter.emitUrlList(repository.buildCompatList());
     if (!urlListResult.ok) log.warn(`${eventName}: failed to emit url_list`, { error: urlListResult.error });
 
-    const persistResult = repository.persistRemove(videoId);
+    const persistResult = await repository.persistRemove(videoId);
     if (!persistResult.ok) log.warn(`${eventName}: failed to persist removal`, { error: persistResult.error, videoId });
 };
 

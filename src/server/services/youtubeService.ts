@@ -7,11 +7,13 @@ import { google } from 'googleapis';
 import { JSDOM } from 'jsdom';
 import logger from '../logger.server';
 import { logSecurityEvent } from '../utils/securityLogger';
-import type CacheService from './cacheService';
+import { CacheService } from './cacheService';
 
 const convertDuration = typeof convertISO8601Duration === 'function'
     ? convertISO8601Duration
     : (convertISO8601Duration as unknown as { default: (value: string) => number }).default;
+
+const MAX_CACHE_ENTRIES = 1000;
 
 export interface VideoDetails {
     title: string;
@@ -22,99 +24,31 @@ export interface VideoDetails {
     raw?: unknown;
 }
 
-class EvictingMap<K, V> extends Map<K, V> {
-    private getMaxEntries: () => number;
-
-    constructor(maxEntriesOrGetter: number | (() => number)) {
-        super();
-        this.getMaxEntries = typeof maxEntriesOrGetter === 'function'
-            ? maxEntriesOrGetter
-            : () => maxEntriesOrGetter;
-    }
-
-    set(key: K, value: V): this {
-        const max = this.getMaxEntries();
-        if (this.size >= max) {
-            const oldestKey = this.keys().next().value;
-            if (oldestKey !== undefined) super.delete(oldestKey);
-        }
-        return super.set(key, value);
-    }
-}
-
 export class YouTubeService {
     youtube: ReturnType<typeof google.youtube>;
-    private cache: EvictingMap<
-        string,
-        { value: VideoDetails; expiresAt: number }
-    > = new EvictingMap(() => this.maxEntries);
+    private cache: CacheService<VideoDetails>;
     private defaultTtl = 1000 * 60 * 60 * 24 * 7;
-    private maxEntries = 1000;
-    private cleanupTimer?: NodeJS.Timeout;
     private rateLimitRetry = 2000;
     private requestQueue: (() => Promise<void>)[] = [];
     private requestQueueMax = 500;
     private isProcessingQueue = false;
     private domPurify: ReturnType<typeof DOMPurify>;
-    private cacheSizeProvider: () => number;
 
-    constructor(apiKey?: string, cacheService?: CacheService) {
+    constructor(apiKey?: string, cacheService?: CacheService<VideoDetails>) {
         const key = apiKey ?? SERVER_ENV.YOUTUBE_API_KEY;
-        if (!key || (typeof key === 'string' && key.trim().length === 0)) {
+        if (!key || key.trim().length === 0) {
             logger.warn(
                 'YouTube API key is not configured; some metadata lookups may fail',
             );
         }
         this.youtube = google.youtube({ auth: key, version: 'v3' });
-        this.cacheSizeProvider = () => this.cache.size;
+        this.cache = cacheService ?? new CacheService<VideoDetails>(MAX_CACHE_ENTRIES);
         if (SERVER_ENV.YOUTUBE_REQUEST_QUEUE_MAX > 0) this.requestQueueMax = SERVER_ENV.YOUTUBE_REQUEST_QUEUE_MAX;
-        this.cleanupTimer = setInterval(
-            () => {
-                this.cleanupExpired();
-            },
-            1000 * 60 * 30,
-        );
 
         const window = new JSDOM('').window;
         this.domPurify = DOMPurify(
             window as unknown as Parameters<typeof DOMPurify>[0],
         );
-
-        if (
-            cacheService
-            && typeof cacheService.get === 'function'
-            && typeof cacheService.set === 'function'
-        ) {
-            const adapter = new EvictingMap<
-                string,
-                { value: VideoDetails; expiresAt: number }
-            >(() => this.maxEntries);
-            adapter.get = (k: string) => {
-                try {
-                    const got = cacheService.get(k);
-                    return got as { value: VideoDetails; expiresAt: number } | undefined;
-                } catch {
-                    return undefined;
-                }
-            };
-            adapter.set = (
-                k: string,
-                val: { value: VideoDetails; expiresAt: number },
-            ) => {
-                try {
-                    const ttl = Math.max(0, val.expiresAt - Date.now());
-                    cacheService.set(k, val, ttl);
-                } catch (error) {
-                    void error;
-                }
-                return adapter;
-            };
-            this.cache = adapter;
-            this.cacheSizeProvider = () => {
-                if (typeof cacheService.getStats === 'function') return cacheService.getStats().size;
-                return this.cache.size;
-            };
-        }
     }
 
     getDiagnostics(): {
@@ -125,19 +59,15 @@ export class YouTubeService {
         requestQueueLength: number;
         requestQueueMax: number;
     } {
+        const stats = this.cache.getStats();
         return {
-            cacheSize: this.cacheSizeProvider(),
+            cacheSize: stats.size,
             defaultTtlMs: this.defaultTtl,
             isProcessingQueue: this.isProcessingQueue,
-            maxEntries: this.maxEntries,
+            maxEntries: stats.maxEntries,
             requestQueueLength: this.requestQueue.length,
             requestQueueMax: this.requestQueueMax,
         };
-    }
-
-    private cleanupExpired() {
-        const now = Date.now();
-        for (const [k, v] of this.cache) if (v.expiresAt <= now) this.cache.delete(k);
     }
 
     private async queueRequest<T>(requestFn: () => Promise<T>): Promise<T> {
@@ -193,7 +123,7 @@ export class YouTubeService {
     }
 
     private sanitizeString(input: string): string {
-        if (!input || typeof input !== 'string') return '';
+        if (!input) return '';
 
         const cleaned = this.domPurify.sanitize(input, {
             ALLOWED_ATTR: [],
@@ -277,9 +207,8 @@ export class YouTubeService {
         ttlMs?: number,
     ): Promise<Result<VideoDetails, string>> {
         const ttl = ttlMs ?? this.defaultTtl;
-        const now = Date.now();
         const cached = this.cache.get(id);
-        if (cached && cached.expiresAt > now) return ok(cached.value);
+        if (cached) return ok(cached);
 
         for (let attempt = 0; attempt <= retries; attempt++) {
             try {
@@ -398,11 +327,7 @@ export class YouTubeService {
                     raw: this.compactRaw(item),
                     title: sanitizedTitle,
                 };
-                try {
-                    this.cache.set(id, { expiresAt: Date.now() + ttl, value: details });
-                } catch (error) {
-                    void error;
-                }
+                this.cache.set(id, details, ttl);
                 return ok(details);
             } catch (error) {
                 logger.warn('YouTubeService getVideoDetails attempt failed', {
@@ -419,10 +344,6 @@ export class YouTubeService {
     }
 
     destroy() {
-        if (this.cleanupTimer) {
-            clearInterval(this.cleanupTimer);
-            this.cleanupTimer = undefined;
-        }
         this.cache.clear();
         this.requestQueue = [];
     }

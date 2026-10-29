@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { waitForVideoEnd } from '../youtube-auto-play/src/bg/socket-events';
-import createFakeChrome from './helpers/fakeChrome';
+import { createFakeChrome } from './helpers/fakeChrome';
 
 describe('waitForVideoEnd behavior', () => {
     test('on video_ended message from playing tab, opens new tab', () => {

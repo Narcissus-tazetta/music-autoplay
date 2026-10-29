@@ -22,7 +22,7 @@ export interface WrapOptions {
 
 export type NormalizedWrapOptions = Required<WrapOptions>;
 
-export function isError(v: unknown): v is Error {
+function isError(v: unknown): v is Error {
     return v instanceof Error;
 }
 

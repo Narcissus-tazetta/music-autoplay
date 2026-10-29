@@ -15,49 +15,28 @@ export interface SerializedError {
 }
 
 export function serializeError(err: unknown): SerializedError {
-    try {
-        const info = extractErrorInfo(err);
+    const info = extractErrorInfo(err);
 
-        let details: unknown = undefined;
-        if (err && typeof err === 'object' && !Array.isArray(err)) {
-            try {
-                const obj = err as Record<string, unknown>;
-                if (hasOwnProperty(obj, 'details')) details = obj.details;
-                else {
-                    const keys = Object.keys(obj).filter(
-                        k => !['message', 'stack', 'code'].includes(k),
-                    );
-                    if (keys.length) {
-                        const out: Record<string, unknown> = {};
-                        for (const k of keys) out[k] = obj[k];
-                        details = out;
-                    }
-                }
-            } catch (error) {
-                void error;
-            }
-        }
-
-        return {
-            code: info.code,
-            details,
-            message: info.message,
-            stack: info.stack,
-        };
-    } catch (error) {
-        void error;
-        try {
-            return { details: undefined, message: String(err) };
-        } catch {
-            return {
-                details: undefined,
-                message: Object.prototype.toString.call(err),
-            };
+    let details: unknown = undefined;
+    if (isRecord(err) && !Array.isArray(err)) {
+        if (hasOwnProperty(err, 'details')) details = err.details;
+        else {
+            const extraKeys = Object.keys(err).filter(
+                k => !['message', 'stack', 'code'].includes(k),
+            );
+            if (extraKeys.length > 0) details = Object.fromEntries(extraKeys.map(k => [k, err[k]]));
         }
     }
+
+    return {
+        code: info.code,
+        details,
+        message: info.message,
+        stack: info.stack,
+    };
 }
 export type AppLogMeta = Record<string, unknown>;
-export type AppLogFn = (msg: string, meta?: AppLogMeta) => void;
+type AppLogFn = (msg: string, meta?: AppLogMeta) => void;
 export interface AppLogger {
     info: AppLogFn;
     warn: AppLogFn;
@@ -87,16 +66,8 @@ function safeSerialize(obj: unknown): unknown {
     try {
         return JSON.parse(JSON.stringify(obj, replacer)) as unknown;
     } catch {
-        try {
-            return util.inspect(obj, { colors: false, depth: 4 });
-        } catch (error) {
-            try {
-                console.debug('safeSerialize failed', String(error), String(error));
-            } catch (debugError) {
-                void debugError;
-            }
-            return '[unserializable]';
-        }
+        // BigInt values and throwing getters defeat JSON.stringify; inspect renders them anyway.
+        return util.inspect(obj, { colors: false, depth: 4 });
     }
 }
 const baseFormat = isProd
@@ -186,18 +157,10 @@ const baseFormat = isProd
                     } else {
                         metaStr = typeof metaObj === 'string' ? metaObj : JSON.stringify(metaObj);
                     }
-                } catch (error) {
-                    try {
-                        metaStr = typeof metaObj === 'string' ? metaObj : JSON.stringify(metaObj);
-                    } catch (stringifyError) {
-                        void stringifyError;
-                        metaStr = String(metaObj);
-                    }
-                    try {
-                        console.debug('logger meta stringify fallback', error);
-                    } catch (debugError) {
-                        void debugError;
-                    }
+                } catch {
+                    // metaObj already went through safeSerialize, so this cannot throw again.
+                    // Console is routed back into this logger, so the failure is not re-logged.
+                    metaStr = typeof metaObj === 'string' ? metaObj : JSON.stringify(metaObj);
                 }
             }
 
@@ -254,13 +217,7 @@ function replaceConsoleWithLogger(): () => void {
     const toMessage = (args: unknown[]) => {
         if (args.length === 0) return '';
         const first = args[0];
-        if (typeof first === 'string' && first.includes('%')) {
-            try {
-                return util.format(first, ...args.slice(1));
-            } catch (error) {
-                safeLog('debug', 'logger toMessage format error', { error: error });
-            }
-        }
+        if (typeof first === 'string' && first.includes('%')) return util.format(first, ...args.slice(1));
         return args
             .map(a => (typeof a === 'string' ? a : util.inspect(a, { depth: 4 })))
             .join(' ');
@@ -341,21 +298,4 @@ export function logMetric(
             timestamp: new Date().toISOString(),
         }),
     );
-}
-
-export function safeLog(
-    level: 'warn' | 'debug',
-    msg: string,
-    meta?: AppLogMeta,
-) {
-    try {
-        if (level === 'warn') logger.warn(msg, normalizeMeta(meta ?? {}));
-        else logger.debug(msg, normalizeMeta(meta ?? {}));
-    } catch (error) {
-        try {
-            console.debug(msg, meta, error);
-        } catch (debugError) {
-            void debugError;
-        }
-    }
 }

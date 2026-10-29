@@ -17,11 +17,14 @@ storybook-static/
 .env.development.local
 .env.test.local
 .env.production.local
-.env.example
 .env*
 
 # Generic example file pattern
 *.example
+
+# The template carries no secrets and is the only record of which variables exist.
+# Negations must come after every pattern that would otherwise match.
+!.env.example
 
 # Caches
 .cache/

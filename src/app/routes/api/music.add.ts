@@ -15,7 +15,8 @@ export const action = async ({
 }: ActionFunctionArgs) => {
     const { httpRateLimiter, io } = context.get(serverContext);
     const cookie = request.headers.get('Cookie');
-    const rateLimitKey = await getRateLimitKey(request, cookie);
+    const session = await loginSession.getSession(cookie);
+    const rateLimitKey = await getRateLimitKey(request, cookie, session);
     const rateLimiter = httpRateLimiter;
 
     // Shared with music.remove / music.reorder: this route inlined its own copy of the
@@ -29,7 +30,6 @@ export const action = async ({
 
     if (submission.status !== 'success') return Response.json(submission.reply(), { status: 400 });
 
-    const session = await loginSession.getSession(cookie);
     const { requesterHash, requesterName } = await resolveRequesterIdentity(cookie, session);
     const insertAfterId = hasPathfinderAccess(session) ? submission.value.insertAfterId : undefined;
 

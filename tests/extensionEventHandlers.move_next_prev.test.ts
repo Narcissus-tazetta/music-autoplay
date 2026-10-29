@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { MusicRepository } from '../src/server/music/musicRepository';
 import { setupExtensionEventHandlers } from '../src/server/socket/handlers/extensionEventHandlers';
-import createFakeEmitter from './helpers/fakeEmitter';
-import createFakeSocket from './helpers/fakeSocket';
+import { createFakeEmitter } from './helpers/fakeEmitter';
+import { createFakeSocket } from './helpers/fakeSocket';
+import { createMemoryStore } from './helpers/memoryStore';
 
 describe('move_next_video / move_prev_video handlers', () => {
     test('move_next_video emits next_url and updates manager', async () => {
@@ -35,7 +36,7 @@ describe('move_next_video / move_prev_video handlers', () => {
             requestedAt: new Date().toISOString(),
             requesterHash: 't',
         });
-        const repo = new MusicRepository(musicMap, undefined as any);
+        const repo = new MusicRepository(musicMap, createMemoryStore());
         const emitter = createFakeEmitter();
         const updatedCalls: any[] = [];
         const manager: any = {
@@ -94,7 +95,7 @@ describe('move_next_video / move_prev_video handlers', () => {
             requestedAt: new Date().toISOString(),
             requesterHash: 't',
         });
-        const repo = new MusicRepository(musicMap, undefined as any);
+        const repo = new MusicRepository(musicMap, createMemoryStore());
         const emitter = createFakeEmitter();
         const updatedCalls: any[] = [];
         const manager: any = {

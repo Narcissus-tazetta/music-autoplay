@@ -1,5 +1,6 @@
 import type { Music } from '@/shared/types/music';
 import type { ExtensionContextBase, HistoryRecorder } from './extensionHandlerContext';
+import { trackByVideo } from './extensionHandlerContext';
 
 const HISTORY_PROGRESS_COMPLETION_REMAINING_SEC = 1;
 const HISTORY_REPLAY_RESET_MAX_CURRENT_SEC = 10;
@@ -25,7 +26,7 @@ export function createHistoryRecorder(ctx: ExtensionContextBase): HistoryRecorde
 
     const rememberRecordableMusic = (music: Music | undefined) => {
         if (!music || !canRecordHistory(music)) return;
-        recordableMusicSnapshotByVideoId.set(music.id, music);
+        trackByVideo(recordableMusicSnapshotByVideoId, music.id, music);
     };
 
     const recordHistory = (music: Music | undefined, reason: string): boolean => {
@@ -79,7 +80,7 @@ export function createHistoryRecorder(ctx: ExtensionContextBase): HistoryRecorde
         rememberRecordableMusic(music);
         if (!recordHistory(music, reason)) return false;
 
-        historyCompletionRecordedAtByVideoId.set(videoId, now);
+        trackByVideo(historyCompletionRecordedAtByVideoId, videoId, now);
         return true;
     };
 

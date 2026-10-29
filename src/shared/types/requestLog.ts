@@ -31,10 +31,10 @@ export interface RequestLogPersistFile {
 
 export interface RequestLogStore {
     load(): RequestLogPersistFile;
-    query?(input?: RequestLogQuery): RequestLogEntry[] | Promise<RequestLogEntry[]>;
+    /** Applies the hash filter and returns matches newest-first, capped at `input.limit`. */
+    query(input?: RequestLogQuery): RequestLogEntry[] | Promise<RequestLogEntry[]>;
     append(entry: RequestLogEntry): void | Promise<void>;
-    pruneExpired?(now: Date): void | Promise<void>;
-    replace?(entries: RequestLogEntry[]): void | Promise<void>;
-    flush?(): Promise<void>;
-    closeSync?(): void;
+    pruneExpired(now: Date): void | Promise<void>;
+    flush(): Promise<void>;
+    closeSync(): void;
 }

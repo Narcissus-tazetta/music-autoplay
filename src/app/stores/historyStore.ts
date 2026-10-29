@@ -35,13 +35,9 @@ export const useHistoryStore = create<HistoryStore>((set, get) => {
             sort: overrides?.sort ?? state.sort,
             to: resolvedTo.length > 0 ? resolvedTo : undefined,
         };
-        try {
-            socket.emit('getHistory', payload, (items: HistoryItem[] | undefined) => {
-                if (version === requestVersion && Array.isArray(items)) set({ items });
-            });
-        } catch {
-            if (import.meta.env.DEV) console.debug('historyStore getHistory emit failed');
-        }
+        socket.emit('getHistory', payload, (items: HistoryItem[] | undefined) => {
+            if (version === requestVersion && Array.isArray(items)) set({ items });
+        });
     };
 
     return {

@@ -4,10 +4,10 @@ import logger from './logger.server';
 import type { Store } from './persistence';
 import { createPersistence, registerPersistenceSingletons } from './persistence/provider';
 import type { RequestLogService } from './requestLog/requestLogService';
-import CacheService from './services/cacheService';
 import { MetricsManager, metricsManager } from './services/metricsManager';
 import { RateLimiterManager } from './services/rateLimiterManager';
 import { YouTubeService } from './services/youtubeService';
+import { defaultSettingsStore } from './settingsPersistence.server';
 import { SocketServerInstance } from './socket/socketServer';
 export interface Metrics {
     apiMusics: { calls: number; errors: number; totalMs: number };
@@ -23,8 +23,6 @@ export interface BootstrapResult {
 }
 
 export async function bootstrap(): Promise<BootstrapResult> {
-    const cacheService = new CacheService();
-
     const persistence = await createPersistence();
     registerPersistenceSingletons(persistence);
     const fileStore: Store = persistence.store;
@@ -32,60 +30,41 @@ export async function bootstrap(): Promise<BootstrapResult> {
     const requestLogService: RequestLogService = persistence.requestLogService;
     const closeDb = persistence.close;
 
-    const youtubeService = new YouTubeService(undefined, cacheService);
+    const youtubeService = new YouTubeService();
 
     const socketServer = new SocketServerInstance(youtubeService, fileStore);
 
     const appShutdownHandlers: (() => Promise<void> | void)[] = [];
-    appShutdownHandlers.push(async () => {
+
+    /**
+     * Each store is drained independently: one backend failing must not skip the others, and
+     * the synchronous close is the last-resort path for when the async flush cannot finish.
+     */
+    const drain = async (label: string, flush: () => Promise<void> | void, closeSync?: () => void) => {
         try {
-            try {
-                youtubeService.destroy();
-            } catch (destroyError) {
-                logger.warn('youtubeService.destroy failed', { error: destroyError });
-            }
-            if (typeof fileStore.flush === 'function') {
-                await fileStore.flush();
-                logger.info('filestore flushed');
-            }
-            const managedHistoryService = historyService ?? getHistoryService();
-            await managedHistoryService.flush();
-            logger.info('historyService flushed');
-            await requestLogService.flush();
-            logger.info('requestLogService flushed');
-            if (closeDb) {
-                await closeDb();
-                logger.info('persistence backend closed');
-            }
+            await flush();
+            logger.info(`${label} flushed`);
         } catch (error) {
-            logger.warn('fileStore.flush failed, attempting sync close', {
-                error: error,
-            });
+            logger.warn(`${label} flush failed, attempting sync close`, { error });
             try {
-                if (typeof fileStore.closeSync === 'function') fileStore.closeSync();
-            } catch (closeSyncError) {
-                logger.warn('fileStore.closeSync failed', { error: closeSyncError });
-            }
-
-            try {
-                const managedHistoryService = historyService ?? getHistoryService();
-                managedHistoryService.closeSync();
-            } catch (historyCloseError) {
-                logger.warn('historyService.closeSync failed', { error: historyCloseError });
-            }
-
-            try {
-                requestLogService.closeSync();
-            } catch (requestLogCloseError) {
-                logger.warn('requestLogService.closeSync failed', { error: requestLogCloseError });
-            }
-
-            try {
-                if (closeDb) await closeDb();
-            } catch (closeDbError) {
-                logger.warn('persistence backend close failed', { error: closeDbError });
+                closeSync?.();
+            } catch (closeError) {
+                logger.warn(`${label} sync close failed`, { error: closeError });
             }
         }
+    };
+
+    appShutdownHandlers.push(async () => {
+        youtubeService.destroy();
+        await drain('fileStore', () => fileStore.flush?.(), () => fileStore.closeSync?.());
+        await drain(
+            'historyService',
+            () => (historyService ?? getHistoryService()).flush(),
+            () => (historyService ?? getHistoryService()).closeSync(),
+        );
+        await drain('requestLogService', () => requestLogService.flush(), () => requestLogService.closeSync());
+        await drain('settingsStore', () => defaultSettingsStore.flush(), () => defaultSettingsStore.closeSync());
+        if (closeDb) await drain('persistence backend', closeDb);
     });
 
     const diagEnabled = SERVER_ENV.DIAG_MEM_ENABLED;
@@ -161,8 +140,6 @@ export async function bootstrap(): Promise<BootstrapResult> {
                     socketConnectedSockets: socketDiagnostics.connectedSockets,
                     socketRoomCount: socketDiagnostics.roomCount,
                     socketTimerCount: socketDiagnostics.timerCount,
-                    socketWindowCloseLastEventCount: socketDiagnostics.windowClose.lastEventCount,
-                    socketWindowCloseTimerCount: socketDiagnostics.windowClose.timerCount,
                     socketRateLimiterKeys: socketDiagnostics.rateLimiter.socket.totalKeys,
                     socketRateLimiterAttempts: socketDiagnostics.rateLimiter.socket.totalAttempts,
                     httpRateLimiterKeys: socketDiagnostics.rateLimiter.http.totalKeys,

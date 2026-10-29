@@ -34,11 +34,7 @@ export function getSocket(): Socket<S2C, C2S> {
             withCredentials: true,
         };
         socket = io(options) as Socket<S2C, C2S>;
-        try {
-            attachDebugListeners(socket);
-        } catch (error) {
-            if (import.meta.env.DEV) console.warn('[socket] failed to attach debug listeners', error);
-        }
+        attachDebugListeners(socket);
     }
     return socket;
 }

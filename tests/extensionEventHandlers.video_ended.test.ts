@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { MusicRepository } from '../src/server/music/musicRepository';
 import { setupExtensionEventHandlers } from '../src/server/socket/handlers/extensionEventHandlers';
-import createFakeEmitter from './helpers/fakeEmitter';
-import createFakeSocket from './helpers/fakeSocket';
+import { createFakeEmitter } from './helpers/fakeEmitter';
+import { createFakeSocket } from './helpers/fakeSocket';
+import { createMemoryStore } from './helpers/memoryStore';
 // removed unused import to satisfy lint
 
 const makeMusic = (id: string, title = id) => ({
@@ -54,7 +55,7 @@ describe('video_ended handler', () => {
         const musicMap = new Map();
         musicMap.set('AAAAAAAAAAA', { id: 'AAAAAAAAAAA', title: 'A' });
         musicMap.set('BBBBBBBBBBB', { id: 'BBBBBBBBBBB', title: 'B' });
-        const repo = new MusicRepository(musicMap, undefined as any);
+        const repo = new MusicRepository(musicMap, createMemoryStore());
         const emitter = createFakeEmitter();
         const manager: any = { update: () => {} };
         const youtubeService: any = {};
@@ -94,7 +95,7 @@ describe('video_ended handler', () => {
         musicMap.set('AAAAAAAAAAA', { id: 'AAAAAAAAAAA', title: 'A' });
         musicMap.set('BBBBBBBBBBB', { id: 'BBBBBBBBBBB', title: 'B' });
         musicMap.set('CCCCCCCCCCC', { id: 'CCCCCCCCCCC', title: 'C' });
-        const repo = new MusicRepository(musicMap, undefined as any);
+        const repo = new MusicRepository(musicMap, createMemoryStore());
         const emitter = createFakeEmitter();
         const manager: any = { update: () => {} };
         const youtubeService: any = {};
@@ -130,7 +131,7 @@ describe('video_ended handler', () => {
         musicMap.set('AAAAAAAAAAA', { id: 'AAAAAAAAAAA', title: 'A' });
         musicMap.set('BBBBBBBBBBB', { id: 'BBBBBBBBBBB', title: 'B' });
         musicMap.set('CCCCCCCCCCC', { id: 'CCCCCCCCCCC', title: 'C' });
-        const repo = new MusicRepository(musicMap, undefined as any);
+        const repo = new MusicRepository(musicMap, createMemoryStore());
         const emitter = createFakeEmitter();
         const manager: any = { update: () => {} };
         const youtubeService: any = {};
@@ -161,7 +162,7 @@ describe('video_ended handler', () => {
         const musicMap = new Map();
         musicMap.set('AAAAAAAAAAA', { id: 'AAAAAAAAAAA', title: 'A' });
         musicMap.set('BBBBBBBBBBB', { id: 'BBBBBBBBBBB', title: 'B' });
-        const repo = new MusicRepository(musicMap, undefined as any);
+        const repo = new MusicRepository(musicMap, createMemoryStore());
         const emitter = createFakeEmitter();
         const manager: any = { update: () => {} };
         const youtubeService: any = {};
@@ -191,7 +192,7 @@ describe('video_ended handler', () => {
         const socket = createFakeSocket();
         const musicMap = new Map();
         musicMap.set('AAAAAAAAAAA', makeMusic('AAAAAAAAAAA', 'A'));
-        const repo = new MusicRepository(musicMap, undefined as any);
+        const repo = new MusicRepository(musicMap, createMemoryStore());
         const emitter = createFakeEmitter();
         const manager = createManager();
         const youtubeService: any = {};
@@ -226,7 +227,7 @@ describe('video_ended handler', () => {
         const musicMap = new Map();
         musicMap.set('AAAAAAAAAAA', makeMusic('AAAAAAAAAAA', 'A'));
         musicMap.set('BBBBBBBBBBB', makeMusic('BBBBBBBBBBB', 'B'));
-        const repo = new MusicRepository(musicMap, undefined as any);
+        const repo = new MusicRepository(musicMap, createMemoryStore());
         const emitter = createFakeEmitter();
         const manager = createManager();
         const youtubeService: any = {};
@@ -274,7 +275,7 @@ describe('video_ended handler', () => {
         const socket = createFakeSocket();
         const musicMap = new Map();
         musicMap.set('AAAAAAAAAAA', makeMusic('AAAAAAAAAAA', 'A'));
-        const repo = new MusicRepository(musicMap, undefined as any);
+        const repo = new MusicRepository(musicMap, createMemoryStore());
         const emitter = createFakeEmitter();
         const manager = createManager();
         const youtubeService: any = {};
@@ -328,7 +329,7 @@ describe('video_ended handler', () => {
         const socket = createFakeSocket();
         const musicMap = new Map();
         musicMap.set('AAAAAAAAAAA', makeMusic('AAAAAAAAAAA', 'A'));
-        const repo = new MusicRepository(musicMap, undefined as any);
+        const repo = new MusicRepository(musicMap, createMemoryStore());
         const emitter = createFakeEmitter();
         const manager = createManager();
         const youtubeService: any = {};

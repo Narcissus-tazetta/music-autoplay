@@ -5,7 +5,7 @@ import { hasOwnProperty } from './typeGuards';
  * `NormalizedApiResponse` with different shapes under the same names; both now live here
  * so there is one definition to reason about.
  */
-export interface ApiSuccess<T = unknown> {
+interface ApiSuccess<T = unknown> {
     success: true;
     data: T;
 }
@@ -17,7 +17,7 @@ export interface ApiError {
     details?: unknown;
 }
 
-export interface ApiFailure {
+interface ApiFailure {
     success: false;
     error: ApiError;
 }
@@ -106,5 +106,3 @@ export async function normalizeApiResponse<T = unknown>(
         success: false,
     };
 }
-
-export default normalizeApiResponse;
