@@ -111,9 +111,7 @@ export class MongoHybridStore implements Store {
         if (idx !== -1) {
             this.current.items[idx] = m;
             this.current.lastUpdated = new Date().toISOString();
-            this.pending.enqueue(() =>
-                this.mongo.add(m, idx).catch(error => logger.warn('MongoHybridStore: failed to add', { error }))
-            );
+            this.pending.enqueue(() => this.mongo.add(m, idx));
             return;
         }
         if (atIndex != undefined) {
@@ -126,17 +124,13 @@ export class MongoHybridStore implements Store {
             this.pending.enqueue(() =>
                 this.mongo.add(m)
                     .then(() => this.mongo.reorderAll(ordered))
-                    .catch(error => logger.warn('MongoHybridStore: failed to add at index', { error }))
             );
             return;
         }
         const order = this.current.items.length;
         this.current.items.push(m);
         this.current.lastUpdated = new Date().toISOString();
-        this.pending.enqueue(() =>
-            this.mongo.add(m, order)
-                .catch(error => logger.warn('MongoHybridStore: failed to add', { error }))
-        );
+        this.pending.enqueue(() => this.mongo.add(m, order));
     }
 
     add(m: Music, atIndex?: number): void | Promise<void> {
@@ -147,10 +141,7 @@ export class MongoHybridStore implements Store {
         this.current.items = [...musics];
         this.current.lastUpdated = new Date().toISOString();
         const ordered = [...this.current.items];
-        this.pending.enqueue(() =>
-            this.mongo.reorderAll(ordered)
-                .catch(error => logger.warn('MongoHybridStore: failed to reorder', { error }))
-        );
+        this.pending.enqueue(() => this.mongo.reorderAll(ordered));
     }
 
     reorder(musics: Music[]): void | Promise<void> {
@@ -165,7 +156,6 @@ export class MongoHybridStore implements Store {
         this.pending.enqueue(() =>
             this.mongo.remove(id)
                 .then(() => this.mongo.reorderAll(ordered))
-                .catch(error => logger.warn('MongoHybridStore: failed to remove', { error }))
         );
     }
 
@@ -176,9 +166,7 @@ export class MongoHybridStore implements Store {
     clearSync() {
         this.current = { items: [], lastUpdated: new Date().toISOString() };
 
-        this.pending.enqueue(() =>
-            this.mongo.clear().catch(error => logger.warn('MongoHybridStore: failed to clear', { error }))
-        );
+        this.pending.enqueue(() => this.mongo.clear());
     }
 
     clear(): void {

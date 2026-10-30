@@ -38,6 +38,8 @@
 - `MONGODB_URI` : MongoDB 接続文字列（`PERSISTENCE_PROVIDER=mongo` のとき必須）
 - `MONGODB_DB_NAME` : MongoDB DB名（未指定は `musicReq`）
 - `MONGODB_COLLECTION` : MongoDB コレクション名（未指定は `musicRequests`）
+- Mongo への書き込みが失敗した場合は最大 3 回リトライし、それでも失敗したときは `error` ログを出します
+- `GET /healthz` : 軽量なヘルスチェック（SSR なし・ログなし）。Render の `healthCheckPath` と外部の死活監視（無料プランのスリープ回避）はここに向けます。監視間隔は 15 分未満にしてください
 
 （注意）これらの値はデプロイ先のシークレット管理に登録してください。ローカル開発ではリポジトリ直下に `.env` を作成して設定できますが、秘密情報を公開リポジトリに置かないでください。
 

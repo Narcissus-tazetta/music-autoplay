@@ -40,7 +40,6 @@ export class SettingsMongoHybridStore implements SettingsStore {
         this.pending.enqueue(() =>
             this.mongo
                 .upsert(userId, entry)
-                .catch(error => logger.warn('SettingsMongoHybridStore: failed to upsert', { error }))
         );
     }
 

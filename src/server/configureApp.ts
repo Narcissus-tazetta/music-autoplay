@@ -62,6 +62,13 @@ export async function configureApp(
         },
     );
 
+    // Registered ahead of helmet, compression and morgan: an uptime monitor hits this every few
+    // minutes to keep the free-tier instance awake, and it must neither render SSR nor flood the log.
+    app.get('/healthz', (_req, res) => {
+        res.setHeader('Cache-Control', 'no-store');
+        res.type('text/plain').send('ok');
+    });
+
     // The nonce is a production-only mechanism. Vite's dev transforms inject inline scripts of
     // their own, and a policy may not carry both: a nonce-source makes browsers ignore
     // `'unsafe-inline'` entirely. Dev therefore emits no nonce at all, which also keeps React

@@ -82,7 +82,6 @@ export class HistoryMongoHybridStore implements HistoryStore {
         this.pending.enqueue(() =>
             this.mongo
                 .upsert(item)
-                .catch(error => logger.warn('HistoryMongoHybridStore: failed to upsert', { error }))
         );
     }
 
@@ -91,7 +90,6 @@ export class HistoryMongoHybridStore implements HistoryStore {
         this.pending.enqueue(() =>
             this.mongo
                 .remove(id)
-                .catch(error => logger.warn('HistoryMongoHybridStore: failed to remove', { error }))
         );
     }
 
