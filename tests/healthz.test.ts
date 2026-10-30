@@ -6,7 +6,8 @@ import { describe, expect, it } from './bunTestCompat';
 describe('GET /healthz', () => {
     it('answers 200 ok without caching', async () => {
         const app = express();
-        await configureApp(app, () => null, null);
+        // CI runs tests without `bun run build`, so the production build import must not be reached.
+        await configureApp(app, () => null, { middlewares: express.Router(), ssrLoadModule: async () => ({}) });
         const server = app.listen(0);
         try {
             const { port } = server.address() as AddressInfo;
