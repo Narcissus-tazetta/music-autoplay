@@ -1,5 +1,5 @@
 import { loginSession } from '@/server/sessions.server';
-import { defaultSettingsStore } from '@/server/settingsPersistence.server';
+import { getSettingsStore } from '@/server/settingsPersistence.server';
 import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router';
 import { z } from 'zod';
 
@@ -19,7 +19,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // Anonymous visitors have nothing stored; 204 says so without a body to parse.
     if (!user?.id) return new Response(undefined, { status: 204 });
 
-    const stored = defaultSettingsStore.load(user.id);
+    const stored = getSettingsStore().load(user.id);
     return Response.json(stored?.value ?? {});
 };
 
@@ -39,7 +39,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const parsed = SettingsSchema.safeParse(parseJson(body));
     if (!parsed.success) return Response.json({ error: 'invalid_settings', ok: false }, { status: 400 });
 
-    defaultSettingsStore.save(user.id, parsed.data);
+    getSettingsStore().save(user.id, parsed.data);
     return Response.json({ ok: true });
 };
 

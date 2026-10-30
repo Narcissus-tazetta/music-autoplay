@@ -8,6 +8,7 @@ import { FileStore } from '../src/server/persistence/file';
 import { MongoStore } from '../src/server/persistence/mongo';
 import { createPersistence, registerPersistenceSingletons } from '../src/server/persistence/provider';
 import { getRequestLogService, RequestLogService } from '../src/server/requestLog/requestLogService';
+import { FileSettingsStore, getSettingsStore } from '../src/server/settingsPersistence.server';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from './bunTestCompat';
 
 /**
@@ -42,6 +43,7 @@ describe('createPersistence', () => {
         registerPersistenceSingletons({
             historyService: new HistoryService(path.join(tmpDir, 'history.json')),
             requestLogService: new RequestLogService(path.join(tmpDir, 'request-logs.json')),
+            settingsStore: new FileSettingsStore(path.join(tmpDir, 'settings.json')),
             store: new FileStore(path.join(tmpDir, 'musicRequests.json')),
         });
         fs.rmSync(tmpDir, { force: true, recursive: true });
@@ -79,6 +81,7 @@ describe('createPersistence', () => {
             const bundle = {
                 historyService: new HistoryService(path.join(tmpDir, 'history.json')),
                 requestLogService: new RequestLogService(path.join(tmpDir, 'request-logs.json')),
+                settingsStore: new FileSettingsStore(path.join(tmpDir, 'settings.json')),
                 store: new FileStore(path.join(tmpDir, 'musicRequests.json')),
             };
 
@@ -86,6 +89,7 @@ describe('createPersistence', () => {
 
             expect(getHistoryService()).toBe(bundle.historyService);
             expect(getRequestLogService()).toBe(bundle.requestLogService);
+            expect(getSettingsStore()).toBe(bundle.settingsStore);
         });
     });
 

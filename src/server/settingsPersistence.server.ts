@@ -5,19 +5,22 @@ import { JsonFileStore } from './persistence/jsonFileStore';
 const DEFAULT_FILE_PATH = path.resolve(SERVER_ENV.DATA_DIR ?? path.resolve(process.cwd(), 'data'), 'settings.json');
 const FLUSH_DELAY_MS = 500;
 
-interface StoredSettings {
+export interface StoredSettings {
     value: Record<string, unknown>;
     lastUpdated: string;
 }
 
+/** Per-user UI settings. The backend is chosen by PERSISTENCE_PROVIDER, like the queue and history. */
+export interface SettingsStore {
+    load(userId: string): StoredSettings | undefined;
+    save(userId: string, value: Record<string, unknown>): void;
+    flush(): Promise<void>;
+    closeSync(): void;
+}
+
 type PersistFile = Record<string, StoredSettings>;
 
-/**
- * Per-user UI settings, on the same debounced, atomically-written file store the queue and
- * history use. It previously hand-rolled its own read/write pair and did a synchronous
- * whole-file rewrite inside the request handler.
- */
-class SettingsStore {
+export class FileSettingsStore implements SettingsStore {
     private entries: PersistFile = {};
     private readonly file: JsonFileStore<PersistFile>;
 
@@ -54,4 +57,13 @@ class SettingsStore {
     }
 }
 
-export const defaultSettingsStore = new SettingsStore();
+let settingsStoreSingleton: SettingsStore | undefined;
+
+export function setSettingsStore(store: SettingsStore): void {
+    settingsStoreSingleton = store;
+}
+
+export function getSettingsStore(): SettingsStore {
+    if (!settingsStoreSingleton) settingsStoreSingleton = new FileSettingsStore();
+    return settingsStoreSingleton;
+}

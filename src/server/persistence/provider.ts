@@ -2,6 +2,7 @@ import { SERVER_ENV } from '@/server/env.server';
 import { HistoryService, setHistoryService } from '../history/historyService';
 import logger from '../logger.server';
 import { RequestLogService, setRequestLogService } from '../requestLog/requestLogService';
+import { FileSettingsStore, setSettingsStore, type SettingsStore } from '../settingsPersistence.server';
 import { FileStore } from './file';
 import type { Store } from './types';
 
@@ -9,6 +10,7 @@ export interface PersistenceBundle {
     store: Store;
     historyService: HistoryService;
     requestLogService: RequestLogService;
+    settingsStore: SettingsStore;
     close?: () => Promise<void>;
 }
 
@@ -30,12 +32,14 @@ export async function createPersistence(): Promise<PersistenceBundle> {
         const collectionName = SERVER_ENV.MONGODB_COLLECTION;
         const requestLogCollectionName = SERVER_ENV.MONGODB_REQUEST_LOG_COLLECTION;
 
-        const [{ MongoClient }, { MongoHybridStore, MongoStore }, historyMod, requestLogMod] = await Promise.all([
-            import('mongodb'),
-            import('./mongo'),
-            import('../history/historyMongoStore'),
-            import('../requestLog/requestLogMongoStore'),
-        ]);
+        const [{ MongoClient }, { MongoHybridStore, MongoStore }, historyMod, requestLogMod, settingsMod] =
+            await Promise.all([
+                import('mongodb'),
+                import('./mongo'),
+                import('../history/historyMongoStore'),
+                import('../requestLog/requestLogMongoStore'),
+                import('../settingsMongoStore'),
+            ]);
 
         const client = new MongoClient(uri, { serverSelectionTimeoutMS: 5_000 });
 
@@ -60,6 +64,9 @@ export async function createPersistence(): Promise<PersistenceBundle> {
             new requestLogMod.RequestLogMongoHybridStore(requestLogMongo, await requestLogMongo.loadAll()),
         );
 
+        const settingsMongo = new settingsMod.SettingsMongoStore({ client, collectionName: 'settings', dbName, uri });
+        const settingsStore = new settingsMod.SettingsMongoHybridStore(settingsMongo, await settingsMongo.loadAll());
+
         logger.info('persistence provider: mongo', {
             collectionName,
             dbName,
@@ -69,11 +76,17 @@ export async function createPersistence(): Promise<PersistenceBundle> {
 
         return {
             close: async () => {
-                await Promise.all([mongo.close(), historyMongo.close(), requestLogMongo.close()]);
+                await Promise.all([
+                    mongo.close(),
+                    historyMongo.close(),
+                    requestLogMongo.close(),
+                    settingsMongo.close(),
+                ]);
                 await client.close();
             },
             historyService,
             requestLogService,
+            settingsStore,
             store,
         };
     }
@@ -82,6 +95,7 @@ export async function createPersistence(): Promise<PersistenceBundle> {
     return {
         historyService: new HistoryService(),
         requestLogService: new RequestLogService(),
+        settingsStore: new FileSettingsStore(),
         store: new FileStore(),
     };
 }
@@ -90,4 +104,5 @@ export async function createPersistence(): Promise<PersistenceBundle> {
 export function registerPersistenceSingletons(bundle: PersistenceBundle): void {
     setHistoryService(bundle.historyService);
     setRequestLogService(bundle.requestLogService);
+    setSettingsStore(bundle.settingsStore);
 }

@@ -1,10 +1,6 @@
 # Render deployment configuration for music-autoplay.
 # Deploy with: render services create -f render.yaml (or push to the repo with auto-deploy enabled).
 #
-# This file previously declared `services:` twice plus a mistyped `dservices:` block. YAML keeps
-# only the last occurrence of a duplicate key, so the two earlier blocks were dead config that
-# never reached Render. What remains below is exactly the block that was already in effect.
-#
 # Secrets marked `sync: false` must be filled in via the Render dashboard or CLI - never commit values here.
 
 services:
@@ -13,12 +9,8 @@ services:
     runtime: docker
     env: docker
     region: oregon
-    plan: starter
+    plan: free
     healthCheckPath: /
-    disk:
-      name: app-data
-      mountPath: /app/data
-      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
@@ -37,6 +29,11 @@ services:
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      # The free plan has no persistent disk, so every store lives in MongoDB.
+      - key: PERSISTENCE_PROVIDER
+        value: mongo
+      - key: MONGODB_URI
         sync: false
       - key: CLIENT_URL
         value: https://music-auto-play.onrender.com

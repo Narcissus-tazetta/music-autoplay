@@ -7,7 +7,6 @@ import type { RequestLogService } from './requestLog/requestLogService';
 import { MetricsManager, metricsManager } from './services/metricsManager';
 import { RateLimiterManager } from './services/rateLimiterManager';
 import { YouTubeService } from './services/youtubeService';
-import { defaultSettingsStore } from './settingsPersistence.server';
 import { SocketServerInstance } from './socket/socketServer';
 export interface Metrics {
     apiMusics: { calls: number; errors: number; totalMs: number };
@@ -28,6 +27,7 @@ export async function bootstrap(): Promise<BootstrapResult> {
     const fileStore: Store = persistence.store;
     const historyService: HistoryService = persistence.historyService;
     const requestLogService: RequestLogService = persistence.requestLogService;
+    const settingsStore = persistence.settingsStore;
     const closeDb = persistence.close;
 
     const youtubeService = new YouTubeService();
@@ -63,7 +63,7 @@ export async function bootstrap(): Promise<BootstrapResult> {
             () => (historyService ?? getHistoryService()).closeSync(),
         );
         await drain('requestLogService', () => requestLogService.flush(), () => requestLogService.closeSync());
-        await drain('settingsStore', () => defaultSettingsStore.flush(), () => defaultSettingsStore.closeSync());
+        await drain('settingsStore', () => settingsStore.flush(), () => settingsStore.closeSync());
         if (closeDb) await drain('persistence backend', closeDb);
     });
 
